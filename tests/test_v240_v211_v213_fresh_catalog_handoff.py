@@ -637,7 +637,8 @@ class SameFreshCatalogChain(unittest.TestCase):
             self.assertFalse(first["upstream_fetch_authenticated_by_adapter"])
             # P3-DN: ORIGINAL v217-sealed v191/v211/v213 receipts already
             # authenticate the exact source join, not quality/game slots.
-            # Reuse that evidence as ONE Policy A family; no new Native.
+            # Reuse original source relation + sealed SimC input ID syntax.
+            # These do not attest quality, CHMV E or effect activation.
             from runner import v216_environment_build_coordinator as build
             args={"source_catalog_path":first["source_catalog_path"],
                   "expected_game_build":BUILD,
@@ -664,9 +665,21 @@ class SameFreshCatalogChain(unittest.TestCase):
                              {"91001","91002"})
             for missing in optional["per_item_missing_reasons"].values():
                 self.assertNotIn("EVIDENCE_MISSING:source_relation",missing)
-                self.assertTrue({"EVIDENCE_MISSING:simc_input",
-                                 "EVIDENCE_MISSING:product_input",
+                self.assertNotIn("EVIDENCE_MISSING:simc_input",missing)
+                self.assertTrue({"EVIDENCE_MISSING:product_input",
                                  "EVIDENCE_MISSING:chmv_budget"} <= set(missing))
+            real=optional["original_v217_source_relation_receipts_internal"]
+            self.assertEqual(set(real),{91001,91002})
+            for exact_id,proof in real.items():
+                self.assertEqual(proof["simc_input"]["status"],
+                                 "SIMC_INPUT_ACCEPTED")
+                self.assertEqual(proof["simc_input"]["input_field"],
+                                 "enchant_id="+str(exact_id))
+                self.assertFalse(proof["simc_input"][
+                    "gameplay_or_native_effect_attested"])
+                self.assertFalse(proof["simc_input"][
+                    "effect_mechanism_reimplemented"])
+                self.assertEqual(set(proof),{"source_relation","simc_input"})
             self.assertIn(
                 "EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED",
                 optional["per_item_missing_reasons"]["91001"])
