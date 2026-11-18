@@ -1902,6 +1902,133 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
     return proofs
 
 
+def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
+                                                            compilation):
+    """Connect actual sealed v232 + v230 + Wago/SimC v583 into v196/v220.
+
+    A one-representative SOURCE-ONLY smoke comparison, never the user's
+    eventual selected equipment. No UI registration, SimC option, fixed E,
+    new download/Native, or inferred item/hand based on a token or name.
+    Later user-selected gear needs its own exact provenance-bound check.
+    """
+    def pending(reason):
+        return {"status":"SEALED_REPRESENTATIVE_ENCHANT_SCOPE_PENDING",
+                "reason":reason,"ui_selectable":False,
+                "policy_A_product_input_verified":False,
+                "native_calls":0,"network_calls":0}
+    rep=collected.get("fresh_one_spec_simc_representative") or {}
+    joined=collected.get("fresh_permanent_enchant_item_source") or {}
+    seed=collected.get("fresh_lazy_full_pinned_simc_item_source") or {}
+    if (rep.get("status")!=
+            "FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE" or
+        joined.get("status")!=
+            "PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY" or
+        not seed.get("source_dir")):
+        return pending("SEALED_REPRESENTATIVE_OR_PHYSICAL_ENCHANT_SOURCE_MISSING")
+    try:
+        root=pathlib.Path(compilation["stage_root"]).resolve()
+        def sealed_original(record):
+            stage=record["source_stage"]
+            relative=stage["output_paths"]["candidate"]
+            path=pathlib.Path(record["candidate_path"]).resolve()
+            need((relative.startswith("source/") or
+                  relative.startswith("fresh_source/")) and
+                 path==root/relative and
+                 path.is_file() and not path.is_symlink() and
+                 0<path.stat().st_size<=25_000_000,
+                 "V216_SELECTED_ENCHANT_SEALED_PATH_INVALID")
+            receipt=stage_engine._read_receipt(
+                root/".stage_receipts"/(stage["stage_id"]+".json"))
+            raw=path.read_bytes()
+            need(receipt.get("receipt_sha256")==stage["receipt_sha256"] and
+                 receipt.get("output_paths",{}).get("candidate")==relative and
+                 receipt.get("outputs",{}).get("candidate",{}).get(
+                     "sha256")==digest(raw),
+                 "V216_SELECTED_ENCHANT_STAGE_SHA_DRIFT")
+            return json.loads(raw),stage["receipt_sha256"]
+        representative,rep_sha=sealed_original(rep)
+        original_join,join_sha=sealed_original(joined)
+        build=collected["expected_game_build"]
+        revision=compilation["simc_revision"]
+        need(representative["game_build"]==build and
+             representative["simc_revision"]==revision and
+             original_join["game_build"]==build and
+             representative["source_seed_receipt_sha256"] and
+             original_join["status"]==
+                 "PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",
+             "V216_SELECTED_ENCHANT_SAME_BUILD_SOURCE_REQUIRED")
+        ids=representative["selected_G_slot_ids"]
+        need(type(ids) is dict and 1<=len(ids)<=15 and
+             all(type(k) is str and type(v) is int and v>0
+                 for k,v in ids.items()) and
+             len(set(ids.values()))==len(ids),
+             "V216_SELECTED_ENCHANT_EXACT_V232_IDS_REQUIRED")
+        # v232 has already selected the physical items. Reuse the same
+        # pinned v230 parser once, never expand to the user's whole gear.
+        metadata=simc_item_metadata.from_seed(
+            directory=seed["source_dir"],item_ids=sorted(ids.values()))
+        need(metadata["game_build"]==build and
+             metadata["simc_revision"]==revision and
+             metadata["source_sha256"]==
+                 representative["item_data_sha256"] and
+             metadata["source_receipt_sha256"]==
+                 representative["source_seed_receipt_sha256"],
+             "V216_SELECTED_ENCHANT_V230_SOURCE_SHA_DRIFT")
+        physical_by_id={row["item_id"]:row for row in metadata["items"]}
+        source,_=environment_manifest.read_json(
+            compilation["source_catalog_path"])
+        need(source["game_build"]==build and
+             source["simc_revision"]==revision,
+             "V216_SELECTED_ENCHANT_CATALOG_BUILD_MISMATCH")
+        by_enchant={row["enchant_id"]:row for row in
+                    source["v196_enchant_source"]["rows"]}
+        # Bounded first positive source-only comparison. v583 guarantees
+        # a Wago physical item ↔ SimC enchant ID relationship; it does NOT
+        # prove that this enchant is usable/stronger/selected by the user.
+        for candidate in sorted(original_join["matches"],
+                                key=lambda row:row["enchant_id"]):
+            eid=candidate["enchant_id"]
+            origin=by_enchant.get(eid)
+            if origin is None or not candidate.get("physical_items"):
+                continue
+            if not any(all(row.get(k)==origin.get(k) for k in (
+                    "enchant_id","item_class","inventory_type_mask",
+                    "item_subclass_mask"))
+                    for row in candidate.get("simc_rank_rows",[])):
+                continue
+            wago_item=min(item["item_id"]
+                          for item in candidate["physical_items"])
+            for slot,item_id in sorted(ids.items()):
+                exact=physical_by_id[item_id]
+                checked=auto_admission.selected_equipment_source_mask_match(
+                    permanent_source={
+                        "item_class":origin["item_class"],
+                        "inventory_type_mask":origin["inventory_type_mask"],
+                        "item_subclass_mask":origin["item_subclass_mask"]},
+                    item_metadata=exact,selected_slot=slot)
+                if not checked["matched"]:
+                    continue
+                preview=user_catalog.preview_sealed_representative_enchant_mask(
+                    source_catalog=source,scope={
+                        "game_build":build,"simc_revision":revision,
+                        "enchant_id":eid,"selected_slot":slot,
+                        "item_metadata":exact,"wago_item_id":wago_item,
+                        "v232_receipt_sha256":rep_sha,
+                        "v583_receipt_sha256":join_sha,
+                        "v230_item_data_sha256":metadata["source_sha256"]})
+                need(preview["matched"] is True and
+                     preview["ui_selectable"] is False and
+                     preview["policy_A_product_input_verified"] is False,
+                     "V216_SELECTED_ENCHANT_PREVIEW_MUST_NOT_APPROVE")
+                return preview
+        return pending("NO_SOURCE_MASK_MATCH_FOR_THIS_REFERENCE_REPRESENTATIVE")
+    except (EnvironmentBuildBlocked,simc_item_metadata.ItemMetadataBlocked,
+            user_catalog.CatalogBlocked,OSError,ValueError,KeyError,
+            TypeError,AttributeError) as exc:
+        # An unselected enchant is optional, not a new G/J/F/O blocker.
+        return pending(str(exc).split(":",1)[0])
+
+
 def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 expected_simc_revision, budget_evidence=None,
                                 target_ilevel=None, manual_final_T=None,
@@ -8178,6 +8305,17 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                                 "FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED"
                             else observed[
                                 "four_stat_ordinary_best_observed_unadmitted"])
+                # v230 exact selected representative + v583 same-build
+                # physical enchant join -> existing v196/v220 mask predicate.
+                # SOURCE ONLY: reference G gear can differ from final user gear.
+                enchant_mask_preview=(
+                    _fresh_first_sealed_representative_enchant_mask_preview(
+                        collected=collected,compilation=source_compilation))
+                source_compilation[
+                    "sealed_reference_enchant_mask_source_only"]=(
+                        enchant_mask_preview)
+                progress["sealed_reference_enchant_mask_status"]=(
+                    enchant_mask_preview["status"])
                 preflight=preflight_new_season_source(
                     source_catalog_path=source_compilation["source_catalog_path"],
                     expected_game_build=collected["expected_game_build"],
