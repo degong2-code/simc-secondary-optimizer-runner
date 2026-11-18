@@ -1,0 +1,28 @@
+name: P1 v583 Existing v216 Permanent Enchant Source Integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - .github/workflows/p1_v583_permanent_enchant_source_integration.yml
+      - runner/v583_permanent_enchant_physical_source.py
+      - runner/v216_environment_build_coordinator.py
+      - tests/test_v583_permanent_enchant_physical_source.py
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm v583 one-table cached source join and old v216 contracts
+        run: |
+          python -m unittest discover -s tests -p test_v583_permanent_enchant_physical_source.py -v
+          python -m unittest discover -s tests -p test_v216_environment_build_coordinator.py -q
+      - name: Source join only (no Native / external collection)
+        run: echo "Focused offline v583 tests only; historical real 70783 v582 Wago exact join remains separate evidence."
