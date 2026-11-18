@@ -70,14 +70,15 @@ class UserSessionControls(unittest.TestCase):
 
     def test_v596_generic_user_E0_syntax_not_authorization(self):
         source=ux.standard_controls(("hunter","survival"))
-        for slot in ("finger1","finger2"):
+        for slot in ("finger1","finger2","head","chest","legs","feet"):
             with self.subTest(slot=slot):
                 controls={**source,"enchant_choices":{slot:89999}}
                 user=ux.user_scenario(controls)
                 self.assertEqual(user["selected_season_enchants"],
                                  {slot:89999})
                 self.assertNotIn("fixed_E",user)
-        for bad in ({"finger3":7967},{"finger1":0},
+        for bad in ({"finger3":7967},{"main_hand":89999},
+                    {"off_hand":89999},{"trinket1":89999},{"finger1":0},
                     {"finger1":True},{"finger1":"7967"},
                     {"finger1":7967,"finger2":7967}):
             with self.subTest(bad=bad):

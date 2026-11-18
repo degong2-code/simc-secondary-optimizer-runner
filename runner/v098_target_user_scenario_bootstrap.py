@@ -43,6 +43,7 @@ IMPORT_FIELD="import_simc_profile"
 CONSUME_FIELD="consumable_choices"
 ENCHANT_FIELD="verified_enchant"
 SEASON_ENCHANT_FIELD=nonchmv_enchant.FIELD
+SIGNED_E0_SINGLE_SLOTS=entry.SIGNED_E0_SINGLE_SLOTS
 RUNEFORGE_FIELD="runeforge_by_hand"
 STAT_CAP_FIELD="max_single_stat_percent"
 TIER_FIVE=common.TIER_FIVE
@@ -1124,7 +1125,7 @@ def _selected_installed_E0_on_final_user_item(*,user,rows,mask,installed_path):
          and isinstance(installed_path,(str,pathlib.Path)),
          "FRESH_USER_E0_FINAL_ITEM_PHYSICAL_SOURCE_REQUIRED")
     slot,eid=next(iter(user[SEASON_ENCHANT_FIELD].items()))
-    need(slot in ("finger1","finger2") and
+    need(slot in SIGNED_E0_SINGLE_SLOTS and
          type(eid) is int and eid>0 and
          type(rows.get(slot)) is dict and
          type(rows[slot].get("item_id")) is int and
@@ -1307,7 +1308,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
                 and all(type(id_) is int and id_>0
                         for id_ in user[SEASON_ENCHANT_FIELD].values())
                 and set(user[SEASON_ENCHANT_FIELD])<=
-                    {"finger1","finger2"}))
+                    SIGNED_E0_SINGLE_SLOTS))
           and (not selected_season_items or
                season_selected_static_cache_path is not None)),
          "SEASON_PROFILE_INTERNAL_SOURCE_ONLY_MODE_REQUIRED")

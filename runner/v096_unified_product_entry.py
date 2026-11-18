@@ -20,6 +20,7 @@ import v206_nonchmv_eagle_selection as nonchmv_enchant
 import v529_current_season_eagle_E0_bridge as fresh_eagle
 import v531_current_season_positive_E_bridge as positive_enchant
 import v222_season_budget_contract as budget_contract
+import v055_simc_item_selection as gear_slots
 
 SCHEMA="v096_user_scenario_unified_entry_v1"
 FIELDS={"schema","profile_simc","scenario_json","fillers_json",
@@ -34,6 +35,10 @@ SEASON_FIELD="admitted_season_budget_source"
 SEASON_SCHEMA="v096_internal_admitted_season_budget_source_v1"
 FRESH_SEASON_FIELD="installed_fresh_season_budget_source"
 FRESH_SEASON_SCHEMA="v096_internal_installed_fresh_v212_source_v1"
+# One v212-signed E0 on an actual ordinary representative gear slot.
+# Weapons require a distinct selected-hand mask; trinkets live outside G.
+SIGNED_E0_SINGLE_SLOTS=frozenset(
+    gear_slots.SLOTS-{"trinket1","trinket2","main_hand","off_hand"})
 SELECTED_FRESH_SEASON_FIELD="installed_selected_fresh_v212_source"
 SELECTED_FRESH_SEASON_SCHEMA="v096_internal_selected_fresh_v212_replay_v1"
 # Optional internal stage seal: no Native until physical SimC acceptance.
@@ -202,7 +207,7 @@ def _signed_installed_user_E0_profile(*,doc,selected,profile,user_final_T):
          and type(selected["identity_sha256"]) is str and
              contract.HASH_RE.fullmatch(selected["identity_sha256"])
                  is not None
-         and selected["slot"] in ("finger1","finger2") and
+         and selected["slot"] in SIGNED_E0_SINGLE_SLOTS and
          type(selected["item_id"]) is int and
              selected["item_id"]>0 and
          type(selected["enchant_id"]) is int and

@@ -302,9 +302,9 @@ def user_scenario(controls):
             # E0 + v096 exactly-once SimC profile may authorize this ID.
             # Old packaged/non-installed paths still reject arbitrary IDs.
             need(type(choice) is dict and len(choice)==1
-                 and set(choice)<= {"finger1","finger2"} and
+                 and set(choice)<= bootstrap.SIGNED_E0_SINGLE_SLOTS and
                  all(type(v) is int and v>0 for v in choice.values()),
-                 "USER_INSTALLED_ENCHANT_EXACT_ONE_RING_ID_REQUIRED")
+                 "USER_INSTALLED_ENCHANT_EXACT_ONE_ORDINARY_SLOT_ID_REQUIRED")
         output[nonchmv_enchant.FIELD]=dict(choice)
     if "runeforge_by_hand" in controls:
         output["runeforge_by_hand"]=bootstrap.runeforge_mod.check_input(
