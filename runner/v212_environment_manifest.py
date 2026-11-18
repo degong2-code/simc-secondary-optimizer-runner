@@ -145,6 +145,7 @@ def _validate_fresh_prepared_option_sources(prepared, catalog):
         resolved=(
             source["slot_resolution_status"]=="SOURCE_MASK_RESOLVED" and
             type(source["slot_group"]) is str and
+            not source["slot_group"].startswith("WEAPON_SUBCLASS_") and
             ("/" not in source["slot_group"] or ring_family))
         need(resolved or weapon_family,
              "FRESH_ENVIRONMENT_PREPARED_SOURCE_SLOT_UNRESOLVED")
