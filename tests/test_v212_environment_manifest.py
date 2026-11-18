@@ -69,6 +69,62 @@ class RegisteredDualRingSourceScopeTests(unittest.TestCase):
                               {**source,"inventory_type_mask":1<<8}]}}})
 
 
+    def test_v594_exact_chmv_receipt_E_optional_and_never_inferred(self):
+        """Same v212 row accepts E only from original trusted receipt shape."""
+        source={"enchant_id":8025,
+                "token":"enchant_ring__silvermoons_alacrity",
+                "quality_rank":2,"slot_resolution_status":"SOURCE_MASK_RESOLVED",
+                "slot_group":"finger1/finger2","item_class":4,
+                "inventory_type_mask":1<<11,"item_subclass_mask":0}
+        catalog={"catalog":{"enchants":{"items":[source]}},
+                 "game_build":"12.1.5.70783",
+                 "simc_revision":"a"*40,"manifest_sha256":"b"*64}
+        item={"enchant_id":8025,"simc_token":source["token"],
+              "slot":"finger1/finger2","highest_verified_quality_rank":2,
+              "policy_A_source_relation_sha256":"c"*64,
+              "quality_source_sha256":"d"*64,
+              "exact_v220_identity":{
+                  "kind":"permanent_enchant","exact_id":8025,
+                  "simc_token":source["token"],"slot":"finger1/finger2",
+                  "game_build":catalog["game_build"],
+                  "simc_revision":catalog["simc_revision"],
+                  "catalog_sha256":catalog["manifest_sha256"]}}
+        document={"status":"EXACT_OPTIONS_PREPARED_FOR_VERSIONED_INSTALL",
+                  "v220_exact_proof_eligible_count":1,
+                  "quality_use_scope_pending_item_ids":[],
+                  "other_proofs_pending_by_item_id":{},
+                  "native_calls":0,"network_calls":0}
+        def check(row):
+            return p._validate_fresh_prepared_option_sources({
+                **document,"verified_option_inputs_unpublished":[row]},
+                catalog)
+        # Existing historical installed rows lacking E remain valid but
+        # MUST NOT imply a zero vector or a runnable SimC option.
+        self.assertEqual(check(item),1)
+        E={"crit_rating":0,"haste_rating":30,
+           "mastery_rating":0,"versatility_rating":0}
+        owner={**item,"verified_fixed_E":E,
+               "chmv_budget_receipt_sha256":"e"*64}
+        self.assertEqual(check(owner),1)
+        # The zero vector is accepted only if explicitly trusted by the
+        # same CHMV owner, never inferred from a missing DBC/stat row.
+        zero={**owner,"verified_fixed_E":dict.fromkeys(E,0)}
+        self.assertEqual(check(zero),1)
+        for bad in (
+            {**owner,"verified_fixed_E":{"haste_rating":30}},
+            {**owner,"verified_fixed_E":{**E,"haste_rating":-1}},
+            {**owner,"verified_fixed_E":{**E,"haste_rating":True}},
+            {**owner,"verified_fixed_E":{**E,"haste_rating":100001}},
+            {**owner,"chmv_budget_receipt_sha256":"not-sha"},
+            {k:v for k,v in owner.items()
+             if k!="chmv_budget_receipt_sha256"},
+            {**item,"chmv_budget_receipt_sha256":"e"*64},
+        ):
+            with self.subTest(bad=bad),self.assertRaises(
+                    p.EnvironmentBlocked):
+                check(bad)
+
+
 class FreshEnvironmentSourceStageTests(unittest.TestCase):
     """Only season source staging; no user v098, Native or installed READY."""
 
