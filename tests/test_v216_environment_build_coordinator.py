@@ -2159,7 +2159,14 @@ class FirstSealedEnchantScopeBridgeTests(unittest.TestCase):
                     collected=collected,compilation=compiled,
                     selected_user_item={"slot":"feet","item_id":268267},
                     selected_enchant_id=8025)
+                missing=v216._fresh_first_sealed_representative_enchant_mask_preview(
+                    collected=collected,compilation=compiled,
+                    selected_user_item={"slot":"finger1","item_id":268267},
+                    selected_enchant_id=999999)
+            # Missing physical enchant cannot trigger another large v230 scan.
             self.assertEqual(parsed.call_count,3)
+            self.assertEqual(missing["status"],
+                             "SEALED_REPRESENTATIVE_ENCHANT_SCOPE_PENDING")
             self.assertTrue(actual["matched"],actual)
             self.assertEqual(actual["selected_representative_item_id"],268267)
             self.assertFalse(actual["reference_representative_not_user_equipment"])
