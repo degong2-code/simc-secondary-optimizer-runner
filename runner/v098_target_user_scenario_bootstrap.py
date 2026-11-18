@@ -683,7 +683,9 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
     positive_E=(positive_enchant.check_choice(user[SEASON_ENCHANT_FIELD])[1]
                 if user.get(SEASON_ENCHANT_FIELD) in
                    positive_enchant.CHOICES and
-                   _historical_exact_enchant_user_scope(user) else None)
+                   _historical_exact_enchant_user_scope(
+                       user,game_build=season_build,
+                       revision=simc_revision) else None)
     if positive_E is not None:
         user_T=user["target"]["final_T"]
         expected_B=(3107+sum(positive_E.values()) if user_T is None
@@ -1081,13 +1083,17 @@ def _final_user_enchant_source_mask(*,user,rows,consumer):
     return source
 
 
-def _historical_exact_enchant_user_scope(user):
+def _historical_exact_enchant_user_scope(user, *,game_build=None,
+                                         revision=None):
     """Preserve exact v528 scope, but never make its ID a global ban.
 
     A different user/spec or future season may select the SAME enchant ID
     through the signed v212 Policy A E0 path. This checks only the old
     bounded witness user input; no new effect/Native proof.
     """
+    if (game_build is not None and game_build!=fresh_eagle.BUILD or
+        revision is not None and revision!=fresh_eagle.REVISION):
+        return False
     choice=user.get(SEASON_ENCHANT_FIELD)
     try:
         if choice==fresh_eagle.CHOICE:
@@ -1612,7 +1618,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
     selected_installed_E0=None
     if SEASON_ENCHANT_FIELD in user:
         if (fresh_installed_environment_path is not None and
-                not _historical_exact_enchant_user_scope(user)):
+                not _historical_exact_enchant_user_scope(
+                    user,game_build=actual_season_build,
+                    revision=revision)):
             selected_installed_E0=_selected_installed_E0_on_final_user_item(
                 user=user,rows=rows,mask=actual_user_enchant_source,
                 installed_path=fresh_installed_environment_path)
@@ -2312,7 +2320,10 @@ def preview_from_environment_build(user,folder,binary,revision,*,
     # retargets B/T. Original v096 checks source-owner proofs once more.
     positive_choice=(user.get(SEASON_ENCHANT_FIELD) in
                      positive_enchant.CHOICES and
-                     _historical_exact_enchant_user_scope(user))
+                     _historical_exact_enchant_user_scope(
+                         user,game_build=inputs["v216_numeric_preview"][
+                             "calculation"]["game_build"],
+                         revision=compilation.get("simc_revision")))
     if installed_path is not None and (
             user["target"]["final_T"] is not None or positive_choice):
         original=inputs["v216_numeric_preview"]["calculation"]
