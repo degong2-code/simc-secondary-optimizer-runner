@@ -302,11 +302,9 @@ def preview_sealed_representative_enchant_mask(*, source_catalog, scope,
              and set(x["source_class_and_masks"])=={
                  "item_class","inventory_type_mask","item_subclass_mask"}
              and type(x.get("source_slot")) is dict
-             and type(x.get("raw_rank_component_evidence")) is dict
-             and x["raw_rank_component_evidence"].get(
-                 "same_effect_and_use_conditions_verified") is False
-             and x["raw_rank_component_evidence"].get(
-                 "quality_noninferiority_runtime_verified") is False
+             # Exact source class/masks and physical ID are the only
+             # applicability evidence used by this v220 predicate.
+             # Effect/driver/quality ranking is NOT re-certified here.
              and x.get("static_E_source_status") in (
                  "NO_STATIC_CHMV_COMPONENT_IN_SIMC_DBC",
                  "UNKNOWN_STATIC_COMPONENT_REVIEW_PENDING",
