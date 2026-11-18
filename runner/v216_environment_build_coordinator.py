@@ -1908,10 +1908,10 @@ def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
                                                             selected_enchant_id=None):
     """Connect actual sealed v232 + v230 + Wago/SimC v583 into v196/v220.
 
-    A one-representative SOURCE-ONLY smoke comparison, never the user's
-    eventual selected equipment. No UI registration, SimC option, fixed E,
-    new download/Native, or inferred item/hand based on a token or name.
-    Later user-selected gear needs its own exact provenance-bound check.
+    Source-only comparison against either the selected G reference or
+    (when explicitly supplied by the internal v098 caller) one actual final
+    user slot/ItemID. The reference is not user gear. Neither path grants
+    Policy A, UI selection, fixed E, SimC effects or Native permission.
     """
     def pending(reason):
         return {"status":"SEALED_REPRESENTATIVE_ENCHANT_SCOPE_PENDING",
@@ -1970,6 +1970,12 @@ def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
              original_join["status"]==
                  "PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",
              "V216_SELECTED_ENCHANT_SAME_BUILD_SOURCE_REQUIRED")
+        # Filter exact user-selected enchant BEFORE reparsing the pinned
+        # 32 MB item_data source. An unlinked optional source costs no scan.
+        if user_selected and not any(
+                r.get("enchant_id")==selected_enchant_id
+                for r in original_join.get("matches",[])):
+            return pending("SELECTED_USER_ENCHANT_WAGO_SIMC_SOURCE_PENDING")
         ids=representative["selected_G_slot_ids"]
         need(type(ids) is dict and 1<=len(ids)<=15 and
              all(type(k) is str and type(v) is int and v>0
