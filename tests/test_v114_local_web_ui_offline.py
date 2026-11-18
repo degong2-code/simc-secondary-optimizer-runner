@@ -2351,9 +2351,10 @@ console.log("V473_BUILD_ILEVEL_REVOKE_ENCHANT_RUNE_PASS");
         script=r"""
 const fs=require("fs"),assert=require("assert");
 const raw=fs.readFileSync(process.argv[1],"utf8");
+const avail=raw.indexOf("function refreshExactEnchantAvailability() {");
 const begin=raw.indexOf("function renderSeasonOptionCatalog(catalog) {");
 const end=raw.indexOf("function installOptions(options) {",begin);
-assert(begin>=0&&end>begin);
+assert(avail>=0&&begin>avail&&end>begin);
 const elements={};
 const $=id=>elements[id]??={options:[],children:[],textContent:"",disabled:false,
   replaceChildren(...items){this.options=items;this.children=[];},
@@ -2364,9 +2365,12 @@ const runeCompatibility=()=>compatibility++;
 const state={dkRuneIds:new Set([999]),eagleApproved:true};
 const document={createElement(tag){return {tag,children:[],textContent:"",
    appendChild(item){this.children.push(item);}};}};
+// Exercise the REAL availability function next to render, not a fake
+// toggle: E0 must work even without an old exact v528 user scope.
 const render=Function("state","$","option","runeCompatibility","document",
- raw.slice(begin,end)+"return renderSeasonOptionCatalog;")(
- state,$,option,runeCompatibility,document);
+ "exactUserEnchantInputsMatch",
+ raw.slice(avail,end)+"return renderSeasonOptionCatalog;")(
+ state,$,option,runeCompatibility,document,()=>false);
 const installed={
   schema:"v196_current_season_ui_catalog_v1",
   status:"FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY",
