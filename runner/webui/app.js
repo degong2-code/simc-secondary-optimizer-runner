@@ -1154,14 +1154,6 @@ async function chooseInstalledFlask() {
   }
   // Rebind trinket choices and source-owned options to the SAME exact v212
   // install. This is read-only; it never invokes the G/F Build or Native.
-  const priorTrinkets=[field("trinket1"),field("trinket2")];
-  const priorSpecial=Array.from($("special-rows").querySelectorAll(".gear-row"))
-    .map(row=>{
-      const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
-      return {slot:read("slot"),item_id:Number(read("item_id")),
-              options:{bonus_id:read("bonus_id"),
-                       redirected_base_stats:read("redirected_base_stats")}};
-    }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
   // Until the replacement source is received, no previous SHA may authorize
   // a new run. Edits during the async read also cannot reinstate old proof.
   state.seasonGearTargetIlevel=null;
@@ -1186,6 +1178,14 @@ async function chooseInstalledFlask() {
      gear.season_build!==build ||
      gear.installed_manifest_sha256!==sha)
     throw Error("VERIFIED_FLASK_EXACT_INSTALLED_GEAR_UNAVAILABLE");
+  const priorTrinkets=[field("trinket1"),field("trinket2")];
+  const priorSpecial=Array.from($("special-rows").querySelectorAll(".gear-row"))
+    .map(row=>{
+      const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
+      return {slot:read("slot"),item_id:Number(read("item_id")),
+              options:{bonus_id:read("bonus_id"),
+                       redirected_base_stats:read("redirected_base_stats")}};
+    }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
   installSeasonGearHints(gear);
   state.seasonGearTargetIlevel=level;
   setTrinketSelection("trinket1",priorTrinkets[0]);
@@ -1331,14 +1331,6 @@ async function bindUniqueInstalledOilVariant() {
     return;
   }
   const scope=seasonBuildInputScope(true);
-  const oldTrinkets=[field("trinket1"),field("trinket2")];
-  const oldSpecial=Array.from($("special-rows").querySelectorAll(".gear-row"))
-    .map(row=>{
-      const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
-      return {slot:read("slot"),item_id:Number(read("item_id")),
-        options:{bonus_id:read("bonus_id"),
-                 redirected_base_stats:read("redirected_base_stats")}};
-    }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
   state.seasonGearTargetIlevel=null;
   const gear=await api("/api/v1/season-gear?game_build="+
     encodeURIComponent(build)+"&target_ilevel="+level+
@@ -1353,6 +1345,14 @@ async function bindUniqueInstalledOilVariant() {
      gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"||
      gear.season_build!==build||gear.installed_manifest_sha256!==sha)
     throw Error("VERIFIED_OIL_EXACT_INSTALLED_GEAR_UNAVAILABLE");
+  const oldTrinkets=[field("trinket1"),field("trinket2")];
+  const oldSpecial=Array.from($("special-rows").querySelectorAll(".gear-row"))
+    .map(row=>{
+      const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
+      return {slot:read("slot"),item_id:Number(read("item_id")),
+        options:{bonus_id:read("bonus_id"),
+                 redirected_base_stats:read("redirected_base_stats")}};
+    }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
   installSeasonGearHints(gear);
   state.seasonGearTargetIlevel=level;
   setTrinketSelection("trinket1",oldTrinkets[0]);
@@ -2631,14 +2631,6 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     if(installedScope.environment_ready===true &&
        installedScope.environment_installed===true) {
       const sha=installedSha,build=installedBuild,level=installedLevel;
-      const priorTrinkets=[field("trinket1"),field("trinket2")];
-      const priorSpecial=Array.from($("special-rows").querySelectorAll(".gear-row"))
-        .map(row=>{
-          const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
-          return {slot:read("slot"),item_id:Number(read("item_id")),
-            options:{bonus_id:read("bonus_id"),
-                     redirected_base_stats:read("redirected_base_stats")}};
-        }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
       try{
         if(typeof sha!=="string"||!/^[a-f0-9]{64}$/.test(sha) ||
            typeof build!=="string"||!/^\d+(?:\.\d+){3}$/.test(build) ||
@@ -2655,6 +2647,14 @@ async function buildSeasonEnvironment(forUserVariant=false) {
            gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES" ||
            gear.season_build!==build||gear.installed_manifest_sha256!==sha)
           throw Error("SEASON_GEAR_INSTALLED_SOURCE_UNAVAILABLE");
+      const priorTrinkets=[field("trinket1"),field("trinket2")];
+      const priorSpecial=Array.from($("special-rows").querySelectorAll(".gear-row"))
+        .map(row=>{
+          const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
+          return {slot:read("slot"),item_id:Number(read("item_id")),
+            options:{bonus_id:read("bonus_id"),
+                     redirected_base_stats:read("redirected_base_stats")}};
+        }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
         installSeasonGearHints(gear);
         state.seasonGearTargetIlevel=level;
         setTrinketSelection("trinket1",priorTrinkets[0]);

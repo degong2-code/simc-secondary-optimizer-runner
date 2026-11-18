@@ -778,10 +778,13 @@ const state={
     flask_item_id:241327,socket_total:4,J:92,F:165}]
 };
 const calls=[],restored=[];
-let changeSocketsDuringFetch=false;
+let changeSocketsDuringFetch=false,changeTrinketsDuringFetch=false;
 const api=async u=>{
  calls.push(u);
  if(changeSocketsDuringFetch)$("season-target-socket-count").value="5";
+ if(changeTrinketsDuringFetch){
+   $("trinket1").value="103";$("trinket2").value="104";
+ }
  return {status:"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
    source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
    season_build:"12.1.5.70783",installed_manifest_sha256:B,
@@ -851,6 +854,19 @@ const make=(oilUseIntent=false)=>Function(
     "STALE_SOURCE_MUST_NOT_APPLY_OPTION_CATALOG");
  assert($("season-verified-flask-status").textContent.includes(
     "조회 중 영약"));
+ // Changing equipment during the in-flight GET must win over its snapshot.
+ // This was a real UI race: the previous pre-await 101/102 silently returned.
+ changeSocketsDuringFetch=false;
+ changeTrinketsDuringFetch=true;
+ $("season-target-socket-count").value="4";
+ state.seasonGear={installed_manifest_sha256:A};
+ state.seasonGearTargetIlevel=334;
+ await make()();
+ assert.strictEqual(calls.length,3,"ONE_NEW_READ_ONLY_GEAR_GET");
+ assert.strictEqual($("trinket1").value,"103",
+   "LATEST_TRINKET_1_EDIT_MUST_SURVIVE_INSTALLED_F_BIND");
+ assert.strictEqual($("trinket2").value,"104",
+   "LATEST_TRINKET_2_EDIT_MUST_SURVIVE_INSTALLED_F_BIND");
  console.log("V490_EXACT_F_J_BIND_NO_NATIVE_AND_AMBIGUOUS_BLOCK_PASS");
 })().catch(e=>{console.error(e);process.exitCode=1});
 """
@@ -902,10 +918,13 @@ const state={oilLoadouts:[row],seasonGearTargetIlevel:334,
 const scope=Function("$","field","oilUseIntent",raw.slice(a,b)+
  "return seasonBuildInputScope;")($,field,true);
 const received=[],installed=[],notes=[],restored=[];
-let changing=false;
+let changing=false,changeTrinketsDuringFetch=false;
 const api=async url=>{
  received.push(url);
  if(changing)$("season-target-socket-count").value="5";
+ if(changeTrinketsDuringFetch){
+   $("trinket1").value="333";$("trinket2").value="444";
+ }
  return {status:"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
   source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
   season_build:"12.1.5.70783",installed_manifest_sha256:sha,
@@ -950,6 +969,17 @@ const bind=Function("state","$","field","valueInt",
    "SOCKET_CHANGE_DURING_GET_CANNOT_INSTALL_OLD_SHA");
  assert.strictEqual(state.seasonGearTargetIlevel,null);
  assert(notes.at(-1).includes("조회 중"));
+ // Still the same F/J/O source, but the user edited equipment during GET.
+ changing=false;
+ changeTrinketsDuringFetch=true;
+ $("season-target-socket-count").value="4";
+ state.seasonGearTargetIlevel=334;
+ await bind();
+ assert.strictEqual(received.length,3);
+ assert.strictEqual($("trinket1").value,"333",
+   "OIL_REBIND_MUST_PRESERVE_LATEST_TRINKET_1");
+ assert.strictEqual($("trinket2").value,"444",
+   "OIL_REBIND_MUST_PRESERVE_LATEST_TRINKET_2");
  console.log("M3_EXACT_SINGLE_OIL_FJ_INSTALL_AND_AMBIGUITY_PASS");
 })().catch(e=>{console.error(e);process.exitCode=1});
 """
@@ -1764,6 +1794,15 @@ console.log("V477_PINNED_TRINKET_GEAR_PREFLIGHT_PASS");
         self.assertIn('setTrinketSelection("trinket2",priorTrinkets[1]);',js)
         self.assertIn('fillGearRows("special-rows",retained);',js)
         self.assertIn("specialAllowedSlots(selected).includes(entry.slot)",js)
+        # Never restore stale equipment captured before the asynchronous GET.
+        build=js[js.index("async function buildSeasonEnvironment("):
+                 js.index("function showEnvironmentBuild(")]
+        self.assertGreater(build.index('const priorTrinkets=['),
+                           build.index('const gear=await api("/api/v1/season-gear'))
+        self.assertLess(build.index('const priorTrinkets=['),
+                        build.index('installSeasonGearHints(gear)'))
+        self.assertGreater(build.index('const priorSpecial='),
+                           build.index('const gear=await api("/api/v1/season-gear'))
 
     def test_v489_ambiguous_base_budget_guides_existing_user_variant(self):
         """Explain the existing user UI path; never choose F/J client-side."""
