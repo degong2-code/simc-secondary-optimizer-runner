@@ -80,7 +80,7 @@ class PermanentEnchantSameBuildJoin(unittest.TestCase):
                   ["SpellID","Effect","EffectIndex","EffectMiscValue_0","DifficultyID"],[
             {"SpellID":777,"Effect":54,"EffectIndex":0,"EffectMiscValue_0":8025,"DifficultyID":0},
             {"SpellID":778,"Effect":53,"EffectIndex":0,"EffectMiscValue_0":123456,"DifficultyID":0},
-            {"SpellID":779,"Effect":54,"EffectIndex":0,"EffectMiscValue_0":8039,"DifficultyID":0}])
+            {"SpellID":779,"Effect":53,"EffectIndex":0,"EffectMiscValue_0":123456,"DifficultyID":0}])
         result=probe.wago_join(self.root,self.simc,self.highest,11)
         self.assertEqual(result["highest_source_rank_linked"],0)
         self.assertEqual(result["highest_source_rank_unlinked_ids"],[8025,8039])
