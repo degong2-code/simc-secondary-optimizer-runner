@@ -123,6 +123,104 @@ def decide(candidate, receipts=None):
     }
 
 
+
+def selected_equipment_source_mask_match(*, permanent_source, item_metadata,
+                                         selected_slot):
+    """Reuse SimC's permanent_enchant.cpp class/inventory/subclass predicate.
+
+    This is a SOURCE-MASK COMPARISON, not Policy A product_input proof.
+    The caller must supply SAME-BUILD, internally sealed v230 exact
+    item_metadata and chosen representative equipment slot; raw user JSON
+    cannot authenticate those inputs. An exact selected item is required,
+    not a catalog of every weapon or current equipped items.
+
+    SimC itself owns runeforges, effect execution and DPS. Those do not
+    require this physical Wago enchant path.
+    """
+    if (type(permanent_source) is not dict or
+        type(item_metadata) is not dict or
+        type(selected_slot) is not str or
+        selected_slot not in {
+            "head","shoulders","chest","legs","feet",
+            "wrists","hands","waist","back","finger1","finger2",
+            "main_hand","off_hand"}):
+        raise ValueError("PERMANENT_SELECTED_ITEM_SOURCE_FIELDS_INVALID")
+    keys=("item_class","inventory_type_mask","item_subclass_mask")
+    if (any(type(permanent_source.get(k)) is not int or
+            permanent_source[k]<0 or permanent_source[k]>=2**32
+            for k in keys) or
+        any(type(item_metadata.get(k)) is not int or
+            item_metadata[k]<0 for k in (
+                "item_id","class_id","subclass_id","inventory_type")) or
+        item_metadata["item_id"]<=0 or
+        item_metadata["inventory_type"]>=32 or
+        item_metadata["subclass_id"]>=32):
+        raise ValueError("PERMANENT_SELECTED_ITEM_EXACT_METADATA_INVALID")
+    cls=permanent_source["item_class"]
+    inventory_mask=permanent_source["inventory_type_mask"]
+    subclass_mask=permanent_source["item_subclass_mask"]
+    icls=item_metadata["class_id"]
+    inv=item_metadata["inventory_type"]
+    sub=item_metadata["subclass_id"]
+    reasons=[]
+    if cls not in (2,4):
+        reasons.append("NOT_DPS_EQUIPMENT_ENCHANT_CLASS")
+    if icls!=cls:
+        reasons.append("ENCHANT_AND_ITEM_CLASS_MISMATCH")
+    if cls==4:
+        if selected_slot in ("main_hand","off_hand"):
+            reasons.append("ARMOR_ENCHANT_ON_WEAPON_HAND")
+        # Only the item type may establish the exact intended user slot.
+        # Reuse the same retail InventoryType mapping as original v213.
+        slot_types={
+            "head":{1},"shoulders":{3},"chest":{5,20},
+            "legs":{7},"feet":{8},"wrists":{9},"hands":{10},
+            "waist":{6},"back":{16},
+            "finger1":{11},"finger2":{11}}
+        if inv not in slot_types.get(selected_slot,set()):
+            reasons.append("SELECTED_ARMOR_SLOT_ITEM_TYPE_MISMATCH")
+        if not inventory_mask:
+            reasons.append("ARMOR_ENCHANT_SOURCE_INVENTORY_MASK_MISSING")
+    if cls==2:
+        if selected_slot not in ("main_hand","off_hand"):
+            reasons.append("WEAPON_ENCHANT_ON_ARMOR_SLOT")
+        if not subclass_mask:
+            reasons.append("WEAPON_ENCHANT_SUBCLASS_MASK_MISSING")
+        # Equipment item inventory types for already-selected hand:
+        # 21 means main-hand-only; 22 means off-hand-only.
+        if selected_slot=="main_hand" and inv==22:
+            reasons.append("OFFHAND_ONLY_ITEM_IN_MAIN_HAND")
+        if selected_slot=="off_hand" and inv in (15,17,21,26):
+            reasons.append("MAIN_OR_RANGED_ONLY_ITEM_IN_OFF_HAND")
+    # Unlike SimC's lookup with zero inventory/subclass as a wildcard, an
+    # internal exact physical ItemID proves the actual zero-coded subtype.
+    # Fail closed instead of accepting a nonmatching source mask.
+    if inventory_mask and not (inventory_mask & (1<<inv)):
+        reasons.append("SOURCE_INVENTORY_MASK_NOT_MATCHED")
+    if subclass_mask and not (subclass_mask & (1<<sub)):
+        reasons.append("SOURCE_SUBCLASS_MASK_NOT_MATCHED")
+    matched=not reasons
+    return {
+        "status":("EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED"
+                  if matched else "SOURCE_MASK_OR_HAND_NOT_MATCHED"),
+        "matched":matched,
+        "selected_slot":selected_slot,
+        "selected_item_id":item_metadata["item_id"],
+        "source_item_class":cls,
+        "source_inventory_type_mask":inventory_mask,
+        "source_item_subclass_mask":subclass_mask,
+        "item_class":icls,
+        "item_inventory_type":inv,
+        "item_subclass_id":sub,
+        "missing_or_conflicting_conditions":reasons,
+        "trusted_v230_item_provenance_required":True,
+        "exact_simc_input_not_attested":True,
+        "same_effect_and_highest_quality_not_attested":True,
+        "fixed_E_or_no_E_not_attested":True,
+        "policy_A_product_input_verified":False,
+        "ui_selectable":False,"native_calls":0}
+
+
 def candidate_from_source_enchant(source_catalog, row):
     """Shared v196/v216 source candidate shape; never evidence by itself."""
     if type(source_catalog) is not dict or type(row) is not dict:
