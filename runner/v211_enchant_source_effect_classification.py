@@ -118,7 +118,11 @@ def parse_enums(text):
       "ITEM_MOD_HASTE_RATING":36,"ITEM_MOD_VERSATILITY_RATING":40,
       "ITEM_MOD_MASTERY_RATING":49,"ITEM_MOD_SPEED_RATING":61,
       "ITEM_MOD_LEECH_RATING":62,"ITEM_MOD_AVOIDANCE_RATING":63,
-      "ITEM_MOD_STRENGTH_AGILITY_INTELLECT":71}
+      "ITEM_MOD_STRENGTH_AGILITY_INTELLECT":71,
+      "ITEM_MOD_STRENGTH_AGILITY":72,
+      "ITEM_MOD_AGILITY_INTELLECT":73,
+      "ITEM_MOD_STRENGTH_INTELLECT":74,
+      "ITEM_ENCHANTMENT_RESISTANCE":4}
     need(all(out.get(k)==v for k,v in required.items()),
          "SIMC_ENCHANT_OR_ITEM_MOD_ENUM_DRIFT")
     return out
@@ -176,7 +180,10 @@ MODS={
  61:("speed_rating","TERTIARY_RATING"),
  62:("leech_rating","TERTIARY_RATING"),
  63:("avoidance_rating","TERTIARY_RATING"),
- 71:("strength_agility_intellect","PRIMARY_ATTRIBUTE_HYBRID")}
+ 71:("strength_agility_intellect","PRIMARY_ATTRIBUTE_HYBRID"),
+ 72:("strength_agility","PRIMARY_ATTRIBUTE_HYBRID"),
+ 73:("agility_intellect","PRIMARY_ATTRIBUTE_HYBRID"),
+ 74:("strength_intellect","PRIMARY_ATTRIBUTE_HYBRID")}
 def spell_role(text,handler):
     low=(text or "").lower()
     if handler=="eyes_of_the_eagle":return "CRIT_EFFECTIVENESS_PASSIVE"
@@ -244,6 +251,15 @@ def classify_row(candidate,dbc,enums,spelltexts,handlers,evidence,*,
             name,category=mod
             static.append({"component_index":idx+1,"item_mod_id":prop,
                            "item_mod":name,"category":category,
+                           "dbc_amount":amount,"scaling_id":dbc["id_scaling"],
+                           "coefficient":coeff})
+        elif typ==enums["ITEM_ENCHANTMENT_RESISTANCE"]:
+            # Pinned SimC declares a non-CHMV resistance-category component.
+            # Preserve raw scaling; SimC alone computes its combat value.
+            static.append({"component_index":idx+1,
+                           "item_mod_id":prop,"item_mod":"resistance",
+                           "category":"NON_CHMV_RESISTANCE",
+                           "source_enchant_type":"ITEM_ENCHANTMENT_RESISTANCE",
                            "dbc_amount":amount,"scaling_id":dbc["id_scaling"],
                            "coefficient":coeff})
         elif typ==equip_type:
