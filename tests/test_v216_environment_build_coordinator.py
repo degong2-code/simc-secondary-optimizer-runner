@@ -2063,5 +2063,99 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             .read_text(encoding="utf8"))))
 
 
+class FirstSealedEnchantScopeBridgeTests(unittest.TestCase):
+    """No real source download or Native; actual v216 -> v196 consumer call."""
+
+    def test_missing_optional_enchant_does_not_block_base(self):
+        out=v216._fresh_first_sealed_representative_enchant_mask_preview(
+            collected={},compilation={})
+        self.assertEqual(out["status"],
+                         "SEALED_REPRESENTATIVE_ENCHANT_SCOPE_PENDING")
+        self.assertFalse(out["ui_selectable"])
+        self.assertEqual((out["native_calls"],out["network_calls"]),(0,0))
+
+    def test_existing_v232_v230_v583_source_calls_v196_without_admission(self):
+        build="12.1.5.70783"
+        revision="d"*40
+        with tempfile.TemporaryDirectory() as tmp:
+            root=pathlib.Path(tmp)
+            def staged(folder, name, payload, stamp):
+                relative=folder+"/"+name+".json"
+                path=root/relative
+                path.parent.mkdir(parents=True,exist_ok=True)
+                raw=json.dumps(payload,sort_keys=True).encode("utf8")
+                path.write_bytes(raw)
+                return {"candidate_path":str(path),"source_stage":{
+                    "stage_id":name,"output_paths":{"candidate":relative},
+                    "receipt_sha256":stamp}},raw
+            representative={
+                "game_build":build,"simc_revision":revision,
+                "source_seed_receipt_sha256":"b"*64,
+                "item_data_sha256":"e"*64,
+                "selected_G_slot_ids":{"finger1":268266}}
+            rep,rep_raw=staged("source","v232",representative,"c"*64)
+            join={"game_build":build,
+                  "status":"PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",
+                  "matches":[{"enchant_id":8025,
+                              "physical_items":[{"item_id":244444}],
+                              "simc_rank_rows":[{
+                                  "enchant_id":8025,"item_class":4,
+                                  "inventory_type_mask":1<<11,
+                                  "item_subclass_mask":0}]}]}
+            wago,join_raw=staged("fresh_source","v583",join,"f"*64)
+            def read_receipt(path):
+                name=path.stem
+                contents=rep_raw if name=="v232" else join_raw
+                stamp="c"*64 if name=="v232" else "f"*64
+                return {"receipt_sha256":stamp,
+                        "output_paths":{"candidate":(
+                            "source/v232.json" if name=="v232" else
+                            "fresh_source/v583.json")},
+                        "outputs":{"candidate":{"sha256":
+                            v216.digest(contents)}}}
+            source={"game_build":build,"simc_revision":revision,
+                    "manifest_sha256":"a"*64,
+                    "v196_enchant_source":{"rows":[{
+                        "enchant_id":8025,"item_class":4,
+                        "inventory_type_mask":1<<11,
+                        "item_subclass_mask":0}]}}
+            metadata={"game_build":build,"simc_revision":revision,
+                      "source_sha256":"e"*64,
+                      "source_receipt_sha256":"b"*64,
+                      "items":[{"item_id":268266,"class_id":4,
+                                "subclass_id":0,"inventory_type":11}]}
+            collected={
+                "expected_game_build":build,
+                "fresh_one_spec_simc_representative":{
+                    "status":"FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE",
+                    **rep},
+                "fresh_permanent_enchant_item_source":{
+                    "status":"PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",
+                    **wago},
+                "fresh_lazy_full_pinned_simc_item_source":{
+                    "source_dir":str(root/"source"/"v256_full_pinned_simc")}}
+            compiled={"stage_root":str(root),"simc_revision":revision,
+                      "source_catalog_path":str(root/"fresh_source"/"v213.json")}
+            with (mock.patch.object(v216.stage_engine,"_read_receipt",
+                                    side_effect=read_receipt),
+                  mock.patch.object(v216.simc_item_metadata,"from_seed",
+                                    return_value=metadata) as parsed,
+                  mock.patch.object(v216.environment_manifest,"read_json",
+                                    return_value=(source,"hash")),
+                  mock.patch.object(v216.user_catalog.source_bridge,
+                                    "verify_catalog")):
+                out=v216._fresh_first_sealed_representative_enchant_mask_preview(
+                    collected=collected,compilation=compiled)
+            self.assertEqual(parsed.call_count,1)
+            self.assertTrue(out["matched"],out)
+            self.assertEqual(out["selected_representative_item_id"],268266)
+            self.assertEqual(out["wago_physical_enchant_item_id"],244444)
+            self.assertEqual(out["selected_slot"],"finger1")
+            self.assertTrue(out["reference_representative_not_user_equipment"])
+            self.assertFalse(out["policy_A_product_input_verified"])
+            self.assertFalse(out["ui_selectable"])
+            self.assertEqual((out["native_calls"],out["network_calls"]),(0,0))
+
+
 if __name__=="__main__":
     unittest.main()
