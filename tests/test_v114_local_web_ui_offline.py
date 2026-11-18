@@ -1026,7 +1026,7 @@ const bind=Function("state","$","field","valueInt",
         self.assertNotIn('value="3368"',page)
         self.assertIn('state.dkRuneIds=new Set()',js)
         self.assertIn('PINNED_DK_RUNES_INSTALLED',js)
-        self.assertIn('이번 시즌 검증된 죽음의 기사 룬만 새 세션',js)
+        self.assertIn('설치된 SimC에서 확인된 죽음의 기사 룬만 새 세션',js)
         catalog=self.client.get("/api/v1/season-option-catalog",
                                 headers=self.head)
         self.assertEqual(catalog.status_code,200,catalog.text)
