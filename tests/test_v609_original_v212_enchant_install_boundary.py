@@ -171,6 +171,28 @@ class OriginalInstallerOneVerifiedE0Choice(unittest.TestCase):
             self.assertEqual(installed["published_verified_option_count"],1)
             self.assertEqual((installed["official_B"],installed["official_T"]),
                              (3110,3110))
+            # Actually pass through the original v217 content-addressed
+            # installer and persisted receipt, not merely compile a Python
+            # dict that resembles a verified environment.
+            first=build._install_verified_fresh_environment_only(
+                compilation=compilation,staged=staged,
+                trusted_budget_evidence=trusted_budget,
+                trusted_policy_A_receipts_by_id={91001:receipts},
+                target_ilevel=334)
+            self.assertEqual(first["stage_status"],"EXECUTED_AND_SEALED")
+            stored=pathlib.Path(first["stage_output_path"])
+            self.assertTrue(stored.is_file())
+            on_disk=json.loads(stored.read_text("utf8"))
+            self.assertEqual(on_disk,installed)
+            self.assertTrue(install.verify_fresh_installed_environment(on_disk))
+            second=build._install_verified_fresh_environment_only(
+                compilation=compilation,staged=staged,
+                trusted_budget_evidence=trusted_budget,
+                trusted_policy_A_receipts_by_id={91001:receipts},
+                target_ilevel=334)
+            self.assertEqual(second["stage_status"],"REUSED_VERIFIED")
+            self.assertEqual(second["manifest_sha256"],first["manifest_sha256"])
+            self.assertEqual(second["stage_output_path"],first["stage_output_path"])
             preview=install.preview_installed_selected_enchant_budget(
                 document=installed,slot="feet",item_id=987654,
                 enchant_id=91001)
@@ -189,7 +211,7 @@ class OriginalInstallerOneVerifiedE0Choice(unittest.TestCase):
             base_profile="finger1=id=111\nfinger2=id=222\n"
             actual_profile=base_profile+"feet=id=987654,enchant_id=91001\n"
             consumed=product._signed_installed_user_E0_profile(
-                doc=installed,selected=selected,
+                doc=on_disk,selected=selected,
                 profile=actual_profile,user_final_T=None)
             self.assertEqual(consumed["selected_identity_sha256"],
                              preview["selected_identity_sha256"])
@@ -198,7 +220,7 @@ class OriginalInstallerOneVerifiedE0Choice(unittest.TestCase):
                     product.EntryBlocked,
                     "FRESH_SELECTED_E0_EXACT_ONCE_SIMC_INPUT_REQUIRED"):
                 product._signed_installed_user_E0_profile(
-                    doc=installed,selected=selected,
+                    doc=on_disk,selected=selected,
                     profile=actual_profile+
                         "chest=id=333,enchant_id=91001\n",
                     user_final_T=None)
