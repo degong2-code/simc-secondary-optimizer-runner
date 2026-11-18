@@ -1111,6 +1111,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
          season_environment_receipt_path is None and
          current_season_product and static_cache_path is None),
          "FRESH_SEASON_INSTALLED_REQUIRES_ORIGINAL_SOURCE_LINKS")
+    # Explicit DK runes in a newly constructed season must be selected from
+    # the exact installed, SimC-pinned v212 rune registry. The historical
+    # RUNE_IDS fallback remains for pre-v212 legacy sessions only; never use
+    # it when the user requested a fresh/current-season product.
+    if current_season_product and RUNEFORGE_FIELD in user:
+        need(fresh_installed_environment_path is not None,
+             "FRESH_DK_RUNEFORGE_SOURCE_NOT_INSTALLED")
     # The ordinary reference G cannot fund Fury's dual-twohand automatic
     # B/T. Only a v216 source-owned Fury v277 Native G, bound into the
     # exact installed v212 and same spec physical candidate, may do that.
