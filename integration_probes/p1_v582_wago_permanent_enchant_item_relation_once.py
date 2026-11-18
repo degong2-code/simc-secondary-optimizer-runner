@@ -397,6 +397,8 @@ def run(build, revision, expansion_id, out):
             "slot_resolved_count":extra.get("slot_resolved_count"),
             "weapon_hand_pending_count":extra.get("weapon_hand_pending_count"),
             "static_chmv_candidate_count":extra.get("static_chmv_candidate_count"),
+            "unknown_component_candidate_count":
+                extra.get("unknown_component_candidate_count"),
             "quality_noninferior_source_count":
                 extra.get("quality_noninferior_source_count"),
             "source_quality_observations":extra.get(
@@ -459,6 +461,7 @@ def main():
              for key in ("status","reason","candidate_count",
                          "slot_resolved_count","weapon_hand_pending_count",
                          "static_chmv_candidate_count",
+                         "unknown_component_candidate_count",
                          "quality_noninferior_source_count")},
         "additional":{key:result["production_v583_additional_scope_classification"][key]
                       for key in ("actual_source_unscoped_count","scope_counts",
