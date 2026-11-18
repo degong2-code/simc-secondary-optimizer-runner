@@ -2,6 +2,7 @@ import json
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from runner import v046_static_item_cache as item_cache
@@ -123,6 +124,116 @@ class RegisteredDualRingSourceScopeTests(unittest.TestCase):
             with self.subTest(bad=bad),self.assertRaises(
                     p.EnvironmentBlocked):
                 check(bad)
+
+
+class SelectedPermanentEnchantE0BudgetTests(unittest.TestCase):
+    """Synthetic signed-v212 boundary, not an actual user SimC effect test."""
+
+    def installed(self,enchants):
+        zero=dict.fromkeys(("crit_rating","haste_rating",
+                            "mastery_rating","versatility_rating"),0)
+        old={"status":"ARITHMETIC_RECONCILED_SOURCE_AUTHENTICATION_EXTERNAL",
+             "reference_G":2850,"effective_G":2850,
+             "J":92,"F":165,"fixed_O":dict(zero),
+             "fixed_L":dict(zero),"fixed_E":dict(zero),
+             "G_reference_excludes_selected_E":True,
+             "reference_B":3107,"base_B":3107,"final_T":3107,
+             "game_build":"12.1.5.70783","target_ilevel":334,
+             "source_catalog_manifest_sha256":"a"*64,
+             "source_catalog_artifact_sha256":"b"*64}
+        return {
+            "status":"FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY",
+            "environment_ready":True,"environment_installed":True,
+            "manifest_sha256":"c"*64,
+            "game_build":old["game_build"],"target_ilevel":334,
+            "source_catalog_manifest_sha256":"a"*64,
+            "source_catalog_artifact_sha256":"b"*64,
+            "official_G":2850,"official_effective_G":2850,
+            "official_J":92,"official_F":165,
+            "official_O":dict(zero),"official_B":3107,
+            "official_T":3107,"v222_reconciled_budget":old,
+            "published_verified_options":enchants,
+        }
+
+    def test_signed_source_E0_keeps_B_T_but_distinguishes_cache_identity(self):
+        E0=dict.fromkeys(("crit_rating","haste_rating",
+                          "mastery_rating","versatility_rating"),0)
+        rows=[{"enchant_id":7967,
+               "simc_token":"enchant_ring__eyes_of_the_eagle",
+               "slot":"finger1/finger2","ui_selectable":True,
+               "verified_fixed_E":E0,
+               "chmv_budget_receipt_sha256":"d"*64}]
+        doc=self.installed(rows)
+        with mock.patch.object(p,"verify_fresh_installed_environment",
+                               return_value=True) as verified:
+            first=p.preview_installed_selected_enchant_budget(
+                document=doc,slot="finger1",item_id=268266,
+                enchant_id=7967)
+            second=p.preview_installed_selected_enchant_budget(
+                document=doc,slot="finger2",item_id=268268,
+                enchant_id=7967)
+            manual=p.preview_installed_selected_enchant_budget(
+                document=doc,slot="finger1",item_id=268266,
+                enchant_id=7967,manual_final_T=3300)
+            self.assertEqual(verified.call_count,3)
+        self.assertEqual((first["base_B"],first["final_T"]),(3107,3107))
+        self.assertEqual((manual["base_B"],manual["final_T"]),(3300,3300))
+        self.assertEqual(first["fixed_E"],E0)
+        self.assertTrue(first["fixed_E_zero_is_valid"])
+        self.assertFalse(first["runtime_selectable"])
+        self.assertTrue(first["user_physical_item_and_simc_profile_binding_pending"])
+        self.assertNotEqual(first["selected_identity_sha256"],
+                            second["selected_identity_sha256"])
+        self.assertNotEqual(first["selected_identity_sha256"],
+                            manual["selected_identity_sha256"])
+        self.assertEqual((first["native_calls"],first["network_calls"]),(0,0))
+
+    def test_positive_static_E_added_once_auto_manual_T_keeps_authority(self):
+        zero=dict.fromkeys(("crit_rating","haste_rating",
+                            "mastery_rating","versatility_rating"),0)
+        E={**zero,"haste_rating":30}
+        option={"enchant_id":8025,"simc_token":"enchant_ring__silvermoons_alacrity",
+                "slot":"finger1/finger2","ui_selectable":True,
+                "verified_fixed_E":E,
+                "chmv_budget_receipt_sha256":"d"*64}
+        doc=self.installed([option])
+        with mock.patch.object(p,"verify_fresh_installed_environment",
+                               return_value=True):
+            auto=p.preview_installed_selected_enchant_budget(
+                document=doc,slot="finger1",item_id=268266,
+                enchant_id=8025)
+            manual=p.preview_installed_selected_enchant_budget(
+                document=doc,slot="finger1",item_id=268266,
+                enchant_id=8025,manual_final_T=3500)
+            self.assertEqual((auto["base_B"],auto["final_T"]),(3137,3137))
+            self.assertEqual((manual["base_B"],manual["final_T"]),(3500,3500))
+            self.assertFalse(auto["fixed_E_zero_is_valid"])
+            for altered,expected in (
+                ({"slot":"feet"},"USER_SLOT_OUTSIDE_ORIGINAL_MASK"),
+                ({"item_id":0},"FINAL_SLOT_ITEM_ID_REQUIRED"),
+                ({"enchant_id":99999},"EXACT_INSTALLED_REGISTRATION_REQUIRED")):
+                with self.subTest(altered=altered),self.assertRaisesRegex(
+                        p.EnvironmentBlocked,expected):
+                    p.preview_installed_selected_enchant_budget(
+                        document=doc,slot="finger1",item_id=268266,
+                        enchant_id=8025,**altered)
+            missing=self.installed([{k:v for k,v in option.items() if
+                                     k not in ("verified_fixed_E",
+                                               "chmv_budget_receipt_sha256")}])
+            with self.assertRaisesRegex(
+                    p.EnvironmentBlocked,"STATIC_E_NOT_ESTABLISHED"):
+                p.preview_installed_selected_enchant_budget(
+                    document=missing,slot="finger1",item_id=268266,
+                    enchant_id=8025)
+            unknown=self.installed([option])
+            unknown["v222_reconciled_budget"]={
+                **unknown["v222_reconciled_budget"],
+                "G_reference_excludes_selected_E":False}
+            with self.assertRaisesRegex(
+                    p.EnvironmentBlocked,"G_OWNERSHIP_UNKNOWN"):
+                p.preview_installed_selected_enchant_budget(
+                    document=unknown,slot="finger1",item_id=268266,
+                    enchant_id=8025)
 
 
 class FreshEnvironmentSourceStageTests(unittest.TestCase):
