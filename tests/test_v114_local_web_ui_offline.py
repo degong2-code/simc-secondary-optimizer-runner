@@ -2397,7 +2397,19 @@ assert($("season-option-catalog-status").textContent.includes("미승인"));
 assert($("season-option-catalog-status").textContent.includes("실행 선택 불가"));
 assert.strictEqual($("season-enchant-groups").children.length,1);
 assert($("season-enchant-groups").children[0].children[1].children[0]
-  .textContent.includes("E 벡터"));
+  .textContent.includes("고정 E 미확정"));
+const proven={...installed,verified_installed_enchant_registrations:{
+  ...installed.verified_installed_enchant_registrations,
+  items:[{...installed.verified_installed_enchant_registrations.items[0],
+    verified_fixed_E:{crit_rating:0,haste_rating:30,
+      mastery_rating:0,versatility_rating:0},
+    chmv_budget_receipt_sha256:"f".repeat(64)}]}};
+render(proven);
+assert($("season-enchant-groups").children[0].children[1].children[0]
+  .textContent.includes("고정 E 원본 확인"));
+assert.strictEqual($("season_enchant_finger1").disabled,true,
+  "verified fixed E alone cannot unlock an unbound user SimC profile");
+assert.strictEqual($("season_enchant_finger1").options.length,1);
 render({...installed,verified_installed_enchant_registrations:{
   ...installed.verified_installed_enchant_registrations,
   installed_manifest_sha256:"b".repeat(64)}});
