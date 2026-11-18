@@ -44,6 +44,86 @@ class LocalWebAPIOffline(unittest.TestCase):
 
 
 
+    def test_v591_installed_v113_snapshot_preserves_only_sealed_optional_locator(self):
+        """One original v212 install -> compact v113 user source, no Native/HTTP."""
+        jobs=self.app.state.jobs
+        build="12.1.5.70783"
+        digest="a"*64
+        folder=jobs.root/"_fresh_season_sources"/("wago_"+build)/"fresh_source"
+        folder.mkdir(parents=True,exist_ok=True)
+        installed=folder/("v212_installed_"+digest[:20]+".json")
+        installed.write_text("{}")
+        catalog=folder/"v213_candidate_catalog.json"
+        catalog.write_text("{}")
+        doc={"game_build":build,"target_ilevel":334,
+             "manifest_sha256":digest,
+             "source_catalog_artifact_sha256":"b"*64,
+             "source_catalog_manifest_sha256":"c"*64,
+             "official_O_physical_source":None}
+        reference={"status":"PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",
+                   "candidate_path":str(folder/"v583.json"),
+                   "source_stage":{"stage_id":"v583",
+                                   "receipt_sha256":"f"*64,
+                                   "output_paths":{"candidate":"fresh_source/v583.json",
+                                                   "unrelated":"ignored"},
+                                   "unrelated_large_list":[100]*200}}
+        keys=("status","source_catalog_path","stage_root","simc_revision",
+              "v191_original_gear_tier_source_paths",
+              "v098_source_only_profile_inputs_unadmitted",
+              "physical_gem_layout_unadmitted",
+              "physical_gem_J_arithmetic_unadmitted",
+              "selected_v221_gem_item_relation_unadmitted",
+              "preflight_sha256","verified_environment_install")
+        compilation={k:None for k in keys}
+        compilation.update({
+            "status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+            "source_catalog_path":str(catalog),
+            "stage_root":str(folder.parent),
+            "simc_revision":"d"*40,
+            "verified_environment_install":{
+                "environment_ready":True,
+                "stage_output_path":str(installed),
+                "manifest_sha256":digest}})
+        original={"normal_build_entry":True,
+                  "zero_history_build":{"environment_ready":True},
+                  "source_compilation":compilation,
+                  "fresh_one_spec_simc_representative":{"status":"SOURCE"},
+                  "fresh_lazy_full_pinned_simc_item_source":{"source_dir":"source"},
+                  "fresh_permanent_enchant_item_source":reference}
+        def read(path,*_args,**_kwargs):
+            return ((doc,"a"*64) if pathlib.Path(path)==installed
+                    else ({"manifest_sha256":"c"*64,"game_build":build},"b"*64))
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                                side_effect=read),
+              mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment"),
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                return_value={"installed_manifest_sha256":digest}),
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE"))):
+            self.assertEqual(jobs.remember_verified_fresh_environment(original),
+                             digest)
+            compact=jobs._verified_fresh_profile_result
+            self.assertEqual(compact["expected_game_build"],build)
+            self.assertEqual(compact["fresh_permanent_enchant_item_source"],{
+                "status":"PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",
+                "candidate_path":str(folder/"v583.json"),
+                "source_stage":{"stage_id":"v583",
+                                "receipt_sha256":"f"*64,
+                                "output_paths":{"candidate":"fresh_source/v583.json"}}})
+            self.assertNotIn("unrelated_large_list",
+                             compact["fresh_permanent_enchant_item_source"][
+                                 "source_stage"])
+            # No selected enchant/source must not block baseline install.
+            missing={**original,
+                     "fresh_permanent_enchant_item_source":{"status":"PENDING"}}
+            self.assertEqual(jobs.remember_verified_fresh_environment(missing),
+                             digest)
+            self.assertIsNone(jobs._verified_fresh_profile_result[
+                "fresh_permanent_enchant_item_source"])
+
+
     def test_m1_myth_default_missing_verified_raid_needs_manual_no_recollect(self):
         jobs=self.app.state.jobs
         with mock.patch.object(jobs.source_credential_store,"load",
