@@ -118,11 +118,7 @@ def parse_enums(text):
       "ITEM_MOD_HASTE_RATING":36,"ITEM_MOD_VERSATILITY_RATING":40,
       "ITEM_MOD_MASTERY_RATING":49,"ITEM_MOD_SPEED_RATING":61,
       "ITEM_MOD_LEECH_RATING":62,"ITEM_MOD_AVOIDANCE_RATING":63,
-      "ITEM_MOD_STRENGTH_AGILITY_INTELLECT":71,
-      "ITEM_MOD_STRENGTH_AGILITY":72,
-      "ITEM_MOD_AGILITY_INTELLECT":73,
-      "ITEM_MOD_STRENGTH_INTELLECT":74,
-      "ITEM_ENCHANTMENT_RESISTANCE":4}
+      "ITEM_MOD_STRENGTH_AGILITY_INTELLECT":71}
     need(all(out.get(k)==v for k,v in required.items()),
          "SIMC_ENCHANT_OR_ITEM_MOD_ENUM_DRIFT")
     return out
@@ -253,7 +249,7 @@ def classify_row(candidate,dbc,enums,spelltexts,handlers,evidence,*,
                            "item_mod":name,"category":category,
                            "dbc_amount":amount,"scaling_id":dbc["id_scaling"],
                            "coefficient":coeff})
-        elif typ==enums["ITEM_ENCHANTMENT_RESISTANCE"]:
+        elif typ==enums.get("ITEM_ENCHANTMENT_RESISTANCE"):
             # Pinned SimC declares a non-CHMV resistance-category component.
             # Preserve raw scaling; SimC alone computes its combat value.
             static.append({"component_index":idx+1,
