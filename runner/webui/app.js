@@ -1606,10 +1606,12 @@ function fillSessionInputs(payload) {
   fillGearRows("crafted-rows",u.embellishments||[]);
   const restoredId=u.selected_season_enchants?.finger1;
   const restoredEagle=[7967,8025,7965].includes(restoredId);
+  const restoredSignedE0=state.installedE0Ids?.has(restoredId)===true;
   const savedEnchant=$("season_enchant_finger1");
   for(const previous of Array.from(savedEnchant.options))
     if(previous.dataset?.historic==="true")previous.remove();
-  if(restoredEagle&&!state.exactUserEnchantIds.has(restoredId)&&
+  if(restoredEagle&&!restoredSignedE0&&
+     !state.exactUserEnchantIds.has(restoredId)&&
      !(restoredId===7967&&state.eagleApproved)) {
     // History is display-only until the same original v212 + Native scope
     // is revalidated. No stored browser choice can approve a new run.
@@ -1618,7 +1620,8 @@ function fillSessionInputs(payload) {
     historical.dataset.historic="true";
     savedEnchant.appendChild(historical);
   }
-  savedEnchant.value=restoredEagle?String(restoredId):"";
+  savedEnchant.value=(restoredSignedE0||restoredEagle)?
+    String(restoredId):"";
   // Recover the exact local inputs from this machine's saved session only.
   // No talent strings or OS file paths are stored in browser localStorage.
   $("binary").value=payload.binary;
