@@ -1902,7 +1902,8 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
     return proofs
 
 
-def _v216_reuse_sealed_v584_selected_supplemental(join, selected_id):
+def _v216_reuse_sealed_v584_selected_supplemental(join, selected_id,
+                                                   simc_revision):
     """One existing v583↔v584 selected DPS gear source; NO new catalog.
 
     Original physical relation and the v584 classification MUST agree on
@@ -1913,6 +1914,10 @@ def _v216_reuse_sealed_v584_selected_supplemental(join, selected_id):
     source=join.get("supplemental_gear_effects_source_only") or {}
     if (source.get("status")!=
             "SUPPLEMENTAL_DPS_ENCHANT_EFFECTS_CLASSIFIED_UNADMITTED"
+        or source.get("game_build")!=join.get("game_build")
+        or source.get("simc_revision")!=simc_revision
+        or type(source.get("rows")) is not list
+        or source.get("candidate_count")!=len(source["rows"])
         or source.get("source_only") is not True
         or source.get("ui_selectable") is not False):
         return None
@@ -2025,7 +2030,7 @@ def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
                 r.get("enchant_id")==selected_enchant_id
                 for r in joined_rows):
             supplemental=_v216_reuse_sealed_v584_selected_supplemental(
-                original_join,selected_enchant_id)
+                original_join,selected_enchant_id,revision)
             if supplemental is None:
                 return pending("SELECTED_USER_ENCHANT_WAGO_SIMC_SOURCE_PENDING")
             joined_rows=[supplemental]
