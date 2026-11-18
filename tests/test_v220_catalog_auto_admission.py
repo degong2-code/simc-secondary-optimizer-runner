@@ -290,5 +290,78 @@ class AutoAdmissionTests(unittest.TestCase):
             policy.decide(self.item,{"made_up":{}})
 
 
+    def test_real_selected_armor_and_subclass_masks_are_source_only(self):
+        source={"item_class":4,"inventory_type_mask":1<<7,
+                "item_subclass_mask":0x1e}
+        legs={"item_id":248161,"class_id":4,"subclass_id":4,"inventory_type":7}
+        result=policy.selected_equipment_source_mask_match(
+            permanent_source=source,item_metadata=legs,selected_slot="legs")
+        self.assertTrue(result["matched"],result)
+        self.assertFalse(result["policy_A_product_input_verified"])
+        self.assertFalse(result["ui_selectable"])
+        self.assertEqual(result["native_calls"],0)
+        self.assertTrue(result["fixed_E_or_no_E_not_attested"])
+        self.assertFalse(policy.selected_equipment_source_mask_match(
+            permanent_source=source,item_metadata=legs,
+            selected_slot="head")["matched"])
+        wrong={**legs,"subclass_id":0}
+        self.assertIn("SOURCE_SUBCLASS_MASK_NOT_MATCHED",
+            policy.selected_equipment_source_mask_match(
+                permanent_source=source,item_metadata=wrong,
+                selected_slot="legs")["missing_or_conflicting_conditions"])
+
+    def test_ranged_source_weapons_match_bow_gun_crossbow_only_main_hand(self):
+        source={"item_class":2,"inventory_type_mask":0,
+                "item_subclass_mask":0x4000c}
+        for subclass in (2,3,18):
+            equipped={"item_id":268207+subclass,"class_id":2,
+                      "subclass_id":subclass,"inventory_type":26}
+            with self.subTest(subclass=subclass):
+                self.assertTrue(policy.selected_equipment_source_mask_match(
+                    permanent_source=source,item_metadata=equipped,
+                    selected_slot="main_hand")["matched"])
+                self.assertFalse(policy.selected_equipment_source_mask_match(
+                    permanent_source=source,item_metadata=equipped,
+                    selected_slot="off_hand")["matched"])
+        wrong={"item_id":268207,"class_id":2,"subclass_id":0,
+               "inventory_type":13}
+        result=policy.selected_equipment_source_mask_match(
+            permanent_source=source,item_metadata=wrong,
+            selected_slot="main_hand")
+        self.assertIn("SOURCE_SUBCLASS_MASK_NOT_MATCHED",
+                      result["missing_or_conflicting_conditions"])
+
+    def test_exact_ring_slot_is_a_source_relation_not_both_slots_approval(self):
+        source={"item_class":4,"inventory_type_mask":1<<11,
+                "item_subclass_mask":0}
+        ring={"item_id":268266,"class_id":4,"subclass_id":0,
+              "inventory_type":11}
+        first=policy.selected_equipment_source_mask_match(
+            permanent_source=source,item_metadata=ring,
+            selected_slot="finger1")
+        self.assertEqual(first["selected_slot"],"finger1")
+        self.assertTrue(first["matched"])
+        self.assertFalse(first["policy_A_product_input_verified"])
+        other=policy.selected_equipment_source_mask_match(
+            permanent_source=source,item_metadata={**ring,"item_id":268267},
+            selected_slot="finger2")
+        self.assertNotEqual(first["selected_item_id"],other["selected_item_id"])
+
+    def test_unknown_equipment_metadata_never_approves_a_mask(self):
+        source={"item_class":2,"inventory_type_mask":0,
+                "item_subclass_mask":0x4000c}
+        with self.assertRaisesRegex(ValueError,
+                                    "PERMANENT_SELECTED_ITEM_EXACT_METADATA_INVALID"):
+            policy.selected_equipment_source_mask_match(
+                permanent_source=source,item_metadata={
+                    "item_id":268207,"class_id":2,"inventory_type":26},
+                selected_slot="main_hand")
+        with self.assertRaisesRegex(ValueError,
+                                    "PERMANENT_SELECTED_ITEM_SOURCE_FIELDS_INVALID"):
+            policy.selected_equipment_source_mask_match(
+                permanent_source=source,item_metadata={},
+                selected_slot="bogus_hand")
+
+
 if __name__=="__main__":
     unittest.main()
