@@ -3240,7 +3240,6 @@ function renderSeasonOptionCatalog(catalog) {
     for(const item of e0Candidates) {
       if(!Number.isSafeInteger(item.enchant_id)||
          item.enchant_id<=0 || item.slot!=="finger1/finger2" ||
-         [7967,8025,7965].includes(item.enchant_id) ||
          !rows.some(row=>row.enchant_id===item.enchant_id &&
            row.slot===item.slot &&
            row.chmv_budget_receipt_sha256===
@@ -3280,8 +3279,9 @@ function renderSeasonOptionCatalog(catalog) {
       state.exactUserEnchantScope=exact.scope;
       for(const row of exact.items) {
         state.exactUserEnchantIds.add(row.enchant_id);
-        selector.appendChild(option(String(row.enchant_id),
-          row.name+" · #"+row.enchant_id+" · 실제 Native 검증"));
+        if(!state.installedE0Ids.has(row.enchant_id))
+          selector.appendChild(option(String(row.enchant_id),
+            row.name+" · #"+row.enchant_id+" · 특정 사용자 Native 검증"));
       }
       refreshExactEnchantAvailability();
       status.textContent="이번 시즌 원본 마부 후보는 전체 미승인입니다. "+
