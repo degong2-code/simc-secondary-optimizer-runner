@@ -1,0 +1,31 @@
+# P1 v587 — Selected permanent-enchant physical applicability and DK fresh installed-registry guard (2026-11-18)
+
+## Why this bounded work
+
+The product is a 26-DPS specialization **target-ilvl / manual final T absolute CHMV DPS optimizer**, NOT a equipment optimizer, full seasonal equipment/enchant item DB, or independent SimC effect engine. The user explicitly required avoiding work irrelevant to output and keeping **SimC-only DK runeforging** separate from item-backed permanent enchants. Existing \`v216→v583/v584→v211/v213\` has source-only classification. The **real consumer gap** remains the selected physical item/application, quality/effect equivalence, E owner and authenticated exact SimC profile integration, not source collection.
+
+## Small reusable code change in existing v220 (not a new engine)
+
+Added \`v220_catalog_auto_admission.selected_equipment_source_mask_match(permanent_source,item_metadata,selected_slot)\`.
+
+- Consumes exact SimC-origin mask for enchant (item class, inventory type mask, item subclass mask), *one exact equipped item metadata row* (matching the already-implemented \`v230_simc_item_metadata\` parsed fields \`item_id, class_id, subclass_id, inventory_type\`), and the actual requested occupied slot/hand. **No full gear UI, no new season DB, no Wago/SimC downloads, no Native.**
+- Compares the same three dimensions in the pinned [SimulationCraft \`permanent_enchant.cpp\`](https://github.com/simulationcraft/simc/blob/de11f57df75dda668bae6ac7043a43b98831fa96/engine/dbc/permanent_enchant.cpp): exact equipment class, equipment InventoryType mask, weapon item subclass mask. Distinguishes exact ring \`finger1\` from \`finger2\`, leg slot, weapon hand, bow/gun/crossbow.
+- Deliberately conservative for numeric subclass zero: SimC's name/token lookup treats zero as no subclass constraint, whereas **an already source-verified physical item with subtype zero has a real subtype** and should not pass a mask that excludes bit 0. Unknown or incomplete physical item metadata raises a specific error; no guessing a type from a physical ItemID. Do not assume a source-only mask is proof of actual weapon or user eligibility.
+- Output status is either \`EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED\` or \`SOURCE_MASK_OR_HAND_NOT_MATCHED\`, with exact selected \`item_id\`, slot and mask evidence, \`policy_A_product_input_verified=false\`, \`ui_selectable=false\`, \`exact_simc_input_not_attested=true\`, \`same_effect_and_highest_quality_not_attested=true\`, \`fixed_E_or_no_E_not_attested=true\`. **Important:** this is a new *pure helper inside existing v220*, not yet called by the ordinary fresh installed \`v216/v196\` user-selected option provider. It **does not** issue any of the four existing Policy A receipts and does **not** close user E2E. A future producer must bind it to actual *trusted same-build v230 metadata*, not HTTP/user data.
+- Tests in existing \`tests/test_v220_catalog_auto_admission.py\` cover exact synthetic item metadata for legs, separate ring hand, bow/gun/crossbow and offhand rejection, unknown subclass zero, missing fields, and no accidental E/quality/UI certification. Synthetic item ID examples are test inputs **not actual 70783 v230 item evidence**.
+
+## Existing DK path safety fix
+
+During inspection, \`v098_target_user_scenario_bootstrap.build\` used dynamic v212 installed SimC-rune IDs **only when** \`fresh_installed_environment_path\` existed; \`current_season_product=True\` with explicit \`runeforge_by_hand\` and missing installed v212 source could fall back to old hardcoded \`v294.RUNE_IDS\`. This could erroneously treat an old-season ID as the latest SimC-supported selectable rune.
+
+New guard: **for new/current-season product and explicit DK runeforge choice only**, require \`fresh_installed_environment_path\`; then existing exact v212 game-build/ilvl/SimC source registry and \`v294\` hand/class/conflict/profile serializer apply. Historical sessions with no fresh-season intent retain their legacy compatibility path. No new DK source engine, Wago item ID, seasonal membership, mechanic cert or E Native. Test in existing \`tests/test_v586_pinned_dk_runeforge_environment_integration.py\` ensures a real v106 DK Frost scenario is rejected before any SimC execution if new season rune source is not installed.
+
+## Exact evidence and outstanding boundary
+
+[Focused offline CI #44233373988](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44233373988) **SUCCESS**, v583 8 + v584 11 + v220 19 + v585 2 + v586 5 + v294 4 + v295 4 + v240 20 + original v216 31 = **104 PASS / 0 FAIL, Native 0**. Original v220 default auto-admission decision/proof shapes preserved. This is a new regression test, NOT proof that a real player weapon has been selected from same-build v230 metadata or that all permanent enchants became usable.
+
+**Next efficient consumer step:** For one user-selected existing representative gear slot only, connect the actual sealed same-build \`v230\` item metadata and selected source enchant to the now shared \`v220\` physical predicate. Then reuse \`v216\` original \`source_relation\`, \`v220\` original \`simc_input/product_input/chmv_budget\` receipt families and \`v196/v212\` publisher. Do not certify a whole season. For stat-changing permanent enchants, use existing bounded E measurement/reuse only if exact source does not establish amount; no repeated Native if source says no fixed C/H/M/V and same-build evidence is sufficient. Do not promote \`v585\` 5/8 DBC coefficients to runtime same-effect or highest quality proof: SimC \`sc_item_data.cpp\` can use linked \`id_spell\` first.
+
+DK runeforging already follows a separate SimC-only path; current seven source-verified runes require **no Wago or season quality assessment**. The base G/J/F/O and user manual T remain unchanged, no new E/O accounting, no default oil choice inference.
+
+**Completion boundary:** source-only v220 helper and DK fresh catalog guard **implemented/tested**; ordinary 8 new enchant families remain unadmitted, quality equivalence + exact selected source item/product runtime **PENDING**. 26-DPS product 78-item ledger historical **15/78 COMPLETE**, \`full_product_e2e=PENDING\`. No main merge, v003 immutable edit, Project UI application, Work OS promotion or takeover of the main product chat.
