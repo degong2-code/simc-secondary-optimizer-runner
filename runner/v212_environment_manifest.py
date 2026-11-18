@@ -106,9 +106,20 @@ def _validate_fresh_prepared_option_sources(prepared, catalog):
              row["enchant_id"] in by_id,
              "FRESH_ENVIRONMENT_PREPARED_ITEM_ID_OR_FIELDS_INVALID")
         source=by_id[row["enchant_id"]]
+        # The v213 source explicitly resolves inventory type 11 to BOTH
+        # ring hands. Registration is by item/enchant family; v098 checks
+        # the exact eventual finger1/finger2 item against the same mask.
+        # This is not an inferred user hand or a SimC effect certificate.
+        ring_family=(
+            source.get("slot_group")=="finger1/finger2" and
+            source.get("slot_resolution_status")=="SOURCE_MASK_RESOLVED" and
+            source.get("item_class")==4 and
+            source.get("inventory_type_mask")==(1<<11) and
+            type(source.get("token")) is str and
+            source["token"].startswith("enchant_ring__"))
         need(source["slot_resolution_status"]=="SOURCE_MASK_RESOLVED" and
              type(source["slot_group"]) is str and
-             "/" not in source["slot_group"],
+             ("/" not in source["slot_group"] or ring_family),
              "FRESH_ENVIRONMENT_PREPARED_SOURCE_SLOT_UNRESOLVED")
         identity={"kind":"permanent_enchant","exact_id":source["enchant_id"],
                   "simc_token":source["token"],"slot":source["slot_group"],
