@@ -201,17 +201,19 @@ def prepare_verified_fresh_choices(source_catalog, source_ui,
             continue
         candidate=auto_admission.candidate_from_source_enchant(
             context,row,original_source_row=original_by_id[item_id])
-        # Only the original trusted product_input owner may attest quality.
-        # A selected rank and arbitrary SHA shape do not prove that variants
-        # have the SAME effect/use scope or that the higher-quality variant
-        # is non-inferior in every relevant numeric effect component.
-        # This stays inside v220's existing product_input family: no second
-        # certificate or full-market discovery is required. Unknown source
-        # comparisons leave only this optional item pending.
+        # Permanent-enchant quality is an exact *crafting family/rank*
+        # selection, not an independent SimC spell/proc/numeric dominance
+        # certification. Only a trusted sealed v191+v583 source owner may
+        # emit source_quality_family_verified; an arbitrary rank/hash
+        # without that provenance is still pending. Preserve previously
+        # approved legacy same-effect/noninferiority receipts.
         product=trusted_internal_receipts_by_id[item_id]["product_input"]
+        source_quality=(product.get("source_quality_family_verified") is True
+                        and product.get("same_build_physical_join_verified") is True)
+        legacy_quality=(product.get("same_effect_and_use_conditions_verified") is True
+                        and product.get("no_inferior_effect_components_verified") is True)
         if (product.get("exact_application_scope_verified") is not True
-            or product.get("same_effect_and_use_conditions_verified") is not True
-            or product.get("no_inferior_effect_components_verified") is not True
+            or not (source_quality or legacy_quality)
             or not (type(product.get("quality_source_sha256")) is str
                     and auto_admission.HEX64.fullmatch(
                         product["quality_source_sha256"]))
