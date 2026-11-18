@@ -3264,7 +3264,9 @@ function renderSeasonOptionCatalog(catalog) {
             item.verified_fixed_E[k]>=0);
         li.textContent="마부 #"+item.enchant_id+" · "+
           item.slot+" · 최고 검증 등급 "+item.highest_verified_quality_rank+
-          (hasE?" · 고정 E 원본 확인":" · 고정 E 미확정")+
+          (hasE?(stats.every(k=>item.verified_fixed_E[k]===0)
+            ?" · 정적 CHMV E=0 (정상, 효과는 SimC 처리)"
+            :" · 고정 E 원본 확인"):" · 고정 E 미확정")+
           " · 최종 SimC 프로필 연결 대기 (선택 불가)";
         list.appendChild(li);
       }
