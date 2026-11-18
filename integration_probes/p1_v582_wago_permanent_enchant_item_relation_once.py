@@ -3,9 +3,10 @@
 
 Read-only research probe, NOT a second Environment Build or product approval.
 It reuses v191's SimC parser, v190/v280 CSV parsing and v281 SpellEffect
-scanner. Wago chain: Item (class 8) -> ItemSparse (ExpansionID) ->
-ItemXItemEffect -> ItemEffect (use SpellID) -> SpellEffect (effect 53,
-misc enchant ID) -> SimC permanent_enchant.inc exact enchant ID.
+scanner. Wago chain: Item -> ItemSparse(ExpansionID) -> ItemXItemEffect
+-> ItemEffect -> SpellEffect(301 CraftingDataID) -> CraftingData(Type3)
+-> CraftingDataEnchantQuality(ItemID, Rank, SpellItemEnchantmentID)
+-> SimC permanent_enchant.inc exact enchant ID. Legacy Effect53 is diagnostic.
 No SimC effect reproduction, Native, DPS, UI publication or cache mutation.
 """
 from __future__ import annotations
@@ -27,11 +28,15 @@ import v191_unified_season_data_update as season
 import v280_consumable_item_use_spell_source as use
 import v281_consumable_simc_relation as spell
 
-TABLES = ("Item", "ItemSparse", "ItemXItemEffect", "ItemEffect", "SpellEffect")
+TABLES = ("Item", "ItemSparse", "ItemXItemEffect", "ItemEffect", "SpellEffect",
+          "CraftingData", "CraftingDataEnchantQuality")
 LIMITS = {"Item": 60_000_000, "ItemSparse": 210_000_000,
           "ItemXItemEffect": 60_000_000, "ItemEffect": 40_000_000,
-          "SpellEffect": 150_000_000}
+          "SpellEffect": 150_000_000, "CraftingData": 40_000_000,
+          "CraftingDataEnchantQuality": 40_000_000}
 PERM_EFFECT = 53
+CRAFT_ENCHANT_EFFECT = 301
+ENCHANT_CRAFTING_TYPE = 3
 ITEM_ENHANCEMENT_CLASS = 8
 SIMC_MAX = 5_000_000
 BUILD = re.compile(r"\d+(?:\.\d+){3}\Z")
@@ -140,6 +145,28 @@ def wago_join(directory, simc_by_id, highest, expansion_id):
         uses.setdefault(value["spell_id"], []).extend(
             (iid, eid, value["trigger_type"]) for iid in ids)
     observed = spell.scan_spell_effects(root / "SpellEffect.csv", set(uses))
+    # Modern retail scrolls use Effect 301 -> CraftingData(Type3).
+    # The exact physical quality rank and applied SimC enchant ID live in
+    # CraftingDataEnchantQuality, not in Effect301.MiscValue_0 directly.
+    craft_types = {}
+    for row in physical.csvrows(root / "CraftingData.csv", ("ID", "Type")):
+        cid = int(row["ID"])
+        if cid > 0 and int(row["Type"]) == ENCHANT_CRAFTING_TYPE:
+            craft_types[cid] = True
+    qualities = {}
+    for row in physical.csvrows(
+            root / "CraftingDataEnchantQuality.csv",
+            ("ID", "Rank", "SpellItemEnchantmentID", "ItemID",
+             "CraftingDataID")):
+        cid = int(row["CraftingDataID"])
+        if cid not in craft_types:
+            continue
+        enchant_id, physical_id = int(row["SpellItemEnchantmentID"]), int(row["ItemID"])
+        if enchant_id <= 0 or physical_id <= 0:
+            continue
+        qualities.setdefault(cid, []).append({
+            "enchant_id": enchant_id, "item_id": physical_id,
+            "quality_rank": int(row["Rank"]), "row_id": int(row["ID"])})
     found = {}
     wago_unmatched = set()
     unmatched_samples = []
@@ -173,6 +200,41 @@ def wago_join(directory, simc_by_id, highest, expansion_id):
                 "effect_index": effect["effect_index"],
                 "difficulty_id": effect["difficulty_id"],
                 "exact_join": "WAGO_SPELL_EFFECT_53_MISC_EQUALS_SIMC_ENCHANT_ID"})
+    modern_301_use_spell_count = 0
+    modern_quality_join_hits = 0
+    for effect in observed:
+        if effect["effect"] != CRAFT_ENCHANT_EFFECT:
+            continue
+        crafting_id = effect["enchant_id"]  # Effect301 misc is CraftingDataID.
+        if crafting_id not in craft_types:
+            continue
+        modern_301_use_spell_count += 1
+        for physical_id, item_effect_id, trigger in uses.get(effect["spell_id"], []):
+            for quality in qualities.get(crafting_id, []):
+                if quality["item_id"] != physical_id:
+                    continue
+                modern_quality_join_hits += 1
+                target_id = quality["enchant_id"]
+                if target_id not in simc_by_id:
+                    wago_unmatched.add(target_id)
+                    continue
+                unique = (target_id, physical_id, effect["spell_id"],
+                          item_effect_id, trigger, effect["effect_index"],
+                          effect["difficulty_id"], crafting_id, quality["row_id"])
+                if unique in seen:
+                    continue
+                seen.add(unique)
+                found.setdefault(target_id, []).append({
+                    **physical_ids[physical_id],
+                    "apply_spell_id": effect["spell_id"],
+                    "item_effect_id": item_effect_id,
+                    "item_effect_trigger_type": trigger,
+                    "effect_index": effect["effect_index"],
+                    "difficulty_id": effect["difficulty_id"],
+                    "crafting_data_id": crafting_id,
+                    "crafting_data_enchant_quality_row_id": quality["row_id"],
+                    "quality_rank_wago": quality["quality_rank"],
+                    "exact_join": "EFFECT_301_CRAFTDATA_TYPE3_QUALITY_ITEM_ENCHANT_ID"})
     for row in observed:
         for iid, eid, trigger in uses.get(row["spell_id"], []):
             if iid == 244014:
@@ -194,6 +256,10 @@ def wago_join(directory, simc_by_id, highest, expansion_id):
             "class0_sub8": sum(x["item_class"] == 0 and x["item_subclass"] == 8
                               for x in physical_ids.values())},
         "known_item_244014": physical_ids.get(244014),
+        "source_crafting_data_type3_count": len(craft_types),
+        "source_quality_rows_for_type3": sum(len(v) for v in qualities.values()),
+        "source_effect301_spell_rows": modern_301_use_spell_count,
+        "source_effect301_matching_item_quality_rows": modern_quality_join_hits,
         "known_item_244014_spell_effects": known_item_effects[:35],
         "other_wago_unmatched_source_examples": unmatched_samples,
         "physical_item_use_spell_count": len(uses),
