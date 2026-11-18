@@ -27,6 +27,13 @@ Updated the existing offline suites, without adding a workflow or collecting Nat
 - `tests/test_v113_local_web_api_offline.py`: existing sealed installed option catalog test now includes old E-absent row AND extra E-bearing row; E appears read-only and runtime disabled.
 - `tests/test_v114_local_web_ui_offline.py`: existing actual Node UI suite now checks absent versus proven E text, and that both still disable new user SimC choice. An early test run at [#44256464531](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44256464531) produced **one legitimate expected-text FAIL** after the UI changed; this was fixed in the existing test at commit `17aa0a6da8cf045762b2c4d9b0af1defb82ea063`. Do NOT claim that early CI successful. Recheck the later run for actual all-pass receipts before recording a PASS count.
 
+**Completed latest source+UI regression receipts** (code/test head `db32f15ba1e8ad56d97be8e41974aa0e85d51a0a`):
+- [v113 Windows+Ubuntu #44256884518](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44256884518): **BOTH SUCCESS**; per-OS log `Ran 480 tests`, `OK (skipped=1)` = **479 PASS / 1 SKIP / 0 FAIL**. Includes v196/v220 exact CHMV receipt propagation, v212 typed option, v113 read-only registry, Node UI missing/proven E locked states, unchanged real Windows client HTTP offline behavior.
+- [v182 UI Windows+Ubuntu #44256884548](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44256884548): **BOTH SUCCESS**; per OS three existing suites report `Ran 105`, `Ran 199`, `Ran 4` tests, all job steps SUCCESS. **No additional UI runtime choice was unlocked.**
+- [Original focused offline continuity #44256884563](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44256884563): **SUCCESS**, `Ran 680 tests`, `OK (skipped=2)` = **678 PASS / 2 SKIP / 0 FAIL**.
+- [Original v401 78-contract guard #44256884531](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44256884531): **SUCCESS**, contract-only, not product full-E2E.
+- Two intermediate CI failures (older UI expectation of `E 벡터` then original render compatibility count 3 versus 4 after the extra tested E-bearing render) were diagnosed from actual Actions logs and repaired **only in the existing UI regression**. The production lock behavior was unchanged. Final above jobs passed on corrected source/test head.
+
 **No new SimC Native/HTTP/DB2 calls**, no renewed 64 Native baseline, no source DB broad rescan, no new optimizer or runtime AI, no change to baseline G/J/F/O, selected L, Fury G, oils O, manual T, source cache or existing DPS cache identities.
 
 ## Remaining product task — not done by this read-only bridge
