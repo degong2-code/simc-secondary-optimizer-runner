@@ -1031,6 +1031,43 @@ def _v232_final_socket_item_source_comparison(*, candidate, plan,
             "user_changed_item_by_slot":changes}
 
 
+def _final_user_enchant_source_mask(*,user,rows,consumer):
+    """Check final v098 gear against sealed same-build source, not approval."""
+    if consumer is None:
+        return None
+    need(type(user) is dict and type(rows) is dict and callable(consumer)
+         and type(user.get(SEASON_ENCHANT_FIELD)) is dict and
+         len(user[SEASON_ENCHANT_FIELD])==1,
+         "FRESH_FINAL_USER_ENCHANT_SOURCE_SCOPE_REQUIRED")
+    slot,eid=next(iter(user[SEASON_ENCHANT_FIELD].items()))
+    item=rows.get(slot)
+    need(type(slot) is str and type(eid) is int and eid>0
+         and type(item) is dict and type(item.get("item_id")) is int
+         and item["item_id"]>0,
+         "FRESH_FINAL_USER_ENCHANT_PHYSICAL_ITEM_REQUIRED")
+    source=consumer(slot,item["item_id"],eid)
+    need(type(source) is dict and source.get("status") in (
+             "SEALED_REPRESENTATIVE_ENCHANT_SCOPE_PENDING",
+             "SOURCE_MASK_OR_HAND_NOT_MATCHED",
+             "EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED")
+         and source.get("ui_selectable") is False
+         and source.get("policy_A_product_input_verified") is False
+         and source.get("native_calls")==0
+         and source.get("network_calls")==0,
+         "FRESH_FINAL_USER_ENCHANT_SOURCE_MUST_NOT_ADMIT")
+    need(source["status"]!="SOURCE_MASK_OR_HAND_NOT_MATCHED",
+         "FRESH_FINAL_USER_ENCHANT_SOURCE_MASK_AND_HAND_MISMATCH")
+    if source["status"]=="EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED":
+        need(source.get("actual_user_item_from_v098_final_rows") is True
+             and source.get("selected_representative_item_id")==item["item_id"]
+             and source.get("selected_slot")==slot
+             and source.get("enchant_id")==eid,
+             "FRESH_FINAL_USER_ENCHANT_SOURCE_ITEM_OR_SLOT_DRIFT")
+    # The old exact v528 Native-witnessed path owns quality/E and remains
+    # intact when optional v583 source is missing; this adds no new choice.
+    return source
+
+
 def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
           independent_334=False,independent_target_level=False,
@@ -1041,7 +1078,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
           season_socket_plan=None,fresh_installed_environment_path=None,
           season_physical_one_spec_candidate=None,
           season_selected_static_cache_path=None,
-          exploration_policy=None):
+          exploration_policy=None,
+          selected_user_enchant_source_consumer=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
                    FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
@@ -1118,6 +1156,12 @@ def build(user,folder,binary,revision,static_cache_path=None,
     if current_season_product and RUNEFORGE_FIELD in user:
         need(fresh_installed_environment_path is not None,
              "FRESH_DK_RUNEFORGE_SOURCE_NOT_INSTALLED")
+    need(selected_user_enchant_source_consumer is None or
+         (callable(selected_user_enchant_source_consumer)
+          and fresh_installed_environment_path is not None
+          and season_profile_inputs is not None
+          and SEASON_ENCHANT_FIELD in user),
+         "FRESH_FINAL_USER_ENCHANT_CONSUMER_INTERNAL_SELECTED_ONLY")
     # The ordinary reference G cannot fund Fury's dual-twohand automatic
     # B/T. Only a v216 source-owned Fury v277 Native G, bound into the
     # exact installed v212 and same spec physical candidate, may do that.
@@ -1404,6 +1448,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
     else:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need)
+    actual_user_enchant_source=_final_user_enchant_source_mask(
+        user=user,rows=rows,consumer=selected_user_enchant_source_consumer)
     if season_source_gem_tokens is not None:
         _assert_season_gem_tokens_unchanged_by_selected_equipment(
             season_source_gem_tokens,rows,need)
@@ -1577,11 +1623,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
             source_only[
                 "v232_final_socket_item_source_comparison_unadmitted"]=(
                     season_socket_origin)
+        if actual_user_enchant_source is not None:
+            source_only["final_user_enchant_source_mask_unadmitted"]=(
+                actual_user_enchant_source)
         if (season_environment_receipt_path is None and
                 fresh_installed_environment_path is None):
             # Unadmitted observations never write a runnable manifest.
             return source_only
-        return _materialize_admitted_season_v096(
+        materialized=_materialize_admitted_season_v096(
             source_only=source_only,
             season_profile_inputs=season_profile_inputs,
             season_environment_receipt_path=season_environment_receipt_path,
@@ -1591,6 +1640,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
             fresh_installed_environment_path=fresh_installed_environment_path,
             original_v191_link=linked_originals,
             exploration_policy=exploration_policy)
+        return ({**materialized,
+                 "final_user_enchant_source_mask_unadmitted":
+                     actual_user_enchant_source}
+                if actual_user_enchant_source is not None else materialized)
     if static_special_probe_only:
         # v208 internal on-demand static-L source, never a product plan.
         # Reuses exactly the real user/gear/consumables profile composition
@@ -2272,7 +2325,18 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                 environment_result=environment_result,calculation=calc)
     else:
         other_spec_general_source=False
+    # Final item/hand must be read AFTER v101 applied user equipment.
+    # This callback is internal Python only, never a browser-supplied proof.
+    selected_enchant_consumer=None
+    if installed_path is not None and SEASON_ENCHANT_FIELD in user:
+        import v216_environment_build_coordinator as source_owner
+        def selected_enchant_consumer(slot,item_id,enchant_id):
+            return source_owner._fresh_first_sealed_representative_enchant_mask_preview(
+                collected=environment_result,compilation=compilation,
+                selected_user_item={"slot":slot,"item_id":item_id},
+                selected_enchant_id=enchant_id)
     result=build(user,folder,binary,revision,
+                 selected_user_enchant_source_consumer=selected_enchant_consumer,
                  current_season_product=True,
                  # The v529 selected permanent enchant must read only the
                  # *installed* exact v213 catalog, not historical 70575.
