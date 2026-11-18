@@ -712,6 +712,37 @@ class SameFreshCatalogChain(unittest.TestCase):
                 target_ilevel=334)
             self.assertEqual(staged["stage_status"],"EXECUTED_AND_SEALED")
             self.assertEqual(same_stage["stage_status"],"REUSED_VERIFIED")
+            # The normal M2 installer consumes exactly the same original
+            # two-family map (never approval), not just a preflight preview.
+            owned=build._fresh_source_owner_merge_policy_A_original_source_relation(
+                preflight=linked,staged=staged,
+                trusted_policy_A_receipts_by_id={})
+            self.assertEqual(set(owned),{91001,91002})
+            self.assertEqual(set(owned[91001]),
+                             {"source_relation","simc_input"})
+            self.assertEqual(owned[91001]["simc_input"]["input_field"],
+                             "enchant_id=91001")
+            self.assertFalse(build.auto_admission.decide(
+                build.auto_admission.candidate_from_source_enchant(
+                    {"game_build":BUILD,"simc_revision":REV,
+                     "manifest_sha256":linked["source_catalog_manifest_sha256"]},
+                    {"enchant_id":91001,
+                     "token":owned[91001]["source_relation"]["identity"][
+                         "simc_token"],
+                     "source_slots":["WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED"]}),
+                owned[91001])["eligible"])
+            tampered=copy.deepcopy(linked)
+            original=copy.deepcopy(tampered[
+                "optional_policy_A_evidence_unadmitted"])
+            original["original_v217_source_relation_receipts_internal"][
+                91001]["simc_input"]["input_field"]="enchant_id=91002"
+            tampered["optional_policy_A_evidence_unadmitted"]=original
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "V216_POLICY_A_ORIGINAL_SIMC_INPUT_SYNTAX_PROOF_DRIFT"):
+                build._fresh_source_owner_merge_policy_A_original_source_relation(
+                    preflight=tampered,staged=staged,
+                    trusted_policy_A_receipts_by_id={})
             self.assertEqual(staged["manifest_sha256"],
                              same_stage["manifest_sha256"])
             with pathlib.Path(staged["stage_output_path"]).open(
