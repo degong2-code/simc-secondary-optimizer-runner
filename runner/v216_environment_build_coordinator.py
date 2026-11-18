@@ -1902,6 +1902,37 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
     return proofs
 
 
+def original_optional_enchant_source_reference(collected):
+    """Compact existing v217 stage locator for v113 saved user profile.
+
+    The installed base G/J/F/O is independent from optional enchants.
+    Copy ONLY the already sealed stage locator; do not load the Wago table,
+    reparse v230, create proof, approve quality/E, or call SimC.
+    Missing/malformed optional source yields None and never blocks base.
+    """
+    if type(collected) is not dict:
+        return None
+    item=collected.get("fresh_permanent_enchant_item_source")
+    if type(item) is not dict or item.get("status")!=(
+            "PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY"):
+        return None
+    stage=item.get("source_stage")
+    if (type(stage) is not dict or
+        type(item.get("candidate_path")) is not str or
+        type(stage.get("stage_id")) is not str or
+        type(stage.get("receipt_sha256")) is not str or
+        auto_admission.HEX64.fullmatch(stage["receipt_sha256"]) is None or
+        type(stage.get("output_paths")) is not dict or
+        type(stage["output_paths"].get("candidate")) is not str):
+        return None
+    return {"status":item["status"],
+            "candidate_path":item["candidate_path"],
+            "source_stage":{
+                "stage_id":stage["stage_id"],
+                "receipt_sha256":stage["receipt_sha256"],
+                "output_paths":{"candidate":stage["output_paths"]["candidate"]}}}
+
+
 def _v216_reuse_sealed_v584_selected_supplemental(join, selected_id,
                                                    simc_revision):
     """One existing v583↔v584 selected DPS gear source; NO new catalog.
