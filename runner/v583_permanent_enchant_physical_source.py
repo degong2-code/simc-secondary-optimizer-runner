@@ -80,8 +80,8 @@ def _quality_table(*, root, build, transport=None, attempted=None):
     source_url = "https://wago.tools/db2/CraftingDataEnchantQuality/csv?" + urlencode(
         {"build": build, "locale": "enUS"})
     # Do not key this immutable game-build snapshot by the SimC revision.
-    code = stages.module_dependency_fingerprint([Path(__file__),
-                                                   Path(stages.__file__)])
+    # Raw immutable CSV identity: game build + URL + explicit fetch contract.
+    # Parser/SimC revision changes must not invalidate these Wago bytes.
     calls = attempted if attempted is not None else [0]
 
     def execute():
@@ -117,7 +117,7 @@ def _quality_table(*, root, build, transport=None, attempted=None):
     summary = stages.execute_stage(
         root=root, stage_id=QUALITY_STAGE, stage_version="single-db2-by-build-v1",
         inputs={"build":build,"table":"CraftingDataEnchantQuality",
-                "source_url":source_url,"code_sha256":code["sha256"]},
+                "source_url":source_url,"fetch_contract":"WAGO_CSV_BOUNDED_V1"},
         outputs=outputs,execute=execute,validate=validate)
     return summary,calls[0]
 
@@ -284,13 +284,17 @@ def collect(*, stage_root, build, expansion_id, wago_stage, fresh_gear,
             root=root,build=build,transport=transport,attempted=calls)
         original["quality"]=root/QUALITY_CSV
         quality_sha=quality_stage["receipt_sha256"]
-        projection_identity=sha(json.dumps({
-            "build":build,"expansion":expansion_id,"upstream":identity,
-            "quality":quality_sha},sort_keys=True).encode())[:20]
-        stage_id="fresh-v583-enchant-join-"+projection_identity
-        output="source/v583_permanent_join_"+projection_identity+".json"
         code=stages.module_dependency_fingerprint([
             Path(__file__),Path(simc.__file__),Path(stages.__file__)])
+        # Output identity includes parser code. Updating the connector
+        # reprojects a small manifest, never overwrites a sealed old output
+        # or forces a second Wago download within the same build.
+        projection_identity=sha(json.dumps({
+            "build":build,"expansion":expansion_id,"upstream":identity,
+            "quality":quality_sha,"projection_code":code["sha256"]},
+            sort_keys=True).encode())[:20]
+        stage_id="fresh-v583-enchant-join-"+projection_identity
+        output="source/v583_permanent_join_"+projection_identity+".json
         def execute():
             data=join_existing_sources(**original,build=build,
                                        expansion_id=expansion_id)
