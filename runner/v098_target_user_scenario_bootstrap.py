@@ -682,7 +682,8 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
     # separately proven increment from the unenchanted reference.
     positive_E=(positive_enchant.check_choice(user[SEASON_ENCHANT_FIELD])[1]
                 if user.get(SEASON_ENCHANT_FIELD) in
-                   positive_enchant.CHOICES else None)
+                   positive_enchant.CHOICES and
+                   _historical_exact_enchant_user_scope(user) else None)
     if positive_E is not None:
         user_T=user["target"]["final_T"]
         expected_B=(3107+sum(positive_E.values()) if user_T is None
@@ -823,7 +824,8 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
                if user["target"]["final_T"] is not None else {}),
             **({"verified_user_positive_E_enchant_id":
                    user[SEASON_ENCHANT_FIELD]["finger1"]}
-               if user.get(SEASON_ENCHANT_FIELD) in
+               if selected_installed_E0 is None and
+                  user.get(SEASON_ENCHANT_FIELD) in
                   positive_enchant.CHOICES else {}),
             **({"selected_user_installed_E0":{
                    "identity_sha256":
@@ -1077,6 +1079,27 @@ def _final_user_enchant_source_mask(*,user,rows,consumer):
     # The old exact v528 Native-witnessed path owns quality/E and remains
     # intact when optional v583 source is missing; this adds no new choice.
     return source
+
+
+def _historical_exact_enchant_user_scope(user):
+    """Preserve exact v528 scope, but never make its ID a global ban.
+
+    A different user/spec or future season may select the SAME enchant ID
+    through the signed v212 Policy A E0 path. This checks only the old
+    bounded witness user input; no new effect/Native proof.
+    """
+    choice=user.get(SEASON_ENCHANT_FIELD)
+    try:
+        if choice==fresh_eagle.CHOICE:
+            fresh_eagle.user_scope(user)
+            return True
+        if choice in positive_enchant.CHOICES:
+            positive_enchant.user_scope(user)
+            return True
+    except (fresh_eagle.SourceBlocked,
+            positive_enchant.PositiveEnchantBlocked):
+        return False
+    return False
 
 
 def _selected_installed_E0_on_final_user_item(*,user,rows,mask,installed_path):
@@ -1589,8 +1612,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
     selected_installed_E0=None
     if SEASON_ENCHANT_FIELD in user:
         if (fresh_installed_environment_path is not None and
-                user[SEASON_ENCHANT_FIELD] not in
-                    (fresh_eagle.CHOICE,)+positive_enchant.CHOICES):
+                not _historical_exact_enchant_user_scope(user)):
             selected_installed_E0=_selected_installed_E0_on_final_user_item(
                 user=user,rows=rows,mask=actual_user_enchant_source,
                 installed_path=fresh_installed_environment_path)
@@ -2289,7 +2311,8 @@ def preview_from_environment_build(user,folder,binary,revision,*,
     # Signed v212 environment remains immutable; only the user session
     # retargets B/T. Original v096 checks source-owner proofs once more.
     positive_choice=(user.get(SEASON_ENCHANT_FIELD) in
-                     positive_enchant.CHOICES)
+                     positive_enchant.CHOICES and
+                     _historical_exact_enchant_user_scope(user))
     if installed_path is not None and (
             user["target"]["final_T"] is not None or positive_choice):
         original=inputs["v216_numeric_preview"]["calculation"]
