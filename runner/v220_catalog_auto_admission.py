@@ -230,7 +230,8 @@ def selected_equipment_source_mask_match(*, permanent_source, item_metadata,
         "ui_selectable":False,"native_calls":0}
 
 
-def candidate_from_source_enchant(source_catalog, row):
+def candidate_from_source_enchant(source_catalog, row, *,
+                                  original_source_row=None):
     """Shared v196/v216 source candidate shape; never evidence by itself."""
     if type(source_catalog) is not dict or type(row) is not dict:
         raise ValueError("AUTO_ADMISSION_SOURCE_CANDIDATE_INVALID")
@@ -238,12 +239,25 @@ def candidate_from_source_enchant(source_catalog, row):
     if (type(slot) is not list or
         not all(type(value) is str and bool(value) for value in slot)):
         raise ValueError("AUTO_ADMISSION_SLOT_SCOPE_INVALID")
+    # v196 public UI rows intentionally exclude physical class/masks.
+    # The normal v212 installer may pass ONLY the original v213-sealed
+    # candidate row, not metadata from a browser or an inferred ring name.
+    original=original_source_row
     ring_pair=(slot==["finger1/finger2"] and
                type(row.get("token")) is str and
                row["token"].startswith("enchant_ring__") and
-               row.get("item_class")==4 and
-               row.get("inventory_type_mask")==(1<<11) and
-               row.get("item_subclass_mask")==0)
+               type(original) is dict and
+               original.get("enchant_id")==row["enchant_id"] and
+               original.get("token")==row["token"] and
+               original.get("quality_rank")==row.get(
+                   "highest_source_quality_rank") and
+               original.get("slot_group")=="finger1/finger2" and
+               original.get("slot_resolution_status")==
+                   "SOURCE_MASK_RESOLVED" and
+               original.get("item_class")==4 and
+               original.get("inventory_type_mask")==(1<<11) and
+               type(original.get("item_subclass_mask")) is int and
+               original["item_subclass_mask"]>=0)
     resolved=(len(slot)==1 and "/" not in slot[0] and
               not slot[0].startswith("WEAPON_SUBCLASS_"))
     return {"kind":"permanent_enchant","exact_id":row["enchant_id"],
@@ -293,7 +307,8 @@ def candidate_from_source_gem(source_catalog, row):
 
 
 def preview_enchant_catalog(source_catalog, items, *,
-                            trusted_internal_receipts_by_id=None):
+                            trusted_internal_receipts_by_id=None,
+                            original_source_rows_by_id=None):
     """Reuse decide() per exact item, without publishing a user choice.
 
     The optional receipt map is strictly for an INTERNAL orchestrator that
@@ -314,6 +329,11 @@ def preview_enchant_catalog(source_catalog, items, *,
          any(type(k) is not int or k<=0 or type(v) is not dict
              for k,v in trusted_internal_receipts_by_id.items()))):
         raise ValueError("AUTO_ADMISSION_INTERNAL_RECEIPT_MAP_INVALID")
+    if original_source_rows_by_id is not None and (
+            type(original_source_rows_by_id) is not dict or
+            any(type(k) is not int or type(v) is not dict
+                for k,v in original_source_rows_by_id.items())):
+        raise ValueError("AUTO_ADMISSION_ORIGINAL_SOURCE_MAP_INVALID")
     decisions=[]
     seen=set()
     for row in items:
@@ -324,10 +344,16 @@ def preview_enchant_catalog(source_catalog, items, *,
             raise ValueError("AUTO_ADMISSION_DUPLICATE_ID")
         seen.add(item_id)
         # Existing per-item slot/hand PENDING still prevents publication.
-        candidate=candidate_from_source_enchant(source_catalog,row)
+        candidate=candidate_from_source_enchant(
+            source_catalog,row,original_source_row=(
+                None if original_source_rows_by_id is None else
+                original_source_rows_by_id.get(item_id)))
         trusted=(None if trusted_internal_receipts_by_id is None else
                  trusted_internal_receipts_by_id.get(item_id))
         decisions.append(decide(candidate,trusted))
+    if (original_source_rows_by_id is not None and
+        set(original_source_rows_by_id)!=seen):
+        raise ValueError("AUTO_ADMISSION_ORIGINAL_SOURCE_COVERAGE_DRIFT")
     if trusted_internal_receipts_by_id is not None and (
         set(trusted_internal_receipts_by_id)-seen):
         raise ValueError("AUTO_ADMISSION_RECEIPT_FOR_NONCANDIDATE")
