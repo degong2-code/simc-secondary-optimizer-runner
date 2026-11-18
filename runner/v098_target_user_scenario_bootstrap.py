@@ -759,7 +759,8 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
                                      weapon_layout,fillers,user,ilevel,rows,key,
                                      fresh_installed_environment_path=None,
                                      original_v191_link=None,
-                                     exploration_policy=None):
+                                     exploration_policy=None,
+                                     selected_installed_E0=None):
     """Reuse the ORIGINAL v096 manifest+durable v094 route for an admitted season.
 
     A non-admitted v216 numeric draft can never reach this writer. The
@@ -823,7 +824,17 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
             **({"verified_user_positive_E_enchant_id":
                    user[SEASON_ENCHANT_FIELD]["finger1"]}
                if user.get(SEASON_ENCHANT_FIELD) in
-                  positive_enchant.CHOICES else {})}
+                  positive_enchant.CHOICES else {}),
+            **({"selected_user_installed_E0":{
+                   "identity_sha256":
+                       selected_installed_E0["selected_identity_sha256"],
+                   "slot":selected_installed_E0[
+                       "selected_identity"]["selected_slot"],
+                   "item_id":selected_installed_E0[
+                       "selected_identity"]["selected_item_id"],
+                   "enchant_id":selected_installed_E0[
+                       "selected_identity"]["selected_enchant_id"]}}
+               if selected_installed_E0 is not None else {})}
         source=entry._admitted_fresh_season_source(
             manifest_path=folder/"manifest.json",season=manifest_source,
             revision=revision,user_scenario=draft["scenario"],
@@ -1262,9 +1273,12 @@ def build(user,folder,binary,revision,static_cache_path=None,
           and (SEASON_ENCHANT_FIELD not in user or
                (fresh_installed_environment_path is not None
                 and not selected_season_items
-                and (user[SEASON_ENCHANT_FIELD]==fresh_eagle.CHOICE or
-                     user[SEASON_ENCHANT_FIELD] in
-                        positive_enchant.CHOICES)))
+                and type(user[SEASON_ENCHANT_FIELD]) is dict
+                and len(user[SEASON_ENCHANT_FIELD])==1
+                and all(type(id_) is int and id_>0
+                        for id_ in user[SEASON_ENCHANT_FIELD].values())
+                and set(user[SEASON_ENCHANT_FIELD])<=
+                    {"finger1","finger2"}))
           and (not selected_season_items or
                season_selected_static_cache_path is not None)),
          "SEASON_PROFILE_INTERNAL_SOURCE_ONLY_MODE_REQUIRED")
@@ -1572,8 +1586,21 @@ def build(user,folder,binary,revision,static_cache_path=None,
                      ("food","potion","augmentation"))),
                  "SEASON_PROFILE_SELECTED_CONSUMABLES_NOT_SOURCE_BOUND")
     selected_nonchmv=None
+    selected_installed_E0=None
     if SEASON_ENCHANT_FIELD in user:
-        if fresh_installed_environment_path is not None:
+        if (fresh_installed_environment_path is not None and
+                user[SEASON_ENCHANT_FIELD] not in
+                    (fresh_eagle.CHOICE,)+positive_enchant.CHOICES):
+            selected_installed_E0=_selected_installed_E0_on_final_user_item(
+                user=user,rows=rows,mask=actual_user_enchant_source,
+                installed_path=fresh_installed_environment_path)
+            selected_nonchmv={
+                "status":"EXACT_INSTALLED_USER_E0_FINAL_ITEM_BOUND_PENDING_V096",
+                "selected_identity_sha256":
+                    selected_installed_E0["selected_identity_sha256"],
+                "fixed_E":dict(selected_installed_E0["fixed_E"]),
+                "simc_mechanics_owner":"SimC"}
+        elif fresh_installed_environment_path is not None:
             bridge=(positive_enchant if
                     user[SEASON_ENCHANT_FIELD] in positive_enchant.CHOICES
                     else fresh_eagle)
@@ -1687,7 +1714,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
             fillers=fillers,user=user,ilevel=ilvl,rows=rows,key=key,
             fresh_installed_environment_path=fresh_installed_environment_path,
             original_v191_link=linked_originals,
-            exploration_policy=exploration_policy)
+            exploration_policy=exploration_policy,
+            selected_installed_E0=selected_installed_E0)
         return ({**materialized,
                  "final_user_enchant_source_mask_unadmitted":
                      actual_user_enchant_source}
