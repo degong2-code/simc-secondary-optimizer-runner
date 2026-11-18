@@ -2063,6 +2063,82 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             .read_text(encoding="utf8"))))
 
 
+class OriginalPolicyARingFamilyIdentityTests(unittest.TestCase):
+    """Exercise original v216 source_relation producer, not a forged browser proof."""
+
+    def test_v217_sealed_source_relation_matches_v220_ring_family(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            (root/"fresh_source").mkdir()
+            stamps={"v191":"1"*64,"v211":"2"*64,"v213":"3"*64}
+            outputs={"v191":("candidate","fresh_source/v191_candidate.json",
+                              "a"*64),
+                     "v211":("classification",
+                              "fresh_source/v211_classification.json","b"*64),
+                     "v213":("candidate",
+                              "fresh_source/v213_candidate_catalog.json","c"*64)}
+            attest={"stage_root":str(root)}
+            receipts={}
+            for key,(name,relative,file_sha) in outputs.items():
+                attest[key+"_stage"]={
+                    "status":"EXECUTED_AND_SEALED",
+                    "stage_id":"fresh-"+key,
+                    "receipt_sha256":stamps[key]}
+                receipts["fresh-"+key]={
+                    "stage_id":"fresh-"+key,"stage_version":"1",
+                    "status":"COMPLETE","receipt_sha256":stamps[key],
+                    "output_paths":{name:relative},
+                    "outputs":{name:{"sha256":file_sha,"path":relative}}}
+            ring={"enchant_id":7967,
+                  "token":"enchant_ring__eyes_of_the_eagle",
+                  "quality_rank":2,"slot_group":"finger1/finger2",
+                  "slot_resolution_status":"SOURCE_MASK_RESOLVED",
+                  "item_class":4,"inventory_type_mask":1<<11,
+                  "item_subclass_mask":0}
+            catalog={"game_build":"12.1.5.70783",
+                     "simc_revision":"d"*40,
+                     "manifest_sha256":"e"*64,
+                     "source_provenance":{
+                         "v191":{"sha256":"a"*64},
+                         "v211":{"sha256":"b"*64}},
+                     "catalog":{"enchants":{"items":[ring]}},
+                     "v196_enchant_source":{"rows":[{
+                         "enchant_id":7967,
+                         "token":ring["token"],
+                         "inventory_type_mask":1<<11}]}}
+            public={"enchant_id":7967,"token":ring["token"],
+                    "source_slots":["finger1/finger2"],
+                    "highest_source_quality_rank":2}
+            def receipt_for(path):
+                return receipts[path.stem]
+            with mock.patch.object(
+                    v216.stage_engine,"_read_receipt",
+                    side_effect=receipt_for) as reader:
+                produced=v216._v217_policy_A_source_relation_receipts(
+                    catalog=catalog,artifact_sha256="c"*64,
+                    catalog_path=root/"fresh_source"/
+                        "v213_candidate_catalog.json",
+                    stage_attestations=attest,public_rows=[public])
+            self.assertEqual(reader.call_count,3)
+            witness=produced[7967]["source_relation"]
+            self.assertEqual(witness["status"],"EXACT_SOURCE_RELATION_VERIFIED")
+            self.assertEqual(witness["identity"]["slot"],"finger1/finger2")
+            self.assertEqual(witness["identity"]["exact_id"],7967)
+            self.assertEqual(witness["identity"]["catalog_sha256"],"e"*64)
+            # Source identity alone never authorizes SimC input or E.
+            import v220_catalog_auto_admission as policy
+            candidate=policy.candidate_from_source_enchant(
+                {"game_build":catalog["game_build"],
+                 "simc_revision":catalog["simc_revision"],
+                 "manifest_sha256":catalog["manifest_sha256"]},
+                public,original_source_row=ring)
+            result=policy.decide(candidate,produced[7967])
+            self.assertFalse(result["eligible"])
+            self.assertIn("EVIDENCE_MISSING:simc_input",result["missing"])
+            self.assertIn("EVIDENCE_MISSING:product_input",result["missing"])
+            self.assertIn("EVIDENCE_MISSING:chmv_budget",result["missing"])
+
+
 class OriginalOptionalEnchantSnapshotSourceTests(unittest.TestCase):
     """The verified v113 user profile keeps only a source locator, not DB bytes."""
 
