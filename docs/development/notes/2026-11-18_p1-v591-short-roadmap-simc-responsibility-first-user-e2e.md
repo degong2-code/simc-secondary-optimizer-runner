@@ -1,0 +1,37 @@
+# P1 v591 — User-approved P0 scope reset + first verified user product-path gap fix
+
+Date: 2026-11-18. Isolated branch `probe/chat-cache-v035-20261024`. This note supersedes v590's proposed NEXT action when it implied an additional SimC spell-effect/cast/proc certification requirement. Previous v585–v590 source evidence and receipts remain historical, not deleted or falsely promoted.
+
+## Direct user decision (highest priority)
+
+This program is **NOT a gear optimizer or effect certification system**. For **26 DPS specs** the user chooses a future target ilvl (default 334) or authoritative final CHMV T, a character/talents, two trinkets and optional special gear/embellishments, consumables, permanent enchants, oil, and combat. The program internally builds target-level representative gear/4pc/weapon, season G/J/F/O and B/T, a correct SimC input, and reuses the existing adaptive SimC DPS search, 95% uncertainty, absolute ratings/ratios, observed best and viable near alternatives, cache/cancel/resume.
+
+**SimC owns enchant/item/spell effect mechanics, whether and how a spell/proc fires, APL and actual DPS.** We must deliver exact SimC item/enchant/quality/ilevel/slot/options and correct static CHMV L/E/O accounting. Do not build new independent spell-effect certification gates or measure proc/DPS impact to admit a normally valid SimC option. For UI quality dedup only, verify identical stated effect/use conditions and noninferior relevant numeric components from reliable source; unresolved optional choice stays PENDING. Static E is an *accounting* check, not gameplay certification. Actual errors from SimC should be reported verbatim. Dev AI may be used freely; **runtime LLM/AI/API calls/models/agents are strictly excluded**.
+
+## Revised immediate order — STOP → REUSE → CONNECT/FIX → minimal EXTEND
+
+- **P0** Correct the SimC responsibility boundary and stop source-only enchant probes as the development mainline. Do not create/repeat whole-season effect/Native/26-spec admission matrices.
+- **P1** Reuse existing ZERO-SOURCE season G/J/F/O builder `v216→v212`, verified source and source cache; build B=G+J+F, T=B+O, manual T wins. Default verified representative G is not falsely labeled precise whole-spec G; Fury dual-2H auto G remains separately guarded.
+- **P2** Complete user-input → chosen ID/slot/hand/options → internal representative/tier/proven source → exact SimC profile and static L/E/O budget once. Optional unverified items cannot block verified core.
+- **P3 FIRST PRODUCT ACCEPTANCE**: one ordinary **no-enchant, no selected special/embellishment, O=0** user session at a verified installed current-season 334 (or selected target) through `v113 /environment/season-build → /sessions/start → v218→v098→v096→v106/v094 adaptive SimC → real JSON2→DPS/SEM/95%→user result`. Use existing Native receipts/caches if same-scope valid; otherwise *minimum one actual user E2E* in the ordinary Windows product environment. The current repo/CI in this chat does **not** provide an observed actual current E2E success; no claim of PASS.
+- **P4** Verify cancel/resume/cache/identity and 26 DPS input/profile routes through existing tests and only changed/risky Native cases. No optimizer replacement, no new Gate or full unrelated Native sweep.
+
+## Exact source → consumer gap found and fixed (v591)
+
+Read original live code: `v113.LocalJobs.remember_verified_fresh_environment()` already verifies installed v212, original stage/source SHA, and creates the compact v217-saved user-profile snapshot. `v113.plan()` resolves a current installed build and sends it to `v218.build_or_reuse` and `v098.preview_from_environment_build`; `v106/v096/v094` own execution. **The ordinary no-enchant path already exists; do not rebuild it.**
+
+A concrete optional-source integration defect existed: the compact v113 snapshot removed both original `expected_game_build` and the original `fresh_permanent_enchant_item_source` locator that v589/v590's later exact selected-item v216 consumer expects. Even after a correct environment install, this optional consumer would return PENDING rather than actually inspect the existing sealed source. This is a **selected-option source diagnostic gap**, NOT evidence that the base G/J/F/O or basic user optimizer route failed.
+
+Minimal changes:
+1. `runner/v216_environment_build_coordinator.py::original_optional_enchant_source_reference` extracts only `status`, existing candidate path, `stage_id`, existing `receipt_sha256`, and sealed candidate relative path from already collected v583. The optional reference is `None` on absent/unverified data. No item table copy, new gate, Wago/HTTP, v230 full parse, Native or cache mutation.
+2. `runner/v113_local_web_api.py::remember_verified_fresh_environment` retains that compact already sealed source locator and verified installed `expected_game_build` in the existing snapshot; original `v216.sealed_original` authenticates SHA/build on later consumption. Existing baseline, API, UI, static budget, session and DPS cache identity unchanged. **Historical immutable old v113 snapshots are not rewritten**, so previously installed pre-v591 optional-source links may still be PENDING until an authorized exact source restoration path; no migration/forced refetch now.
+3. Remove redundant v590 **effect/quality dominance prerequisites** from `v216._v216_reuse_sealed_v584_selected_supplemental` and `v196.preview_sealed_representative_enchant_mask` **physical mask checks**. v220 class/inventory/subclass/hand and item identity stay exact, and source-only returns `ui_selectable=false`, `same_effect_and_highest_quality_verified=false`, `fixed_E_or_no_E_verified=false`, `policy_A_product_input_verified=false`; any actual UI dedup and E remain independent existing owners. This does NOT grant a new enchant user choice.
+
+## Validation accounting and remaining P3 work
+
+- Added **2** focused pure optional-stage-locator tests to `tests/test_v216_environment_build_coordinator.py`; updated **1** v220/v196 physical comparison negative test to ensure optional effect claims cannot become an extra validation gate nor UI approval.
+- No new SimC Native/HTTP/DB2 operation **in these code paths**. Old G/J/F/O builder, v290/291/293 optimizer, exact selected L, DK runeforge, Omnium, 95% and DPS cache untouched.
+- `p1-v401-78-completion-contract-scope-gate` CI SUCCESS on [Actions #44248990557](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44248990557) at code HEAD `e921179b6f064d872ea4f0ec8f62e4d301e539b8`. This is **not** an actual current-season Native E2E or proof of all focused tests passing. Previously verified v587 104 PASS/0 FAIL is historical, not v591.
+- Next actual product work is **one regular installed-environment user E2E**, first determine whether the existing verified v212, source-bound v113 snapshot and matching Windows SimC binary can be reused. If not present, the first concrete missing receipt / block from the original producer is recorded, not guessed or replaced by historical season numbers.
+
+Official evidence ledger stays **15/78 COMPLETE**, `full_product_e2e=PENDING`. This is not a product completion rate. Work only on the isolated branch. Do NOT merge main, alter immutable v003, claim original v016 direct integration or Project UI applied, promote Work OS/M0 or take over the primary development chat. New documentation does not itself change official approvals.
