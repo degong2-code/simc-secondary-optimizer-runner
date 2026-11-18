@@ -174,7 +174,7 @@ def selected_equipment_source_mask_match(*, permanent_source, item_metadata,
         type(item_metadata) is not dict or
         type(selected_slot) is not str or
         selected_slot not in {
-            "head","shoulders","chest","legs","feet",
+            "head","neck","shoulders","chest","legs","feet",
             "wrists","hands","waist","back","finger1","finger2",
             "main_hand","off_hand"}):
         raise ValueError("PERMANENT_SELECTED_ITEM_SOURCE_FIELDS_INVALID")
@@ -206,7 +206,7 @@ def selected_equipment_source_mask_match(*, permanent_source, item_metadata,
         # Only the item type may establish the exact intended user slot.
         # Reuse the same retail InventoryType mapping as original v213.
         slot_types={
-            "head":{1},"shoulders":{3},"chest":{5,20},
+            "head":{1},"neck":{2},"shoulders":{3},"chest":{5,20},
             "legs":{7},"feet":{8},"wrists":{9},"hands":{10},
             "waist":{6},"back":{16},
             "finger1":{11},"finger2":{11}}

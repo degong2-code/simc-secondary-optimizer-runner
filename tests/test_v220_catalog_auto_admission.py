@@ -558,6 +558,57 @@ class AutoAdmissionTests(unittest.TestCase):
             selected_slot="finger2")
         self.assertNotEqual(first["selected_item_id"],other["selected_item_id"])
 
+    def test_v605_every_signed_ordinary_slot_uses_exact_v213_inventory_type(self):
+        """v604 UI/SimC slots must all reach the same exact physical mask.
+
+        Synthetic same-build physical metadata checks only class/inventory
+        applicability. It never creates a Policy A receipt or Native proof.
+        """
+        from runner import v213_source_to_catalog as original
+        slot_types={
+            "head":(1,),"neck":(2,),"shoulders":(3,),
+            "back":(16,),"chest":(5,20),"wrists":(9,),
+            "hands":(10,),"waist":(6,),"legs":(7,),"feet":(8,),
+            "finger1":(11,),"finger2":(11,)}
+        for slot,types in slot_types.items():
+            for inv in types:
+                with self.subTest(slot=slot,inv=inv):
+                    self.assertEqual(
+                        original.GEAR_INVENTORY_GROUPS[inv],
+                        "finger" if slot.startswith("finger") else slot)
+                    source={"item_class":4,"inventory_type_mask":1<<inv,
+                            "item_subclass_mask":0}
+                    item={"item_id":260001,"class_id":4,
+                          "subclass_id":0,"inventory_type":inv}
+                    result=policy.selected_equipment_source_mask_match(
+                        permanent_source=source,item_metadata=item,
+                        selected_slot=slot)
+                    self.assertTrue(result["matched"],result)
+                    self.assertEqual(result["status"],
+                        "EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED")
+                    self.assertFalse(result["ui_selectable"])
+                    self.assertFalse(result["policy_A_product_input_verified"])
+                    self.assertEqual(result["native_calls"],0)
+                    self.assertFalse(
+                        policy.selected_equipment_source_mask_match(
+                            permanent_source=source,
+                            item_metadata={**item,"inventory_type":4},
+                            selected_slot=slot)["matched"])
+                    self.assertFalse(
+                        policy.selected_equipment_source_mask_match(
+                            permanent_source={**source,
+                                "inventory_type_mask":1<<4},
+                            item_metadata=item,
+                            selected_slot=slot)["matched"])
+        with self.assertRaisesRegex(
+                ValueError,"PERMANENT_SELECTED_ITEM_SOURCE_FIELDS_INVALID"):
+            policy.selected_equipment_source_mask_match(
+                permanent_source={"item_class":4,
+                    "inventory_type_mask":1<<2,"item_subclass_mask":0},
+                item_metadata={"item_id":260001,"class_id":4,
+                    "inventory_type":2,"subclass_id":0},
+                selected_slot="non_game_slot")
+
     def test_unknown_equipment_metadata_never_approves_a_mask(self):
         source={"item_class":2,"inventory_type_mask":0,
                 "item_subclass_mask":0x4000c}
