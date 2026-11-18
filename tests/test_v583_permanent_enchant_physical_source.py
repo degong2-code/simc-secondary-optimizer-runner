@@ -181,6 +181,17 @@ class TestV583(unittest.TestCase):
         self.assertEqual(result["counts"]["highest_simc_candidate_linked"],0,result)
         self.assertEqual(result["counts"]["highest_simc_candidate_missing_ids"],[8025])
 
+    def test_failed_wago_request_counts_attempt_and_keeps_optional_pending(self):
+        attempts=[]
+        def broken(request,timeout):
+            attempts.append(request.full_url)
+            raise OSError("simulated offline source outage")
+        result=v583.collect(**self.args,transport=broken)
+        self.assertEqual(result["status"],"PERMANENT_ENCHANT_SOURCE_PENDING")
+        self.assertEqual(result["network_calls_by_stage"],1)
+        self.assertEqual(len(attempts),1)
+        self.assertFalse(result["environment_ready"])
+
 
 if __name__=="__main__":
     unittest.main()
