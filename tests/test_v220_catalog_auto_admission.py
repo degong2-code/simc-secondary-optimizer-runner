@@ -400,6 +400,57 @@ class SealedRepresentativeConsumerTests(unittest.TestCase):
         self.assertFalse(out["fixed_E_or_no_E_verified"])
         self.assertEqual((out["network_calls"],out["native_calls"]),(0,0))
 
+    def test_sealed_supplemental_gear_family_stays_source_only(self):
+        # New source family is absent from old v213 enchant_ catalog.
+        supplemental={
+            "enchant_id":7939,"simc_token":"bright_linen_spellthread",
+            "quality_rank_simc":2,
+            "source_class_and_masks":{
+                "item_class":4,"inventory_type_mask":1<<7,
+                "item_subclass_mask":0x1e},
+            "physical_item_ids":[240133],
+            "source_slot":{"status":"SOURCE_MASK_RESOLVED"},
+            "selection_status":"SUPPLEMENTAL_SOURCE_ONLY_NOT_USER_PUBLISHED",
+            "ui_selectable":False,
+            "static_E_source_status":"NO_STATIC_CHMV_COMPONENT_IN_SIMC_DBC",
+            "raw_rank_component_evidence":{
+                "same_effect_and_use_conditions_verified":False,
+                "quality_noninferiority_runtime_verified":False}}
+        scope={**self.scope,"enchant_id":7939,"wago_item_id":240133,
+               "selected_slot":"legs",
+               "item_metadata":{"item_id":268268,"class_id":4,
+                                "subclass_id":4,"inventory_type":7}}
+        with mock.patch.object(catalog.source_bridge,"verify_catalog"):
+            out=catalog.preview_sealed_representative_enchant_mask(
+                source_catalog=self.source,scope=scope,
+                supplemental_source=supplemental)
+            self.assertTrue(out["matched"])
+            self.assertTrue(out["supplemental_v583_v584_source_only"])
+            self.assertEqual(out["source_observed_static_E_status"],
+                             "NO_STATIC_CHMV_COMPONENT_IN_SIMC_DBC")
+            self.assertFalse(out["fixed_E_or_no_E_verified"])
+            self.assertFalse(out["same_effect_and_highest_quality_verified"])
+            self.assertFalse(out["ui_selectable"])
+            with self.assertRaisesRegex(
+                    catalog.CatalogBlocked,"EXACT_SOURCE_CATALOG"):
+                catalog.preview_sealed_representative_enchant_mask(
+                    source_catalog=self.source,scope=scope)
+            with self.assertRaisesRegex(
+                    catalog.CatalogBlocked,"SUPPLEMENTAL_SEALED"):
+                catalog.preview_sealed_representative_enchant_mask(
+                    source_catalog=self.source,
+                    scope={**scope,"wago_item_id":999999},
+                    supplemental_source=supplemental)
+            with self.assertRaisesRegex(
+                    catalog.CatalogBlocked,"SUPPLEMENTAL_SEALED"):
+                catalog.preview_sealed_representative_enchant_mask(
+                    source_catalog=self.source,scope=scope,
+                    supplemental_source={**supplemental,
+                        "raw_rank_component_evidence":{
+                          "same_effect_and_use_conditions_verified":True,
+                          "quality_noninferiority_runtime_verified":True}})
+
+
     def test_wrong_equipment_or_build_cannot_become_a_choice(self):
         with mock.patch.object(catalog.source_bridge,"verify_catalog"):
             wrong=catalog.preview_sealed_representative_enchant_mask(
