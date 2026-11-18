@@ -678,8 +678,10 @@ class SameFreshCatalogChain(unittest.TestCase):
             for missing in optional["per_item_missing_reasons"].values():
                 self.assertNotIn("EVIDENCE_MISSING:source_relation",missing)
                 self.assertNotIn("EVIDENCE_MISSING:simc_input",missing)
-                self.assertTrue({"EVIDENCE_MISSING:product_input",
-                                 "EVIDENCE_MISSING:chmv_budget"} <= set(missing))
+                # v608: source-classified no-static-CHMV may now supply
+                # exact E0 even when SimC owns a spell/proc effect.
+                # Physical quality remains missing without sealed v583.
+                self.assertIn("EVIDENCE_MISSING:product_input",missing)
             real=optional["original_v217_source_relation_receipts_internal"]
             self.assertEqual(set(real),{91001,91002})
             for exact_id,proof in real.items():
@@ -691,7 +693,15 @@ class SameFreshCatalogChain(unittest.TestCase):
                     "gameplay_or_native_effect_attested"])
                 self.assertFalse(proof["simc_input"][
                     "effect_mechanism_reimplemented"])
-                self.assertEqual(set(proof),{"source_relation","simc_input"})
+                self.assertTrue({"source_relation","simc_input"} <= set(proof))
+                self.assertTrue(set(proof) <= {
+                    "source_relation","simc_input","chmv_budget"})
+                if "chmv_budget" in proof:
+                    self.assertEqual(proof["chmv_budget"]["fixed_E"],{
+                        "crit_rating":0,"haste_rating":0,
+                        "mastery_rating":0,"versatility_rating":0})
+                    self.assertFalse(proof["chmv_budget"][
+                        "gameplay_or_native_effect_attested"])
             self.assertIn(
                 "EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED",
                 optional["per_item_missing_reasons"]["91001"])
