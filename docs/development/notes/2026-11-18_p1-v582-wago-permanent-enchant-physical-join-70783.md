@@ -1,6 +1,6 @@
 # P1 v582 — Wago 70783 physical permanent enchant → SimC exact-ID source join (2026-11-18)
 
-**Actual evidence:** [Windows? No: GitHub Ubuntu 26.04 Actions #44211446707](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44211446707), commit `04e9bc826f061651ce54b61f400bc2207540b773`, **SUCCESS**. Five scoped offline tests PASS, **new SimC Native 0**, real Wago source read from build `12.1.5.70783`, expansion `ExpansionID=11`, pinned SimC revision `de11f57df75dda668bae6ac7043a43b98831fa96`. Complete source-only JSON receipt is Actions artifact **14385592815** (`p1-v582-wago-permanent-enchant-item-relation`, 7-day retention). A 38/38 exact source relation is **not** Policy A user admission or a proven complete list of every expansion enchant.
+**Actual evidence:** [GitHub Ubuntu Actions #44211446707](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44211446707), commit `04e9bc826f061651ce54b61f400bc2207540b773`, **SUCCESS**. Five scoped offline tests PASS, **new SimC Native 0**, real Wago source read from build `12.1.5.70783`, expansion `ExpansionID=11`, pinned SimC revision `de11f57df75dda668bae6ac7043a43b98831fa96`. Complete source-only JSON receipt is Actions artifact **14385592815** (`p1-v582-wago-permanent-enchant-item-relation`, 7-day retention). A 38/38 exact source relation is **not** Policy A user admission or a proven complete list of every expansion enchant.
 
 ## Why the earlier direct link failed; verified modern Wago join
 
