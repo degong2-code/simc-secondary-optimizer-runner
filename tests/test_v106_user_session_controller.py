@@ -192,6 +192,24 @@ class UserSessionControls(unittest.TestCase):
                       json.loads((folder/"V106_SESSION_IDENTITY.json").read_text()))
         self.assertEqual(len(list((root/"runs").iterdir())),2)
 
+    def test_v596_E0_item_and_finger_change_distinguishes_v106_user_key(self):
+        root,binary,_=self.fixture()
+        controls=ux.standard_controls(("hunter","survival"))
+        controls["enchant_choices"]={"finger1":89999}
+        first=ux.user_scenario(controls)
+        controls["enchant_choices"]={"finger2":89999}
+        second=ux.user_scenario(controls)
+        controls["enchant_choices"]={"finger1":89998}
+        third=ux.user_scenario(controls)
+        cases=[ux.session_key(u,binary,"7bc10711b5")
+               for u in (first,second,third)]
+        self.assertEqual(len(set(k for k,_ in cases)),3)
+        # This is the underlying user-key distinction only. Runnable
+        # authority still requires signed v212 + v098/v096 source replay.
+        for user,(_,identity) in zip((first,second,third),cases):
+            self.assertEqual(identity["user"],user)
+
+
     def test_session_binary_and_cache_sha_preserve_identity_without_full_reads(self):
         # The original SHA-256 values and v106 key must remain byte-identical.
         # Session lookup need not copy large SimC or static-cache files to RAM.
