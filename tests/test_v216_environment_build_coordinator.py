@@ -2114,6 +2114,8 @@ class FirstSealedEnchantScopeBridgeTests(unittest.TestCase):
                       "physical_items":[{"item_id":240133}]}],
                   "supplemental_gear_effects_source_only":{
                       "status":"SUPPLEMENTAL_DPS_ENCHANT_EFFECTS_CLASSIFIED_UNADMITTED",
+                      "game_build":build,"simc_revision":revision,
+                      "candidate_count":1,
                       "source_only":True,"ui_selectable":False,
                       "rows":[{
                           "enchant_id":7939,
