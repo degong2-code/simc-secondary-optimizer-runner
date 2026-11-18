@@ -38,7 +38,7 @@ class PermanentEnchantSameBuildJoin(unittest.TestCase):
             {"ItemID":244016,"ItemEffectID":102},
             {"ItemID":700,"ItemEffectID":103}])
         write_csv(root, "ItemEffect", ["ID","SpellID","TriggerType"], [
-            {"ID":100,"SpellID":777,"TriggerType":0},
+            {"ID":100,"SpellID":777,"TriggerType":5},
             {"ID":101,"SpellID":778,"TriggerType":0},
             {"ID":102,"SpellID":779,"TriggerType":0},
             {"ID":103,"SpellID":780,"TriggerType":0}])
