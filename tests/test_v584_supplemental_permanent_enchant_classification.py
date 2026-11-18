@@ -85,6 +85,8 @@ class TestSupplementalV584(unittest.TestCase):
         self.assertEqual(row["effect_family"],"static_chmv_rating_haste_rating")
         self.assertFalse(row["ui_selectable"])
         self.assertEqual(row["static_E"],"NOT_MEASURED_IF_CHMV")
+        self.assertEqual(row["static_E_source_status"],
+                         "STATIC_CHMV_NUMERIC_MEASUREMENT_PENDING")
         self.assertFalse(result["source_quality_observations"][0][
             "policy_A_product_input_verified"])
         self.assertEqual(result["native_calls"],0)
@@ -97,6 +99,8 @@ class TestSupplementalV584(unittest.TestCase):
         self.assertEqual(v584._slot(armor)["slot_group"],"legs")
         self.assertEqual(v584._slot(weapon)["status"],
                          "WEAPON_SUBCLASS_PENDING_EXACT_HAND_APPLICABILITY")
+        self.assertEqual(v584._slot(weapon)["weapon_subclass_ids_from_source_mask"],
+                         [2,3,18])
         self.assertEqual(v584._slot({**armor,"inventory_type_mask":1<<28})
                          ["status"],"ARMOR_MASK_EXACT_SLOT_UNRESOLVED")
 
@@ -194,6 +198,8 @@ class TestSupplementalV584(unittest.TestCase):
         self.assertEqual(result["static_chmv_candidate_count"],0)
         self.assertEqual(result["rows"][0]["effect_family"],
                          "static_nonchmv_item_mod")
+        self.assertEqual(result["rows"][0]["static_E_source_status"],
+                         "NO_STATIC_CHMV_COMPONENT_IN_SIMC_DBC")
         self.assertEqual(result["rows"][0]["static_components"][0]["item_mod"],
                          "strength_agility")
         self.assertFalse(result["rows"][0]["ui_selectable"])
