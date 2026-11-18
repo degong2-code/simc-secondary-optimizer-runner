@@ -821,9 +821,19 @@ def source(manifest_path):
         prepared["admitted_season_environment_identity"]=(
             season_source["season_source_identity"])
     if NONCHMV_ENCHANT_FIELD in user:
-        # Positive E is limited to a native-witnessed current user; v529 E0
-        # and the older nonCHMV path retain their exact original rules.
-        if (FRESH_SEASON_FIELD in user and
+        # Installed Policy A E0 is normal. Exact signed v212 CHMV ownership
+        # and one physical SimC enchant_id have ALREADY been rechecked in
+        # _admitted_fresh_season_source; no extra Native effect/proc Gate.
+        if (season_source is not None and
+                "selected_user_installed_E0" in season_source):
+            bound=season_source["selected_user_installed_E0"]
+            need(user[NONCHMV_ENCHANT_FIELD]==bound["choice"] and
+                 all(value==0 for value in bound["fixed_E"].values()),
+                 "FRESH_SELECTED_E0_USER_CHOICE_AND_BUDGET_DRIFT")
+            approved_nonchmv=bound
+        # The previous exact v528 one-profile E0 and positive-E cases
+        # retain their original scope/binary proofs and old identities.
+        elif (FRESH_SEASON_FIELD in user and
                 "positive_user_E" in season_source):
             approved_nonchmv=positive_enchant.admit(
                 user[NONCHMV_ENCHANT_FIELD],prepared["oil"]["profile"],
