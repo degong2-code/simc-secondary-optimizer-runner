@@ -16,6 +16,59 @@ from runner import v216_environment_build_coordinator as environment_build
 from tests.test_v213_source_to_catalog import SourceToCatalogTests
 
 
+class RegisteredDualRingSourceScopeTests(unittest.TestCase):
+    """Only synthetic v212 option registration identity; no UI/Native approval."""
+
+    def test_v212_accepts_exact_source_ring_family_not_guessed_user_hand(self):
+        source={"enchant_id":7967,"token":"enchant_ring__eyes_of_the_eagle",
+                "quality_rank":2,"slot_resolution_status":"SOURCE_MASK_RESOLVED",
+                "slot_group":"finger1/finger2","item_class":4,
+                "inventory_type_mask":1<<11,"item_subclass_mask":0}
+        catalog={"catalog":{"enchants":{"items":[source]}},
+                 "game_build":"12.1.5.70783",
+                 "simc_revision":"a"*40,
+                 "manifest_sha256":"b"*64}
+        identity={"kind":"permanent_enchant","exact_id":7967,
+                  "simc_token":source["token"],
+                  "slot":"finger1/finger2",
+                  "game_build":catalog["game_build"],
+                  "simc_revision":catalog["simc_revision"],
+                  "catalog_sha256":catalog["manifest_sha256"]}
+        item={"enchant_id":7967,"simc_token":source["token"],
+              "slot":"finger1/finger2",
+              "highest_verified_quality_rank":2,
+              "policy_A_source_relation_sha256":"c"*64,
+              "quality_source_sha256":"d"*64,
+              "exact_v220_identity":identity}
+        prepared={"status":"EXACT_OPTIONS_PREPARED_FOR_VERSIONED_INSTALL",
+                  "verified_option_inputs_unpublished":[item],
+                  "v220_exact_proof_eligible_count":1,
+                  "quality_use_scope_pending_item_ids":[],
+                  "other_proofs_pending_by_item_id":{},
+                  "native_calls":0,"network_calls":0}
+        self.assertEqual(
+            p._validate_fresh_prepared_option_sources(prepared,catalog),1)
+        # A single hand is not part of the source family; v098 must later
+        # match the actual physical finger1/finger2 selected item.
+        for altered in (
+            {"slot":"finger1"},
+            {"simc_token":"enchant_ring__other"},
+            {"highest_verified_quality_rank":1},
+            {"exact_v220_identity":{**identity,"exact_id":999999}}):
+            with self.subTest(change=altered),self.assertRaises(
+                    p.EnvironmentBlocked):
+                p._validate_fresh_prepared_option_sources(
+                    {**prepared,"verified_option_inputs_unpublished":[
+                        {**item,**altered}]},catalog)
+        with self.assertRaisesRegex(
+                p.EnvironmentBlocked,"SOURCE_SLOT_UNRESOLVED"):
+            p._validate_fresh_prepared_option_sources(
+                prepared,{"**":None,
+                          **catalog,
+                          "catalog":{"enchants":{"items":[
+                              {**source,"inventory_type_mask":1<<8}]}}})
+
+
 class FreshEnvironmentSourceStageTests(unittest.TestCase):
     """Only season source staging; no user v098, Native or installed READY."""
 
