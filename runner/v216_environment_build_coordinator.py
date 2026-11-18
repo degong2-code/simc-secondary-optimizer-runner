@@ -2162,24 +2162,23 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
                 "effect_mechanism_reimplemented":False,
                 "gameplay_or_native_effect_attested":False}
 
-            # The pinned v211 SimC item-enchant path changes only the
-            # item_mod identified by a DBC static component. Thus a COMPLETE
-            # known, NON-CHMV-only static enchant with no spell or unknown
-            # component cannot add crit/haste/mastery/vers gear rating.
-            # No Native/effect/proc inference: this certifies static E0 ONLY.
+            # The source-owned E vector covers only permanent static
+            # crit/haste/mastery/vers gear rating. ITEM_ENCHANTMENT_EQUIP_SPELL
+            # effects (including dynamic CHMV procs) remain wholly SimC-owned
+            # and MUST NOT become a reason to reject known static E0.
+            # Even a spell-only enchant can have exact static E0. This does
+            # not assert that its spell works, deals damage, or is dominant.
             static=classified_row.get("static_components")
             known_nonchmv={
                 "PRIMARY_ATTRIBUTE","PRIMARY_ATTRIBUTE_HYBRID",
                 "NON_CHMV_STAT","TERTIARY_RATING",
                 "NON_CHMV_RESISTANCE"}
             exact_source_E0=(
-                classified_row.get("effect_family")==
-                    "static_nonchmv_item_mod"
-                and classified_row.get("effect_source_status")==
+                classified_row.get("effect_source_status")==
                     "DBC_STAT_AND_SPELLTEXT_SOURCE_CLASSIFIED"
                 and classified_row.get("budget_policy")==
                     "NO_STATIC_CHMV_COMPONENT_IN_DBC_ROW; DYNAMIC_EFFECTS_STAY_WITH_SIMC"
-                and type(static) is list and bool(static)
+                and type(static) is list
                 and all(type(component) is dict
                         and component.get("category") in known_nonchmv
                         and type(component.get("item_mod_id")) is int
@@ -2190,14 +2189,13 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
                 and classified_row.get("static_chmv_rating_present_in_dbc")
                     is False
                 and classified_row.get("static_chmv_stats")==[]
-                and classified_row.get("spell_effects")==[]
+                and type(classified_row.get("spell_effects")) is list
+                and all(type(component) is dict
+                        and type(component.get("component_index")) is int
+                        and type(component.get("driver_spell_id")) is int
+                        and component["driver_spell_id"]>0
+                        for component in classified_row["spell_effects"])
                 and classified_row.get("unknown_components")==[]
-                and classified_row.get("dynamic_chmv_proc_present_in_spell_text")
-                    is False
-                and classified_row.get("dynamic_chmv_proc_roles")==[]
-                and classified_row.get("simc_custom_handlers")==[]
-                and classified_row.get(
-                    "simc_generic_or_unregistered_spell_count")==0
                 and classified_row.get("native_E_evidence")=={
                     "status":"NOT_MEASURED_NEW_BUILD","static_E":None,
                     "ui_selectable":False,"source_file":None}
@@ -2213,9 +2211,11 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
                     "sealed_v213_artifact_sha256":artifact_sha256,
                     "source_manifest_sha256":v211["source_manifest_sha256"],
                     "static_component_evidence":static,
-                    "no_spell_or_unknown_components":True,
+                    "no_unknown_static_components":True,
+                    "simc_spell_components_not_in_static_E":
+                        len(classified_row["spell_effects"]),
                     "fixed_E":E,
-                    "scope":"PINNED_SIMC_STATIC_NONCHMV_ONLY_NOT_NATIVE_EFFECT_PROOF",
+                    "scope":"PINNED_SIMC_NO_STATIC_CHMV_ITEM_MOD_SPELLS_SIMC_OWNED",
                     "source_receipts":stamps}
                 proofs[row["enchant_id"]]["chmv_budget"]={
                     "identity":identity,
