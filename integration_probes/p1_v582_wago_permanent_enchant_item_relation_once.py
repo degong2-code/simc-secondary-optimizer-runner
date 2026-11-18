@@ -106,6 +106,7 @@ def wago_join(directory, simc_by_id, highest, expansion_id):
                 "name_enUS": row["Display_lang"].strip()}
         else:
             physical_ids.pop(iid)
+    physical_ids = {iid: value for iid, value in physical_ids.items() if value is not None}
     need(physical_ids, "NO_EXPANSION_ITEM_ENHANCEMENT_ITEMS")
     relations = {}
     for row in use._rows((root / "ItemXItemEffect.csv").read_bytes(),
