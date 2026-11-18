@@ -165,6 +165,66 @@ class TestSupplementalV584(unittest.TestCase):
         self.assertEqual(result["source_quality_observations"][0]["status"],
                          "UNKNOWN_STAT_COMPONENT_QUALITY_EFFECT_PENDING")
 
+    def test_known_hybrid_primary_stat_is_nonchmv_without_E(self):
+        with tempfile.TemporaryDirectory() as td:
+            folder=Path(td)
+            relation,manifest_path=fixture(folder)
+            db=folder/"spell_item_enchantment.inc"
+            raw=db.read_bytes()
+            changed=raw.replace(b"{ 36, 0, 0 }, { 0.0000f",
+                                b"{ 72, 0, 0 }, { 0.0000f")
+            self.assertNotEqual(raw,changed)
+            db.write_bytes(changed)
+            enums=folder/"data_enums.hh"
+            parsed=enums.read_bytes()+b"\nITEM_MOD_STRENGTH_AGILITY = 72,\n"
+            enums.write_bytes(parsed)
+            manifest=json.loads(manifest_path.read_text())
+            for name,contents in (("spell_item_enchantment.inc",changed),
+                                  ("data_enums.hh",parsed)):
+                manifest["files"][name].update({
+                    "size_bytes":len(contents),
+                    "sha256":v584.effect.sha256(contents),
+                    "git_blob_sha1":v584.effect.git_blob_sha(contents)})
+            manifest_path.write_text(json.dumps(manifest))
+            result=v584.classify(relation=relation,source_dir=folder,
+                                 manifest_path=manifest_path,
+                                 game_build=BUILD,simc_revision=REV)
+        self.assertEqual(result["status"],v584.COMPLETE,result)
+        self.assertEqual(result["unknown_component_candidate_count"],0)
+        self.assertEqual(result["static_chmv_candidate_count"],0)
+        self.assertEqual(result["rows"][0]["effect_family"],
+                         "static_nonchmv_item_mod")
+        self.assertEqual(result["rows"][0]["static_components"][0]["item_mod"],
+                         "strength_agility")
+        self.assertFalse(result["rows"][0]["ui_selectable"])
+
+    def test_pinned_resistance_type_is_not_chmv_or_unknown_effect(self):
+        enum_string=(
+            "ITEM_ENCHANTMENT_STAT=5,\n"
+            "ITEM_ENCHANTMENT_EQUIP_SPELL=3,\n"
+            "ITEM_ENCHANTMENT_RESISTANCE=4,\n"
+            "ITEM_MOD_AGILITY=3,\nITEM_MOD_STRENGTH=4,\n"
+            "ITEM_MOD_INTELLECT=5,\nITEM_MOD_STAMINA=7,\n"
+            "ITEM_MOD_CRIT_RATING=32,\nITEM_MOD_HASTE_RATING=36,\n"
+            "ITEM_MOD_VERSATILITY_RATING=40,\n"
+            "ITEM_MOD_MASTERY_RATING=49,\nITEM_MOD_SPEED_RATING=61,\n"
+            "ITEM_MOD_LEECH_RATING=62,\nITEM_MOD_AVOIDANCE_RATING=63,\n"
+            "ITEM_MOD_STRENGTH_AGILITY_INTELLECT=71,\n")
+        enums=v584.effect.parse_enums(enum_string)
+        dbc={"ench_type":[4,0,0],"ench_amount":[0,0,0],
+             "ench_prop":[0,0,0],"ench_coeff":[0.8028,0.0,0.0],
+             "id_scaling":0}
+        candidate={"enchant_id":91004,"token":"synth_spellthread",
+                   "quality_rank":2,"item_class":4,
+                   "inventory_type_mask":0x80,
+                   "item_subclass_mask":0x1e}
+        classified=v584.effect.classify_row(
+            candidate,dbc,enums,{}, {},{},unknown_item_mods_pending=True)
+        self.assertEqual(classified["unknown_components"],[])
+        self.assertEqual(classified["static_components"][0]["category"],
+                         "NON_CHMV_RESISTANCE")
+        self.assertFalse(classified["static_chmv_rating_present_in_dbc"])
+
 
 if __name__=="__main__":
     unittest.main()
