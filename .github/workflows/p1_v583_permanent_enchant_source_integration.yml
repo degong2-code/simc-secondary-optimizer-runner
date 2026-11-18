@@ -10,6 +10,8 @@ on:
       - runner/v583_permanent_enchant_physical_source.py
       - runner/v584_supplemental_permanent_enchant_classification.py
       - runner/v213_source_to_catalog.py
+      - runner/v220_catalog_auto_admission.py
+      - tests/test_v220_catalog_auto_admission.py
       - tests/test_v584_supplemental_permanent_enchant_classification.py
       - tests/test_v585_historical_70783_enchant_quality.py
       - tests/test_v586_pinned_dk_runeforge_environment_integration.py
@@ -31,6 +33,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p test_v583_permanent_enchant_physical_source.py -v
           python -m unittest discover -s tests -p test_v584_supplemental_permanent_enchant_classification.py -v
+          python -m unittest discover -s tests -p test_v220_catalog_auto_admission.py -v
           python -m unittest discover -s tests -p test_v585_historical_70783_enchant_quality.py -v
           python -m unittest discover -s tests -p test_v586_pinned_dk_runeforge_environment_integration.py -v
           python -m unittest discover -s tests -p test_v294_dk_runeforge_selection.py -q
