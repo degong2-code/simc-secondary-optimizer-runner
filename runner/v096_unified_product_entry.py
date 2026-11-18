@@ -224,7 +224,9 @@ def _signed_installed_user_E0_profile(*,doc,selected,profile,user_final_T):
               if line.startswith("finger1=") or
                  line.startswith("finger2=")])==2,
          "FRESH_SELECTED_E0_TWO_PHYSICAL_RINGS_REQUIRED")
-    fields=equipment[0].split(",")
+    # The initial token is "finger1=id=..." (or finger2), so split
+    # the assignment name once before comparing exact item/enchant fields.
+    fields=equipment[0].split("=",1)[1].split(",")
     eid="enchant_id="+str(selected["enchant_id"])
     item="id="+str(selected["item_id"])
     need(fields.count(eid)==1 and fields.count(item)==1
