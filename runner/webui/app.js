@@ -3254,7 +3254,13 @@ function renderSeasonOptionCatalog(catalog) {
         "정적 E=0 검증 · 마부 #"+item.enchant_id+
         " · 실행 시 실제 반지/SimC 입력 재확인"));
     }
-    if(state.installedE0Ids.size)refreshExactEnchantAvailability();
+    if(state.installedE0Ids.size) {
+      refreshExactEnchantAvailability();
+      status.textContent="설치 원본으로 정적 CHMV E=0이 확인된 반지 마부 "+
+        state.installedE0Ids.size+
+        "종 선택 가능 · 실제 반지 ID와 SimC 입력은 실행 전에 다시 검증."+
+        " 다른 마부는 계속 잠금.";
+    }
     const exact=catalog.verified_exact_user_enchant_runtime;
     if(exact?.status==="EXACT_V528_V530_V532_V533_USER_ONLY" &&
        exact.general_selectable===false &&
@@ -3287,7 +3293,7 @@ function renderSeasonOptionCatalog(catalog) {
       details.className="catalog-source-group";
       const summary=document.createElement("summary");
       summary.textContent="설치 검증 등록 "+rows.length+
-        "종 · 최종 프로필 적용 대기 (신규 승인 아님)";
+        "종 · E=0 확정 항목만 입력 가능, 나머지는 적용 대기";
       details.appendChild(summary);
       const list=document.createElement("ul");
       for(const item of rows) {
