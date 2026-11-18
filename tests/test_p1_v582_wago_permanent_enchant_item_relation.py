@@ -24,9 +24,9 @@ class PermanentEnchantSameBuildJoin(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         root = Path(self.temp.name)
         self.root = root
-        write_csv(root, "Item", ["ID", "ClassID"], [
-            {"ID":244014,"ClassID":8}, {"ID":244015,"ClassID":8},
-            {"ID":244016,"ClassID":8}, {"ID":700,"ClassID":3}])
+        write_csv(root, "Item", ["ID", "ClassID", "SubclassID"], [
+            {"ID":244014,"ClassID":8,"SubclassID":0}, {"ID":244015,"ClassID":8,"SubclassID":0},
+            {"ID":244016,"ClassID":8,"SubclassID":0}, {"ID":700,"ClassID":3,"SubclassID":0}])
         write_csv(root, "ItemSparse", ["ID","ExpansionID","Display_lang"], [
             {"ID":244014,"ExpansionID":11,"Display_lang":"Ring enchant"},
             {"ID":244015,"ExpansionID":10,"Display_lang":"Wrong expansion"},
