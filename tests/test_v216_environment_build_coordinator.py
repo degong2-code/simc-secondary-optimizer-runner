@@ -2139,14 +2139,35 @@ class FirstSealedEnchantScopeBridgeTests(unittest.TestCase):
             with (mock.patch.object(v216.stage_engine,"_read_receipt",
                                     side_effect=read_receipt),
                   mock.patch.object(v216.simc_item_metadata,"from_seed",
-                                    return_value=metadata) as parsed,
+                                    side_effect=lambda directory,item_ids:{
+                                        **metadata,"items":[{
+                                            **metadata["items"][0],
+                                            "item_id":item_ids[0]}]}) as parsed,
                   mock.patch.object(v216.environment_manifest,"read_json",
                                     return_value=(source,"hash")),
                   mock.patch.object(v216.user_catalog.source_bridge,
                                     "verify_catalog")):
                 out=v216._fresh_first_sealed_representative_enchant_mask_preview(
                     collected=collected,compilation=compiled)
-            self.assertEqual(parsed.call_count,1)
+                # Final user item differs from the G reference ring; exactly
+                # one additional item is resolved, not a gear-market scan.
+                actual=v216._fresh_first_sealed_representative_enchant_mask_preview(
+                    collected=collected,compilation=compiled,
+                    selected_user_item={"slot":"finger1","item_id":268267},
+                    selected_enchant_id=8025)
+                wrong=v216._fresh_first_sealed_representative_enchant_mask_preview(
+                    collected=collected,compilation=compiled,
+                    selected_user_item={"slot":"feet","item_id":268267},
+                    selected_enchant_id=8025)
+            self.assertEqual(parsed.call_count,3)
+            self.assertTrue(actual["matched"],actual)
+            self.assertEqual(actual["selected_representative_item_id"],268267)
+            self.assertFalse(actual["reference_representative_not_user_equipment"])
+            self.assertTrue(actual["actual_user_item_from_v098_final_rows"])
+            self.assertFalse(actual["ui_selectable"])
+            self.assertFalse(actual["policy_A_product_input_verified"])
+            self.assertEqual(wrong["status"],"SOURCE_MASK_OR_HAND_NOT_MATCHED")
+            self.assertFalse(wrong["matched"])
             self.assertTrue(out["matched"],out)
             self.assertEqual(out["selected_representative_item_id"],268266)
             self.assertEqual(out["wago_physical_enchant_item_id"],244444)
