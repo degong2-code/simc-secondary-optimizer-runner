@@ -99,9 +99,20 @@ def _validate_fresh_prepared_option_sources(prepared, catalog):
                      "highest_verified_quality_rank",
                      "policy_A_source_relation_sha256",
                      "quality_source_sha256","exact_v220_identity"}
+    # Optional per-stat E is carried by the EXISTING trusted CHMV receipt.
+    # Historical installed choices lacking E retain their original shape.
+    E_fields={"verified_fixed_E","chmv_budget_receipt_sha256"}
     ids=[]
     for row in selected:
-        need(type(row) is dict and set(row)==expected_fields and
+        need(type(row) is dict and set(row) in (
+                 expected_fields,expected_fields|E_fields) and
+             (not E_fields<=set(row) or
+              (type(row["verified_fixed_E"]) is dict
+               and set(row["verified_fixed_E"])==set(season_budget.STATS)
+               and all(type(row["verified_fixed_E"][stat]) is int
+                       and 0<=row["verified_fixed_E"][stat]<=100000
+                       for stat in season_budget.STATS)
+               and valid_sha(row["chmv_budget_receipt_sha256"]))) and
              type(row.get("enchant_id")) is int and
              row["enchant_id"] in by_id,
              "FRESH_ENVIRONMENT_PREPARED_ITEM_ID_OR_FIELDS_INVALID")
