@@ -143,5 +143,116 @@ class SealedCraftingQualityTests(unittest.TestCase):
         self.assertEqual(prepare(no_E)["verified_option_inputs_unpublished"],[])
 
 
+    def test_original_v216_stage_receipts_publish_product_input_only_from_sealed_join(self):
+        """Actual v216 producer consumes v191/v583 stage SHA, not client flags."""
+        import json
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            (root/"fresh_source").mkdir()
+            (root/"source").mkdir()
+            v191path=root/"fresh_source"/"v191_candidate.json"
+            v191path.write_text(json.dumps(self.v191,sort_keys=True),encoding="utf8")
+            original_sha=build.digest(v191path.read_bytes())
+            joinpath=root/"source"/"v583_join.json"
+            joinpath.write_text(json.dumps(self.v583,sort_keys=True),encoding="utf8")
+            join_sha=build.digest(joinpath.read_bytes())
+            v583stage="fresh-v583-enchant-join-test"
+            stage_map={
+                "v191":("candidate","fresh_source/v191_candidate.json",original_sha),
+                "v211":("classification","fresh_source/v211_classification.json","b"*64),
+                "v213":("candidate","fresh_source/v213_candidate_catalog.json","c"*64)}
+            att={"stage_root":str(root)}
+            receipts={}
+            for stage,(key,rel,checksum) in stage_map.items():
+                name="fresh-"+stage
+                stamp=(str(1+len(att))*64)[:64]
+                att[stage+"_stage"]={"status":"REUSED_VERIFIED",
+                    "stage_id":name,"receipt_sha256":stamp}
+                receipts[name]={"stage_id":name,"stage_version":"1",
+                    "status":"COMPLETE","receipt_sha256":stamp,
+                    "output_paths":{key:rel},
+                    "outputs":{key:{"sha256":checksum,"path":rel}}}
+            receipts[v583stage]={"receipt_sha256":"9"*64,
+                "output_paths":{"candidate":"source/v583_join.json"},
+                "outputs":{"candidate":{"sha256":join_sha}}}
+            v583_ref={"status":
+                "PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",
+                "candidate_path":str(joinpath),
+                "source_stage":{"stage_id":v583stage,
+                    "receipt_sha256":"9"*64,
+                    "output_paths":{"candidate":"source/v583_join.json"}}}
+            original={"enchant_id":99012,"token":self.token,
+                "quality_rank":2,"slot_group":"feet",
+                "slot_resolution_status":"SOURCE_MASK_RESOLVED",
+                "item_class":4,"inventory_type_mask":self.mask,
+                "item_subclass_mask":0}
+            static={"component_index":0,"item_mod_id":7,
+                    "category":"NON_CHMV_STAT",
+                    "dbc_amount":100,"coefficient":0.0}
+            category={**{k:original[k] for k in
+                        ("enchant_id","token","quality_rank","item_class",
+                         "inventory_type_mask","item_subclass_mask")},
+                "simc_effect_owner":"SIMC",
+                "simc_effect_reimplemented":False,
+                "effect_family":"static_nonchmv_item_mod",
+                "effect_source_status":"DBC_STAT_AND_SPELLTEXT_SOURCE_CLASSIFIED",
+                "budget_policy":
+                    "NO_STATIC_CHMV_COMPONENT_IN_DBC_ROW; DYNAMIC_EFFECTS_STAY_WITH_SIMC",
+                "static_components":[static],"static_chmv_rating_present_in_dbc":False,
+                "static_chmv_stats":[],"spell_effects":[],
+                "unknown_components":[],
+                "dynamic_chmv_proc_present_in_spell_text":False,
+                "dynamic_chmv_proc_roles":[],"simc_custom_handlers":[],
+                "simc_generic_or_unregistered_spell_count":0,
+                "native_E_evidence":{"status":"NOT_MEASURED_NEW_BUILD",
+                    "static_E":None,"ui_selectable":False,"source_file":None},
+                "selection_status":"LOCKED_PENDING_CURRENT_SEASON_ITEM_EFFECT_PROOF"}
+            category_item={**original,"classification":category}
+            data={**self.catalog,
+                "source_provenance":{
+                    "v191":{"sha256":original_sha},
+                    "v211":{"sha256":"b"*64,
+                        "simc_item_enchant_pipeline":{
+                            "owner":"SIMC","source_file":"engine/item/enchants.cpp",
+                            "static_stat_path":"ITEM_ENCHANTMENT_STAT",
+                            "spell_effect_path":"ITEM_ENCHANTMENT_EQUIP_SPELL",
+                            "passive_spell_path":"passive_enchant"}}},
+                "enchant_classification":{
+                    "status":
+                        "SOURCE_CLASSIFIED_NOT_GENERAL_NATIVE_ACCEPTANCE_OR_UI_PROMOTION",
+                    "source_manifest_sha256":"f"*64,
+                    "rows":[category]},
+                "catalog":{"enchants":{"items":[category_item]}},
+                "v196_enchant_source":{"rows":[
+                    {"enchant_id":99012,"token":self.token,
+                     "inventory_type_mask":self.mask}]}}
+            public={"enchant_id":99012,"token":self.token,
+                    "highest_source_quality_rank":2,"source_slots":["feet"]}
+            def produce():
+                with mock.patch.object(build.stage_engine,"_read_receipt",
+                    side_effect=lambda path:receipts[path.stem]):
+                    return build._v217_policy_A_source_relation_receipts(
+                        catalog=data,artifact_sha256="c"*64,
+                        catalog_path=root/"fresh_source"/"v213_candidate_catalog.json",
+                        stage_attestations=att,public_rows=[public],
+                        physical_enchant_source=v583_ref)[99012]
+            good=produce()
+            self.assertEqual(set(good),{
+                "source_relation","simc_input","product_input","chmv_budget"})
+            self.assertTrue(good["product_input"]["source_quality_family_verified"])
+            self.assertFalse(good["chmv_budget"]["gameplay_or_native_effect_attested"])
+            candidate=admission.candidate_from_source_enchant(
+                data,public,original_source_row=original)
+            self.assertTrue(admission.decide(candidate,good)["eligible"])
+            joinpath.write_text(joinpath.read_text("utf8")+" ",encoding="utf8")
+            # Tampered optional v583 source leaves G/J/F/O and original
+            # source relation alone, without a forged quality certificate.
+            pending=produce()
+            self.assertNotIn("product_input",pending)
+            self.assertEqual(set(pending),
+                {"source_relation","simc_input","chmv_budget"})
+
+
 if __name__=="__main__":
     unittest.main()
