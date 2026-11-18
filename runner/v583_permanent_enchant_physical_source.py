@@ -294,7 +294,7 @@ def collect(*, stage_root, build, expansion_id, wago_stage, fresh_gear,
             "quality":quality_sha,"projection_code":code["sha256"]},
             sort_keys=True).encode())[:20]
         stage_id="fresh-v583-enchant-join-"+projection_identity
-        output="source/v583_permanent_join_"+projection_identity+".json
+        output="source/v583_permanent_join_"+projection_identity+".json"
         def execute():
             data=join_existing_sources(**original,build=build,
                                        expansion_id=expansion_id)
