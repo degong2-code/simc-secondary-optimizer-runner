@@ -1,5 +1,6 @@
 """v098 target-level USER controls -> full internal v096 plan, offline only."""
 import json,os,pathlib,re,subprocess,sys,tempfile,unittest
+from unittest import mock
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 sys.path.insert(0,str(ROOT/"tests"))
@@ -8,6 +9,62 @@ import v096_unified_product_entry as old
 import v062_static_budget_bridge as native_budget
 import v061_scenario_contract as scenario
 from test_v062_static_budget_bridge import record as offline_record
+
+
+class InstalledE0ActualV098RingTests(unittest.TestCase):
+    """Internal original v212 plus final v101 ring source, zero Native."""
+
+    def test_e0_profile_injection_after_final_equipment_and_exact_source(self):
+        from tests.test_v212_environment_manifest import (
+            SelectedPermanentEnchantE0BudgetTests)
+        zero=dict.fromkeys(boot.installed_manifest.season_budget.STATS,0)
+        doc=SelectedPermanentEnchantE0BudgetTests().installed([{
+            "enchant_id":7967,"simc_token":"enchant_ring__eyes_of_the_eagle",
+            "slot":"finger1/finger2","ui_selectable":True,
+            "verified_fixed_E":zero,
+            "chmv_budget_receipt_sha256":"d"*64}])
+        user={"target":{"ilevel":334,"final_T":None},
+              boot.SEASON_ENCHANT_FIELD:{"finger2":7967}}
+        mask={"status":"EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED",
+              "actual_user_item_from_v098_final_rows":True,
+              "selected_slot":"finger2","enchant_id":7967,
+              "selected_representative_item_id":268268}
+        rows={"finger2":{"item_id":268268,"options":{}}}
+        with tempfile.TemporaryDirectory() as td:
+            installed=pathlib.Path(td)/"v212.json"
+            installed.write_text("{}",encoding="utf8")
+            with (mock.patch.object(boot.installed_manifest,"read_json",
+                                    return_value=(doc,"a"*64)),
+                  mock.patch.object(boot.installed_manifest,
+                                    "verify_fresh_installed_environment",
+                                    return_value=True),
+                  mock.patch.object(boot.installed_manifest,
+                                    "preview_installed_selected_enchant_budget",
+                                    wraps=boot.installed_manifest.
+                                      preview_installed_selected_enchant_budget)):
+                result=boot._selected_installed_E0_on_final_user_item(
+                    user=user,rows=rows,mask=mask,installed_path=installed)
+                self.assertTrue(result["fixed_E_zero_is_valid"])
+                self.assertEqual((result["base_B"],result["final_T"]),
+                                 (3107,3107))
+                self.assertEqual(rows["finger2"]["options"]["enchant_id"],
+                                 "7967")
+                self.assertFalse(result["runtime_selectable"])
+                for changed in (
+                    {"status":"SEALED_REPRESENTATIVE_ENCHANT_SCOPE_PENDING"},
+                    {"selected_representative_item_id":999},
+                    {"enchant_id":8025},
+                ):
+                    with self.subTest(changed=changed):
+                        with self.assertRaises(boot.UserScenarioBlocked):
+                            boot._selected_installed_E0_on_final_user_item(
+                                user=user,
+                                rows={"finger2":{
+                                    "item_id":268268,"options":{}}},
+                                mask={**mask,**changed},
+                                installed_path=installed)
+
+
 
 def case(which,*,ilevel=334,final_T=None):
     options={"fury":("warrior","fury"),
