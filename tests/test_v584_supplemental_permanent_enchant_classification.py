@@ -136,6 +136,35 @@ class TestSupplementalV584(unittest.TestCase):
         self.assertEqual(result["candidate_count"],1,result)
         self.assertEqual(result["rows"][0]["enchant_id"],91004)
 
+    def test_unknown_new_item_mod_is_recorded_not_guessed_or_promoted(self):
+        with tempfile.TemporaryDirectory() as td:
+            folder=Path(td)
+            relation,manifest_path=fixture(folder)
+            db=folder/"spell_item_enchantment.inc"
+            raw=db.read_bytes()
+            changed=raw.replace(b"{ 36, 0, 0 }, { 0.0000f",
+                                b"{ 999, 0, 0 }, { 0.0000f")
+            self.assertNotEqual(raw,changed)
+            db.write_bytes(changed)
+            manifest=json.loads(manifest_path.read_text())
+            manifest["files"]["spell_item_enchantment.inc"].update({
+                "size_bytes":len(changed),
+                "sha256":v584.effect.sha256(changed),
+                "git_blob_sha1":v584.effect.git_blob_sha(changed)})
+            manifest_path.write_text(json.dumps(manifest))
+            result=v584.classify(relation=relation,source_dir=folder,
+                                 manifest_path=manifest_path,
+                                 game_build=BUILD,simc_revision=REV)
+        self.assertEqual(result["status"],v584.COMPLETE,result)
+        self.assertEqual(result["unknown_component_candidate_count"],1)
+        self.assertEqual(result["static_chmv_candidate_count"],0)
+        self.assertEqual(result["quality_noninferior_source_count"],0)
+        self.assertEqual(result["rows"][0]["unknown_components"][0][
+            "item_mod_or_spell_id"],999)
+        self.assertFalse(result["rows"][0]["ui_selectable"])
+        self.assertEqual(result["source_quality_observations"][0]["status"],
+                         "UNKNOWN_STAT_COMPONENT_QUALITY_EFFECT_PENDING")
+
 
 if __name__=="__main__":
     unittest.main()
