@@ -1,0 +1,38 @@
+name: P1 v582 Real Wago Permanent Enchant Item Join Once
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - .github/workflows/p1_v582_wago_permanent_enchant_item_relation_once.yml
+      - integration_probes/p1_v582_wago_permanent_enchant_item_relation_once.py
+      - tests/test_p1_v582_wago_permanent_enchant_item_relation.py
+
+permissions:
+  contents: read
+
+jobs:
+  once:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run scoped offline join regression first
+        run: python -m unittest discover -s tests -p test_p1_v582_wago_permanent_enchant_item_relation.py -v
+      - name: Read exact 70783 Wago source and pinned SimC permanent enchants
+        run: |
+          python integration_probes/p1_v582_wago_permanent_enchant_item_relation_once.py \
+            --game-build 12.1.5.70783 \
+            --simc-revision de11f57df75dda668bae6ac7043a43b98831fa96 \
+            --expansion-id 11 \
+            --out "$RUNNER_TEMP/p1-v582-wago-permanent-enchant-relation.json"
+      - name: Upload source-only join receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-v582-wago-permanent-enchant-item-relation
+          path: ${{ runner.temp }}/p1-v582-wago-permanent-enchant-relation.json
+          if-no-files-found: warn
+          retention-days: 7
