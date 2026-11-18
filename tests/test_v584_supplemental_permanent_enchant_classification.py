@@ -250,7 +250,7 @@ class TestSupplementalV584(unittest.TestCase):
         self.assertEqual(result["source_enum_names"],["BOW","GUN","CROSSBOW"])
         self.assertTrue(result["source_ranged_weapon_types_only"])
         self.assertFalse(result["hand_applicability_verified"])
-        unknown=v584.weapon_subclasses_from_pinned_source(0x8000c,source)
+        unknown=v584.weapon_subclasses_from_pinned_source(0x20000c,source)
         self.assertFalse(unknown["source_enum_all_ids_resolved"])
         self.assertFalse(unknown["source_ranged_weapon_types_only"])
 
