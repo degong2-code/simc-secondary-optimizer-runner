@@ -2419,7 +2419,29 @@ render(provenZero);
 assert($("season-enchant-groups").children[0].children[1].children[0]
   .textContent.includes("정적 CHMV E=0 (정상, 효과는 SimC 처리)"));
 assert.strictEqual($("season_enchant_finger1").disabled,true,
-  "E0 is a normal stat budget, not new unverified product runtime permission");
+  "E0 accounting alone is not signed-installed user runtime authorization");
+const ready={
+  enchant_id:89999,slot:"finger1/finger2",
+  simc_token:"enchant_ring__synthetic_e0",
+  highest_verified_quality_rank:2,
+  verified_fixed_E:{crit_rating:0,haste_rating:0,
+    mastery_rating:0,versatility_rating:0},
+  chmv_budget_receipt_sha256:"e".repeat(64)};
+const signedE0={...installed,verified_installed_enchant_registrations:{
+  ...installed.verified_installed_enchant_registrations,
+  items:[ready],
+  installed_E0_final_finger_candidates:[{
+    enchant_id:89999,slot:"finger1/finger2",
+    simc_token:ready.simc_token,
+    highest_verified_quality_rank:2,
+    chmv_budget_receipt_sha256:"e".repeat(64)}]}};
+render(signedE0);
+assert.strictEqual($("season_enchant_finger1").disabled,false,
+  "only installed authenticated v212 Policy A E0 may choose a final ring");
+assert($("season_enchant_finger1").options.some(x=>x.value==="89999"));
+assert(state.installedE0Ids.has(89999));
+assert($("season-option-catalog-status").textContent.includes("E=0"));
+assert.strictEqual(state.eagleApproved,false);
 render({...installed,verified_installed_enchant_registrations:{
   ...installed.verified_installed_enchant_registrations,
   installed_manifest_sha256:"b".repeat(64)}});
@@ -2429,8 +2451,8 @@ render(null);
 assert.strictEqual(state.dkRuneIds.size,0);
 assert.strictEqual(state.eagleApproved,false);
 assert.strictEqual($("dk_rune_main").options.length,1);
-assert.strictEqual(compatibility,5,
-  "E0 normal/read-only also recomputes rune compatibility without unlocking");
+assert.strictEqual(compatibility,6,
+  "signed E0 option render also recomputes DK rune compatibility");
 console.log("V467_FRESH_DK_RUNES_NO_ENCHANT_APPROVAL_PASS");
 """
         result=subprocess.run([node,"-e",script,str(source)],
