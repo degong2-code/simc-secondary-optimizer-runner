@@ -597,6 +597,95 @@ def candidates_from_v191_fresh(season):
     return rows
 
 
+
+def source_rank_component_comparison(ordered, dbc, selected_id, enums):
+    """Existing pinned SimC DBC: compare raw *static shape and coefficients*.
+
+    Exact same source component types, stat IDs, scaling and use conditions
+    and component-wise nondecreasing rank values are evidence of raw strength
+    direction, NOT proof of same in-game effect, runtime amount or UI rank
+    dominance. Different equip spell driver IDs, unknown stat types or
+    negative/scaled semantics never silently qualify. This is an optional
+    detail inside the existing v211 quality observation, not a new Gate.
+    """
+    stat_type=enums["ITEM_ENCHANTMENT_STAT"]
+    resist_type=enums.get("ITEM_ENCHANTMENT_RESISTANCE")
+    conditions=("id_gem","id_scaling","min_scaling_level",
+                "max_scaling_level","min_ilevel","max_ilevel",
+                "req_skill","req_skill_value")
+    records=[dbc[r["enchant_id"]] for r in ordered]
+    selected=next(i for i,r in enumerate(ordered)
+                  if r["enchant_id"]==selected_id)
+    shapes=[]
+    components=[]
+    for record in records:
+        parts=[(int(t),int(p),int(a),float(c))
+               for t,p,a,c in zip(
+                   record["ench_type"],record["ench_prop"],
+                   record["ench_amount"],record["ench_coeff"])
+               if t!=0]
+        shapes.append([(t,p) for t,p,_,_ in parts])
+        components.append(parts)
+    same_conditions=(len({tuple(x[k] for k in conditions)
+                          for x in records})==1)
+    same_components=(bool(shapes[0])
+                     and all(shape==shapes[0] for shape in shapes))
+    allowed_types={stat_type}
+    if resist_type is not None:
+        allowed_types.add(resist_type)
+    only_known_static=(same_components and
+                       all(t in allowed_types and
+                           (t!=stat_type or p in MODS)
+                           for t,p in shapes[0]))
+    nonnegative_values=(only_known_static and all(
+        a>=0 and c>=0.0 and c<float("inf")
+        for parts in components for _,_,a,c in parts))
+    compare=(len(ordered)>1 and same_conditions
+             and only_known_static and nonnegative_values)
+    raw_noninferior=(compare and all(
+        components[selected][k][2]>=other[k][2] and
+        components[selected][k][3]>=other[k][3]
+        for other in components for k in range(len(components[selected]))))
+    strictly_higher=(raw_noninferior and any(
+        components[selected][k][2]>other[k][2] or
+        components[selected][k][3]>other[k][3]
+        for j,other in enumerate(components) if j!=selected
+        for k in range(len(components[selected]))))
+    drivers=[{"enchant_id":ordered[i]["enchant_id"],
+              "quality_rank":ordered[i]["quality_rank"],
+              "id_spell":record["id_spell"],
+              "components":[{"enchant_type_id":t,"stat_or_spell_id":p,
+                             "amount":a,"coefficient":c}
+                            for t,p,a,c in components[i]]}
+             for i,record in enumerate(records)]
+    if not same_conditions:
+        status="SOURCE_USE_OR_SCALING_SCOPE_DIFFERS"
+    elif not only_known_static:
+        status="SOURCE_COMPONENT_KIND_OR_SPELL_DRIVER_NEEDS_REVIEW"
+    elif not nonnegative_values or not compare:
+        status="SOURCE_STATIC_NUMERIC_COMPARISON_PENDING"
+    elif not raw_noninferior:
+        status="SOURCE_SELECTED_RANK_RAW_COMPONENT_NOT_NONINFERIOR"
+    else:
+        status="SOURCE_STATIC_COMPONENTS_RAW_NONDECREASING_UNADMITTED"
+    observation={
+        "status":status,
+        "source_same_scaling_and_use_conditions":bool(same_conditions),
+        "source_same_component_types_and_ids":bool(same_components),
+        "source_all_components_known_static":bool(only_known_static),
+        "source_raw_amount_and_coefficient_nondecreasing":bool(raw_noninferior),
+        "source_strictly_stronger_raw_component":bool(strictly_higher),
+        "source_id_spell_identical":len({r["id_spell"] for r in records})==1,
+        "by_source_rank":drivers,
+        "same_effect_and_use_conditions_verified":False,
+        "quality_noninferiority_runtime_verified":False,
+        "policy_A_product_input_verified":False,
+        "ui_selectable":False}
+    observation["source_observation_sha256"]=sha256(
+        canonical(observation).encode("utf8"))
+    return observation
+
+
 def _fresh_static_quality_source_only(season,candidates,permanent,dbc_text,enums):
     """Compare source-observed rank variants; NEVER emit a Policy A proof.
 
@@ -715,6 +804,9 @@ def _fresh_static_quality_source_only(season,candidates,permanent,dbc_text,enums
             "status":status,
             "source_only_noninferior":bool(noninferior),
             "source_observation_sha256":sha256(canonical(evidence).encode("utf8")),
+            "source_rank_component_comparison":
+                source_rank_component_comparison(
+                    ordered,dbc,selected["enchant_id"],enums),
             "observed_rank_count":len(ordered),
             "policy_A_product_input_verified":False,
             "ui_selectable":False})
