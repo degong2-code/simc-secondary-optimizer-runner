@@ -294,10 +294,17 @@ def user_scenario(controls):
         choice=controls["enchant_choices"]
         if choice==nonchmv_enchant.CHOICE:
             nonchmv_enchant.check_choice(choice)
-        else:
-            # v531 permits exact v528-positive-E candidates only; v098/v096
-            # still independently check v212 source/build/profile before Native.
+        elif choice in positive_enchant.CHOICES:
             positive_enchant.check_choice(choice)
+        else:
+            # Form syntax is NOT item admission. Only a newly verified
+            # v212 installation + final v098 physical mask + existing CHMV
+            # E0 + v096 exactly-once SimC profile may authorize this ID.
+            # Old packaged/non-installed paths still reject arbitrary IDs.
+            need(type(choice) is dict and len(choice)==1
+                 and set(choice)<= {"finger1","finger2"} and
+                 all(type(v) is int and v>0 for v in choice.values()),
+                 "USER_INSTALLED_ENCHANT_EXACT_ONE_RING_ID_REQUIRED")
         output[nonchmv_enchant.FIELD]=dict(choice)
     if "runeforge_by_hand" in controls:
         output["runeforge_by_hand"]=bootstrap.runeforge_mod.check_input(
