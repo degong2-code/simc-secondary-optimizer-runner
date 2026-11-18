@@ -1778,7 +1778,8 @@ function buildRequest() {
     const eid=Number(field("season_enchant_finger1"));
     const exact=state.exactUserEnchantIds.has(eid) &&
       exactUserEnchantInputsMatch();
-    if(!exact&&!(eid===7967&&state.eagleApproved))
+    if(!exact&&!(eid===7967&&state.eagleApproved)&&
+       !state.installedE0Ids?.has(eid))
       throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
     controls.enchant_choices={finger1:eid};
   }
@@ -3162,11 +3163,20 @@ function exactUserEnchantInputsMatch() {
     !field("optimizer-oil-off-id");
 }
 function refreshExactEnchantAvailability() {
-  if(!state.exactUserEnchantIds.size)return;
+  const hasE0=!!state.installedE0Ids?.size;
+  if(!state.exactUserEnchantIds.size&&!hasE0)return;
   const selector=$("season_enchant_finger1");
-  const permitted=exactUserEnchantInputsMatch();
-  selector.disabled=!permitted;
-  if(!permitted&&selector.value)selector.value="";
+  const permitted=state.exactUserEnchantIds.size &&
+    exactUserEnchantInputsMatch();
+  selector.disabled=!permitted&&!hasE0;
+  for(const opt of selector.options) {
+    const id=Number(opt.value);
+    if(state.exactUserEnchantIds.has(id)&&
+       !state.installedE0Ids?.has(id))opt.disabled=!permitted;
+  }
+  if(!permitted&&selector.value&&
+     !state.installedE0Ids?.has(Number(selector.value)))
+    selector.value="";
 }
 function renderSeasonOptionCatalog(catalog) {
   const runeSource=catalog?.verified_weapon_enhancements?.dk_runeforges;
@@ -3196,6 +3206,7 @@ function renderSeasonOptionCatalog(catalog) {
   const selector=$("season_enchant_finger1");
   state.eagleApproved=false;
   state.exactUserEnchantIds=new Set();
+  state.installedE0Ids=new Set();
   state.exactUserEnchantScope=null;
   selector.replaceChildren(option("","마법부여 없음 (기존 설정)"));
   selector.disabled=true;
@@ -3219,6 +3230,31 @@ function renderSeasonOptionCatalog(catalog) {
     // This source-only catalogue remains globally unapproved. Exact
     // v528/v530/v532/v533 Native-witnessed choices live in a separate
     // read-only installed SHA scope and must also match current user input.
+    // The separately signed v212/Policy A E0 subset is stat-accounting
+    // ready. v098/v096 independently check final representative ring,
+    // SimC enchant_id, actual item and cache identity before execution.
+    // Prior exact v528 IDs retain their historical scoped entry instead.
+    const e0Candidates=Array.isArray(
+      registration?.installed_E0_final_finger_candidates)?
+      registration.installed_E0_final_finger_candidates:[];
+    for(const item of e0Candidates) {
+      if(!Number.isSafeInteger(item.enchant_id)||
+         item.enchant_id<=0 || item.slot!=="finger1/finger2" ||
+         [7967,8025,7965].includes(item.enchant_id) ||
+         !rows.some(row=>row.enchant_id===item.enchant_id &&
+           row.slot===item.slot &&
+           row.chmv_budget_receipt_sha256===
+              item.chmv_budget_receipt_sha256 &&
+           !!row.verified_fixed_E &&
+           ["crit_rating","haste_rating","mastery_rating",
+             "versatility_rating"].every(k=>row.verified_fixed_E[k]===0)))
+        continue;
+      state.installedE0Ids.add(item.enchant_id);
+      selector.appendChild(option(String(item.enchant_id),
+        "정적 E=0 검증 · 마부 #"+item.enchant_id+
+        " · 실행 시 실제 반지/SimC 입력 재확인"));
+    }
+    if(state.installedE0Ids.size)refreshExactEnchantAvailability();
     const exact=catalog.verified_exact_user_enchant_runtime;
     if(exact?.status==="EXACT_V528_V530_V532_V533_USER_ONLY" &&
        exact.general_selectable===false &&
@@ -3267,7 +3303,9 @@ function renderSeasonOptionCatalog(catalog) {
           (hasE?(stats.every(k=>item.verified_fixed_E[k]===0)
             ?" · 정적 CHMV E=0 (정상, 효과는 SimC 처리)"
             :" · 고정 E 원본 확인"):" · 고정 E 미확정")+
-          " · 최종 SimC 프로필 연결 대기 (선택 불가)";
+          (state.installedE0Ids.has(item.enchant_id)
+            ?" · 반지 1 선택 가능, 실행 전 장비/SimC 확인"
+            :" · 최종 SimC 프로필 연결 대기 (선택 불가)");
         list.appendChild(li);
       }
       details.appendChild(list);
