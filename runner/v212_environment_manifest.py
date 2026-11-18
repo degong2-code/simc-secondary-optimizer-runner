@@ -729,6 +729,21 @@ def verify_fresh_installed_environment(document):
          document.get("dps_optimization_required") is False and
          document.get("native_calls")==0 and document.get("network_calls")==0,
          "FRESH_INSTALL_READY_OR_BUDGET_CONTRACT_DRIFT")
+    # A v212 E vector is only installed when v196 propagated the trusted
+    # existing CHMV receipt; neither absence nor a changed signed value
+    # may mean E=0. Legacy published rows without E remain unchanged.
+    for row in document["published_verified_options"]:
+        has_E="verified_fixed_E" in row
+        has_receipt="chmv_budget_receipt_sha256" in row
+        need(has_E==has_receipt and
+             (not has_E or (
+              type(row["verified_fixed_E"]) is dict and
+              set(row["verified_fixed_E"])==set(season_budget.STATS) and
+              all(type(row["verified_fixed_E"][stat]) is int
+                      and 0<=row["verified_fixed_E"][stat]<=100000
+                      for stat in season_budget.STATS) and
+              valid_sha(row["chmv_budget_receipt_sha256"]))),
+             "FRESH_INSTALLED_OPTION_FIXED_E_OWNER_DRIFT")
     # The optional Fury G scope is a source-bound *rating reference*,
     # not a 26-spec Native or DPS proof. Legacy v212 manifests have no
     # track field, retaining their original canonical identity.
