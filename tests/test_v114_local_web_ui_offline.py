@@ -2410,6 +2410,16 @@ assert($("season-enchant-groups").children[0].children[1].children[0]
 assert.strictEqual($("season_enchant_finger1").disabled,true,
   "verified fixed E alone cannot unlock an unbound user SimC profile");
 assert.strictEqual($("season_enchant_finger1").options.length,1);
+const provenZero={...proven,verified_installed_enchant_registrations:{
+  ...proven.verified_installed_enchant_registrations,
+  items:[{...proven.verified_installed_enchant_registrations.items[0],
+    verified_fixed_E:{crit_rating:0,haste_rating:0,
+      mastery_rating:0,versatility_rating:0}}]}};
+render(provenZero);
+assert($("season-enchant-groups").children[0].children[1].children[0]
+  .textContent.includes("정적 CHMV E=0 (정상, 효과는 SimC 처리)"));
+assert.strictEqual($("season_enchant_finger1").disabled,true,
+  "E0 is a normal stat budget, not new unverified product runtime permission");
 render({...installed,verified_installed_enchant_registrations:{
   ...installed.verified_installed_enchant_registrations,
   installed_manifest_sha256:"b".repeat(64)}});
@@ -2419,8 +2429,8 @@ render(null);
 assert.strictEqual(state.dkRuneIds.size,0);
 assert.strictEqual(state.eagleApproved,false);
 assert.strictEqual($("dk_rune_main").options.length,1);
-assert.strictEqual(compatibility,4,
-  "the additional verified-E read-only render must recompute rune compatibility");
+assert.strictEqual(compatibility,5,
+  "E0 normal/read-only also recomputes rune compatibility without unlocking");
 console.log("V467_FRESH_DK_RUNES_NO_ENCHANT_APPROVAL_PASS");
 """
         result=subprocess.run([node,"-e",script,str(source)],
