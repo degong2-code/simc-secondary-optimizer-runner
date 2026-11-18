@@ -215,8 +215,9 @@ class SelectedPermanentEnchantE0BudgetTests(unittest.TestCase):
                 with self.subTest(altered=altered),self.assertRaisesRegex(
                         p.EnvironmentBlocked,expected):
                     p.preview_installed_selected_enchant_budget(
-                        document=doc,slot="finger1",item_id=268266,
-                        enchant_id=8025,**altered)
+                        document=doc,
+                        **{**{"slot":"finger1","item_id":268266,
+                              "enchant_id":8025},**altered})
             missing=self.installed([{k:v for k,v in option.items() if
                                      k not in ("verified_fixed_E",
                                                "chmv_budget_receipt_sha256")}])
