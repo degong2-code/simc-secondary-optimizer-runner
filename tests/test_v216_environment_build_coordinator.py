@@ -2284,14 +2284,39 @@ class OriginalPolicyARingFamilyIdentityTests(unittest.TestCase):
             self.assertFalse(decision["eligible"])
             self.assertEqual(decision["missing"],
                              ["EVIDENCE_MISSING:product_input"])
-            # There is no source shortcut from no CHMV to same-effect/quality
-            # or actual stat application. Any spell/unknown/CHMV fails closed.
+            # v608: static gear rating E0 is independent from SimC-owned
+            # passive spells, dynamic CHMV procs and custom handlers.
+            proc={"component_index":2,"driver_spell_id":12345,
+                  "effect_role":"TEMPORARY_HASTE_RATING_PROC",
+                  "simc_custom_handler":"source_provided_handler"}
+            for spell_only in (False,True):
+                with self.subTest(spell_only=spell_only):
+                    spell_cls={**category,
+                        "effect_family":("simc_spell_effect" if spell_only
+                                         else "static_nonchmv_plus_simc_spell"),
+                        "static_components":([] if spell_only else [component]),
+                        "spell_effects":[proc],
+                        "dynamic_chmv_proc_present_in_spell_text":True,
+                        "dynamic_chmv_proc_roles":["TEMPORARY_HASTE_RATING_PROC"],
+                        "simc_custom_handlers":["source_provided_handler"]}
+                    sp={**cat,"enchant_classification":{
+                        **cat["enchant_classification"],"rows":[spell_cls]},
+                        "catalog":{"enchants":{"items":[{
+                            **row,"classification":spell_cls}]}}}
+                    allowed=produce(sp)[91010]
+                    self.assertIn("chmv_budget",allowed)
+                    self.assertEqual(allowed["chmv_budget"]["fixed_E"],
+                                     dict.fromkeys(v216.season_budget_contract.STATS,0))
+                    self.assertFalse(allowed["chmv_budget"][
+                        "gameplay_or_native_effect_attested"])
+            # Unknown static item mods or present static CHMV must not be
+            # silently represented by E0; malformed spell rows also fail.
             for changed in (
-                {"spell_effects":[{"driver_spell_id":12345}]},
+                {"spell_effects":[{"component_index":2,
+                                   "driver_spell_id":None}]},
                 {"unknown_components":[{"item_mod_or_spell_id":99}]},
                 {"static_chmv_rating_present_in_dbc":True},
                 {"static_chmv_stats":["haste_rating"]},
-                {"effect_family":"static_nonchmv_plus_simc_spell"},
                 {"budget_policy":"STATIC_E_REQUIRES_EXACT_MATCHED_NATIVE_PROFILE_AND_IS_FIXED_INSIDE_G"},
                 {"static_components":[{**component,
                      "category":"CHMV_SECONDARY_RATING"}]},
