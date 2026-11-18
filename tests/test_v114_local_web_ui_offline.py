@@ -2293,7 +2293,9 @@ assert(a>=0&&b>a,"real saved enchant restore block missing");
 const input={options:[],value:"",appendChild(v){this.options.push(v);}};
 const input2={options:[],value:"",appendChild(v){this.options.push(v);}};
 const $=id=>id==="season_enchant_finger1"?input:
-  id==="season_enchant_finger2"?input2:assert.fail("BAD_INPUT_ID_"+id);
+  id==="season_enchant_finger2"?input2:
+  id==="season_enchant_other"?{options:[],value:"",appendChild(){}}
+  :assert.fail("BAD_INPUT_ID_"+id);
 const option=(v,textContent)=>({value:v,textContent,dataset:{},
   remove(){for(const x of [input,input2]) {
     const at=x.options.indexOf(this);if(at>=0)x.options.splice(at,1);
@@ -2405,10 +2407,13 @@ const b=raw.indexOf("  if(!Number.isInteger(controls.ilevel)",a);
 assert(scope>=0&&a>scope&&b>a,"actual source-only request block missing");
 const el={season_enchant_finger1:{value:"",options:[]},
           season_enchant_finger2:{value:"",options:[
-            {value:"89999",disabled:false}]}};
+            {value:"89999",disabled:false}]},
+          season_enchant_other:{value:"",options:[
+            {value:"legs:89999",disabled:false}]}};
 const $=id=>el[id],field=id=>el[id].value;
 const state={installedE0Ids:new Set([89999]),
- exactUserEnchantIds:new Set([7967]),eagleApproved:false};
+ exactUserEnchantIds:new Set([7967]),eagleApproved:false,
+ installedOtherE0Choices:new Set(["legs:89999"])};
 const run=Function("state","$","field",
   "exactUserEnchantInputsMatch","controls",
   raw.slice(a,b)+"return controls.enchant_choices||null;");
@@ -2420,6 +2425,10 @@ function selected(one,two){
 assert.strictEqual(selected("",""),null);
 assert.deepStrictEqual(selected("","89999"),{finger2:89999});
 assert.deepStrictEqual(selected("89999",""),{finger1:89999});
+el.season_enchant_other.value="legs:89999";
+assert.deepStrictEqual(selected("",""),{legs:89999});
+assert.throws(()=>selected("89999",""),/한 곳만 선택/);
+el.season_enchant_other.value="";
 assert.throws(()=>selected("89999","89999"),/한 곳만 선택/);
 assert.throws(()=>selected("","7967"),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
 assert.throws(()=>selected("","81234"),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
@@ -2495,6 +2504,8 @@ assert.strictEqual($("season_enchant_finger1").disabled,true);
 assert.strictEqual($("season_enchant_finger1").options.length,1);
 assert.strictEqual($("season_enchant_finger2").disabled,true);
 assert.strictEqual($("season_enchant_finger2").options.length,1);
+assert.strictEqual($("season_enchant_other").disabled,true);
+assert.strictEqual($("season_enchant_other").options.length,1);
 assert($("season-option-catalog-status").textContent.includes("미승인"));
 assert($("season-option-catalog-status").textContent.includes("실행 선택 불가"));
 assert.strictEqual($("season-enchant-groups").children.length,1);
@@ -2512,6 +2523,7 @@ assert($("season-enchant-groups").children[0].children[1].children[0]
 assert.strictEqual($("season_enchant_finger1").disabled,true,
   "verified fixed E alone cannot unlock an unbound user SimC profile");
 assert.strictEqual($("season_enchant_finger1").options.length,1);
+assert.strictEqual($("season_enchant_other").disabled,true);
 const provenZero={...proven,verified_installed_enchant_registrations:{
   ...proven.verified_installed_enchant_registrations,
   items:[{...proven.verified_installed_enchant_registrations.items[0],
@@ -2521,7 +2533,9 @@ render(provenZero);
 assert($("season-enchant-groups").children[0].children[1].children[0]
   .textContent.includes("정적 CHMV E=0 (정상, 효과는 SimC 처리)"));
 assert.strictEqual($("season_enchant_finger1").disabled,true,
-  "E0 accounting alone is not signed-installed user runtime authorization");
+  "other-gear E0 does not unlock finger1");
+assert.strictEqual($("season_enchant_other").disabled,false);
+assert($("season_enchant_other").options.some(x=>x.value==="boots:91234"));
 const ready={
   enchant_id:89999,slot:"finger1/finger2",
   simc_token:"enchant_ring__synthetic_e0",
@@ -2557,6 +2571,8 @@ assert.strictEqual(state.dkRuneIds.size,0);
 assert.strictEqual(state.eagleApproved,false);
 assert.strictEqual($("season_enchant_finger2").disabled,true);
 assert.strictEqual($("season_enchant_finger2").options.length,1);
+assert.strictEqual($("season_enchant_other").disabled,true);
+assert.strictEqual($("season_enchant_other").options.length,1);
 assert.strictEqual($("dk_rune_main").options.length,1);
 assert.strictEqual(compatibility,6,
   "signed E0 option render also recomputes DK rune compatibility");

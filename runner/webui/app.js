@@ -630,7 +630,7 @@ function initializeSearchChoices(){
   for(const id of ["class-choice","spec","trinket1","trinket2","food","potion",
     "augmentation","diamond","omnium","optimizer-oil-loadout",
     "dk_rune_main","dk_rune_off","season_enchant_finger1",
-    "season_enchant_finger2"])
+    "season_enchant_finger2","season_enchant_other"])
     enhanceSelect($(id));
   for(const row of document.querySelectorAll(".gear-row")){
     const fields=row.dataset.group==="special-rows"?["item_id"]:["embellishment","slot"];
@@ -922,6 +922,7 @@ function fillDefault(item) {
   refreshDefaultConsumableSummaries();
   $("season_enchant_finger1").value="";
   $("season_enchant_finger2").value="";
+  $("season_enchant_other").value="";
   // Reset optional slots on specialization changes, including hidden extra rows.
   fillGearRows("special-rows",[]);
   fillGearRows("crafted-rows",[]);
@@ -1641,6 +1642,20 @@ function fillSessionInputs(payload) {
     old.dataset.historic="true";savedFinger2.appendChild(old);
   }
   savedFinger2.value=restoredFinger2?String(restoredFinger2):"";
+  // A saved old option is displayed, never accepted without current v212.
+  const savedOther=Object.entries(u.selected_season_enchants||{}).find(
+    ([slot])=>!["finger1","finger2"].includes(slot));
+  const otherNode=$("season_enchant_other");
+  for(const old of Array.from(otherNode.options))
+    if(old.dataset?.historic==="true")old.remove();
+  if(savedOther) {
+    const key=savedOther[0]+":"+savedOther[1];
+    if(!state.installedOtherE0Choices?.has(key)) {
+      const prior=option(key,"이전 일반 마부 "+key+" · 새 최적화는 원본 검증 필요");
+      prior.dataset.historic="true";otherNode.appendChild(prior);
+    }
+    otherNode.value=key;
+  } else otherNode.value="";
   // Recover the exact local inputs from this machine's saved session only.
   // No talent strings or OS file paths are stored in browser localStorage.
   $("binary").value=payload.binary;
@@ -1801,7 +1816,9 @@ function buildRequest() {
   }
   // v106/v098/v096 accepts ONE selected ring; do not discard another.
   const selectedFinger2Enchant=field("season_enchant_finger2");
-  if(field("season_enchant_finger1")&&selectedFinger2Enchant)
+  const selectedOtherEnchant=field("season_enchant_other");
+  if(Number(!!field("season_enchant_finger1"))+
+     Number(!!selectedFinger2Enchant)+Number(!!selectedOtherEnchant)>1)
     throw Error("현재 검증된 영구 마부는 반지 1 또는 반지 2 한 곳만 선택할 수 있습니다. 두 반지 동시 적용은 아직 지원하지 않습니다.");
   if(field("season_enchant_finger1")) {
     const eid=Number(field("season_enchant_finger1"));
@@ -1821,6 +1838,17 @@ function buildRequest() {
          opt=>opt.value===selectedFinger2Enchant&&opt.disabled!==true))
       throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
     controls.enchant_choices={finger2:eid};
+  }
+  if(selectedOtherEnchant) {
+    const match=/^([a-z][a-z0-9_]*):([1-9][0-9]*)$/.exec(selectedOtherEnchant);
+    if(!match || !state.installedOtherE0Choices?.has(selectedOtherEnchant) ||
+       !Array.from($("season_enchant_other").options).some(
+         opt=>opt.value===selectedOtherEnchant&&opt.disabled!==true))
+      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+    const eid=Number(match[2]);
+    if(!Number.isSafeInteger(eid))
+      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+    controls.enchant_choices={[match[1]]:eid};
   }
   if(!Number.isInteger(controls.ilevel)||controls.ilevel<1||controls.ilevel>1000)
     throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
@@ -3247,6 +3275,8 @@ function renderSeasonOptionCatalog(catalog) {
   const host=$("season-enchant-groups");
   const selector=$("season_enchant_finger1");
   const second=$("season_enchant_finger2");
+  const other=$("season_enchant_other");
+  state.installedOtherE0Choices=new Set();
   state.eagleApproved=false;
   state.exactUserEnchantIds=new Set();
   state.installedE0Ids=new Set();
@@ -3255,6 +3285,8 @@ function renderSeasonOptionCatalog(catalog) {
   selector.disabled=true;
   second.replaceChildren(option("","마법부여 없음 (검증 대기)"));
   second.disabled=true;
+  other.replaceChildren(option("","마법부여 없음 (검증 대기)"));
+  other.disabled=true;
   host.replaceChildren();
   if(catalog?.schema==="v196_current_season_ui_catalog_v1" &&
      catalog.status==="FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY") {
@@ -3301,6 +3333,29 @@ function renderSeasonOptionCatalog(catalog) {
         "정적 E=0 검증 · 마부 #"+item.enchant_id+
         " · 반지 2 실제 아이템/SimC 입력 재확인"));
     }
+    // Only signed installed v212 E0. v098 must still match actual
+    // representative item and SimC input before running.
+    const ordinarySlots=new Set(["head","neck","shoulders","back",
+      "chest","wrists","hands","waist","legs","feet"]);
+    const names={head:"머리",neck:"목",shoulders:"어깨",back:"등",
+      chest:"가슴",wrists:"손목",hands:"손",waist:"허리",legs:"다리",feet:"발"};
+    for(const item of rows) {
+      if(!ordinarySlots.has(item.slot) ||
+         !Number.isSafeInteger(item.enchant_id)||item.enchant_id<=0 ||
+         typeof item.verified_fixed_E!=="object"||
+         item.verified_fixed_E===null ||
+         Object.keys(item.verified_fixed_E).length!==4 ||
+         !["crit_rating","haste_rating","mastery_rating",
+           "versatility_rating"].every(k=>item.verified_fixed_E[k]===0) ||
+         !/^[0-9a-f]{64}$/.test(item.chmv_budget_receipt_sha256||""))
+        continue;
+      const key=item.slot+":"+item.enchant_id;
+      state.installedOtherE0Choices.add(key);
+      other.appendChild(option(key,
+        names[item.slot]+" · 마부 #"+item.enchant_id+
+        " · 정적 E=0 검증 (실물/SimC 재확인)"));
+    }
+    other.disabled=state.installedOtherE0Choices.size===0;
     if(state.installedE0Ids.size) {
       refreshExactEnchantAvailability();
       status.textContent="설치 원본으로 정적 CHMV E=0이 확인된 반지 마부 "+
@@ -3638,7 +3693,7 @@ function registerHandlers() {
     "optimizer-oil-enabled","optimizer-oil-loadout",
     "optimizer-oil-main-id","optimizer-oil-off-id","oil_main","oil_off",
     "season_enchant_finger1","season_enchant_finger2",
-    "dk_rune_main","dk_rune_off"
+    "season_enchant_other","dk_rune_main","dk_rune_off"
   ]);
   const editedUserChoice=event=>{
     const target=event.target;
@@ -3686,7 +3741,7 @@ function registerHandlers() {
     "season-selected-flask-id","season-verified-flask","optimizer-oil-loadout",
     "optimizer-oil-main-id","optimizer-oil-off-id","oil_main","oil_off",
     "spec","trinket1","trinket2","season_enchant_finger1",
-    "season_enchant_finger2","diamond","omnium"])
+    "season_enchant_finger2","season_enchant_other","diamond","omnium"])
     $(id).addEventListener("change",updateBudgetPreview);
   for(const group of ["special-rows","crafted-rows"])
     $(group).addEventListener("change",updateBudgetPreview);
