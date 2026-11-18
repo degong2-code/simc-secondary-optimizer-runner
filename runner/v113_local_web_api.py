@@ -2985,8 +2985,32 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                                if "verified_fixed_E" in entry else {})}
                             for entry in confirmed],
                         "installed_manifest_sha256":doc["manifest_sha256"],
+                        # A signed Policy A item with a verified E0 vector
+                        # may use the exact-user v098/v096 profile route.
+                        # This is not an effect/proc proof and does not
+                        # make unrelated E+/unknown options selectable.
+                        "installed_E0_final_finger_candidates":[{
+                            "enchant_id":entry["enchant_id"],
+                            "simc_token":entry["simc_token"],
+                            "slot":entry["slot"],
+                            "highest_verified_quality_rank":
+                                entry["highest_verified_quality_rank"],
+                            "chmv_budget_receipt_sha256":
+                                entry["chmv_budget_receipt_sha256"]}
+                            for entry in confirmed
+                            if entry.get("slot")=="finger1/finger2"
+                            and type(entry.get("verified_fixed_E")) is dict
+                            and set(entry["verified_fixed_E"])==
+                                set(environment_manifest.season_budget.STATS)
+                            and all(type(entry["verified_fixed_E"][stat])
+                                    is int and
+                                    entry["verified_fixed_E"][stat]==0
+                                    for stat in environment_manifest.
+                                        season_budget.STATS)
+                            and environment_manifest.valid_sha(
+                                entry.get("chmv_budget_receipt_sha256"))],
                         "runtime_selectable":False,
-                        "unresolved":"EXACT_ENCHANT_E_AND_USER_SIMC_PROFILE_BINDING",
+                        "unresolved":"NONZERO_OR_UNKNOWN_E_AND_OTHER_USER_BINDINGS",
                         "new_approval_granted":False}
                 source=doc.get("verified_DK_runeforges")
                 if type(source) is dict:
