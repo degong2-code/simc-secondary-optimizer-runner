@@ -231,6 +231,8 @@ def prepare_verified_fresh_choices(source_catalog, source_ui,
                  and all(type(fixed_E[k]) is int
                          and 0<=fixed_E[k]<=100000
                          for k in fixed_budget.STATS))
+        need("fixed_E" not in budget_receipt or bound_E,
+             "FRESH_TRUSTED_CHMV_OWNER_FIXED_E_VECTOR_INVALID")
         ready.append({
             "enchant_id":item_id,
             "simc_token":candidate["simc_token"],
