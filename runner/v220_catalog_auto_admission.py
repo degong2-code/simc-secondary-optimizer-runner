@@ -76,10 +76,19 @@ def decide(candidate, receipts=None):
                          candidate["slot"]=="NO_EQUIPMENT_SLOT" and
                          candidate["slot_status"]==
                              "CONSUMABLE_USE_SCOPE_NOT_EQUIPMENT")
+    # Source-authorized ring enchant family can apply to either ring.
+    # Which real finger/item is chosen is bound later by v098/v220's
+    # already-existing selected-equipment predicate, not inferred here.
+    two_ring_scope=(candidate["kind"]=="permanent_enchant" and
+                    candidate["slot"]=="finger1/finger2" and
+                    candidate["slot_status"]==
+                        "RING_HAND_SELECTED_BY_FINAL_USER_EQUIPMENT" and
+                    candidate["simc_token"].startswith("enchant_ring__"))
     if candidate["kind"]=="consumable":
         if not slotless_consumable:
             missing.append("CONSUMABLE_NO_EQUIPMENT_SLOT_SCOPE_INVALID")
-    elif candidate["slot_status"]!="SOURCE_MASK_RESOLVED" and not universal_gem:
+    elif (candidate["slot_status"]!="SOURCE_MASK_RESOLVED" and
+          not universal_gem and not two_ring_scope):
         missing.append("EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED")
     for family, expected_status in PROOF_STATUSES.items():
         proof=receipts.get(family)
@@ -229,13 +238,21 @@ def candidate_from_source_enchant(source_catalog, row):
     if (type(slot) is not list or
         not all(type(value) is str and bool(value) for value in slot)):
         raise ValueError("AUTO_ADMISSION_SLOT_SCOPE_INVALID")
+    ring_pair=(slot==["finger1/finger2"] and
+               type(row.get("token")) is str and
+               row["token"].startswith("enchant_ring__") and
+               row.get("item_class")==4 and
+               row.get("inventory_type_mask")==(1<<11) and
+               row.get("item_subclass_mask")==0)
     resolved=(len(slot)==1 and "/" not in slot[0] and
               not slot[0].startswith("WEAPON_SUBCLASS_"))
     return {"kind":"permanent_enchant","exact_id":row["enchant_id"],
             "simc_token":row["token"],
-            "slot":slot[0] if resolved else "SOURCE_SLOT_UNRESOLVED",
-            "slot_status":"SOURCE_MASK_RESOLVED" if resolved else
-                          "PENDING_EXACT_SLOT_OR_HAND",
+            "slot":slot[0] if (resolved or ring_pair) else "SOURCE_SLOT_UNRESOLVED",
+            "slot_status":("RING_HAND_SELECTED_BY_FINAL_USER_EQUIPMENT"
+                           if ring_pair else
+                           "SOURCE_MASK_RESOLVED" if resolved else
+                           "PENDING_EXACT_SLOT_OR_HAND"),
             "game_build":source_catalog["game_build"],
             "simc_revision":source_catalog["simc_revision"],
             "catalog_sha256":source_catalog["manifest_sha256"]}
