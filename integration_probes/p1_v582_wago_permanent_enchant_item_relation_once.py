@@ -326,6 +326,38 @@ def run(build, revision, expansion_id, out):
              production["native_calls"]==0 and
              production["automatic_ui_promotion"] is False,
              "PRODUCTION_V583_V582_REAL_WAGO_COUNTER_DRIFT")
+
+        additional=production["additional_enchants_unadmitted"]
+        need({row["enchant_id"] for row in additional}==
+             set(result["other_wago_permanent_enchant_ids_not_in_simc_token_source"]),
+             "PRODUCTION_V583_OTHER_ID_COVERAGE_DRIFT")
+        result["production_v583_additional_scope_classification"]={
+            "actual_source_unscoped_count":len(additional),
+            "scope_counts":production["additional_wago_id_classification_counts"],
+            "new_gear_source_candidate_count":
+                production["additional_dps_gear_candidate_count"],
+            "new_gear_highest_source_rank_candidate_count":
+                production["additional_dps_gear_highest_source_rank_candidate_count"],
+            "new_gear_highest_source_rank_ids":
+                production["additional_dps_gear_highest_source_rank_candidate_ids"],
+            "classification_does_not_grant_product_admission":True,
+            "new_native_calls":0,
+            "items":[{"enchant_id":row["enchant_id"],
+                      "scope":row["scope"],
+                      "gear_kind":row["gear_kind"],
+                      "simc": [
+                          {"token":s["simc_token"],"quality_rank":s["quality_rank"],
+                           "item_class":s["item_class"],
+                           "inventory_type_mask":s["inventory_type_mask"],
+                           "item_subclass_mask":s["item_subclass_mask"]}
+                          for s in row["simc_source_rows"]],
+                      "wago_items":[
+                          {"item_id":w["item_id"],"name":w["name_enUS"],
+                           "item_class":w["item_class"],
+                           "item_subclass":w["item_subclass"],
+                           "wago_rank":w["quality_rank_wago"]}
+                          for w in row["physical_items"]]}
+                     for row in additional]}
         result["production_v583_same_original_bytes_crosscheck"]={
             "status":"EXACT_PAIR_SET_EQUAL",
             "highest_simc_candidate_linked":
@@ -368,6 +400,10 @@ def main():
         "unlinked": len(result["highest_source_rank_unlinked_ids"]),
         "physical": result["matched_physical_item_ids"],
         "production_v583":result["production_v583_same_original_bytes_crosscheck"],
+        "additional":{key:result["production_v583_additional_scope_classification"][key]
+                      for key in ("actual_source_unscoped_count","scope_counts",
+                                  "new_gear_source_candidate_count",
+                                  "new_gear_highest_source_rank_candidate_count")},
         "no_native": True}, ensure_ascii=False))
 
 
