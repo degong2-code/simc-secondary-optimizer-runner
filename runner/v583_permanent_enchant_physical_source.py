@@ -361,7 +361,8 @@ def collect(*, stage_root, build, expansion_id, wago_stage, fresh_gear,
         quality_sha=quality_stage["receipt_sha256"]
         code=stages.module_dependency_fingerprint([
             Path(__file__),Path(simc.__file__),Path(stages.__file__),
-            Path(supplemental.__file__)])
+            Path(supplemental.__file__),Path(supplemental.effect.__file__),
+            Path(supplemental.slots.__file__)])
         # Output identity includes parser code. Updating the connector
         # reprojects a small manifest, never overwrites a sealed old output
         # or forces a second Wago download within the same build.
