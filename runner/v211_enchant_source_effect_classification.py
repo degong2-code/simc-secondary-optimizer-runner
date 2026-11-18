@@ -676,6 +676,14 @@ def source_rank_component_comparison(ordered, dbc, selected_id, enums):
         "source_raw_amount_and_coefficient_nondecreasing":bool(raw_noninferior),
         "source_strictly_stronger_raw_component":bool(strictly_higher),
         "source_id_spell_identical":len({r["id_spell"] for r in records})==1,
+        # Original pinned SimC sc_item_data.cpp first reads the linked
+        # E_ENCHANT_ITEM spell average, using DBC coefficients only as
+        # fallback. Therefore increasing coefficients NEVER certify the
+        # actual runtime amounts when the source has id_spell > 0.
+        "simc_spell_value_may_override_raw_coefficient":
+            any(r["id_spell"]>0 for r in records),
+        "stat_value_precedence_source":
+            "SIMC_ENCHANT_SPELL_AVERAGE_FIRST_THEN_DBC_COEFFICIENT_FALLBACK",
         "by_source_rank":drivers,
         "same_effect_and_use_conditions_verified":False,
         "quality_noninferiority_runtime_verified":False,
