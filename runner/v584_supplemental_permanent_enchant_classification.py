@@ -33,7 +33,7 @@ def weapon_subclasses_from_pinned_source(item_subclass_mask, source):
     """Original SimC enum is the sole name authority; preserve unknown IDs."""
     resolved={}
     for line in source.splitlines():
-        m=re.match(r"^\\s*ITEM_SUBCLASS_WEAPON_([A-Z0-9_]+)\\s*=\\s*(\\d+)\\s*,?",line)
+        m=re.match(r"^\s*ITEM_SUBCLASS_WEAPON_([A-Z0-9_]+)\s*=\s*(\d+)\s*,?",line)
         if m:
             key,val=m.group(1),int(m.group(2))
             if key!="INVALID" and val not in resolved:
