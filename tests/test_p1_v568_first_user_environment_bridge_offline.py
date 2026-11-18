@@ -24,7 +24,12 @@ const raw=fs.readFileSync(process.argv[1],"utf8");
 const a=raw.indexOf("function optimizerNeedsSeasonPreparation()");
 const b=raw.indexOf("\nfunction buildRequest()",a);
 assert(a>=0 && b>a);
-const src=raw.slice(a,b);
+// The real UI now shares nonthrowing ilvl validation between button state
+// and first-click preparation; load that actual helper into this isolated test.
+const helperA=raw.indexOf("function validTargetIlevel()");
+const helperB=raw.indexOf("\nfunction hasRequiredSelections()",helperA);
+assert(helperA>=0 && helperB>helperA);
+const src=raw.slice(helperA,helperB)+"\n"+raw.slice(a,b);
 assert(!src.includes("/api/v1/longrun/start"));
 const factory=Function("field","valueInt","state",
   "verifiedInstalledGearScopeMatchesRun","buildSeasonEnvironment",
