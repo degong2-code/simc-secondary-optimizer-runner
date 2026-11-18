@@ -1068,6 +1068,54 @@ def _final_user_enchant_source_mask(*,user,rows,consumer):
     return source
 
 
+def _selected_installed_E0_on_final_user_item(*,user,rows,mask,installed_path):
+    """Join existing signed v212 E0 to v101's ACTUAL final item, not a proc Gate.
+
+    Exact v216 physical source-mask comparison is mandatory. The original
+    v212 Policy A registration and existing CHMV owner certify only static
+    E=0 and SimC ID/quality. Actual effects/APL/DPS remain SimC-owned.
+    """
+    need(type(user) is dict and
+         type(user.get(SEASON_ENCHANT_FIELD)) is dict and
+         len(user[SEASON_ENCHANT_FIELD])==1 and
+         type(rows) is dict and type(mask) is dict and
+         mask.get("status")=="EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED"
+         and mask.get("actual_user_item_from_v098_final_rows") is True
+         and type(installed_path) in (str,pathlib.Path),
+         "FRESH_USER_E0_FINAL_ITEM_PHYSICAL_SOURCE_REQUIRED")
+    slot,eid=next(iter(user[SEASON_ENCHANT_FIELD].items()))
+    need(slot in ("finger1","finger2") and
+         type(eid) is int and eid>0 and
+         type(rows.get(slot)) is dict and
+         type(rows[slot].get("item_id")) is int and
+         rows[slot]["item_id"]>0 and
+         mask.get("selected_slot")==slot and
+         mask.get("enchant_id")==eid and
+         mask.get("selected_representative_item_id")==rows[slot]["item_id"],
+         "FRESH_USER_E0_FINAL_SLOT_ITEM_ENCHANT_MISMATCH")
+    path=pathlib.Path(installed_path).resolve()
+    need(path.is_file() and not path.is_symlink(),
+         "FRESH_USER_E0_INSTALLED_V212_FILE_REQUIRED")
+    doc,_=installed_manifest.read_json(path)
+    installed_manifest.verify_fresh_installed_environment(doc)
+    result=installed_manifest.preview_installed_selected_enchant_budget(
+        document=doc,slot=slot,item_id=rows[slot]["item_id"],
+        enchant_id=eid,manual_final_T=user["target"]["final_T"])
+    need(result["fixed_E_zero_is_valid"] is True and
+         not any(result["fixed_E"].values()) and
+         result["selected_identity"]["installed_manifest_sha256"]==
+             doc["manifest_sha256"] and
+         doc["target_ilevel"]==user["target"]["ilevel"] and
+         result["base_B"]>=result["J"]+result["F"]+
+             sum(result["fixed_L"].values()) and
+         type(rows[slot].get("options")) is dict and
+         not set(rows[slot]["options"]).intersection(
+             {"enchant","enchant_id"}),
+         "FRESH_USER_E0_BUDGET_OR_EXISTING_ENCHANT_CONFLICT")
+    rows[slot]["options"]["enchant_id"]=str(eid)
+    return result
+
+
 def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
           independent_334=False,independent_target_level=False,
