@@ -632,14 +632,15 @@ const apply=Function("state","$","field","valueInt",
         page=self.client.get("/").text
         p=PageParser();p.feed(page)
         self.assertEqual(p.forms,1)
-        self.assertEqual(len(p.ids),185)
+        self.assertEqual(len(p.ids),186)
         for ident in ("class-choice","spec","race","ilevel","talents","final_T",
                       "trinket1","trinket2","special-rows","crafted-rows",
                       "season-target-socket-count","season-verified-flask",
                       "optimizer-oil-loadout","optimizer-oil-apply-btn",
                       "binary","revision","start-btn",
                       "run-label","progress-label","dps","sem","conf95",
-                      "result-panel","results-nav-btn","equipment-dialog"):
+                      "result-panel","results-nav-btn","equipment-dialog",
+                      "season_enchant_other"):
             self.assertIn(ident,p.ids)
         self.assertIn('data-view-panel="optimizer"',page)
         self.assertIn('data-view-panel="settings" hidden',page)
@@ -2486,7 +2487,7 @@ const installed={
     status:"INSTALLED_POLICY_A_REGISTRATIONS_RUNTIME_BINDING_PENDING",
     installed_manifest_sha256:"a".repeat(64),
     runtime_selectable:false,new_approval_granted:false,
-    items:[{enchant_id:91234,slot:"boots",
+    items:[{enchant_id:91234,slot:"feet",
        simc_token:"enchant_boots__example",
        highest_verified_quality_rank:3}]},
   verified_weapon_enhancements:{dk_runeforges:{
@@ -2535,7 +2536,7 @@ assert($("season-enchant-groups").children[0].children[1].children[0]
 assert.strictEqual($("season_enchant_finger1").disabled,true,
   "other-gear E0 does not unlock finger1");
 assert.strictEqual($("season_enchant_other").disabled,false);
-assert($("season_enchant_other").options.some(x=>x.value==="boots:91234"));
+assert($("season_enchant_other").options.some(x=>x.value==="feet:91234"));
 const ready={
   enchant_id:89999,slot:"finger1/finger2",
   simc_token:"enchant_ring__synthetic_e0",
