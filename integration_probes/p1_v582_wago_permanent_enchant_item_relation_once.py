@@ -27,6 +27,7 @@ import v190_consumable_item_snapshot_join as physical
 import v191_unified_season_data_update as season
 import v280_consumable_item_use_spell_source as use
 import v281_consumable_simc_relation as spell
+import v583_permanent_enchant_physical_source as production_join
 
 TABLES = ("Item", "ItemSparse", "ItemXItemEffect", "ItemEffect", "SpellEffect",
           "CraftingData", "CraftingDataEnchantQuality")
@@ -299,6 +300,41 @@ def run(build, revision, expansion_id, out):
             simc_url, simc_file, SIMC_MAX)
         by_id, top, parsed = catalog(simc_file.read_bytes(), build)
         result = wago_join(directory, by_id, top, expansion_id)
+        # Real one-fetch validation of the actual v216 production projection,
+        # not a second download or an independent enchant certification.
+        production = production_join.join_existing_sources(
+            item=directory/"Item.csv",sparse=directory/"ItemSparse.csv",
+            crafting=directory/"CraftingData.csv",
+            relation=directory/"ItemXItemEffect.csv",
+            effect=directory/"ItemEffect.csv",
+            spell_effect=directory/"SpellEffect.csv",
+            quality=directory/"CraftingDataEnchantQuality.csv",
+            simc_enchants=simc_file,build=build,expansion_id=expansion_id)
+        old_pairs={(row["enchant_id"], physical["item_id"])
+                   for row in result["matches"] for physical in row["wago_items"]}
+        new_pairs={(row["enchant_id"], physical["item_id"])
+                   for row in production["matches"]
+                   for physical in row["physical_items"]}
+        need(old_pairs==new_pairs,
+             "PRODUCTION_V583_V582_REAL_WAGO_PAIR_MISMATCH")
+        need(production["highest_simc_candidate_count"]==
+                result["highest_simc_candidate_count"] and
+             production["highest_simc_candidate_linked"]==
+                result["highest_source_rank_linked"] and
+             production["physical_item_ids_linked"]==
+                result["matched_physical_item_ids"] and
+             production["native_calls"]==0 and
+             production["automatic_ui_promotion"] is False,
+             "PRODUCTION_V583_V582_REAL_WAGO_COUNTER_DRIFT")
+        result["production_v583_same_original_bytes_crosscheck"]={
+            "status":"EXACT_PAIR_SET_EQUAL",
+            "highest_simc_candidate_linked":
+                production["highest_simc_candidate_linked"],
+            "all_rank_simc_id_linked":production["all_rank_simc_id_linked"],
+            "physical_item_ids_linked":production["physical_item_ids_linked"],
+            "actual_shared_item_enchant_pairs":len(new_pairs),
+            "same_source_bytes_reused":True,"extra_http":0,
+            "new_native_calls":0}
     receipt = {
         "schema": "p1_wago_permanent_enchant_physical_relation_diagnostic_v1",
         "status": "SOURCE_ONLY_IDENTITY_RESEARCH_NO_PRODUCT_ADMISSION",
@@ -331,6 +367,7 @@ def main():
         "linked": result["highest_source_rank_linked"],
         "unlinked": len(result["highest_source_rank_unlinked_ids"]),
         "physical": result["matched_physical_item_ids"],
+        "production_v583":result["production_v583_same_original_bytes_crosscheck"],
         "no_native": True}, ensure_ascii=False))
 
 
