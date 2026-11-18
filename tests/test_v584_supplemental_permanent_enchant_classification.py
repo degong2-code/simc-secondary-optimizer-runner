@@ -4,6 +4,7 @@ No Wago HTTP, new SimC Native, effect reimplementation or user publication.
 """
 from __future__ import annotations
 import json
+import copy
 from pathlib import Path
 import tempfile
 import unittest
@@ -78,6 +79,12 @@ class TestSupplementalV584(unittest.TestCase):
         self.assertEqual(result["weapon_hand_pending_count"],0)
         self.assertEqual(result["static_chmv_candidate_count"],1)
         self.assertEqual(result["quality_noninferior_source_count"],1)
+        self.assertEqual(result["raw_static_component_nondecreasing_candidate_count"],1)
+        component=result["rows"][0]["raw_rank_component_evidence"]
+        self.assertTrue(component["source_same_component_types_and_ids"])
+        self.assertTrue(component["source_raw_amount_and_coefficient_nondecreasing"])
+        self.assertFalse(component["quality_noninferiority_runtime_verified"])
+        self.assertFalse(component["ui_selectable"])
         row=result["rows"][0]
         self.assertEqual(row["enchant_id"],91004)
         self.assertEqual(row["physical_item_ids"],[237002])
@@ -231,6 +238,77 @@ class TestSupplementalV584(unittest.TestCase):
         self.assertEqual(classified["static_components"][0]["category"],
                          "NON_CHMV_RESISTANCE")
         self.assertFalse(classified["static_chmv_rating_present_in_dbc"])
+
+    def test_actual_weapon_subclass_labels_from_pinned_enum_without_id_whitelist(self):
+        source=(
+            "  ITEM_SUBCLASS_WEAPON_BOW = 2,\n"
+            "  ITEM_SUBCLASS_WEAPON_GUN = 3,\n"
+            "  ITEM_SUBCLASS_WEAPON_CROSSBOW = 18,\n"
+            "  ITEM_SUBCLASS_WEAPON_WAND = 19,\n")
+        result=v584.weapon_subclasses_from_pinned_source(0x4000c,source)
+        self.assertEqual(result["source_item_subclass_ids"],[2,3,18])
+        self.assertEqual(result["source_enum_names"],["BOW","GUN","CROSSBOW"])
+        self.assertTrue(result["source_ranged_weapon_types_only"])
+        self.assertFalse(result["hand_applicability_verified"])
+        unknown=v584.weapon_subclasses_from_pinned_source(0x8000c,source)
+        self.assertFalse(unknown["source_enum_all_ids_resolved"])
+        self.assertFalse(unknown["source_ranged_weapon_types_only"])
+
+    def test_source_scaled_static_coefficient_direction_is_evidence_only(self):
+        dbc={
+            91003:{"id_gem":0,"id_scaling":-7,
+                "min_scaling_level":0,"max_scaling_level":80,
+                "min_ilevel":120,"max_ilevel":0,"req_skill":0,
+                "req_skill_value":0,"id_spell":12331,
+                "ench_type":[5,5,0],"ench_prop":[5,7,0],
+                "ench_amount":[0,0,0],"ench_coeff":[0.9515,2.0814,0.0]},
+            91004:{"id_gem":0,"id_scaling":-7,
+                "min_scaling_level":0,"max_scaling_level":80,
+                "min_ilevel":120,"max_ilevel":0,"req_skill":0,
+                "req_skill_value":0,"id_spell":12332,
+                "ench_type":[5,5,0],"ench_prop":[5,7,0],
+                "ench_amount":[0,0,0],"ench_coeff":[1.2191,3.4194,0.0]}}
+        ordered=[{"enchant_id":91004,"quality_rank":2},
+                 {"enchant_id":91003,"quality_rank":1}]
+        enums={"ITEM_ENCHANTMENT_STAT":5,
+               "ITEM_ENCHANTMENT_RESISTANCE":4}
+        z=v584.effect.source_rank_component_comparison(
+            ordered,dbc,91004,enums)
+        self.assertEqual(z["status"],
+                         "SOURCE_STATIC_COMPONENTS_RAW_NONDECREASING_UNADMITTED")
+        self.assertTrue(z["source_same_scaling_and_use_conditions"])
+        self.assertTrue(z["source_strictly_stronger_raw_component"])
+        self.assertFalse(z["source_id_spell_identical"])
+        self.assertFalse(z["same_effect_and_use_conditions_verified"])
+        self.assertFalse(z["ui_selectable"])
+        weaker=copy.deepcopy(dbc)
+        weaker[91004]["ench_coeff"][0]=0.4
+        fail=v584.effect.source_rank_component_comparison(
+            ordered,weaker,91004,enums)
+        self.assertEqual(fail["status"],
+                         "SOURCE_SELECTED_RANK_RAW_COMPONENT_NOT_NONINFERIOR")
+        self.assertFalse(fail["source_raw_amount_and_coefficient_nondecreasing"])
+
+    def test_different_rank_driver_spell_never_claims_static_quality(self):
+        common={"id_gem":0,"id_scaling":0,
+                "min_scaling_level":0,"max_scaling_level":80,
+                "min_ilevel":120,"max_ilevel":0,
+                "req_skill":0,"req_skill_value":0,
+                "ench_type":[3,0,0],"ench_amount":[0,0,0],
+                "ench_coeff":[0.0,0.0,0.0]}
+        dbc={
+            81101:{**common,"id_spell":123,
+                   "ench_prop":[456,0,0]},
+            81102:{**common,"id_spell":124,
+                   "ench_prop":[457,0,0]}}
+        out=v584.effect.source_rank_component_comparison(
+            [{"enchant_id":81102,"quality_rank":2},
+             {"enchant_id":81101,"quality_rank":1}],
+            dbc,81102,{"ITEM_ENCHANTMENT_STAT":5})
+        self.assertEqual(out["status"],
+                         "SOURCE_COMPONENT_KIND_OR_SPELL_DRIVER_NEEDS_REVIEW")
+        self.assertFalse(out["source_all_components_known_static"])
+        self.assertFalse(out["source_raw_amount_and_coefficient_nondecreasing"])
 
 
 if __name__=="__main__":
