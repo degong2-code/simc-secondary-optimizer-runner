@@ -1498,6 +1498,12 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                          "AUTHENTICATED_SEASON_JOIN_NOT_READY")
         self.assertFalse(first["season_join"]["season_membership_verified"])
         self.assertFalse(first["environment_installed"])
+        # Missing optional permanent-enchant source cannot enlarge an injected
+        # Wago transport or block the existing base season source collection.
+        self.assertEqual(first["fresh_permanent_enchant_item_source"]["status"],
+                         "PERMANENT_ENCHANT_SOURCE_PENDING")
+        self.assertEqual(first["fresh_permanent_enchant_item_source"]
+                         ["network_calls_by_stage"],0)
         report=pathlib.Path(first["season_discovery"]["source_report_path"])
         data=report.read_text("utf8")
         self.assertNotIn(secret,data)
