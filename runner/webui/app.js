@@ -3202,9 +3202,8 @@ function renderSeasonOptionCatalog(catalog) {
   host.replaceChildren();
   if(catalog?.schema==="v196_current_season_ui_catalog_v1" &&
      catalog.status==="FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY") {
-    // Fresh v213 item rows remain candidates. A verified *installed*
-    // policy-A registry can exist separately, but its v212 publication
-    // does NOT supply the per-stat E vector/runtime profile binding.
+    // Fresh v213 rows remain candidates. Even a verified installed v212
+    // option with CHMV-owned E is not an executable user SimC profile yet.
     const registration=catalog.verified_installed_enchant_registrations;
     const rows=registration?.status===
       "INSTALLED_POLICY_A_REGISTRATIONS_RUNTIME_BINDING_PENDING" &&
@@ -3216,7 +3215,7 @@ function renderSeasonOptionCatalog(catalog) {
     status.textContent="이번 시즌 마법부여 원본 후보는 미승인 상태입니다. "+
       "검증된 직업 룬만 선택할 수 있으며 일반 마부는 잠금 유지."+
       (rows.length?" · 설치에 등록된 영구 마부 "+
-       rows.length+"종은 E·최종 프로필 연결 전까지 실행 선택 불가":"");
+       rows.length+"종은 사용자 최종 프로필 연결 전까지 실행 선택 불가":"");
     // This source-only catalogue remains globally unapproved. Exact
     // v528/v530/v532/v533 Native-witnessed choices live in a separate
     // read-only installed SHA scope and must also match current user input.
@@ -3257,9 +3256,16 @@ function renderSeasonOptionCatalog(catalog) {
       const list=document.createElement("ul");
       for(const item of rows) {
         const li=document.createElement("li");
+        const stats=["crit_rating","haste_rating","mastery_rating",
+          "versatility_rating"];
+        const hasE=!!item.verified_fixed_E &&
+          typeof item.verified_fixed_E==="object" &&
+          stats.every(k=>Number.isSafeInteger(item.verified_fixed_E[k]) &&
+            item.verified_fixed_E[k]>=0);
         li.textContent="마부 #"+item.enchant_id+" · "+
           item.slot+" · 최고 검증 등급 "+item.highest_verified_quality_rank+
-          " · E 벡터·SimC 적용 미연결 (선택 불가)";
+          (hasE?" · 고정 E 원본 확인":" · 고정 E 미확정")+
+          " · 최종 SimC 프로필 연결 대기 (선택 불가)";
         list.appendChild(li);
       }
       details.appendChild(list);
