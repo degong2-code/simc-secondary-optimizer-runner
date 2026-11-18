@@ -8,6 +8,9 @@ on:
     paths:
       - .github/workflows/p1_v583_permanent_enchant_source_integration.yml
       - runner/v583_permanent_enchant_physical_source.py
+      - runner/v584_supplemental_permanent_enchant_classification.py
+      - runner/v213_source_to_catalog.py
+      - tests/test_v584_supplemental_permanent_enchant_classification.py
       - runner/v216_environment_build_coordinator.py
       - tests/test_v583_permanent_enchant_physical_source.py
 
@@ -23,6 +26,8 @@ jobs:
       - name: Confirm v583 one-table cached source join and old v216 contracts
         run: |
           python -m unittest discover -s tests -p test_v583_permanent_enchant_physical_source.py -v
+          python -m unittest discover -s tests -p test_v584_supplemental_permanent_enchant_classification.py -v
+          python -m unittest discover -s tests -p test_v240_v211_v213_fresh_catalog_handoff.py -q
           python -m unittest discover -s tests -p test_v216_environment_build_coordinator.py -q
       - name: Source join only (no Native / external collection)
         run: echo "Focused offline v583 tests only; historical real 70783 v582 Wago exact join remains separate evidence."
