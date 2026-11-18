@@ -122,6 +122,38 @@ def _quality_table(*, root, build, transport=None, attempted=None):
     return summary,calls[0]
 
 
+def _additional_scope_from_original_simc(rows):
+    """Discover combat-gear types from SimC class/masks, NEVER token spelling.
+
+    Physical Wago expansion membership has already been proven separately.
+    A SimC class 19 is a profession tool, not DPS character gear. A Wago
+    scroll with no exact SimC source record is UNRESOLVED rather than guessed
+    from its English name or physical item subclass.
+    """
+    if not rows:
+        return {"scope":"SIMC_PERMANENT_EQUIPMENT_SCOPE_UNRESOLVED",
+                "gear_kind":None,"applicability_source":None}
+    types=set()
+    for row in rows:
+        if row["item_class"]==4 and row["inventory_type_mask"]>0:
+            types.add("armor")
+        elif row["item_class"]==2 and row["item_subclass_mask"]>0:
+            types.add("weapon")
+        elif row["item_class"]==19:
+            types.add("profession")
+        else:
+            types.add("other")
+    if types=={"profession"}:
+        return {"scope":"PROFESSION_TOOL_OUTSIDE_DPS_EQUIPMENT",
+                "gear_kind":None,"applicability_source":"SIMC_ITEM_CLASS_19"}
+    if types=={"armor"} or types=={"weapon"}:
+        return {"scope":"DPS_EQUIPMENT_PERMANENT_CANDIDATE_UNADMITTED",
+                "gear_kind":next(iter(types)),
+                "applicability_source":"SIMC_EQUIPMENT_CLASS_AND_MASK"}
+    return {"scope":"SIMC_EQUIPMENT_APPLICABILITY_AMBIGUOUS",
+            "gear_kind":None,"applicability_source":"SIMC_MIXED_OR_OTHER_MASKS"}
+
+
 def join_existing_sources(*, item, sparse, crafting, relation, effect,
                           spell_effect, quality, simc_enchants, build, expansion_id):
     """Single source-only exact-FK join, using only previously sealed files.
@@ -138,6 +170,9 @@ def join_existing_sources(*, item, sparse, crafting, relation, effect,
     by_id={}
     for row in all_rows:
         by_id.setdefault(row["enchant_id"],[]).append(row)
+    all_source_by_id={}
+    for row in generated["rows"]:
+        all_source_by_id.setdefault(row["enchant_id"],[]).append(row)
 
     candidates={}
     for row in csvsource.csvrows(item,("ID","ClassID","SubclassID")):
@@ -186,6 +221,7 @@ def join_existing_sources(*, item, sparse, crafting, relation, effect,
                 "source_quality_row_id":int(row["ID"])})
 
     found={}
+    additional={}
     missing_simc_ids=set()
     seen=set()
     for entry in spells.scan_spell_effects(spell_effect,set(spells_by_id)):
@@ -201,14 +237,14 @@ def join_existing_sources(*, item, sparse, crafting, relation, effect,
                        "wago_rank":None,"source_quality_row_id":None},)
             for q in rows:
                 target=q["enchant_id"]
-                if target not in by_id:
+                outside_original=target not in by_id
+                if outside_original:
                     missing_simc_ids.add(target)
-                    continue
                 key=(target,iid,entry["spell_id"],eid,trigger,
                      entry["effect_index"],q["source_quality_row_id"])
                 if key in seen:continue
                 seen.add(key)
-                found.setdefault(target,[]).append({
+                (additional if outside_original else found).setdefault(target,[]).append({
                     **physical[iid],"apply_spell_id":entry["spell_id"],
                     "item_effect_id":eid,"item_effect_trigger_type":trigger,
                     "quality_rank_wago":q["wago_rank"],
@@ -219,6 +255,32 @@ def join_existing_sources(*, item, sparse, crafting, relation, effect,
                                   if effect_code==EFFECT_CRAFT else
                                   "WAGO_53_DIRECT_TO_SIMC_ID")})
 
+    # Classify all other same-expansion enchant IDs by actual SimC gear
+    # class/masks, including names without an enchant_ prefix. Preserve
+    # physically linked no-SimC rows for optional module/scope review.
+    additional_rows=[]
+    additional_gear=[]
+    for eid in sorted(additional):
+        source_rows=all_source_by_id.get(eid,[])
+        scope=_additional_scope_from_original_simc(source_rows)
+        if scope["scope"]=="DPS_EQUIPMENT_PERMANENT_CANDIDATE_UNADMITTED":
+            additional_gear.extend(source_rows)
+        additional_rows.append({
+            "enchant_id":eid,**scope,
+            "simc_source_rows":source_rows,
+            "physical_items":sorted(additional[eid],
+                                    key=lambda x:(x["item_id"],
+                                                  x["apply_spell_id"])),
+            "ui_selectable":False,
+            "effect_and_quality_not_approved":True})
+    # Source highest-rank is a candidate only; same-effect dominance and
+    # applicable slot/hand proof remain owned by v211/v196, not this stage.
+    gear_high=simc.highest_known_quality(
+        additional_gear,"permanent_enchant") if additional_gear else []
+    scope_counts={}
+    for row in additional_rows:
+        tag=row["scope"]
+        scope_counts[tag]=scope_counts.get(tag,0)+1
     high_ids={r["enchant_id"] for r in highest}
     # Do not claim 38/38 for an unmeasured future expansion/build.
     return {"schema":SCHEMA,
@@ -231,7 +293,17 @@ def join_existing_sources(*, item, sparse, crafting, relation, effect,
             "all_rank_simc_id_linked":len(found),
             "physical_item_ids_linked":len({row["item_id"] for group in found.values()
                                            for row in group}),
+            # Historical field name means outside original enchant_ token
+            # subset; many IDs DO exist in full SimC generated data.
             "other_wago_enchant_ids_not_in_simc_source":sorted(missing_simc_ids),
+            "additional_wago_id_classification_counts":scope_counts,
+            "additional_dps_gear_candidate_count":len(additional_gear),
+            "additional_dps_gear_highest_source_rank_candidate_count":
+                len(gear_high),
+            "additional_dps_gear_highest_source_rank_candidate_ids":
+                sorted(row["enchant_id"] for row in gear_high),
+            "additional_enchants_unadmitted":additional_rows,
+
             "source_only":True,"automatic_ui_promotion":False,
             "same_expansion_not_season_specific":True,
             "highest_quality_effect_equivalence_verified":False,
@@ -332,7 +404,11 @@ def collect(*, stage_root, build, expansion_id, wago_stage, fresh_gear,
                     "highest_simc_candidate_linked",
                     "highest_simc_candidate_missing_ids",
                     "all_rank_simc_id_linked","physical_item_ids_linked",
-                    "other_wago_enchant_ids_not_in_simc_source")},
+                    "other_wago_enchant_ids_not_in_simc_source",
+                    "additional_wago_id_classification_counts",
+                    "additional_dps_gear_candidate_count",
+                    "additional_dps_gear_highest_source_rank_candidate_count",
+                    "additional_dps_gear_highest_source_rank_candidate_ids")},
                 "quality_source_stage":{k:v for k,v in quality_stage.items()
                                         if k!="result"},
                 "source_stage":{k:v for k,v in projection.items()
