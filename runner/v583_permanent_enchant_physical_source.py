@@ -281,6 +281,8 @@ def join_existing_sources(*, item, sparse, crafting, relation, effect,
     for row in additional_rows:
         tag=row["scope"]
         scope_counts[tag]=scope_counts.get(tag,0)+1
+    additional_gear_ids={r["enchant_id"] for r in additional_gear}
+    additional_high_ids={r["enchant_id"] for r in gear_high}
     high_ids={r["enchant_id"] for r in highest}
     # Do not claim 38/38 for an unmeasured future expansion/build.
     return {"schema":SCHEMA,
@@ -297,11 +299,11 @@ def join_existing_sources(*, item, sparse, crafting, relation, effect,
             # subset; many IDs DO exist in full SimC generated data.
             "other_wago_enchant_ids_not_in_simc_source":sorted(missing_simc_ids),
             "additional_wago_id_classification_counts":scope_counts,
-            "additional_dps_gear_candidate_count":len(additional_gear),
+            "additional_dps_gear_candidate_count":len(additional_gear_ids),
             "additional_dps_gear_highest_source_rank_candidate_count":
-                len(gear_high),
+                len(additional_high_ids),
             "additional_dps_gear_highest_source_rank_candidate_ids":
-                sorted(row["enchant_id"] for row in gear_high),
+                sorted(additional_high_ids),
             "additional_enchants_unadmitted":additional_rows,
 
             "source_only":True,"automatic_ui_promotion":False,
