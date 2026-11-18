@@ -195,12 +195,14 @@ class SealedCraftingQualityTests(unittest.TestCase):
                          "inventory_type_mask","item_subclass_mask")},
                 "simc_effect_owner":"SIMC",
                 "simc_effect_reimplemented":False,
-                "effect_family":"static_nonchmv_item_mod",
+                "effect_family":"static_nonchmv_plus_simc_spell",
                 "effect_source_status":"DBC_STAT_AND_SPELLTEXT_SOURCE_CLASSIFIED",
                 "budget_policy":
                     "NO_STATIC_CHMV_COMPONENT_IN_DBC_ROW; DYNAMIC_EFFECTS_STAY_WITH_SIMC",
                 "static_components":[static],"static_chmv_rating_present_in_dbc":False,
-                "static_chmv_stats":[],"spell_effects":[],
+                "static_chmv_stats":[],
+                "spell_effects":[{"component_index":2,
+                                   "driver_spell_id":1280001}],
                 "unknown_components":[],
                 "dynamic_chmv_proc_present_in_spell_text":False,
                 "dynamic_chmv_proc_roles":[],"simc_custom_handlers":[],
@@ -245,6 +247,29 @@ class SealedCraftingQualityTests(unittest.TestCase):
             candidate=admission.candidate_from_source_enchant(
                 data,public,original_source_row=original)
             self.assertTrue(admission.decide(candidate,good)["eligible"])
+            # Reuse the unchanged v220 -> v196 installer input path: exact
+            # four source receipts (including SimC-owned spell + static E0)
+            # yield one ready option without spell/proc efficacy validation.
+            ui={"schema":catalog.SCHEMA,
+                "status":"FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY",
+                "environment_ready":False,"season_build":self.build,
+                "simc_revision":self.rev,
+                "source_catalog":{"manifest_sha256":data["manifest_sha256"]},
+                "enchant_candidates":{
+                    "selectable_count":0,
+                    "items":[{**public,"ui_selectable":False}]}}
+            with mock.patch.object(catalog.source_bridge,"verify_catalog"):
+                prepared=catalog.prepare_verified_fresh_choices(
+                    data,ui,{99012:good})
+            self.assertEqual(prepared["status"],
+                             "EXACT_OPTIONS_PREPARED_FOR_VERSIONED_INSTALL")
+            self.assertEqual(len(prepared["verified_option_inputs_unpublished"]),1)
+            selected=prepared["verified_option_inputs_unpublished"][0]
+            self.assertEqual(selected["enchant_id"],99012)
+            self.assertEqual(selected["slot"],"feet")
+            self.assertEqual(selected["verified_fixed_E"],
+                             dict.fromkeys(admission.CHMV_STATS,0))
+            self.assertFalse(prepared["options_published"])
             joinpath.write_text(joinpath.read_text("utf8")+" ",encoding="utf8")
             # Tampered optional v583 source leaves G/J/F/O and original
             # source relation alone, without a forged quality certificate.
