@@ -90,23 +90,27 @@ def catalog(simc_bytes, build):
 def wago_join(directory, simc_by_id, highest, expansion_id):
     root = Path(directory)
     physical_ids = {}
-    for row in physical.csvrows(root / "Item.csv", ("ID", "ClassID")):
-        if int(row["ClassID"]) == ITEM_ENHANCEMENT_CLASS:
+    for row in physical.csvrows(root / "Item.csv",
+                                ("ID", "ClassID", "SubclassID")):
+        cls, sub = int(row["ClassID"]), int(row["SubclassID"])
+        # Modern Item Enhancement class 8; retain legacy Consumable 0/6
+        # and 0/8 as an independent physical-data hypothesis.
+        if cls == 8 or (cls == 0 and sub in (6, 8)):
             iid = int(row["ID"])
             need(iid > 0 and iid not in physical_ids, "WAGO_ITEM_ID_DUPLICATE")
-            physical_ids[iid] = None
+            physical_ids[iid] = {"item_class": cls, "item_subclass": sub}
     for row in physical.csvrows(root / "ItemSparse.csv",
                                 ("ID", "ExpansionID", "Display_lang")):
         iid = int(row["ID"])
         if iid not in physical_ids:
             continue
         if int(row["ExpansionID"]) == expansion_id:
-            physical_ids[iid] = {
+            physical_ids[iid].update({
                 "item_id": iid, "expansion_id": expansion_id,
-                "name_enUS": row["Display_lang"].strip()}
+                "name_enUS": row["Display_lang"].strip()})
         else:
             physical_ids.pop(iid)
-    physical_ids = {iid: value for iid, value in physical_ids.items() if value is not None}
+    physical_ids = {iid: value for iid, value in physical_ids.items() if "expansion_id" in value}
     need(physical_ids, "NO_EXPANSION_ITEM_ENHANCEMENT_ITEMS")
     relations = {}
     for row in use._rows((root / "ItemXItemEffect.csv").read_bytes(),
@@ -138,6 +142,8 @@ def wago_join(directory, simc_by_id, highest, expansion_id):
     observed = spell.scan_spell_effects(root / "SpellEffect.csv", set(uses))
     found = {}
     wago_unmatched = set()
+    unmatched_samples = []
+    known_item_effects = []
     seen = set()
     for effect in observed:
         if effect["effect"] != PERM_EFFECT or effect["enchant_id"] <= 0:
@@ -145,6 +151,14 @@ def wago_join(directory, simc_by_id, highest, expansion_id):
         target_id = effect["enchant_id"]
         if target_id not in simc_by_id:
             wago_unmatched.add(target_id)
+            for iid, _, trigger in uses.get(effect["spell_id"], []):
+                if len(unmatched_samples) < 60:
+                    unmatched_samples.append({
+                        "enchant_id": target_id, "item_id": iid,
+                        "name": physical_ids[iid]["name_enUS"],
+                        "item_class": physical_ids[iid]["item_class"],
+                        "item_subclass": physical_ids[iid]["item_subclass"],
+                        "trigger_type": trigger})
             continue
         for iid, item_effect_id, trigger_type in uses.get(effect["spell_id"], []):
             unique = (target_id, iid, effect["spell_id"], item_effect_id,
@@ -159,12 +173,29 @@ def wago_join(directory, simc_by_id, highest, expansion_id):
                 "effect_index": effect["effect_index"],
                 "difficulty_id": effect["difficulty_id"],
                 "exact_join": "WAGO_SPELL_EFFECT_53_MISC_EQUALS_SIMC_ENCHANT_ID"})
+    for row in observed:
+        for iid, eid, trigger in uses.get(row["spell_id"], []):
+            if iid == 244014:
+                known_item_effects.append({
+                    "item_id": iid, "spell_id": row["spell_id"],
+                    "effect": row["effect"],
+                    "effect_misc_value_0": row["enchant_id"],
+                    "trigger_type": trigger})
     for entries in found.values():
         entries.sort(key=lambda x: (x["item_id"], x["apply_spell_id"],
                                     x["effect_index"], x["difficulty_id"]))
     highest_ids = {x["enchant_id"] for x in highest}
     return {
         "same_expansion_item_enhancement_candidates": len(physical_ids),
+        "physical_item_class_counts": {
+            "class8": sum(x["item_class"] == 8 for x in physical_ids.values()),
+            "class0_sub6": sum(x["item_class"] == 0 and x["item_subclass"] == 6
+                              for x in physical_ids.values()),
+            "class0_sub8": sum(x["item_class"] == 0 and x["item_subclass"] == 8
+                              for x in physical_ids.values())},
+        "known_item_244014": physical_ids.get(244014),
+        "known_item_244014_spell_effects": known_item_effects[:35],
+        "other_wago_unmatched_source_examples": unmatched_samples,
         "physical_item_use_spell_count": len(uses),
         "all_simc_permanent_rank_ids": len(simc_by_id),
         "highest_simc_candidate_count": len(highest),
