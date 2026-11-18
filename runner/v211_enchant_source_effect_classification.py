@@ -217,7 +217,8 @@ def verify_evidence(path,kind):
     return {"status":"MEASURED_ZERO_ONE_WINDOWS_PALADIN_334_PROFILE",
             "static_E":dict(data["static_CHMV_E"]),
             "ui_selectable":True,"source_file":"data/v206_eagle_7967_windows_E0_proof.json"}
-def classify_row(candidate,dbc,enums,spelltexts,handlers,evidence):
+def classify_row(candidate,dbc,enums,spelltexts,handlers,evidence,*,
+                 unknown_item_mods_pending=False):
     stat_type=enums["ITEM_ENCHANTMENT_STAT"]
     equip_type=enums["ITEM_ENCHANTMENT_EQUIP_SPELL"]
     static=[];spells=[];unknown=[]
@@ -226,7 +227,20 @@ def classify_row(candidate,dbc,enums,spelltexts,handlers,evidence):
         if typ==0:continue
         if typ==stat_type:
             mod=MODS.get(prop)
-            need(mod is not None,"CURRENT_SEASON_ITEM_MOD_UNCLASSIFIED:"+str(prop))
+            if mod is None:
+                # Keep the normal historical strict parser unchanged.
+                # An OPTIONAL source-only extra enchant may legitimately
+                # introduce a future item modifier. Do not misclassify it as
+                # a known CHMV stat, E, or approve its user selection.
+                if not unknown_item_mods_pending:
+                    need(False,"CURRENT_SEASON_ITEM_MOD_UNCLASSIFIED:"+str(prop))
+                unknown.append({
+                    "component_index":idx+1,
+                    "enchant_type_id":typ,
+                    "item_mod_or_spell_id":prop,
+                    "amount":amount,"coefficient":coeff,
+                    "reason":"UNRECOGNIZED_ITEM_MOD_SOURCE_PENDING"})
+                continue
             name,category=mod
             static.append({"component_index":idx+1,"item_mod_id":prop,
                            "item_mod":name,"category":category,
