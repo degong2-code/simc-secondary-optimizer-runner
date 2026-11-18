@@ -340,6 +340,15 @@ class LocalJobs:
                 result.get("fresh_tier_simc_candidate_bridge"),
             "fresh_lazy_full_pinned_simc_item_source":
                 result.get("fresh_lazy_full_pinned_simc_item_source"),
+            # v589/v590 user-selected source checks require the exact
+            # v217-sealed Wago stage locator plus SAME installed build.
+            # The old v113 compact snapshot discarded both. Reuse only
+            # the original tiny stage reference; do not copy optional DB
+            # payload, fetch Wago, run Native, or change base G/J/F/O.
+            "expected_game_build":doc["game_build"],
+            "fresh_permanent_enchant_item_source":
+                environment_build.original_optional_enchant_source_reference(
+                    result),
             "verified_target_ilevel":doc["target_ilevel"],
             "verified_oil_item_ids_by_hand":dict(installed_oils)}
         return doc["manifest_sha256"]
