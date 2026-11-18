@@ -11,6 +11,8 @@ on:
       - runner/v584_supplemental_permanent_enchant_classification.py
       - runner/v213_source_to_catalog.py
       - tests/test_v584_supplemental_permanent_enchant_classification.py
+      - tests/test_v585_historical_70783_enchant_quality.py
+      - tests/fixtures/p1_v585_70783_linked_enchant_quality_pinned_source_excerpt.json
       - runner/v216_environment_build_coordinator.py
       - tests/test_v583_permanent_enchant_physical_source.py
 
@@ -27,6 +29,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p test_v583_permanent_enchant_physical_source.py -v
           python -m unittest discover -s tests -p test_v584_supplemental_permanent_enchant_classification.py -v
+          python -m unittest discover -s tests -p test_v585_historical_70783_enchant_quality.py -v
           python -m unittest discover -s tests -p test_v240_v211_v213_fresh_catalog_handoff.py -q
           python -m unittest discover -s tests -p test_v216_environment_build_coordinator.py -q
       - name: Source join only (no Native / external collection)
