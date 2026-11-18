@@ -2095,12 +2095,26 @@ class OriginalPolicyARingFamilyIdentityTests(unittest.TestCase):
                   "slot_resolution_status":"SOURCE_MASK_RESOLVED",
                   "item_class":4,"inventory_type_mask":1<<11,
                   "item_subclass_mask":0}
+            classified={**ring,
+                        "simc_effect_owner":"SIMC",
+                        "simc_effect_reimplemented":False}
+            ring={**ring,"classification":classified}
             catalog={"game_build":"12.1.5.70783",
                      "simc_revision":"d"*40,
                      "manifest_sha256":"e"*64,
                      "source_provenance":{
                          "v191":{"sha256":"a"*64},
-                         "v211":{"sha256":"b"*64}},
+                         "v211":{"sha256":"b"*64,
+                                 "simc_item_enchant_pipeline":{
+                                     "static_stat_path":"ITEM_ENCHANTMENT_STAT",
+                                     "spell_effect_path":"ITEM_ENCHANTMENT_EQUIP_SPELL",
+                                     "passive_spell_path":"passive_enchant",
+                                     "owner":"SIMC",
+                                     "source_file":"engine/item/enchants.cpp"}}},
+                     "enchant_classification":{
+                         "status":"SOURCE_CLASSIFIED_NOT_GENERAL_NATIVE_ACCEPTANCE_OR_UI_PROMOTION",
+                         "source_manifest_sha256":"3"*64,
+                         "rows":[classified]},
                      "catalog":{"enchants":{"items":[ring]}},
                      "v196_enchant_source":{"rows":[{
                          "enchant_id":7967,
@@ -2125,7 +2139,12 @@ class OriginalPolicyARingFamilyIdentityTests(unittest.TestCase):
             self.assertEqual(witness["identity"]["slot"],"finger1/finger2")
             self.assertEqual(witness["identity"]["exact_id"],7967)
             self.assertEqual(witness["identity"]["catalog_sha256"],"e"*64)
-            # Source identity alone never authorizes SimC input or E.
+            # Exact pinned SimC source/DBC and profile enchant_id syntax
+            # attest input only. No effect, quality or E claims are created.
+            input_proof=produced[7967]["simc_input"]
+            self.assertEqual(input_proof["status"],"SIMC_INPUT_ACCEPTED")
+            self.assertEqual(input_proof["input_field"],"enchant_id=7967")
+            self.assertFalse(input_proof["gameplay_or_native_effect_attested"])
             import v220_catalog_auto_admission as policy
             candidate=policy.candidate_from_source_enchant(
                 {"game_build":catalog["game_build"],
@@ -2134,9 +2153,31 @@ class OriginalPolicyARingFamilyIdentityTests(unittest.TestCase):
                 public,original_source_row=ring)
             result=policy.decide(candidate,produced[7967])
             self.assertFalse(result["eligible"])
-            self.assertIn("EVIDENCE_MISSING:simc_input",result["missing"])
+            self.assertNotIn("EVIDENCE_MISSING:simc_input",result["missing"])
             self.assertIn("EVIDENCE_MISSING:product_input",result["missing"])
             self.assertIn("EVIDENCE_MISSING:chmv_budget",result["missing"])
+            # An obsolete v211 source or missing SimC pipeline cannot grant
+            # syntax evidence. Sealed source_relation remains available.
+            for mismatch in (
+                    {"enchant_classification":{"status":"SOURCE_ONLY",
+                                                "rows":[classified]}},
+                    {"source_provenance":{
+                        **catalog["source_provenance"],
+                        "v211":{"sha256":"b"*64}}},
+                    {"enchant_classification":{
+                        **catalog["enchant_classification"],
+                        "rows":[{**classified,"token":"enchant_ring__other"}]}}):
+                altered={**catalog,**mismatch}
+                with mock.patch.object(
+                    v216.stage_engine,"_read_receipt",
+                    side_effect=receipt_for):
+                    pending=v216._v217_policy_A_source_relation_receipts(
+                        catalog=altered,artifact_sha256="c"*64,
+                        catalog_path=root/"fresh_source"/
+                            "v213_candidate_catalog.json",
+                        stage_attestations=attest,public_rows=[public])
+                self.assertNotIn("simc_input",pending[7967])
+                self.assertIn("source_relation",pending[7967])
 
 
 class OriginalOptionalEnchantSnapshotSourceTests(unittest.TestCase):

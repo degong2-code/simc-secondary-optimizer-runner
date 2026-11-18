@@ -1876,6 +1876,34 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
     source_context={"game_build":catalog["game_build"],
                     "simc_revision":catalog["simc_revision"],
                     "manifest_sha256":catalog["manifest_sha256"]}
+    # v211 compiled exact permanent_enchant.inc IDs + DBC rows + the
+    # original SimC item-enchant processing path; v213 joined their sealed
+    # bytes to these same identities. This attests the *input ID/format*
+    # only, never Native gameplay, quality dominance, or fixed E.
+    v211=catalog.get("enchant_classification") or {}
+    pipeline=(source_provenance.get("v211") or {}).get(
+        "simc_item_enchant_pipeline")
+    classified=v211.get("rows") if type(v211) is dict else None
+    input_route_verified=(
+        v211.get("status")==
+            "SOURCE_CLASSIFIED_NOT_GENERAL_NATIVE_ACCEPTANCE_OR_UI_PROMOTION"
+        and type(classified) is list
+        and len(classified)==len(catalog_items)
+        and type(pipeline) is dict
+        and pipeline.get("owner")=="SIMC"
+        and pipeline.get("static_stat_path")=="ITEM_ENCHANTMENT_STAT"
+        and pipeline.get("spell_effect_path")=="ITEM_ENCHANTMENT_EQUIP_SPELL"
+        and pipeline.get("passive_spell_path")=="passive_enchant"
+        and pipeline.get("source_file")=="engine/item/enchants.cpp"
+        and type(v211.get("source_manifest_sha256")) is str
+        and auto_admission.HEX64.fullmatch(
+            v211["source_manifest_sha256"]) is not None)
+    v211_by_id=({row["enchant_id"]:row for row in classified
+                 if type(row) is dict
+                 and type(row.get("enchant_id")) is int}
+                if input_route_verified else {})
+    input_route_verified=(input_route_verified and
+                          len(v211_by_id)==len(classified))
     proofs={}
     for row in public_rows:
         item=catalog_items.get(row["enchant_id"])
@@ -1903,6 +1931,36 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
                 "identity":identity,
                 "status":"EXACT_SOURCE_RELATION_VERIFIED",
                 "evidence_sha256":digest(canonical(payload).encode("utf8"))}}
+        classified_row=v211_by_id.get(row["enchant_id"])
+        if (input_route_verified and type(classified_row) is dict
+            and item.get("classification")==classified_row
+            and all(classified_row.get(k)==item.get(k)
+                    for k in ("enchant_id","token","quality_rank",
+                              "item_class","inventory_type_mask",
+                              "item_subclass_mask"))
+            and classified_row.get("simc_effect_owner")=="SIMC"
+            and classified_row.get("simc_effect_reimplemented") is False):
+            # This is one of v220's existing proof families, not a new
+            # authorization Gate. The original profile serializer uses
+            # exactly enchant_id=N on a FINAL v098 selected item.
+            syntax="enchant_id="+str(item["enchant_id"])
+            input_payload={
+                "identity":identity,
+                "sealed_v211_sha256":source_provenance["v211"]["sha256"],
+                "sealed_v213_artifact_sha256":artifact_sha256,
+                "simc_source_manifest_sha256":v211["source_manifest_sha256"],
+                "input_field":syntax,
+                "input_owner":"SimC",
+                "input_scope":"EXACT_ID_SYNTAX_ONLY_NO_NATIVE_EFFECT_CERTIFICATION",
+                "source_receipts":stamps}
+            proofs[row["enchant_id"]]["simc_input"]={
+                "identity":identity,
+                "status":auto_admission.PROOF_STATUSES["simc_input"],
+                "evidence_sha256":digest(
+                    canonical(input_payload).encode("utf8")),
+                "input_field":syntax,
+                "effect_mechanism_reimplemented":False,
+                "gameplay_or_native_effect_attested":False}
     return proofs
 
 
@@ -7691,7 +7749,10 @@ def _fresh_original_default_base_install_inputs(*, preflight, staged,
 
 def _fresh_source_owner_merge_policy_A_original_source_relation(
         *,preflight,staged,trusted_policy_A_receipts_by_id):
-    """Reuse only the original sealed v217 source family, not three others."""
+    """Reuse original sealed v217 source + optional v211 SimC input syntax.
+
+    Product/quality, CHMV E, and Native gameplay remain unproved here.
+    """
     need(type(trusted_policy_A_receipts_by_id) is dict,
          "V216_POLICY_A_INTERNAL_PROVIDER_RECEIPTS_REQUIRED")
     meta=(preflight.get("optional_policy_A_evidence_unadmitted")
@@ -7723,7 +7784,8 @@ def _fresh_source_owner_merge_policy_A_original_source_relation(
     for item_id,parts in source.items():
         need(type(item_id) is int and item_id>0
              and type(parts) is dict
-             and set(parts)=={"source_relation"}
+             and set(parts) in ({"source_relation"},
+                                {"source_relation","simc_input"})
              and type(parts["source_relation"]) is dict,
              "V216_POLICY_A_V217_SOURCE_RELATION_SHAPE_DRIFT")
         proof=parts["source_relation"]
@@ -7748,7 +7810,26 @@ def _fresh_source_owner_merge_policy_A_original_source_relation(
         need("source_relation" not in existing or
              existing["source_relation"]==proof,
              "V216_POLICY_A_PROVIDER_SOURCE_RELATION_CONFLICT")
-        merged[item_id]={**existing,"source_relation":dict(proof)}
+        incoming=dict(existing)
+        incoming["source_relation"]=dict(proof)
+        if "simc_input" in parts:
+            simc=parts["simc_input"]
+            need(type(simc) is dict and
+                 simc.get("identity")==ident and
+                 simc.get("status")==auto_admission.PROOF_STATUSES[
+                     "simc_input"] and
+                 type(simc.get("evidence_sha256")) is str and
+                 season_budget_contract.SHA.fullmatch(
+                     simc["evidence_sha256"]) is not None and
+                 simc.get("input_field")=="enchant_id="+str(item_id) and
+                 simc.get("effect_mechanism_reimplemented") is False and
+                 simc.get("gameplay_or_native_effect_attested") is False,
+                 "V216_POLICY_A_ORIGINAL_SIMC_INPUT_SYNTAX_PROOF_DRIFT")
+            need("simc_input" not in existing or
+                 existing["simc_input"]==simc,
+                 "V216_POLICY_A_PROVIDER_SIMC_INPUT_CONFLICT")
+            incoming["simc_input"]=dict(simc)
+        merged[item_id]=incoming
     return merged
 
 
