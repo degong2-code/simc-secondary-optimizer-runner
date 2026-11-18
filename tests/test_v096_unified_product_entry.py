@@ -14,6 +14,64 @@ import v084_frost_cloth_1h_frill_native as frost_module
 from test_v091_weapon_oil_external_adapter import (
     fury,frost,FURY_TARGET,FROST_TARGET,REV)
 
+
+class InstalledE0NativeProfileInputTests(unittest.TestCase):
+    """Original v212 CHMV E0 + actual SimC item fields, zero Native/effect probes."""
+
+    def test_signed_v212_e0_option_matches_exact_finger_profile_once(self):
+        from tests.test_v212_environment_manifest import (
+            SelectedPermanentEnchantE0BudgetTests)
+        import v212_environment_manifest as installed
+        zero=dict.fromkeys(installed.season_budget.STATS,0)
+        doc=SelectedPermanentEnchantE0BudgetTests().installed([{
+            "enchant_id":7967,
+            "simc_token":"enchant_ring__eyes_of_the_eagle",
+            "slot":"finger1/finger2","ui_selectable":True,
+            "verified_fixed_E":zero,
+            "chmv_budget_receipt_sha256":"d"*64}])
+        with mock.patch.object(installed,"verify_fresh_installed_environment",
+                               return_value=True):
+            bound=installed.preview_installed_selected_enchant_budget(
+                document=doc,slot="finger1",item_id=268266,
+                enchant_id=7967)
+            selected={"identity_sha256":bound["selected_identity_sha256"],
+                      "slot":"finger1","item_id":268266,
+                      "enchant_id":7967}
+            profile=("hunter=Profile\nfinger1=id=268266,ilevel=334,"
+                     "enchant_id=7967\nfinger2=id=268268,ilevel=334\n")
+            actual=entry._signed_installed_user_E0_profile(
+                doc=doc,selected=selected,profile=profile,user_final_T=None)
+            self.assertEqual(actual["fixed_E"],zero)
+            self.assertEqual((actual["base_B"],actual["final_T"]),(3107,3107))
+            self.assertEqual(actual["selected_identity_sha256"],
+                             bound["selected_identity_sha256"])
+            # No independent spell-effect activation check, never E>0 here.
+            failures=(
+                ({**selected,"identity_sha256":"0"*64},profile),
+                (selected,profile.replace("id=268266","id=268269")),
+                (selected,profile.replace("enchant_id=7967","enchant_id=999")),
+                (selected,profile.replace("finger2=id=268268,ilevel=334\n","")),
+                (selected,profile.replace(
+                    "finger2=id=268268,ilevel=334",
+                    "finger2=id=268268,ilevel=334,enchant_id=7967"))
+            )
+            for changed,profile_text in failures:
+                with self.subTest(changed=changed,profile=profile_text):
+                    with self.assertRaises(entry.EntryBlocked):
+                        entry._signed_installed_user_E0_profile(
+                            doc=doc,selected=changed,profile=profile_text,
+                            user_final_T=None)
+            positive={**doc,"published_verified_options":[{
+                **doc["published_verified_options"][0],
+                "verified_fixed_E":{**zero,"haste_rating":30}}]}
+            with self.assertRaisesRegex(
+                    entry.EntryBlocked,"SIGN.*SOURCE_OR_BUDGET"):
+                entry._signed_installed_user_E0_profile(
+                    doc=positive,selected=selected,profile=profile,
+                    user_final_T=None)
+
+
+
 class V096Unified(unittest.TestCase):
     def fixture(self,td,kind="fury"):
         p,c,fill=(fury(td) if kind=="fury" else frost(td))
