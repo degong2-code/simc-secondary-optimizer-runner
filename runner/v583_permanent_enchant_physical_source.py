@@ -20,6 +20,7 @@ import v190_consumable_item_snapshot_join as csvsource
 import v191_unified_season_data_update as simc
 import v217_stage_execution_engine as stages
 import v281_consumable_simc_relation as spells
+import v584_supplemental_permanent_enchant_classification as supplemental
 
 SCHEMA = "v583_same_build_permanent_enchant_item_relation_v1"
 QUALITY_CSV = "source/v583_CraftingDataEnchantQuality.csv"
@@ -359,7 +360,8 @@ def collect(*, stage_root, build, expansion_id, wago_stage, fresh_gear,
         original["quality"]=root/QUALITY_CSV
         quality_sha=quality_stage["receipt_sha256"]
         code=stages.module_dependency_fingerprint([
-            Path(__file__),Path(simc.__file__),Path(stages.__file__)])
+            Path(__file__),Path(simc.__file__),Path(stages.__file__),
+            Path(supplemental.__file__)])
         # Output identity includes parser code. Updating the connector
         # reprojects a small manifest, never overwrites a sealed old output
         # or forces a second Wago download within the same build.
@@ -375,6 +377,15 @@ def collect(*, stage_root, build, expansion_id, wago_stage, fresh_gear,
             data["source_stage_receipts"]=identity
             data["quality_csv_stage_receipt_sha256"]=quality_sha
             data["simc_revision"]=pinned_simc.get("simc_revision")
+            # Original v191→v211→v213 helpers, reused only for newly
+            # Wago-linked extra gear families. Source-only optional output:
+            # no impact on the existing base catalog or budget.
+            data["supplemental_gear_effects_source_only"]=supplemental.classify(
+                relation=data,
+                source_dir=pinned_simc.get("source_dir"),
+                manifest_path=pinned_simc.get("manifest_path"),
+                game_build=build,
+                simc_revision=pinned_simc.get("simc_revision"))
             target=root/output
             target.parent.mkdir(parents=True,exist_ok=True)
             target.write_text(json.dumps(
@@ -399,7 +410,11 @@ def collect(*, stage_root, build, expansion_id, wago_stage, fresh_gear,
                     "code_sha256":code["sha256"]},
             outputs={"candidate":output},execute=execute,validate=validate)
         row=json.loads((root/output).read_text("utf8"))
+        supplementary=row.get("supplemental_gear_effects_source_only",{})
         return {"schema":SCHEMA,"status":row["status"],
+                "supplemental_gear_effects_status":supplementary.get("status"),
+                "supplemental_gear_effects_candidate_count":
+                    supplementary.get("candidate_count",0),
                 "candidate_path":str((root/output).resolve()),
                 "counts":{key:row[key] for key in (
                     "highest_simc_candidate_count",
