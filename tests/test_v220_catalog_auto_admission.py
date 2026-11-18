@@ -441,14 +441,20 @@ class SealedRepresentativeConsumerTests(unittest.TestCase):
                     source_catalog=self.source,
                     scope={**scope,"wago_item_id":999999},
                     supplemental_source=supplemental)
-            with self.assertRaisesRegex(
-                    catalog.CatalogBlocked,"SUPPLEMENTAL_SEALED"):
-                catalog.preview_sealed_representative_enchant_mask(
-                    source_catalog=self.source,scope=scope,
-                    supplemental_source={**supplemental,
-                        "raw_rank_component_evidence":{
-                          "same_effect_and_use_conditions_verified":True,
-                          "quality_noninferiority_runtime_verified":True}})
+            # A physical applicability check must not independently
+            # certify or block SimC spell effects or quality dominance.
+            # Even inconsistent optional effect observations cannot grant
+            # UI/Policy A/E status; product-quality dedup owns that later.
+            untrusted_quality=catalog.preview_sealed_representative_enchant_mask(
+                source_catalog=self.source,scope=scope,
+                supplemental_source={**supplemental,
+                    "raw_rank_component_evidence":{
+                      "same_effect_and_use_conditions_verified":True,
+                      "quality_noninferiority_runtime_verified":True}})
+            self.assertTrue(untrusted_quality["matched"])
+            self.assertFalse(untrusted_quality["same_effect_and_highest_quality_verified"])
+            self.assertFalse(untrusted_quality["policy_A_product_input_verified"])
+            self.assertFalse(untrusted_quality["ui_selectable"])
 
 
     def test_wrong_equipment_or_build_cannot_become_a_choice(self):
