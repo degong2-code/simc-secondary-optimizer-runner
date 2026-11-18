@@ -7818,7 +7818,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                    "source_target_socket_count",
                    "auto_four_stat_source_requested",
                    "source_ordinary_nominal_by_stat",
-                 "default_auto_core_build_requested"},
+                 "default_auto_core_build_requested",
+                 "source_only_reference_enchant_scope_requested"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
         # A trusted internal source-owner adapter can provide independently
         # verified GJFO/Policy A input. JSON or HTTP cannot supply a callable.
@@ -7827,6 +7828,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         need(verified_install_provider is None or
              callable(verified_install_provider),
              "V216_VERIFIED_INSTALL_PROVIDER_INTERNAL_CALLABLE_REQUIRED")
+        need(type(fresh_collection_inputs.get(
+                "source_only_reference_enchant_scope_requested",False)) is bool,
+             "V216_REFERENCE_ENCHANT_SOURCE_ONLY_OPT_IN_BOOL_REQUIRED")
         # The UI default mode is an efficiency hint, not permission to
         # suppress a developer's explicit G measurement with F.
         default_auto_core=fresh_collection_inputs.get(
@@ -8305,17 +8309,19 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                                 "FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED"
                             else observed[
                                 "four_stat_ordinary_best_observed_unadmitted"])
-                # v230 exact selected representative + v583 same-build
-                # physical enchant join -> existing v196/v220 mask predicate.
-                # SOURCE ONLY: reference G gear can differ from final user gear.
-                enchant_mask_preview=(
-                    _fresh_first_sealed_representative_enchant_mask_preview(
-                        collected=collected,compilation=source_compilation))
-                source_compilation[
-                    "sealed_reference_enchant_mask_source_only"]=(
-                        enchant_mask_preview)
-                progress["sealed_reference_enchant_mask_status"]=(
-                    enchant_mask_preview["status"])
+                # Only an explicit source-only developer probe may re-read
+                # v230 item_data; never do it for an UNSELECTED enchant in
+                # the normal G/J/F/O baseline build.
+                if fresh_collection_inputs.get(
+                        "source_only_reference_enchant_scope_requested",False):
+                    enchant_mask_preview=(
+                        _fresh_first_sealed_representative_enchant_mask_preview(
+                            collected=collected,compilation=source_compilation))
+                    source_compilation[
+                        "sealed_reference_enchant_mask_source_only"]=(
+                            enchant_mask_preview)
+                    progress["sealed_reference_enchant_mask_status"]=(
+                        enchant_mask_preview["status"])
                 preflight=preflight_new_season_source(
                     source_catalog_path=source_compilation["source_catalog_path"],
                     expected_game_build=collected["expected_game_build"],
