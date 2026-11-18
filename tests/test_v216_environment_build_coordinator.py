@@ -2074,6 +2074,55 @@ class FirstSealedEnchantScopeBridgeTests(unittest.TestCase):
         self.assertFalse(out["ui_selectable"])
         self.assertEqual((out["native_calls"],out["network_calls"]),(0,0))
 
+    def test_v584_supplement_requires_original_wago_identity_and_same_revision(self):
+        revision="d"*40
+        source_row={"enchant_id":7939,
+                    "simc_token":"bright_linen_spellthread",
+                    "quality_rank_simc":2,
+                    "source_class_and_masks":{
+                        "item_class":4,"inventory_type_mask":1<<7,
+                        "item_subclass_mask":0x1e},
+                    "physical_item_ids":[240133],
+                    "selection_status":
+                        "SUPPLEMENTAL_SOURCE_ONLY_NOT_USER_PUBLISHED",
+                    "ui_selectable":False,
+                    "raw_rank_component_evidence":{
+                        "quality_noninferiority_runtime_verified":False}}
+        join={
+            "game_build":"12.1.5.70783",
+            "additional_enchants_unadmitted":[{
+                "enchant_id":7939,
+                "scope":"DPS_EQUIPMENT_PERMANENT_CANDIDATE_UNADMITTED",
+                "simc_source_rows":[{
+                    "enchant_id":7939,
+                    "simc_token":"bright_linen_spellthread",
+                    "quality_rank":2,"item_class":4,
+                    "inventory_type_mask":1<<7,
+                    "item_subclass_mask":0x1e}],
+                "physical_items":[{"item_id":240133}]}],
+            "supplemental_gear_effects_source_only":{
+                "status":"SUPPLEMENTAL_DPS_ENCHANT_EFFECTS_CLASSIFIED_UNADMITTED",
+                "game_build":"12.1.5.70783",
+                "simc_revision":revision,"candidate_count":1,
+                "source_only":True,"ui_selectable":False,
+                "rows":[source_row]}}
+        matched=v216._v216_reuse_sealed_v584_selected_supplemental(
+            join,7939,revision)
+        self.assertEqual(matched["enchant_id"],7939)
+        self.assertEqual(matched["physical_items"][0]["item_id"],240133)
+        self.assertFalse(matched["supplemental_source"]["ui_selectable"])
+        self.assertIsNone(v216._v216_reuse_sealed_v584_selected_supplemental(
+            join,7939,"a"*40))
+        from copy import deepcopy
+        swapped=deepcopy(join)
+        swapped["supplemental_gear_effects_source_only"]["rows"][0][
+            "physical_item_ids"]=[999999]
+        self.assertIsNone(v216._v216_reuse_sealed_v584_selected_supplemental(
+            swapped,7939,revision))
+        self.assertIsNone(v216._v216_reuse_sealed_v584_selected_supplemental(
+            join,999999,revision))
+
+
     def test_existing_v232_v230_v583_source_calls_v196_without_admission(self):
         build="12.1.5.70783"
         revision="d"*40
