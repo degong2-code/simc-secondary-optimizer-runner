@@ -2063,6 +2063,41 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             .read_text(encoding="utf8"))))
 
 
+class OriginalOptionalEnchantSnapshotSourceTests(unittest.TestCase):
+    """The verified v113 user profile keeps only a source locator, not DB bytes."""
+
+    def test_original_optional_enchant_reference_is_bounded_and_replayable(self):
+        candidate={"status":"PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",
+                   "candidate_path":"/source/fresh_source/v583.json",
+                   "source_stage":{
+                       "stage_id":"v583","receipt_sha256":"a"*64,
+                       "output_paths":{"candidate":"fresh_source/v583.json",
+                                       "other":"large-unneeded"},
+                       "large_data_should_not_copy":["x"*1000]},
+                   "enchant_items":[{"item_id":i} for i in range(32)]}
+        extracted=v216.original_optional_enchant_source_reference({
+            "fresh_permanent_enchant_item_source":candidate})
+        self.assertEqual(extracted,{
+            "status":"PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",
+            "candidate_path":"/source/fresh_source/v583.json",
+            "source_stage":{"stage_id":"v583","receipt_sha256":"a"*64,
+                            "output_paths":{"candidate":"fresh_source/v583.json"}}})
+        self.assertNotIn("enchant_items",extracted)
+        self.assertNotIn("large_data_should_not_copy",extracted["source_stage"])
+
+    def test_missing_unselected_source_stays_optional_no_native_or_fetch(self):
+        self.assertIsNone(v216.original_optional_enchant_source_reference({}))
+        self.assertIsNone(v216.original_optional_enchant_source_reference({
+            "fresh_permanent_enchant_item_source":{"status":"PENDING"}}))
+        self.assertIsNone(v216.original_optional_enchant_source_reference({
+            "fresh_permanent_enchant_item_source":{
+                "status":"PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",
+                "candidate_path":"/source/v583.json",
+                "source_stage":{"stage_id":"v583",
+                                "receipt_sha256":"NOT_A_SHA",
+                                "output_paths":{"candidate":"source/v583.json"}}}}))
+
+
 class FirstSealedEnchantScopeBridgeTests(unittest.TestCase):
     """No real source download or Native; actual v216 -> v196 consumer call."""
 
