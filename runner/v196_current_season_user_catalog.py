@@ -220,6 +220,17 @@ def prepare_verified_fresh_choices(source_catalog, source_ui,
                     row["highest_source_quality_rank"]):
             quality_pending.append(item_id)
             continue
+        # Transfer E only if the EXISTING trusted v220 CHMV owner supplied
+        # an exact per-stat vector. v220 already checked no_double_count
+        # and unknown_static_chmv=False. No source row or absent vector may
+        # be treated as E=0, and this does NOT run/validate SimC effects.
+        budget_receipt=trusted_internal_receipts_by_id[item_id]["chmv_budget"]
+        fixed_E=budget_receipt.get("fixed_E")
+        bound_E=(type(fixed_E) is dict
+                 and set(fixed_E)==set(fixed_budget.STATS)
+                 and all(type(fixed_E[k]) is int
+                         and 0<=fixed_E[k]<=100000
+                         for k in fixed_budget.STATS))
         ready.append({
             "enchant_id":item_id,
             "simc_token":candidate["simc_token"],
@@ -231,6 +242,10 @@ def prepare_verified_fresh_choices(source_catalog, source_ui,
                     "source_relation"]["evidence_sha256"],
             "quality_source_sha256":product["quality_source_sha256"],
             "exact_v220_identity":admissible[item_id],
+            **({"verified_fixed_E":dict(fixed_E),
+                "chmv_budget_receipt_sha256":
+                    budget_receipt["evidence_sha256"]}
+               if bound_E else {}),
         })
     ready.sort(key=lambda x:x["enchant_id"])
     payload={
