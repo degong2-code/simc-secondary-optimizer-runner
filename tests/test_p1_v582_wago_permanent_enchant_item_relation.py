@@ -48,6 +48,12 @@ class PermanentEnchantSameBuildJoin(unittest.TestCase):
             {"SpellID":778,"Effect":53,"EffectIndex":0,"EffectMiscValue_0":8025,"DifficultyID":0},
             {"SpellID":779,"Effect":54,"EffectIndex":0,"EffectMiscValue_0":8039,"DifficultyID":0},
             {"SpellID":780,"Effect":53,"EffectIndex":0,"EffectMiscValue_0":8025,"DifficultyID":0}])
+        write_csv(root, "CraftingData", ["ID","Type"], [
+            {"ID":3829,"Type":3}, {"ID":111,"Type":0}])
+        write_csv(root, "CraftingDataEnchantQuality",
+                  ["ID","Rank","SpellItemEnchantmentID","ItemID","CraftingDataID"],
+                  [{"ID":1,"Rank":2,"SpellItemEnchantmentID":8025,
+                    "ItemID":244014,"CraftingDataID":3829}])
         self.simc = {
             8025:[{"token":"enchant_ring__silvermoons_alacrity","quality_rank":2}],
             8039:[{"token":"enchant_weapon__acuity_of_the_rendorei","quality_rank":2}]}
@@ -85,6 +91,36 @@ class PermanentEnchantSameBuildJoin(unittest.TestCase):
         self.assertEqual(result["highest_source_rank_linked"],0)
         self.assertEqual(result["highest_source_rank_unlinked_ids"],[8025,8039])
         self.assertIn(123456,result["other_wago_permanent_enchant_ids_not_in_simc_token_source"])
+
+    def test_modern_effect301_craftingdata_quality_exact_relation(self):
+        write_csv(self.root, "SpellEffect",
+                  ["SpellID","Effect","EffectIndex","EffectMiscValue_0","DifficultyID"], [
+            {"SpellID":777,"Effect":301,"EffectIndex":0,
+             "EffectMiscValue_0":3829,"DifficultyID":0},
+            {"SpellID":778,"Effect":301,"EffectIndex":0,
+             "EffectMiscValue_0":3829,"DifficultyID":0}])
+        result=probe.wago_join(self.root,self.simc,self.highest,11)
+        self.assertEqual(result["highest_source_rank_linked"],1)
+        self.assertEqual(result["matched_physical_item_ids"],1)
+        entry=result["matches"][0]["wago_items"][0]
+        self.assertEqual(entry["item_id"],244014)
+        self.assertEqual(entry["crafting_data_id"],3829)
+        self.assertEqual(entry["quality_rank_wago"],2)
+        self.assertEqual(entry["exact_join"],
+                         "EFFECT_301_CRAFTDATA_TYPE3_QUALITY_ITEM_ENCHANT_ID")
+
+    def test_modern_quality_wrong_physical_item_not_matched(self):
+        write_csv(self.root, "SpellEffect",
+                  ["SpellID","Effect","EffectIndex","EffectMiscValue_0","DifficultyID"], [
+            {"SpellID":777,"Effect":301,"EffectIndex":0,
+             "EffectMiscValue_0":3829,"DifficultyID":0}])
+        write_csv(self.root,"CraftingDataEnchantQuality",
+                  ["ID","Rank","SpellItemEnchantmentID","ItemID","CraftingDataID"],[
+            {"ID":1,"Rank":2,"SpellItemEnchantmentID":8025,
+             "ItemID":244015,"CraftingDataID":3829}])
+        result=probe.wago_join(self.root,self.simc,self.highest,11)
+        self.assertEqual(result["highest_source_rank_linked"],0)
+        self.assertEqual(result["matched_physical_item_ids"],0)
 
 
 if __name__=="__main__":
