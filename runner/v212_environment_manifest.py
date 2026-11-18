@@ -765,6 +765,87 @@ def verify_fresh_installed_environment(document):
     return True
 
 
+def preview_installed_selected_enchant_budget(*, document, slot,
+                                               item_id, enchant_id,
+                                               manual_final_T=None):
+    """Reuse installed v212 E accounting for ONE eventual user slot, Native0.
+
+    A sealed *registration* with verified E is not yet an executable option.
+    The original v098 final-physical-item source mask and v096 SimC profile
+    must independently match this selected slot/item/ID before any DPS run.
+    In particular, E=0 is a NORMAL known static-rating result, and does
+    not suppress the SimC enchant itself or certify its spell/proc effect.
+    """
+    verify_fresh_installed_environment(document)
+    need(type(slot) is str and bool(slot)
+         and type(item_id) is int and item_id>0
+         and type(enchant_id) is int and enchant_id>0,
+         "FRESH_SELECTED_ENCHANT_FINAL_SLOT_ITEM_ID_REQUIRED")
+    choices=[row for row in document["published_verified_options"]
+             if row.get("enchant_id")==enchant_id]
+    need(len(choices)==1 and
+         choices[0].get("ui_selectable") is True,
+         "FRESH_SELECTED_ENCHANT_EXACT_INSTALLED_REGISTRATION_REQUIRED")
+    chosen=choices[0]
+    allowed=(("finger1","finger2") if
+             chosen.get("slot")=="finger1/finger2"
+             else (chosen.get("slot"),))
+    need(slot in allowed,
+         "FRESH_SELECTED_ENCHANT_USER_SLOT_OUTSIDE_ORIGINAL_MASK")
+    need("verified_fixed_E" in chosen and
+         "chmv_budget_receipt_sha256" in chosen,
+         "FRESH_SELECTED_ENCHANT_STATIC_E_NOT_ESTABLISHED")
+    E=season_budget._vector(chosen["verified_fixed_E"],"SELECTED_E")
+    need(valid_sha(chosen["chmv_budget_receipt_sha256"]),
+         "FRESH_SELECTED_ENCHANT_CHMV_OWNER_RECEIPT_REQUIRED")
+    base=season_budget.retarget_verified_install(
+        document=document,manual_final_T=manual_final_T)
+    # The plain representative budget cannot already own a different
+    # enchant E; selected physical gear is not a general equipment picker.
+    original_E=season_budget._vector(
+        document["v222_reconciled_budget"]["fixed_E"],"ORIGINAL_E")
+    need(not any(original_E.values()),
+         "FRESH_SELECTED_ENCHANT_BASE_REFERENCE_E_ALREADY_LOCKED")
+    extra=sum(E.values())
+    # Static E=0 is common and requires NO incremental G/B/T rating.
+    # For the rare E>0 only explicitly known unenchanted representative G
+    # can add it once; a guessed E-ownership flag cannot authorize a delta.
+    need(extra==0 or document["v222_reconciled_budget"].get(
+        "G_reference_excludes_selected_E") is True,
+        "FRESH_SELECTED_ENCHANT_POSITIVE_E_G_OWNERSHIP_UNKNOWN")
+    B=base["base_B"]+(extra if manual_final_T is None else 0)
+    T=B+sum(base["fixed_O"].values())
+    need(manual_final_T is None or T==manual_final_T,
+         "FRESH_SELECTED_ENCHANT_MANUAL_T_CHANGED")
+    minima=base["J"]+base["F"]+sum(base["fixed_L"].values())+extra
+    need(B>=minima,"FRESH_SELECTED_ENCHANT_E_EXCEEDS_FREE_G")
+    identity={"installed_manifest_sha256":document["manifest_sha256"],
+              "game_build":document["game_build"],
+              "target_ilevel":document["target_ilevel"],
+              "selected_slot":slot,"selected_item_id":item_id,
+              "selected_enchant_id":enchant_id,
+              "simc_token":chosen["simc_token"],
+              "chmv_budget_receipt_sha256":
+                  chosen["chmv_budget_receipt_sha256"],
+              "fixed_E":E,"manual_final_T":manual_final_T}
+    return {
+        "status":"INSTALLED_SELECTED_ENCHANT_BUDGET_ONLY_NOT_RUNTIME_ADMITTED",
+        "selected_identity_sha256":sha(canonical(identity).encode("utf8")),
+        "selected_identity":identity,
+        "fixed_E":E,
+        "fixed_E_zero_is_valid":extra==0,
+        "base_B":B,"final_T":T,
+        "J":base["J"],"F":base["F"],
+        "fixed_O":dict(base["fixed_O"]),
+        "fixed_L":dict(base["fixed_L"]),
+        "fixed_E_in_G_once":True,
+        "manual_final_T_authoritative":manual_final_T is not None,
+        "user_physical_item_and_simc_profile_binding_pending":True,
+        "runtime_selectable":False,
+        "native_calls":0,"network_calls":0,
+    }
+
+
 def verify_windows_package_manifest(package_manifest_path, source_catalog_path,
                                       source_catalog, source_catalog_sha):
     if package_manifest_path is None:
