@@ -1,0 +1,89 @@
+# One opt-in M1/M2 source-owner run; no user DPS and no reimplementation.
+name: P1 v610 actual current 70783 permanent enchant auto admission (one M1/M2)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v610_real_original_enchant_admission_once.yml
+      - integration_probes/p1_v610_real_installed_enchant_one_build.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v610-one-real-original-enchant-m1-m2
+  cancel-in-progress: false
+jobs:
+  actual-one-enchant-source:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v610-real-enchant-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 35
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_PINNED_BINARY_SHA256: 1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve original SimC bytes
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Exact official 70783 Windows SimC archive, do not rebuild
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .v610-original-simc
+          github-token: ${{ github.token }}
+      - name: Validate original SimC SHA and quarantine old-season JSON
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archive=Join-Path $PWD '.v610-original-simc/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $archive -PathType Leaf)) { throw 'V610_ORIGINAL_SIMC_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V610_ARCHIVE_SHA_DRIFT' }
+          New-Item -ItemType Directory -Force .v610-extracted | Out-Null
+          & 'C:\Program Files\7-Zip\7z.exe' x '-o.v610-extracted' -y -bd $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V610_SIMC_EXTRACTION_FAILED' }
+          $exes=@(Get-ChildItem .v610-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V610_EXACT_ONE_SIMC_EXE_REQUIRED' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne $env:SIMC_PINNED_BINARY_SHA256) { throw 'V610_PINNED_SIMC_EXE_SHA_DRIFT' }
+          "V610_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $quarantine=Join-Path $env:RUNNER_TEMP 'v610-season-quarantine'
+          New-Item -ItemType Directory -Force $quarantine | Out-Null
+          $old=@(Get-ChildItem data -File -Filter 'current_season_*.json')
+          $old+=@(Get-ChildItem data -File -Filter 'v202_*.json')
+          $old+=@(Get-ChildItem data -File -Filter 'v206_*.json')
+          $old+=@(Get-ChildItem data/season_ordinary_gem_nominal -File -Filter '*.json')
+          foreach ($source in $old) { Move-Item -LiteralPath $source.FullName -Destination (Join-Path $quarantine $source.Name) }
+          if ($old.Count -lt 2) { throw 'V610_HISTORICAL_SOURCE_QUARANTINE_NOT_APPLIED' }
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V610_WEB_DEPS_FAILED' }
+          python -m py_compile integration_probes/p1_v610_real_installed_enchant_one_build.py
+          if ($LASTEXITCODE -ne 0) { throw 'V610_PROBE_SYNTAX_FAIL' }
+      - name: ONE original M1/M2 and exact v216 v212 optional enchant admission
+        shell: pwsh
+        timeout-minutes: 24
+        run: |
+          New-Item -ItemType Directory -Force out/v610 | Out-Null
+          python -u integration_probes/p1_v610_real_installed_enchant_one_build.py --simc "$env:V610_SIMC_EXE" --out out/v610
+          if ($LASTEXITCODE -ne 0) { throw 'V610_ACTUAL_FIRST_BLOCKER_IN_COMPACT_RECEIPT' }
+      - name: Preserve bounded source-owner verdict only (no original CSV, credentials or cache)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v610-real-original-enchant-admission-once
+          path: out/v610/V610_REAL_ENCHANT_ADMISSION_ONE_BUILD.json
+          retention-days: 14
+          if-no-files-found: warn
