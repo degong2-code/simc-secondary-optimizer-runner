@@ -56,6 +56,76 @@ class AutoAdmissionTests(unittest.TestCase):
                 self.assertTrue(any("EVIDENCE_SCOPE_MISMATCH:" in x
                                     for x in out["conflicts"]))
 
+    def test_v594_trusted_v196_E_vector_propagates_without_gameplay_gate(self):
+        """Existing v220 CHMV receipt is owner; no new SimC effect proof."""
+        token="enchant_ring__silvermoons_alacrity"
+        original={"enchant_id":8025,"token":token,"quality_rank":2,
+                  "item_class":4,"inventory_type_mask":1<<11,
+                  "item_subclass_mask":0,
+                  "slot_group":"finger1/finger2",
+                  "slot_resolution_status":"SOURCE_MASK_RESOLVED"}
+        context={"game_build":"12.1.5.70783",
+                 "simc_revision":"a"*40,"manifest_sha256":"b"*64}
+        source={**context,
+                "v196_enchant_source":{"rows":[original]}}
+        row={"enchant_id":8025,"token":token,
+             "highest_source_quality_rank":2,
+             "source_slots":["finger1/finger2"],"ui_selectable":False}
+        ui={"schema":catalog.SCHEMA,
+            "status":"FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY",
+            "environment_ready":False,
+            "season_build":context["game_build"],
+            "simc_revision":context["simc_revision"],
+            "source_catalog":{"manifest_sha256":context["manifest_sha256"]},
+            "enchant_candidates":{"selectable_count":0,"items":[row]}}
+        candidate=policy.candidate_from_source_enchant(
+            context,row,original_source_row=original)
+        ident=policy._identity(candidate)
+        receipts={k:{"identity":dict(ident),"status":status,
+                     "evidence_sha256":str(i)*64}
+                  for i,(k,status) in enumerate(policy.PROOF_STATUSES.items(),1)}
+        receipts["product_input"].update({
+            "exact_application_scope_verified":True,
+            "same_effect_and_use_conditions_verified":True,
+            "no_inferior_effect_components_verified":True,
+            "quality_source_sha256":"f"*64,
+            "verified_quality_rank":2})
+        E={"crit_rating":0,"haste_rating":30,
+           "mastery_rating":0,"versatility_rating":0}
+        receipts["chmv_budget"].update({
+            "no_double_count":True,"unknown_static_chmv":False,
+            "fixed_E":E})
+        def prepare(record):
+            with mock.patch.object(catalog.source_bridge,"verify_catalog"):
+                return catalog.prepare_verified_fresh_choices(
+                    source,ui,{8025:record})
+        good=prepare(receipts)
+        self.assertEqual(len(good["verified_option_inputs_unpublished"]),1)
+        published=good["verified_option_inputs_unpublished"][0]
+        self.assertEqual(published["slot"],"finger1/finger2")
+        self.assertEqual(published["verified_fixed_E"],E)
+        self.assertEqual(published["chmv_budget_receipt_sha256"],"4"*64)
+        self.assertFalse(good["ui_selectable"])
+        self.assertEqual((good["native_calls"],good["network_calls"]),(0,0))
+        missing=copy.deepcopy(receipts)
+        missing["chmv_budget"].pop("fixed_E")
+        unbound=prepare(missing)["verified_option_inputs_unpublished"][0]
+        self.assertNotIn("verified_fixed_E",unbound)
+        self.assertNotIn("chmv_budget_receipt_sha256",unbound)
+        # A explicitly verified E0 is different from an absent E.
+        zero=copy.deepcopy(receipts)
+        zero["chmv_budget"]["fixed_E"]=dict.fromkeys(E,0)
+        self.assertEqual(prepare(zero)["verified_option_inputs_unpublished"]
+                         [0]["verified_fixed_E"],dict.fromkeys(E,0))
+        invalid=copy.deepcopy(receipts)
+        invalid["chmv_budget"]["fixed_E"]={**E,"haste_rating":True}
+        with self.assertRaisesRegex(
+                catalog.CatalogBlocked,"CHMV_OWNER_FIXED_E"):
+            prepare(invalid)
+        source_only=policy.decide(candidate)
+        self.assertFalse(source_only["eligible"])
+
+
     def test_source_bound_dual_ring_family_is_not_an_invented_hand(self):
         """Four synthetic receipts test source semantics, NOT an actual UI grant."""
         ui={"enchant_id":7967,"token":"enchant_ring__eyes_of_the_eagle",
