@@ -11,6 +11,7 @@ on:
       - runner/v584_supplemental_permanent_enchant_classification.py
       - runner/v213_source_to_catalog.py
       - runner/v220_catalog_auto_admission.py
+      - runner/v098_target_user_scenario_bootstrap.py
       - tests/test_v220_catalog_auto_admission.py
       - tests/test_v584_supplemental_permanent_enchant_classification.py
       - tests/test_v585_historical_70783_enchant_quality.py
