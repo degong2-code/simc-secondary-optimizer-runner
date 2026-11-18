@@ -1961,6 +1961,73 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
                 "input_field":syntax,
                 "effect_mechanism_reimplemented":False,
                 "gameplay_or_native_effect_attested":False}
+
+            # The pinned v211 SimC item-enchant path changes only the
+            # item_mod identified by a DBC static component. Thus a COMPLETE
+            # known, NON-CHMV-only static enchant with no spell or unknown
+            # component cannot add crit/haste/mastery/vers gear rating.
+            # No Native/effect/proc inference: this certifies static E0 ONLY.
+            static=classified_row.get("static_components")
+            known_nonchmv={
+                "PRIMARY_ATTRIBUTE","PRIMARY_ATTRIBUTE_HYBRID",
+                "NON_CHMV_STAT","TERTIARY_RATING",
+                "NON_CHMV_RESISTANCE"}
+            exact_source_E0=(
+                classified_row.get("effect_family")==
+                    "static_nonchmv_item_mod"
+                and classified_row.get("effect_source_status")==
+                    "DBC_STAT_AND_SPELLTEXT_SOURCE_CLASSIFIED"
+                and classified_row.get("budget_policy")==
+                    "NO_STATIC_CHMV_COMPONENT_IN_DBC_ROW; DYNAMIC_EFFECTS_STAY_WITH_SIMC"
+                and type(static) is list and bool(static)
+                and all(type(component) is dict
+                        and component.get("category") in known_nonchmv
+                        and type(component.get("item_mod_id")) is int
+                        and type(component.get("component_index")) is int
+                        and type(component.get("dbc_amount")) is int
+                        and type(component.get("coefficient")) in (int,float)
+                        for component in static)
+                and classified_row.get("static_chmv_rating_present_in_dbc")
+                    is False
+                and classified_row.get("static_chmv_stats")==[]
+                and classified_row.get("spell_effects")==[]
+                and classified_row.get("unknown_components")==[]
+                and classified_row.get("dynamic_chmv_proc_present_in_spell_text")
+                    is False
+                and classified_row.get("dynamic_chmv_proc_roles")==[]
+                and classified_row.get("simc_custom_handlers")==[]
+                and classified_row.get(
+                    "simc_generic_or_unregistered_spell_count")==0
+                and classified_row.get("native_E_evidence")=={
+                    "status":"NOT_MEASURED_NEW_BUILD","static_E":None,
+                    "ui_selectable":False,"source_file":None}
+                and classified_row.get("selection_status")==
+                    "LOCKED_PENDING_CURRENT_SEASON_ITEM_EFFECT_PROOF")
+            if exact_source_E0:
+                E=dict.fromkeys(season_budget_contract.STATS,0)
+                budget_payload={
+                    "identity":identity,
+                    "input_source_receipt_sha256":proofs[row["enchant_id"]][
+                        "simc_input"]["evidence_sha256"],
+                    "sealed_v211_sha256":source_provenance["v211"]["sha256"],
+                    "sealed_v213_artifact_sha256":artifact_sha256,
+                    "source_manifest_sha256":v211["source_manifest_sha256"],
+                    "static_component_evidence":static,
+                    "no_spell_or_unknown_components":True,
+                    "fixed_E":E,
+                    "scope":"PINNED_SIMC_STATIC_NONCHMV_ONLY_NOT_NATIVE_EFFECT_PROOF",
+                    "source_receipts":stamps}
+                proofs[row["enchant_id"]]["chmv_budget"]={
+                    "identity":identity,
+                    "status":auto_admission.PROOF_STATUSES["chmv_budget"],
+                    "evidence_sha256":digest(
+                        canonical(budget_payload).encode("utf8")),
+                    "no_double_count":True,
+                    "unknown_static_chmv":False,
+                    "fixed_E":E,
+                    "static_E_evidence_owner":
+                        "PINNED_SIMC_STATIC_NONCHMV_DBC_COMPONENTS",
+                    "gameplay_or_native_effect_attested":False}
     return proofs
 
 
@@ -7749,9 +7816,10 @@ def _fresh_original_default_base_install_inputs(*, preflight, staged,
 
 def _fresh_source_owner_merge_policy_A_original_source_relation(
         *,preflight,staged,trusted_policy_A_receipts_by_id):
-    """Reuse original sealed v217 source + optional v211 SimC input syntax.
+    """Reuse sealed v217 source + SimC syntax + narrowly proven static E0.
 
-    Product/quality, CHMV E, and Native gameplay remain unproved here.
+    Product/quality and Native gameplay remain unproved here. Unknown or
+    spell-driven E is NEVER inferred as zero.
     """
     need(type(trusted_policy_A_receipts_by_id) is dict,
          "V216_POLICY_A_INTERNAL_PROVIDER_RECEIPTS_REQUIRED")
@@ -7785,7 +7853,9 @@ def _fresh_source_owner_merge_policy_A_original_source_relation(
         need(type(item_id) is int and item_id>0
              and type(parts) is dict
              and set(parts) in ({"source_relation"},
-                                {"source_relation","simc_input"})
+                                {"source_relation","simc_input"},
+                                {"source_relation","simc_input",
+                                 "chmv_budget"})
              and type(parts["source_relation"]) is dict,
              "V216_POLICY_A_V217_SOURCE_RELATION_SHAPE_DRIFT")
         proof=parts["source_relation"]
@@ -7829,6 +7899,27 @@ def _fresh_source_owner_merge_policy_A_original_source_relation(
                  existing["simc_input"]==simc,
                  "V216_POLICY_A_PROVIDER_SIMC_INPUT_CONFLICT")
             incoming["simc_input"]=dict(simc)
+        if "chmv_budget" in parts:
+            owner=parts["chmv_budget"]
+            zero=dict.fromkeys(season_budget_contract.STATS,0)
+            need(type(owner) is dict and
+                 owner.get("identity")==ident and
+                 owner.get("status")==auto_admission.PROOF_STATUSES[
+                     "chmv_budget"] and
+                 type(owner.get("evidence_sha256")) is str and
+                 season_budget_contract.SHA.fullmatch(
+                     owner["evidence_sha256"]) is not None and
+                 owner.get("no_double_count") is True and
+                 owner.get("unknown_static_chmv") is False and
+                 owner.get("fixed_E")==zero and
+                 owner.get("static_E_evidence_owner")==
+                     "PINNED_SIMC_STATIC_NONCHMV_DBC_COMPONENTS" and
+                 owner.get("gameplay_or_native_effect_attested") is False,
+                 "V216_POLICY_A_ORIGINAL_STATIC_E0_SOURCE_PROOF_DRIFT")
+            need("chmv_budget" not in existing or
+                 existing["chmv_budget"]==owner,
+                 "V216_POLICY_A_PROVIDER_CHMV_E0_CONFLICT")
+            incoming["chmv_budget"]=dict(owner)
         merged[item_id]=incoming
     return merged
 

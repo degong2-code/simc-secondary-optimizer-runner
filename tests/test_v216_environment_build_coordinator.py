@@ -2180,6 +2180,170 @@ class OriginalPolicyARingFamilyIdentityTests(unittest.TestCase):
                 self.assertIn("source_relation",pending[7967])
 
 
+
+    def test_v606_exact_static_nonchmv_source_produces_E0_not_quality(self):
+        """Sealed v211 component types may prove E0, not item usability."""
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            (root/"fresh_source").mkdir()
+            stamps={"v191":"1"*64,"v211":"2"*64,"v213":"3"*64}
+            files={"v191":("candidate","fresh_source/v191_candidate.json",
+                           "a"*64),
+                   "v211":("classification",
+                           "fresh_source/v211_classification.json","b"*64),
+                   "v213":("candidate",
+                           "fresh_source/v213_candidate_catalog.json","c"*64)}
+            receipts={}
+            att={"stage_root":str(root)}
+            for name,(output,path,sha) in files.items():
+                att[name+"_stage"]={"status":"REUSED_VERIFIED",
+                    "stage_id":"fresh-"+name,"receipt_sha256":stamps[name]}
+                receipts["fresh-"+name]={"stage_id":"fresh-"+name,
+                    "stage_version":"1","status":"COMPLETE",
+                    "receipt_sha256":stamps[name],
+                    "output_paths":{output:path},
+                    "outputs":{output:{"sha256":sha,"path":path}}}
+            slot="feet"
+            row={"enchant_id":91010,"token":"enchant_boots__static_stamina",
+                 "quality_rank":2,"slot_group":slot,
+                 "slot_resolution_status":"SOURCE_MASK_RESOLVED",
+                 "item_class":4,"inventory_type_mask":1<<8,
+                 "item_subclass_mask":0}
+            component={"component_index":1,"item_mod_id":7,
+                       "item_mod":"stamina","category":"NON_CHMV_STAT",
+                       "dbc_amount":120,"scaling_id":0,"coefficient":0.0}
+            category={
+                **{k:row[k] for k in ("enchant_id","token","quality_rank",
+                   "item_class","inventory_type_mask","item_subclass_mask")},
+                "simc_effect_owner":"SIMC",
+                "simc_effect_reimplemented":False,
+                "effect_family":"static_nonchmv_item_mod",
+                "effect_source_status":"DBC_STAT_AND_SPELLTEXT_SOURCE_CLASSIFIED",
+                "budget_policy":
+                    "NO_STATIC_CHMV_COMPONENT_IN_DBC_ROW; DYNAMIC_EFFECTS_STAY_WITH_SIMC",
+                "static_components":[component],
+                "static_chmv_rating_present_in_dbc":False,
+                "static_chmv_stats":[],"spell_effects":[],
+                "unknown_components":[],
+                "dynamic_chmv_proc_present_in_spell_text":False,
+                "dynamic_chmv_proc_roles":[],"simc_custom_handlers":[],
+                "simc_generic_or_unregistered_spell_count":0,
+                "native_E_evidence":{"status":"NOT_MEASURED_NEW_BUILD",
+                    "static_E":None,"ui_selectable":False,"source_file":None},
+                "selection_status":
+                    "LOCKED_PENDING_CURRENT_SEASON_ITEM_EFFECT_PROOF"}
+            public={"enchant_id":91010,"token":row["token"],
+                    "source_slots":[slot],
+                    "highest_source_quality_rank":2}
+            cat={"game_build":"12.1.5.70783","simc_revision":"d"*40,
+                 "manifest_sha256":"e"*64,
+                 "source_provenance":{
+                     "v191":{"sha256":"a"*64},
+                     "v211":{"sha256":"b"*64,
+                         "simc_item_enchant_pipeline":{
+                             "owner":"SIMC",
+                             "source_file":"engine/item/enchants.cpp",
+                             "static_stat_path":"ITEM_ENCHANTMENT_STAT",
+                             "spell_effect_path":"ITEM_ENCHANTMENT_EQUIP_SPELL",
+                             "passive_spell_path":"passive_enchant"}}},
+                 "enchant_classification":{
+                     "status":
+                         "SOURCE_CLASSIFIED_NOT_GENERAL_NATIVE_ACCEPTANCE_OR_UI_PROMOTION",
+                     "source_manifest_sha256":"f"*64,
+                     "rows":[category]},
+                 "catalog":{"enchants":{"items":[{
+                     **row,"classification":category}]}},
+                 "v196_enchant_source":{"rows":[{
+                     "enchant_id":91010,"token":row["token"],
+                     "inventory_type_mask":1<<8}]}}
+            def produce(c):
+                with mock.patch.object(v216.stage_engine,"_read_receipt",
+                                       side_effect=lambda p:receipts[p.stem]):
+                    return v216._v217_policy_A_source_relation_receipts(
+                        catalog=c,artifact_sha256="c"*64,
+                        catalog_path=root/"fresh_source"/
+                            "v213_candidate_catalog.json",
+                        stage_attestations=att,public_rows=[public])
+            proof=produce(cat)[91010]
+            self.assertEqual(set(proof),
+                             {"source_relation","simc_input","chmv_budget"})
+            self.assertEqual(proof["chmv_budget"]["fixed_E"],
+                             dict.fromkeys(v216.season_budget_contract.STATS,0))
+            self.assertEqual(proof["chmv_budget"]["status"],
+                             "CHMV_ACCOUNTING_VERIFIED")
+            self.assertFalse(proof["chmv_budget"][
+                "gameplay_or_native_effect_attested"])
+            import v220_catalog_auto_admission as policy
+            item=policy.candidate_from_source_enchant(
+                {"game_build":cat["game_build"],
+                 "simc_revision":cat["simc_revision"],
+                 "manifest_sha256":cat["manifest_sha256"]},
+                public,original_source_row=row)
+            decision=policy.decide(item,proof)
+            self.assertFalse(decision["eligible"])
+            self.assertEqual(decision["missing"],
+                             ["EVIDENCE_MISSING:product_input"])
+            # There is no source shortcut from no CHMV to same-effect/quality
+            # or actual stat application. Any spell/unknown/CHMV fails closed.
+            for changed in (
+                {"spell_effects":[{"driver_spell_id":12345}]},
+                {"unknown_components":[{"item_mod_or_spell_id":99}]},
+                {"static_chmv_rating_present_in_dbc":True},
+                {"static_chmv_stats":["haste_rating"]},
+                {"effect_family":"static_nonchmv_plus_simc_spell"},
+                {"budget_policy":"STATIC_E_REQUIRES_EXACT_MATCHED_NATIVE_PROFILE_AND_IS_FIXED_INSIDE_G"},
+                {"static_components":[{**component,
+                     "category":"CHMV_SECONDARY_RATING"}]},
+                {"native_E_evidence":{**category["native_E_evidence"],
+                     "status":"MEASURED_ONE_OTHER_SCOPE"}},
+            ):
+                with self.subTest(changed=changed):
+                    cls={**category,**changed}
+                    tampered={**cat,"enchant_classification":{
+                        **cat["enchant_classification"],"rows":[cls]},
+                        "catalog":{"enchants":{"items":[{
+                            **row,"classification":cls}]}}}
+                    limited=produce(tampered)[91010]
+                    self.assertNotIn("chmv_budget",limited)
+                    self.assertIn("simc_input",limited)
+                    self.assertFalse(policy.decide(item,limited)["eligible"])
+            # The first v212 staging consumer transfers only signed E0
+            # and never treats a client-submitted proof as authoritative.
+            preflight={
+                "schema":v216.FRESH_SOURCE_PREFLIGHT_SCHEMA,
+                "game_build":cat["game_build"],
+                "simc_revision":cat["simc_revision"],
+                "source_catalog_manifest_sha256":cat["manifest_sha256"],
+                "source_artifact_sha256":"c"*64,
+                "preflight_sha256":"d"*64,"environment_ready":False,
+                "optional_policy_A_evidence_unadmitted":{
+                    "original_v217_source_relation_receipts_internal":{
+                        91010:proof},
+                    "v217_source_relation_scoped_only":True,
+                    "v217_source_relation_receipt_count":1,
+                    "source_catalog_manifest_sha256":cat["manifest_sha256"],
+                    "source_catalog_artifact_sha256":"c"*64}}
+            staged={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+                    "original_v216_preflight_sha256":"d"*64,
+                    "stage_status":"REUSED_VERIFIED"}
+            merged=v216._fresh_source_owner_merge_policy_A_original_source_relation(
+                preflight=preflight,staged=staged,
+                trusted_policy_A_receipts_by_id={})
+            self.assertEqual(set(merged[91010]),set(proof))
+            forged=copy.deepcopy(preflight)
+            forged["optional_policy_A_evidence_unadmitted"] =copy.deepcopy(
+                preflight["optional_policy_A_evidence_unadmitted"])
+            forged["optional_policy_A_evidence_unadmitted"][
+                "original_v217_source_relation_receipts_internal"][91010][
+                    "chmv_budget"]["fixed_E"]["haste_rating"]=5
+            with self.assertRaisesRegex(
+                    v216.EnvironmentBuildBlocked,
+                    "V216_POLICY_A_ORIGINAL_STATIC_E0_SOURCE_PROOF_DRIFT"):
+                v216._fresh_source_owner_merge_policy_A_original_source_relation(
+                    preflight=forged,staged=staged,
+                    trusted_policy_A_receipts_by_id={})
+
+
 class OriginalOptionalEnchantSnapshotSourceTests(unittest.TestCase):
     """The verified v113 user profile keeps only a source locator, not DB bytes."""
 
