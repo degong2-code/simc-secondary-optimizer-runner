@@ -245,10 +245,12 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
     """
     fields={"schema","installed_environment_path",
             "installed_manifest_sha256","oil_by_hand"}
-    need(type(season) is dict and set(season) in
-         (fields,fields|{"user_final_T"},
-          fields|{"verified_user_positive_E_enchant_id"},
-          fields|{"user_final_T","verified_user_positive_E_enchant_id"}) and
+    optional=("user_final_T","verified_user_positive_E_enchant_id",
+              "selected_user_installed_E0")
+    need(type(season) is dict and
+         fields<=set(season)<=fields|set(optional) and
+         not ("verified_user_positive_E_enchant_id" in season and
+              "selected_user_installed_E0" in season) and
          season.get("schema")==FRESH_SEASON_SCHEMA,
          "FRESH_SEASON_INTERNAL_SOURCE_FIELDS")
     doc,bound=_verified_installed_fresh_v217(
@@ -258,6 +260,11 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
     zeros={stat:0 for stat in contract.STATS}
     user_final_T=season.get("user_final_T")
     positive_id=season.get("verified_user_positive_E_enchant_id")
+    selected_E0=season.get("selected_user_installed_E0")
+    bound_E0=(_signed_installed_user_E0_profile(
+        doc=doc,selected=selected_E0,profile=profile,
+        user_final_T=user_final_T)
+        if selected_E0 is not None else None)
     if positive_id is not None:
         need(type(positive_id) is int and
              positive_id in positive_enchant.ENCHANTS,
@@ -344,7 +351,13 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
                     positive_enchant.ENCHANTS[positive_id]["before"],
                 "original_native_after_json2_sha256":
                     positive_enchant.ENCHANTS[positive_id]["after"]}
-               if positive_id is not None else {})},
+               if positive_id is not None else {}),
+            **({"selected_user_installed_E0_identity_sha256":
+                   bound_E0["selected_identity_sha256"],
+                "selected_user_installed_E0_chmv_owner":
+                   bound_E0["selected_identity"][
+                       "chmv_budget_receipt_sha256"]}
+               if bound_E0 is not None else {})},
             sort_keys=True,separators=(",",":")).encode("utf8")).hexdigest()}
     budget={"game_build":doc["game_build"],
             "simc_revision":doc["simc_revision"],
@@ -360,7 +373,18 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
             "user_manual_final_T":user_final_T,
             **({"positive_user_E":actual["fixed_E"],
                 "positive_user_enchant_id":positive_id}
-               if positive_id is not None else {})}
+               if positive_id is not None else {}),
+            **({"selected_user_installed_E0":{
+                    "status":"EXACT_INSTALLED_USER_E0_PROFILE_BOUND",
+                    "choice":{selected_E0["slot"]:
+                                  selected_E0["enchant_id"]},
+                    "identity_sha256":bound_E0["selected_identity_sha256"],
+                    "slot":selected_E0["slot"],
+                    "item_id":selected_E0["item_id"],
+                    "enchant_id":selected_E0["enchant_id"],
+                    "fixed_E":dict(bound_E0["fixed_E"]),
+                    "effect_proc_dps_owner":"SimC"}}
+               if bound_E0 is not None else {})}
 
 
 
