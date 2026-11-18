@@ -17,6 +17,22 @@ class OneSourceBoundEagle(unittest.TestCase):
         controls=sessions.standard_controls(("hunter","survival"))
         controls.update(race="human",oil_hands=[],trinket_ids=[270175,270173])
         return sessions.user_scenario(controls)
+    def test_v596_historical_id_not_global_class_or_future_season_gate(self):
+        user=self.user()
+        user[bootstrap.SEASON_ENCHANT_FIELD]=dict(owner.CHOICE)
+        self.assertTrue(bootstrap._historical_exact_enchant_user_scope(
+            user,game_build=owner.BUILD,revision=owner.REVISION))
+        self.assertFalse(bootstrap._historical_exact_enchant_user_scope(
+            user,game_build="12.2.0.99999",revision=owner.REVISION))
+        self.assertFalse(bootstrap._historical_exact_enchant_user_scope(
+            user,game_build=owner.BUILD,revision="e"*40))
+        another=copy.deepcopy(user)
+        another["character"]["class"]="paladin"
+        another["character"]["spec"]="retribution"
+        self.assertFalse(bootstrap._historical_exact_enchant_user_scope(
+            another,game_build=owner.BUILD,revision=owner.REVISION))
+        # New spec/same item can proceed ONLY if a separate v212 sealed
+        # Policy A E0 source and final v098 ring confirm it.
     def test_existing_native_receipt_metadata_exact(self):
         proof=owner.evidence()
         self.assertEqual(proof["game_build"],owner.BUILD)
