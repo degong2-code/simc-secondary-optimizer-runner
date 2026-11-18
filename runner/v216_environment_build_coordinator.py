@@ -1975,9 +1975,10 @@ def _v216_reuse_sealed_v584_selected_supplemental(join, selected_id,
                 p["item_id"] for p in by_physical})
             and row.get("selection_status")==
                 "SUPPLEMENTAL_SOURCE_ONLY_NOT_USER_PUBLISHED"
-            and row.get("ui_selectable") is False
-            and row.get("raw_rank_component_evidence",{}).get(
-                "quality_noninferiority_runtime_verified") is False):
+            and row.get("ui_selectable") is False):
+        # Only physical class/slot/ItemID provenance is relevant here.
+        # Same-effect/spell driver/quality dominance belong to UI option
+        # deduplication, not a second SimC effect certification gate.
         return None
     return {"enchant_id":selected_id,
             "simc_rank_rows":[{**original[0],"enchant_id":selected_id}],
