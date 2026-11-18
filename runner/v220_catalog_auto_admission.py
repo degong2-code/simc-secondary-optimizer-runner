@@ -84,11 +84,20 @@ def decide(candidate, receipts=None):
                     candidate["slot_status"]==
                         "RING_HAND_SELECTED_BY_FINAL_USER_EQUIPMENT" and
                     candidate["simc_token"].startswith("enchant_ring__"))
+    # A sealed v213 SimC weapon subclass mask describes a *family*, not
+    # a physical hand. An eventual v098 exact equipped item must pass the
+    # same original source mask before any user SimC input can be formed.
+    weapon_family=(candidate["kind"]=="permanent_enchant" and
+                   candidate["slot"]==
+                       "WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED" and
+                   candidate["slot_status"]==
+                       "WEAPON_HAND_SELECTED_BY_FINAL_USER_EQUIPMENT" and
+                   candidate["simc_token"].startswith("enchant_weapon__"))
     if candidate["kind"]=="consumable":
         if not slotless_consumable:
             missing.append("CONSUMABLE_NO_EQUIPMENT_SLOT_SCOPE_INVALID")
     elif (candidate["slot_status"]!="SOURCE_MASK_RESOLVED" and
-          not universal_gem and not two_ring_scope):
+          not universal_gem and not two_ring_scope and not weapon_family):
         missing.append("EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED")
     for family, expected_status in PROOF_STATUSES.items():
         proof=receipts.get(family)
@@ -258,13 +267,33 @@ def candidate_from_source_enchant(source_catalog, row, *,
                original.get("inventory_type_mask")==(1<<11) and
                type(original.get("item_subclass_mask")) is int and
                original["item_subclass_mask"]>=0)
+    weapon_family=(
+        slot==["WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED"] and
+        type(row.get("token")) is str and
+        row["token"].startswith("enchant_weapon__") and
+        type(original) is dict and
+        original.get("enchant_id")==row["enchant_id"] and
+        original.get("token")==row["token"] and
+        original.get("quality_rank")==row.get(
+            "highest_source_quality_rank") and
+        original.get("slot_group")==
+            "WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED" and
+        original.get("slot_resolution_status")==
+            "WEAPON_SUBCLASS_PENDING_EXACT_HAND_APPLICABILITY" and
+        original.get("item_class")==2 and
+        original.get("inventory_type_mask")==0 and
+        type(original.get("item_subclass_mask")) is int and
+        original["item_subclass_mask"]>0)
     resolved=(len(slot)==1 and "/" not in slot[0] and
               not slot[0].startswith("WEAPON_SUBCLASS_"))
     return {"kind":"permanent_enchant","exact_id":row["enchant_id"],
             "simc_token":row["token"],
-            "slot":slot[0] if (resolved or ring_pair) else "SOURCE_SLOT_UNRESOLVED",
+            "slot":slot[0] if (resolved or ring_pair or weapon_family)
+                         else "SOURCE_SLOT_UNRESOLVED",
             "slot_status":("RING_HAND_SELECTED_BY_FINAL_USER_EQUIPMENT"
                            if ring_pair else
+                           "WEAPON_HAND_SELECTED_BY_FINAL_USER_EQUIPMENT"
+                           if weapon_family else
                            "SOURCE_MASK_RESOLVED" if resolved else
                            "PENDING_EXACT_SLOT_OR_HAND"),
             "game_build":source_catalog["game_build"],

@@ -181,6 +181,73 @@ class AutoAdmissionTests(unittest.TestCase):
                 context,[ui],original_source_rows_by_id={})
 
 
+    def test_v601_sealed_weapon_subclass_family_not_guessed_hand(self):
+        """Exact original source may name a weapon family; item/hand remain later."""
+        context={"game_build":"12.1.5.70783",
+                 "simc_revision":"a"*40,"manifest_sha256":"b"*64}
+        ui={"enchant_id":8088,"token":"enchant_weapon__example",
+            "highest_source_quality_rank":3,
+            "source_slots":["WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED"],
+            "ui_selectable":False}
+        original={"enchant_id":8088,"token":ui["token"],
+                  "quality_rank":3,"item_class":2,
+                  "inventory_type_mask":0,
+                  "item_subclass_mask":1<<7,
+                  "slot_group":"WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED",
+                  "slot_resolution_status":
+                      "WEAPON_SUBCLASS_PENDING_EXACT_HAND_APPLICABILITY"}
+        unknown=policy.candidate_from_source_enchant(context,ui)
+        self.assertEqual(unknown["slot"],"SOURCE_SLOT_UNRESOLVED")
+        weapon=policy.candidate_from_source_enchant(
+            context,ui,original_source_row=original)
+        self.assertEqual(weapon["slot"],
+                         "WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED")
+        self.assertEqual(weapon["slot_status"],
+                         "WEAPON_HAND_SELECTED_BY_FINAL_USER_EQUIPMENT")
+        ident=policy._identity(weapon)
+        receipts={family:{"identity":dict(ident),"status":status,
+                  "evidence_sha256":str(i)*64}
+                  for i,(family,status) in enumerate(
+                      policy.PROOF_STATUSES.items(),1)}
+        receipts["chmv_budget"].update(no_double_count=True,
+                                       unknown_static_chmv=False)
+        no_proof=policy.decide(weapon)
+        self.assertFalse(no_proof["eligible"])
+        self.assertEqual(len(no_proof["missing"]),4)
+        source_only=policy.decide(
+            weapon,{"source_relation":receipts["source_relation"]})
+        self.assertFalse(source_only["eligible"])
+        self.assertIn("EVIDENCE_MISSING:simc_input",source_only["missing"])
+        self.assertIn("EVIDENCE_MISSING:product_input",source_only["missing"])
+        self.assertIn("EVIDENCE_MISSING:chmv_budget",source_only["missing"])
+        # Synthetic four-family fixture checks the *preparation contract*
+        # only; it is not game/Native acceptance or a real Policy A proof.
+        self.assertTrue(policy.decide(weapon,receipts)["eligible"])
+        self.assertFalse(policy.decide(unknown,receipts)["eligible"])
+        for bad in (
+                {**original,"item_subclass_mask":0},
+                {**original,"item_class":4},
+                {**original,"inventory_type_mask":1<<11},
+                {**original,"quality_rank":2},
+                {**original,"slot_resolution_status":"SOURCE_MASK_RESOLVED"},
+                {**original,"slot_group":"main_hand"},
+                {**original,"token":"enchant_weapon__forged"}):
+            with self.subTest(bad=bad):
+                rejected=policy.candidate_from_source_enchant(
+                    context,ui,original_source_row=bad)
+                self.assertEqual(rejected["slot"],"SOURCE_SLOT_UNRESOLVED")
+                self.assertFalse(policy.decide(rejected,receipts)["eligible"])
+        scoped=policy.preview_enchant_catalog(
+            context,[ui],
+            trusted_internal_receipts_by_id={8088:receipts},
+            original_source_rows_by_id={8088:original})
+        self.assertEqual(scoped["automatically_eligible"],1)
+        self.assertFalse(scoped["selection_mutated"])
+        # Approval is never inferred from raw subclass source alone.
+        unapproved=policy.preview_enchant_catalog(
+            context,[ui],original_source_rows_by_id={8088:original})
+        self.assertEqual(unapproved["automatically_eligible"],0)
+
     def test_no_weapon_hand_inference_even_with_four_receipts(self):
         out=policy.decide({**self.item,
                            "slot_status":"PENDING_EXACT_HAND"},self.receipts)

@@ -128,9 +128,25 @@ def _validate_fresh_prepared_option_sources(prepared, catalog):
             source.get("inventory_type_mask")==(1<<11) and
             type(source.get("token")) is str and
             source["token"].startswith("enchant_ring__"))
-        need(source["slot_resolution_status"]=="SOURCE_MASK_RESOLVED" and
-             type(source["slot_group"]) is str and
-             ("/" not in source["slot_group"] or ring_family),
+        # The weapon's original subclass mask is a verifiable family scope.
+        # It NEVER chooses main_hand/off_hand or grants actual SimC use:
+        # the eventual selected final physical weapon owns that comparison.
+        weapon_family=(
+            source.get("slot_group")==
+                "WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED" and
+            source.get("slot_resolution_status")==
+                "WEAPON_SUBCLASS_PENDING_EXACT_HAND_APPLICABILITY" and
+            source.get("item_class")==2 and
+            source.get("inventory_type_mask")==0 and
+            type(source.get("item_subclass_mask")) is int and
+            source["item_subclass_mask"]>0 and
+            type(source.get("token")) is str and
+            source["token"].startswith("enchant_weapon__"))
+        resolved=(
+            source["slot_resolution_status"]=="SOURCE_MASK_RESOLVED" and
+            type(source["slot_group"]) is str and
+            ("/" not in source["slot_group"] or ring_family))
+        need(resolved or weapon_family,
              "FRESH_ENVIRONMENT_PREPARED_SOURCE_SLOT_UNRESOLVED")
         identity={"kind":"permanent_enchant","exact_id":source["enchant_id"],
                   "simc_token":source["token"],"slot":source["slot_group"],

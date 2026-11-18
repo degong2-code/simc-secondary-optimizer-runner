@@ -70,6 +70,58 @@ class RegisteredDualRingSourceScopeTests(unittest.TestCase):
                               {**source,"inventory_type_mask":1<<8}]}}})
 
 
+    def test_v601_installed_weapon_family_keeps_actual_hand_unresolved(self):
+        """Only original v213 class/mask permits a future Policy A option row."""
+        source={"enchant_id":8088,"token":"enchant_weapon__example",
+                "quality_rank":3,"slot_resolution_status":
+                "WEAPON_SUBCLASS_PENDING_EXACT_HAND_APPLICABILITY",
+                "slot_group":"WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED",
+                "item_class":2,"inventory_type_mask":0,
+                "item_subclass_mask":1<<7}
+        catalog={"catalog":{"enchants":{"items":[source]}},
+                 "game_build":"12.1.5.70783",
+                 "simc_revision":"a"*40,"manifest_sha256":"b"*64}
+        identity={"kind":"permanent_enchant","exact_id":8088,
+                  "simc_token":source["token"],
+                  "slot":source["slot_group"],
+                  "game_build":catalog["game_build"],
+                  "simc_revision":catalog["simc_revision"],
+                  "catalog_sha256":catalog["manifest_sha256"]}
+        row={"enchant_id":8088,"simc_token":source["token"],
+             "slot":source["slot_group"],
+             "highest_verified_quality_rank":3,
+             "policy_A_source_relation_sha256":"c"*64,
+             "quality_source_sha256":"d"*64,
+             "exact_v220_identity":identity}
+        prepared={"status":"EXACT_OPTIONS_PREPARED_FOR_VERSIONED_INSTALL",
+                  "verified_option_inputs_unpublished":[row],
+                  "v220_exact_proof_eligible_count":1,
+                  "quality_use_scope_pending_item_ids":[],
+                  "other_proofs_pending_by_item_id":{},
+                  "native_calls":0,"network_calls":0}
+        self.assertEqual(
+            p._validate_fresh_prepared_option_sources(prepared,catalog),1)
+        for altered in (
+                {"item_subclass_mask":0},
+                {"item_class":4},
+                {"inventory_type_mask":1<<11},
+                {"slot_group":"main_hand"},
+                {"slot_resolution_status":"SOURCE_MASK_RESOLVED"},
+                {"token":"enchant_weapon__other"}):
+            with self.subTest(altered=altered),self.assertRaises(
+                    p.EnvironmentBlocked):
+                p._validate_fresh_prepared_option_sources(
+                    prepared,{**catalog,"catalog":{"enchants":{
+                        "items":[{**source,**altered}]}}})
+        for changed in ({"slot":"main_hand"},
+                        {"exact_v220_identity":{**identity,"slot":"main_hand"}},
+                        {"highest_verified_quality_rank":1}):
+            with self.subTest(changed=changed),self.assertRaises(
+                    p.EnvironmentBlocked):
+                p._validate_fresh_prepared_option_sources(
+                    {**prepared,"verified_option_inputs_unpublished":[
+                        {**row,**changed}]},catalog)
+
     def test_v594_exact_chmv_receipt_E_optional_and_never_inferred(self):
         """Same v212 row accepts E only from original trusted receipt shape."""
         source={"enchant_id":8025,
