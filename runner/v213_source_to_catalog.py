@@ -31,7 +31,7 @@ GEAR_INVENTORY_GROUPS = {
 }
 ARMOR_ENCHANT_SLOTS = {
     1: "head", 3: "shoulders", 5: "chest", 20: "chest",
-    8: "feet", 11: "finger1/finger2",
+    7: "legs", 8: "feet", 11: "finger1/finger2",
 }
 ENCHANT_CATEGORY_SLOT = {
     "boots": "feet", "chest": "chest", "helm": "head",
