@@ -26,6 +26,8 @@ class AutoAdmissionTests(unittest.TestCase):
         }
         self.receipts["chmv_budget"]["no_double_count"]=True
         self.receipts["chmv_budget"]["unknown_static_chmv"]=False
+        self.receipts["chmv_budget"]["fixed_E"]={
+            stat:0 for stat in policy.CHMV_STATS}
 
     def test_missing_proofs_pending_no_manual_approval_or_ui_mutation(self):
         out=policy.decide(self.item)
@@ -109,19 +111,33 @@ class AutoAdmissionTests(unittest.TestCase):
         self.assertEqual((good["native_calls"],good["network_calls"]),(0,0))
         missing=copy.deepcopy(receipts)
         missing["chmv_budget"].pop("fixed_E")
-        unbound=prepare(missing)["verified_option_inputs_unpublished"][0]
-        self.assertNotIn("verified_fixed_E",unbound)
-        self.assertNotIn("chmv_budget_receipt_sha256",unbound)
+        unbound=prepare(missing)
+        self.assertEqual(unbound["verified_option_inputs_unpublished"],[])
+        self.assertEqual(unbound["v220_exact_proof_eligible_count"],0)
+        self.assertIn("CHMV_EXACT_FIXED_E_VECTOR_REQUIRED",
+                      unbound["other_proofs_pending_by_item_id"]["8025"])
+        # The public list must not include an unusable installed enchant
+        # with absent E while pretending that E=0 is the same as unknown.
+        self.assertEqual(unbound["status"],
+                         "EXACT_OPTIONS_NOT_YET_PREPARED")
         # A explicitly verified E0 is different from an absent E.
         zero=copy.deepcopy(receipts)
         zero["chmv_budget"]["fixed_E"]=dict.fromkeys(E,0)
         self.assertEqual(prepare(zero)["verified_option_inputs_unpublished"]
                          [0]["verified_fixed_E"],dict.fromkeys(E,0))
         invalid=copy.deepcopy(receipts)
-        invalid["chmv_budget"]["fixed_E"]={**E,"haste_rating":True}
-        with self.assertRaisesRegex(
-                catalog.CatalogBlocked,"CHMV_OWNER_FIXED_E"):
-            prepare(invalid)
+        for vector in (
+                {**E,"haste_rating":True},
+                {**E,"haste_rating":-1},
+                {**E,"haste_rating":100001},
+                {"haste_rating":30},
+                {**E,"unexpected_rating":0}):
+            with self.subTest(vector=vector):
+                invalid["chmv_budget"]["fixed_E"]=vector
+                result=prepare(invalid)
+                self.assertEqual(result["verified_option_inputs_unpublished"],[])
+                self.assertIn("CHMV_EXACT_FIXED_E_VECTOR_REQUIRED",
+                              result["other_proofs_pending_by_item_id"]["8025"])
         source_only=policy.decide(candidate)
         self.assertFalse(source_only["eligible"])
 
@@ -209,8 +225,9 @@ class AutoAdmissionTests(unittest.TestCase):
                   "evidence_sha256":str(i)*64}
                   for i,(family,status) in enumerate(
                       policy.PROOF_STATUSES.items(),1)}
-        receipts["chmv_budget"].update(no_double_count=True,
-                                       unknown_static_chmv=False)
+        receipts["chmv_budget"].update(
+            no_double_count=True,unknown_static_chmv=False,
+            fixed_E=dict.fromkeys(policy.CHMV_STATS,0))
         no_proof=policy.decide(weapon)
         self.assertFalse(no_proof["eligible"])
         self.assertEqual(len(no_proof["missing"]),4)

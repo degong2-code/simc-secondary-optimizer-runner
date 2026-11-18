@@ -25,6 +25,9 @@ ALLOWED_KINDS=frozenset(("permanent_enchant","gem",
                           "embellishment","consumable"))
 HEX64=re.compile(r"[0-9a-f]{64}\Z")
 HEX40=re.compile(r"[0-9a-f]{40}\Z")
+# Reuse the same per-stat fixed E representation and bounds as v196/v212.
+# An absent vector is UNKNOWN, never implicit E=0 on a permanent enchant.
+CHMV_STATS=("crit_rating","haste_rating","mastery_rating","versatility_rating")
 
 
 def _identity(candidate):
@@ -121,6 +124,18 @@ def decide(candidate, receipts=None):
             if proof.get("no_double_count") is not True or (
                 proof.get("unknown_static_chmv") is not False):
                 missing.append("CHMV_BUDGET_OWNERSHIP_NOT_SETTLED")
+            # v212 can only account for a permanent enchant when its exact
+            # four-stat fixed E is known. E0 is valid only when all four
+            # explicit values are zero. A superficially accepted receipt
+            # without this vector previously allowed v196 to publish an
+            # item that v098/v096 could never execute.
+            if candidate["kind"]=="permanent_enchant":
+                E=proof.get("fixed_E")
+                if (type(E) is not dict or set(E)!=set(CHMV_STATS)
+                    or any(type(E[stat]) is not int or
+                           not 0<=E[stat]<=100000
+                           for stat in CHMV_STATS)):
+                    missing.append("CHMV_EXACT_FIXED_E_VECTOR_REQUIRED")
         if family=="simc_input" and proof.get("effect_mechanism_reimplemented") is True:
             conflicts.append("SIMC_EFFECT_OWNERSHIP_VIOLATION")
     eligible=not missing and not conflicts
