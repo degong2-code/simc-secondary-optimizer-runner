@@ -2977,7 +2977,12 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                             "slot":entry["slot"],
                             "simc_token":entry["simc_token"],
                             "highest_verified_quality_rank":
-                                entry["highest_verified_quality_rank"]}
+                                entry["highest_verified_quality_rank"],
+                            **({"verified_fixed_E":
+                                    dict(entry["verified_fixed_E"]),
+                                "chmv_budget_receipt_sha256":
+                                    entry["chmv_budget_receipt_sha256"]}
+                               if "verified_fixed_E" in entry else {})}
                             for entry in confirmed],
                         "installed_manifest_sha256":doc["manifest_sha256"],
                         "runtime_selectable":False,
