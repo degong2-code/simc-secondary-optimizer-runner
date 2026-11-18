@@ -1092,7 +1092,7 @@ def _selected_installed_E0_on_final_user_item(*,user,rows,mask,installed_path):
          type(rows) is dict and type(mask) is dict and
          mask.get("status")=="EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED"
          and mask.get("actual_user_item_from_v098_final_rows") is True
-         and type(installed_path) in (str,pathlib.Path),
+         and isinstance(installed_path,(str,pathlib.Path)),
          "FRESH_USER_E0_FINAL_ITEM_PHYSICAL_SOURCE_REQUIRED")
     slot,eid=next(iter(user[SEASON_ENCHANT_FIELD].items()))
     need(slot in ("finger1","finger2") and
