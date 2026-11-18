@@ -1,0 +1,22 @@
+// Original pinned SimC death knight class-module enum excerpt.
+// Origin: engine/class_modules/sc_death_knight.cpp, revision
+// de11f57df75dda668bae6ac7043a43b98831fa96 (12.1.5.70783).
+// Read-only source regression. Not a product runeforge ID whitelist.
+enum runeforges_e
+{
+  RUNEFORGE_NONE = -1,
+  RUNEFORGE_APOCALYPSE,
+  RUNEFORGE_FALLEN_CRUSADER,
+  RUNEFORGE_RAZORICE,
+  RUNEFORGE_SANGUINATION,
+  RUNEFORGE_SPELLWARDING,
+  RUNEFORGE_STONESKIN_GARGOYLE,
+  RUNEFORGE_UNENDING_THIRST,
+  RUNEFORGE_ID_APOCALYPSE         = 6245,
+  RUNEFORGE_ID_FALLEN_CRUSADER    = 3368,
+  RUNEFORGE_ID_RAZORICE           = 3370,
+  RUNEFORGE_ID_SANGUINATION       = 6241,
+  RUNEFORGE_ID_SPELLWARDING       = 6242,
+  RUNEFORGE_ID_STONESKIN_GARGOYLE = 3847,
+  RUNEFORGE_ID_UNENDING_THIRST    = 6244,
+};
