@@ -128,8 +128,9 @@ def classify(*, relation, source_dir, manifest_path, game_build, simc_revision):
                                   set(high_ids))
         rows=[]
         for r in selected:
-            classified=effect.classify_row(r,dbc[r["enchant_id"]],
-                                           enums,texts,handlers,{})
+            classified=effect.classify_row(
+                r,dbc[r["enchant_id"]],enums,texts,handlers,{},
+                unknown_item_mods_pending=True)
             allowed=_slot(r)
             physical=by_id[r["enchant_id"]]["physical_items"]
             if not isinstance(physical,list) or not physical:
@@ -162,6 +163,16 @@ def classify(*, relation, source_dir, manifest_path, game_build, simc_revision):
         quality=effect._fresh_static_quality_source_only(
             sample,selected,original,sources["spell_item_enchantment.inc"],enums)
         observations=quality.get("observations",[])
+        unknown_ids={r["enchant_id"] for r in rows
+                     if r["unknown_components"]}
+        # v211's raw numeric comparator may compare the same unknown stat
+        # ID; source-only numerical ordering must NOT certify an unknown
+        # effect. Keep the candidate and report the withheld conclusion.
+        for row in observations:
+            if row.get("selected_enchant_id") in unknown_ids:
+                row["status"]="UNKNOWN_STAT_COMPONENT_QUALITY_EFFECT_PENDING"
+                row["source_only_noninferior"]=False
+                row["policy_A_product_input_verified"]=False
         return {"schema":SCHEMA,"status":COMPLETE,
                 "game_build":game_build,"simc_revision":simc_revision,
                 "v211_source_sha256_by_file":{
@@ -172,6 +183,7 @@ def classify(*, relation, source_dir, manifest_path, game_build, simc_revision):
                 "weapon_hand_pending_count":sum(x["source_slot"]["status"]==
                     "WEAPON_SUBCLASS_PENDING_EXACT_HAND_APPLICABILITY"
                     for x in rows),
+                "unknown_component_candidate_count":len(unknown_ids),
                 "static_chmv_candidate_count":sum(x["static_chmv_present"] for x in rows),
                 "quality_noninferior_source_count":sum(
                     x.get("source_only_noninferior") is True for x in observations),
