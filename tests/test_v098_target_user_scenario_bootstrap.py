@@ -14,6 +14,51 @@ from test_v062_static_budget_bridge import record as offline_record
 class InstalledE0ActualV098RingTests(unittest.TestCase):
     """Internal original v212 plus final v101 ring source, zero Native."""
 
+    def test_v604_signed_e0_feet_binds_actual_final_gear_and_mask(self):
+        """Same v212 installed E0 reaches a representative non-ring slot."""
+        from tests.test_v212_environment_manifest import (
+            SelectedPermanentEnchantE0BudgetTests)
+        E=dict.fromkeys(boot.installed_manifest.season_budget.STATS,0)
+        doc=SelectedPermanentEnchantE0BudgetTests().installed([{
+            "enchant_id":89999,"simc_token":"enchant_boots__synthetic_e0",
+            "slot":"feet","ui_selectable":True,
+            "verified_fixed_E":E,"chmv_budget_receipt_sha256":"d"*64}])
+        user={"target":{"ilevel":334,"final_T":None},
+              boot.SEASON_ENCHANT_FIELD:{"feet":89999}}
+        mask={"status":"EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED",
+              "actual_user_item_from_v098_final_rows":True,
+              "selected_slot":"feet","enchant_id":89999,
+              "selected_representative_item_id":260001}
+        with tempfile.TemporaryDirectory() as td:
+            path=pathlib.Path(td)/"v212.json"
+            path.write_text("{}",encoding="utf8")
+            with (mock.patch.object(boot.installed_manifest,"read_json",
+                                    return_value=(doc,"a"*64)),
+                  mock.patch.object(boot.installed_manifest,
+                                    "verify_fresh_installed_environment",
+                                    return_value=True)):
+                rows={"feet":{"item_id":260001,"options":{}}}
+                selected=boot._selected_installed_E0_on_final_user_item(
+                    user=user,rows=rows,mask=mask,installed_path=path)
+                self.assertTrue(selected["fixed_E_zero_is_valid"])
+                self.assertEqual(rows["feet"]["options"]["enchant_id"],"89999")
+                self.assertEqual((selected["base_B"],selected["final_T"]),
+                                 (3107,3107))
+                for changed in ({"selected_slot":"finger1"},
+                                {"selected_representative_item_id":260002},
+                                {"status":"SEALED_REPRESENTATIVE_ENCHANT_SCOPE_PENDING"}):
+                    with self.subTest(changed=changed):
+                        with self.assertRaises(boot.UserScenarioBlocked):
+                            boot._selected_installed_E0_on_final_user_item(
+                                user=user,
+                                rows={"feet":{"item_id":260001,"options":{}}},
+                                mask={**mask,**changed},installed_path=path)
+                with self.assertRaises(boot.UserScenarioBlocked):
+                    boot._selected_installed_E0_on_final_user_item(
+                        user=user,rows={"feet":{"item_id":260001,
+                              "options":{"enchant_id":"89999"}}},
+                        mask=mask,installed_path=path)
+
     def test_e0_profile_injection_after_final_equipment_and_exact_source(self):
         from tests.test_v212_environment_manifest import (
             SelectedPermanentEnchantE0BudgetTests)

@@ -96,6 +96,49 @@ class InstalledE0NativeProfileInputTests(unittest.TestCase):
                         flask_F=F,oil_hands=[],profile=profile)
 
 
+    def test_v604_signed_e0_final_feet_profile_and_exact_once(self):
+        """One v212 registered ordinary E0; the final SimC item still owns it."""
+        from tests.test_v212_environment_manifest import (
+            SelectedPermanentEnchantE0BudgetTests)
+        import v212_environment_manifest as installed
+        E=dict.fromkeys(installed.season_budget.STATS,0)
+        doc=SelectedPermanentEnchantE0BudgetTests().installed([{
+            "enchant_id":89999,"simc_token":"enchant_boots__synthetic_e0",
+            "slot":"feet","ui_selectable":True,
+            "verified_fixed_E":E,"chmv_budget_receipt_sha256":"d"*64}])
+        with mock.patch.object(installed,
+                "verify_fresh_installed_environment",return_value=True):
+            source=installed.preview_installed_selected_enchant_budget(
+                document=doc,slot="feet",item_id=260001,enchant_id=89999)
+            selected={"identity_sha256":source["selected_identity_sha256"],
+                      "slot":"feet","item_id":260001,"enchant_id":89999}
+            profile=("hunter=Profile\\n"
+                     "finger1=id=268266,ilevel=334\\n"
+                     "finger2=id=268268,ilevel=334\\n"
+                     "feet=id=260001,ilevel=334,enchant_id=89999\\n")
+            accepted=entry._signed_installed_user_E0_profile(
+                doc=doc,selected=selected,profile=profile,user_final_T=None)
+            self.assertEqual(accepted["fixed_E"],E)
+            self.assertEqual((accepted["base_B"],accepted["final_T"]),(3107,3107))
+            for broken in (
+                    profile.replace("id=260001","id=260002"),
+                    profile.replace("enchant_id=89999","enchant_id=89998"),
+                    profile.replace("finger2=id=268268,ilevel=334\\n",""),
+                    profile.replace("feet=id=260001,ilevel=334,enchant_id=89999",
+                                    "feet=id=260001,ilevel=334"),
+                    profile.replace("finger1=id=268266,ilevel=334",
+                                    "finger1=id=268266,ilevel=334,enchant_id=89999")):
+                with self.subTest(broken=broken):
+                    with self.assertRaises(entry.EntryBlocked):
+                        entry._signed_installed_user_E0_profile(
+                            doc=doc,selected=selected,profile=broken,
+                            user_final_T=None)
+            with self.assertRaises(entry.EntryBlocked):
+                entry._signed_installed_user_E0_profile(
+                    doc=doc,selected={**selected,"slot":"main_hand"},
+                    profile=profile,user_final_T=None)
+
+
     def test_signed_v212_e0_option_matches_exact_finger_profile_once(self):
         from tests.test_v212_environment_manifest import (
             SelectedPermanentEnchantE0BudgetTests)

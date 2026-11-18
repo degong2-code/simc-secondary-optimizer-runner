@@ -2430,6 +2430,11 @@ el.season_enchant_other.value="legs:89999";
 assert.deepStrictEqual(selected("",""),{legs:89999});
 assert.throws(()=>selected("89999",""),/한 곳만 선택/);
 el.season_enchant_other.value="";
+state.installedOtherE0Choices.clear();
+el.season_enchant_other.value="legs:89999";
+assert.throws(()=>selected("",""),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/,
+  "saved option or stale unapproved v212 cannot select ordinary E0");
+el.season_enchant_other.value="";
 assert.throws(()=>selected("89999","89999"),/한 곳만 선택/);
 assert.throws(()=>selected("","7967"),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
 assert.throws(()=>selected("","81234"),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
