@@ -15,6 +15,8 @@ import v055_simc_item_selection as equipment
 import v212_environment_manifest as environment
 import v294_dk_runeforge_selection as rune
 import v295_season_runeforge_source as source
+import v106_user_session_controller as sessions
+import v098_target_user_scenario_bootstrap as bootstrap
 
 RAW=(ROOT/"tests/fixtures/p1_v586_pinned_simc_dk_runeforge_enum_70783.txt").read_bytes()
 REV="de11f57df75dda668bae6ac7043a43b98831fa96"
@@ -122,6 +124,20 @@ class RealPinnedDKRunePath(unittest.TestCase):
         self.assertEqual(rows["main_hand"]["options"]["enchant_id"],"999245")
         # New build list is SimC-only; no Wago item ID/source assumption.
         self.assertNotIn("physical_item_id",doc["items"][0])
+
+
+    def test_fresh_user_rune_requires_installed_simc_not_legacy_fallback(self):
+        controls=sessions.standard_controls(("deathknight","frost"))
+        controls["oil_hands"]=[]
+        controls["runeforge_by_hand"]={"main_hand":3368}
+        user=sessions.user_scenario(controls)
+        self.assertIn("runeforge_by_hand",user)
+        with self.assertRaisesRegex(
+                bootstrap.UserScenarioBlocked,
+                "FRESH_DK_RUNEFORGE_SOURCE_NOT_INSTALLED"):
+            bootstrap.build(
+                user,ROOT/"tests"/"not_created",ROOT/"tests"/"no_binary",
+                REV,current_season_product=True)
 
 
 if __name__=="__main__":
