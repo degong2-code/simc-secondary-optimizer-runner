@@ -112,10 +112,10 @@ class InstalledE0NativeProfileInputTests(unittest.TestCase):
                 document=doc,slot="feet",item_id=260001,enchant_id=89999)
             selected={"identity_sha256":source["selected_identity_sha256"],
                       "slot":"feet","item_id":260001,"enchant_id":89999}
-            profile=("hunter=Profile\\n"
-                     "finger1=id=268266,ilevel=334\\n"
-                     "finger2=id=268268,ilevel=334\\n"
-                     "feet=id=260001,ilevel=334,enchant_id=89999\\n")
+            profile=("hunter=Profile\n"
+                     "finger1=id=268266,ilevel=334\n"
+                     "finger2=id=268268,ilevel=334\n"
+                     "feet=id=260001,ilevel=334,enchant_id=89999\n")
             accepted=entry._signed_installed_user_E0_profile(
                 doc=doc,selected=selected,profile=profile,user_final_T=None)
             self.assertEqual(accepted["fixed_E"],E)
@@ -123,7 +123,7 @@ class InstalledE0NativeProfileInputTests(unittest.TestCase):
             for broken in (
                     profile.replace("id=260001","id=260002"),
                     profile.replace("enchant_id=89999","enchant_id=89998"),
-                    profile.replace("finger2=id=268268,ilevel=334\\n",""),
+                    profile.replace("finger2=id=268268,ilevel=334\n",""),
                     profile.replace("feet=id=260001,ilevel=334,enchant_id=89999",
                                     "feet=id=260001,ilevel=334"),
                     profile.replace("finger1=id=268266,ilevel=334",
