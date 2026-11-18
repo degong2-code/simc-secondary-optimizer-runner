@@ -34,6 +34,7 @@ import v277_zero_history_native_G_stage as zero_history_G_native
 import v278_sealed_simc_consumable_native_pair as native_effect_pair
 import v280_consumable_item_use_spell_source as item_spell_bridge
 import v281_consumable_simc_relation as consumable_simc_relation
+import v583_permanent_enchant_physical_source as permanent_enchant_source
 import v285_consumable_weapon_source as consumable_weapon_source
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
@@ -3800,6 +3801,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    item_effect_transport=None,
                                    spell_effect_transport=None,
                                    spell_equipped_transport=None,
+                                   permanent_enchant_quality_transport=None,
                                    simc_seed_directory=None,
                                    simc_revision=None,
                                    previous_game_build=None,
@@ -4151,6 +4153,22 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             consumables=fresh_item_spell,compiler_source=pinned_classifier,
             full_simc_item_source=full_seed,
             transport=spell_effect_transport)
+    # Source-only, OPTIONAL permanent-enchant ItemID → Wago crafting quality
+    # → exact SimC enchant ID. Reuses sealed v161/v254/v280/v281/v275 inputs.
+    # Only CraftingDataEnchantQuality is missing from the existing DB2 stages;
+    # its independent v217 receipt is keyed by game build (not SimC revision).
+    # Do not run a surprise LIVE fetch with caller-injected DB2 transports.
+    if fetch is not None and permanent_enchant_quality_transport is None:
+        permanent_source=permanent_enchant_source.pending(
+            "V583_INJECTED_QUALITY_TRANSPORT_NOT_SUPPLIED")
+    else:
+        permanent_source=permanent_enchant_source.collect(
+            stage_root=stage_root,build=expected_game_build,
+            expansion_id=(linked.get("auto_source_scope") or {}).get("expansion_id"),
+            wago_stage=stage,fresh_gear=fresh_gear,
+            item_spells=fresh_item_spell,simc_effects=simc_consumable_relation,
+            pinned_simc=pinned_classifier,
+            transport=permanent_enchant_quality_transport)
     # Same-build source class/inventory masks for exact SimC-linked oils.
     # No item/weapon approval and no calls when upstream remains PENDING.
     if fetch is not None and spell_equipped_transport is None:
@@ -4195,6 +4213,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_food_potion_item_sources":fresh_consumables,
         "fresh_consumable_item_spell_source":fresh_item_spell,
         "fresh_consumable_simc_effect_relation":simc_consumable_relation,
+        "fresh_permanent_enchant_item_source":permanent_source,
         "fresh_consumable_weapon_source":weapon_source,
         "fresh_gem_enchant_raw_source":gem_enchant_csv,
         "fresh_one_spec_character_level_policy":
@@ -4223,6 +4242,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             fresh_consumables["network_calls_by_stage"]+
             fresh_item_spell["network_calls_by_stage"]+
             simc_consumable_relation["network_calls_by_stage"]+
+            permanent_source["network_calls_by_stage"]+
             weapon_source["network_calls_by_stage"]+
             pinned_classifier["network_calls_by_stage"]+
             compiler_tier["network_calls_by_stage"]+
@@ -7657,6 +7677,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                  "tier_transport","bonus_transport","gear_transport",
                   "item_effect_transport","spell_effect_transport",
                   "spell_equipped_transport",
+                  "permanent_enchant_quality_transport",
                  "simc_transport","simc_compiler_transport",
                  "gem_enchant_transport","effect_probe_requests",
                   "same_build_budget_evidence",
