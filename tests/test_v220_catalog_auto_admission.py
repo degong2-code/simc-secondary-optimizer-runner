@@ -3,10 +3,12 @@ import copy
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 import v220_catalog_auto_admission as policy
+import v196_current_season_user_catalog as catalog
 
 
 class AutoAdmissionTests(unittest.TestCase):
@@ -361,6 +363,60 @@ class AutoAdmissionTests(unittest.TestCase):
             policy.selected_equipment_source_mask_match(
                 permanent_source=source,item_metadata={},
                 selected_slot="bogus_hand")
+
+
+class SealedRepresentativeConsumerTests(unittest.TestCase):
+    """v216 source ownership can reach v196/v220 without user enrollment."""
+
+    def setUp(self):
+        self.source={
+            "game_build":"12.1.5.70783",
+            "simc_revision":"d"*40,"manifest_sha256":"a"*64,
+            "v196_enchant_source":{"rows":[{
+                "enchant_id":8025,"item_class":4,
+                "inventory_type_mask":1<<11,"item_subclass_mask":0}]}}
+        self.scope={
+            "game_build":"12.1.5.70783","simc_revision":"d"*40,
+            "enchant_id":8025,"selected_slot":"finger1",
+            "item_metadata":{"item_id":268266,"class_id":4,
+                             "subclass_id":0,"inventory_type":11},
+            "wago_item_id":244444,
+            "v232_receipt_sha256":"b"*64,
+            "v583_receipt_sha256":"c"*64,
+            "v230_item_data_sha256":"e"*64}
+
+    def test_consumer_reads_one_exact_item_but_never_approves_it(self):
+        with mock.patch.object(catalog.source_bridge,"verify_catalog"):
+            out=catalog.preview_sealed_representative_enchant_mask(
+                source_catalog=self.source,scope=self.scope)
+        self.assertEqual(out["selected_representative_item_id"],268266)
+        self.assertEqual(out["enchant_id"],8025)
+        self.assertEqual(out["selected_slot"],"finger1")
+        self.assertTrue(out["matched"])
+        self.assertTrue(out["reference_representative_not_user_equipment"])
+        self.assertFalse(out["ui_selectable"])
+        self.assertFalse(out["policy_A_product_input_verified"])
+        self.assertFalse(out["same_effect_and_highest_quality_verified"])
+        self.assertFalse(out["fixed_E_or_no_E_verified"])
+        self.assertEqual((out["network_calls"],out["native_calls"]),(0,0))
+
+    def test_wrong_equipment_or_build_cannot_become_a_choice(self):
+        with mock.patch.object(catalog.source_bridge,"verify_catalog"):
+            wrong=catalog.preview_sealed_representative_enchant_mask(
+                source_catalog=self.source,
+                scope={**self.scope,"selected_slot":"feet"})
+            self.assertFalse(wrong["matched"])
+            self.assertFalse(wrong["ui_selectable"])
+            with self.assertRaisesRegex(
+                    catalog.CatalogBlocked,"ORIGINAL_SOURCE_SCOPE_REQUIRED"):
+                catalog.preview_sealed_representative_enchant_mask(
+                    source_catalog=self.source,
+                    scope={**self.scope,"game_build":"12.1.5.99999"})
+            with self.assertRaisesRegex(
+                    catalog.CatalogBlocked,"EXACT_SOURCE_CATALOG"):
+                catalog.preview_sealed_representative_enchant_mask(
+                    source_catalog=self.source,
+                    scope={**self.scope,"enchant_id":999999})
 
 
 if __name__=="__main__":
