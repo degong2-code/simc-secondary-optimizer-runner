@@ -189,7 +189,8 @@ def prepare_verified_fresh_choices(source_catalog, source_ui,
              "manifest_sha256":source_catalog["manifest_sha256"]}
     decision=auto_admission.preview_enchant_catalog(
         context,items,
-        trusted_internal_receipts_by_id=trusted_internal_receipts_by_id)
+        trusted_internal_receipts_by_id=trusted_internal_receipts_by_id,
+        original_source_rows_by_id=original_by_id)
     admissible={x["exact_id"]:x
                 for x in decision["eligible_for_atomic_publication"]}
     ready=[]
@@ -198,7 +199,8 @@ def prepare_verified_fresh_choices(source_catalog, source_ui,
         item_id=row["enchant_id"]
         if item_id not in admissible:
             continue
-        candidate=auto_admission.candidate_from_source_enchant(context,row)
+        candidate=auto_admission.candidate_from_source_enchant(
+            context,row,original_source_row=original_by_id[item_id])
         # Only the original trusted product_input owner may attest quality.
         # A selected rank and arbitrary SHA shape do not prove that variants
         # have the SAME effect/use scope or that the higher-quality variant
