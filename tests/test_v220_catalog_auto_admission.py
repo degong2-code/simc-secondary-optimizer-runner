@@ -56,6 +56,61 @@ class AutoAdmissionTests(unittest.TestCase):
                 self.assertTrue(any("EVIDENCE_SCOPE_MISMATCH:" in x
                                     for x in out["conflicts"]))
 
+    def test_source_bound_dual_ring_family_is_not_an_invented_hand(self):
+        """Four synthetic receipts test source semantics, NOT an actual UI grant."""
+        ui={"enchant_id":7967,"token":"enchant_ring__eyes_of_the_eagle",
+            "highest_source_quality_rank":2,
+            "source_slots":["finger1/finger2"]}
+        original={"enchant_id":7967,
+                  "token":"enchant_ring__eyes_of_the_eagle",
+                  "quality_rank":2,
+                  "slot_group":"finger1/finger2",
+                  "slot_resolution_status":"SOURCE_MASK_RESOLVED",
+                  "item_class":4,"inventory_type_mask":1<<11,
+                  "item_subclass_mask":0}
+        context={"game_build":self.item["game_build"],
+                 "simc_revision":self.item["simc_revision"],
+                 "manifest_sha256":self.item["catalog_sha256"]}
+        old=policy.candidate_from_source_enchant(context,ui)
+        self.assertEqual(old["slot"],"SOURCE_SLOT_UNRESOLVED")
+        source_bound=policy.candidate_from_source_enchant(
+            context,ui,original_source_row=original)
+        self.assertEqual(source_bound["slot"],"finger1/finger2")
+        self.assertEqual(source_bound["slot_status"],
+                         "RING_HAND_SELECTED_BY_FINAL_USER_EQUIPMENT")
+        identity=policy._identity(source_bound)
+        receipts=copy.deepcopy(self.receipts)
+        for proof in receipts.values():
+            proof["identity"]=identity
+        # No four actual receipts -> never eligible or selectable.
+        incomplete=policy.decide(source_bound,{"source_relation":
+                                              receipts["source_relation"]})
+        self.assertFalse(incomplete["eligible"])
+        self.assertIn("EVIDENCE_MISSING:simc_input",incomplete["missing"])
+        complete=policy.decide(source_bound,receipts)
+        self.assertTrue(complete["eligible"])
+        self.assertFalse(complete["ui_selection_mutated"])
+        self.assertEqual(complete["native_calls"],0)
+        projected=policy.preview_enchant_catalog(
+            context,[ui],trusted_internal_receipts_by_id={7967:receipts},
+            original_source_rows_by_id={7967:original})
+        self.assertEqual(projected["automatically_eligible"],1)
+        for broken in (
+            {**original,"inventory_type_mask":1<<8},
+            {**original,"quality_rank":1},
+            {**original,"slot_group":"feet"},
+            {**original,"item_class":2},
+            {**original,"token":"enchant_ring__wrong"}):
+            with self.subTest(broken=broken):
+                candidate=policy.candidate_from_source_enchant(
+                    context,ui,original_source_row=broken)
+                self.assertEqual(candidate["slot"],"SOURCE_SLOT_UNRESOLVED")
+                self.assertFalse(policy.decide(candidate,receipts)["eligible"])
+        with self.assertRaisesRegex(ValueError,"ORIGINAL_SOURCE_COVERAGE"):
+            policy.preview_enchant_catalog(
+                context,[ui],original_source_rows_by_id={})
+
+
     def test_no_weapon_hand_inference_even_with_four_receipts(self):
         out=policy.decide({**self.item,
                            "slot_status":"PENDING_EXACT_HAND"},self.receipts)
