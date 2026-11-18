@@ -2071,10 +2071,11 @@ def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
                     else by_enchant.get(eid))
             if origin is None or not candidate.get("physical_items"):
                 continue
-            if not any(all(row.get(k)==origin.get(k) for k in (
-                    "enchant_id","item_class","inventory_type_mask",
-                    "item_subclass_mask"))
-                    for row in candidate.get("simc_rank_rows",[])):
+            if not any(row.get("enchant_id")==eid and
+                       all(row.get(k)==origin.get(k) for k in (
+                           "item_class","inventory_type_mask",
+                           "item_subclass_mask"))
+                       for row in candidate.get("simc_rank_rows",[])):
                 continue
             wago_item=min(item["item_id"]
                           for item in candidate["physical_items"])
