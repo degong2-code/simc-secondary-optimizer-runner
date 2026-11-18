@@ -189,6 +189,51 @@ def _verified_installed_fresh_v217(*,manifest_path,season):
     return doc,bound
 
 
+def _signed_installed_user_E0_profile(*,doc,selected,profile,user_final_T):
+    """Exact v212 CHMV owner + final SimC item input, no effect certification.
+
+    SimC owns activation/procs/DPS. The validated selected source's E=0 is
+    normal and NEVER means the enchant is absent or ineffective. The SOURCE
+    must already have been installed through original v217/v212.
+    """
+    import v212_environment_manifest as installed
+    need(type(selected) is dict and set(selected)=={
+            "identity_sha256","slot","item_id","enchant_id"}
+         and type(selected["identity_sha256"]) is str and
+             contract.HASH_RE.fullmatch(selected["identity_sha256"])
+                 is not None
+         and selected["slot"] in ("finger1","finger2") and
+         type(selected["item_id"]) is int and
+             selected["item_id"]>0 and
+         type(selected["enchant_id"]) is int and
+             selected["enchant_id"]>0,
+         "FRESH_SELECTED_E0_EXACT_USER_OPTION_REQUIRED")
+    source=installed.preview_installed_selected_enchant_budget(
+        document=doc,slot=selected["slot"],
+        item_id=selected["item_id"],enchant_id=selected["enchant_id"],
+        manual_final_T=user_final_T)
+    need(source.get("selected_identity_sha256")==selected["identity_sha256"]
+         and source.get("fixed_E_zero_is_valid") is True
+         and not any(source["fixed_E"].values())
+         and source.get("runtime_selectable") is False,
+         "FRESH_SELECTED_E0_SIGNED_SOURCE_OR_BUDGET_MISMATCH")
+    equipment=[line for line in profile.splitlines()
+               if line.startswith(selected["slot"]+"=")]
+    need(len(equipment)==1 and
+         len([line for line in profile.splitlines()
+              if line.startswith("finger1=") or
+                 line.startswith("finger2=")])==2,
+         "FRESH_SELECTED_E0_TWO_PHYSICAL_RINGS_REQUIRED")
+    fields=equipment[0].split(",")
+    eid="enchant_id="+str(selected["enchant_id"])
+    item="id="+str(selected["item_id"])
+    need(fields.count(eid)==1 and fields.count(item)==1
+         and sum(line.split(",").count(eid)
+                 for line in profile.splitlines())==1,
+         "FRESH_SELECTED_E0_EXACT_ONCE_SIMC_INPUT_REQUIRED")
+    return source
+
+
 def _admitted_fresh_season_source(*, manifest_path, season, revision,
                                   user_scenario, flask_F, oil_hands, profile):
     """Reuse ORIGINAL exact-build v216/v217/v212 installed source, never a preview.
