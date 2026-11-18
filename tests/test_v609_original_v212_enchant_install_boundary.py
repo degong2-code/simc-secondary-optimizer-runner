@@ -19,6 +19,7 @@ from runner import v211_enchant_source_effect_classification as classify
 from runner import v213_source_to_catalog as join
 from runner import v216_environment_build_coordinator as build
 from runner import v220_catalog_auto_admission as policy
+from runner import v096_unified_product_entry as product
 from runner import v196_current_season_user_catalog as ui
 from runner import v212_environment_manifest as install
 from runner import v222_season_budget_contract as budget
@@ -181,6 +182,26 @@ class OriginalInstallerOneVerifiedE0Choice(unittest.TestCase):
                 enchant_id=91001,manual_final_T=3500)
             self.assertEqual((manual["base_B"],manual["final_T"]),(3500,3500))
             self.assertTrue(manual["manual_final_T_authoritative"])
+            # The original v096 consumer must observe the EXACT final
+            # physical item and enchant ID once; spell DPS belongs to SimC.
+            selected={"identity_sha256":preview["selected_identity_sha256"],
+                      "slot":"feet","item_id":987654,"enchant_id":91001}
+            base_profile="finger1=id=111\nfinger2=id=222\n"
+            actual_profile=base_profile+"feet=id=987654,enchant_id=91001\n"
+            consumed=product._signed_installed_user_E0_profile(
+                doc=installed,selected=selected,
+                profile=actual_profile,user_final_T=None)
+            self.assertEqual(consumed["selected_identity_sha256"],
+                             preview["selected_identity_sha256"])
+            self.assertEqual(consumed["fixed_E"],zero)
+            with self.assertRaisesRegex(
+                    product.ProductBlocked,
+                    "FRESH_SELECTED_E0_EXACT_ONCE_SIMC_INPUT_REQUIRED"):
+                product._signed_installed_user_E0_profile(
+                    doc=installed,selected=selected,
+                    profile=actual_profile+
+                        "chest=id=333,enchant_id=91001\n",
+                    user_final_T=None)
             with self.assertRaisesRegex(
                     install.EnvironmentBlocked,"FRESH_SELECTED_ENCHANT_USER_SLOT_OUTSIDE_ORIGINAL_MASK"):
                 install.preview_installed_selected_enchant_budget(
