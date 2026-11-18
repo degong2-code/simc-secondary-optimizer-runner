@@ -29,6 +29,10 @@ class InstalledE0NativeProfileInputTests(unittest.TestCase):
             "slot":"finger1/finger2","ui_selectable":True,
             "verified_fixed_E":zero,
             "chmv_budget_receipt_sha256":"d"*64}])
+        # Synthetic v212 helper omits the revision field because its
+        # original budget-only unit test does not need a SimC revision.
+        # The FULL v096 installed source replay does.
+        doc["simc_revision"]="d"*40
         doc["trusted_budget_component_source_identities"]={
             k:{"source_sha256":str(i)*64}
             for i,k in enumerate(("G","J","F","O"),1)}
