@@ -87,7 +87,9 @@ class InstalledE0NativeProfileInputTests(unittest.TestCase):
                     return_value=(doc,original_load)),
                   mock.patch.object(entry.contract,"normalize",
                     return_value=normalized)):
-                with self.assertRaises(entry.EntryBlocked):
+                with self.assertRaisesRegex(
+                        installed.EnvironmentBlocked,
+                        "EXACT_INSTALLED_REGISTRATION_REQUIRED"):
                     entry._admitted_fresh_season_source(
                         manifest_path=pathlib.Path("/fake/manifest.json"),
                         season=changed,revision="d"*40,user_scenario={},
