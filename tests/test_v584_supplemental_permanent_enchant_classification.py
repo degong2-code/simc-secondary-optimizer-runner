@@ -8,8 +8,10 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from runner import v191_unified_season_data_update as v191
-from runner import v584_supplemental_permanent_enchant_classification as v584
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"runner"))
+import v191_unified_season_data_update as v191
+import v584_supplemental_permanent_enchant_classification as v584
 from tests.test_v239_v211_fresh_season_dynamic_classifier import (
     BUILD,REV,fixture_source,put_sources)
 
