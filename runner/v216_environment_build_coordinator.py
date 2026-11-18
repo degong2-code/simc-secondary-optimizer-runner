@@ -1903,7 +1903,9 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
 
 
 def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
-                                                            compilation):
+                                                            compilation,
+                                                            selected_user_item=None,
+                                                            selected_enchant_id=None):
     """Connect actual sealed v232 + v230 + Wago/SimC v583 into v196/v220.
 
     A one-representative SOURCE-ONLY smoke comparison, never the user's
@@ -1916,6 +1918,17 @@ def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
                 "reason":reason,"ui_selectable":False,
                 "policy_A_product_input_verified":False,
                 "native_calls":0,"network_calls":0}
+    user_selected=selected_user_item is not None
+    if (user_selected != (selected_enchant_id is not None) or
+        (user_selected and (
+            type(selected_user_item) is not dict or
+            set(selected_user_item)!={"slot","item_id"} or
+            type(selected_user_item["slot"]) is not str or
+            type(selected_user_item["item_id"]) is not int or
+            selected_user_item["item_id"]<=0 or
+            type(selected_enchant_id) is not int or
+            selected_enchant_id<=0))):
+        return pending("SELECTED_USER_ENCHANT_EXACT_ITEM_SCOPE_INVALID")
     rep=collected.get("fresh_one_spec_simc_representative") or {}
     joined=collected.get("fresh_permanent_enchant_item_source") or {}
     seed=collected.get("fresh_lazy_full_pinned_simc_item_source") or {}
@@ -1965,6 +1978,10 @@ def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
              "V216_SELECTED_ENCHANT_EXACT_V232_IDS_REQUIRED")
         # v232 has already selected the physical items. Reuse the same
         # pinned v230 parser once, never expand to the user's whole gear.
+        if user_selected:
+            # The actual final user slot was read from v098 rows AFTER
+            # applying selected gear. The reference G spec may differ.
+            ids={selected_user_item["slot"]:selected_user_item["item_id"]}
         metadata=simc_item_metadata.from_seed(
             directory=seed["source_dir"],item_ids=sorted(ids.values()))
         need(metadata["game_build"]==build and
@@ -1988,6 +2005,8 @@ def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
         for candidate in sorted(original_join["matches"],
                                 key=lambda row:row["enchant_id"]):
             eid=candidate["enchant_id"]
+            if user_selected and eid!=selected_enchant_id:
+                continue
             origin=by_enchant.get(eid)
             if origin is None or not candidate.get("physical_items"):
                 continue
@@ -2006,7 +2025,7 @@ def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
                         "inventory_type_mask":origin["inventory_type_mask"],
                         "item_subclass_mask":origin["item_subclass_mask"]},
                     item_metadata=exact,selected_slot=slot)
-                if not checked["matched"]:
+                if not checked["matched"] and not user_selected:
                     continue
                 preview=user_catalog.preview_sealed_representative_enchant_mask(
                     source_catalog=source,scope={
@@ -2016,12 +2035,21 @@ def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
                         "v232_receipt_sha256":rep_sha,
                         "v583_receipt_sha256":join_sha,
                         "v230_item_data_sha256":metadata["source_sha256"]})
-                need(preview["matched"] is True and
+                need(preview["matched"]==checked["matched"] and
                      preview["ui_selectable"] is False and
                      preview["policy_A_product_input_verified"] is False,
                      "V216_SELECTED_ENCHANT_PREVIEW_MUST_NOT_APPROVE")
+                if user_selected:
+                    # Source comparison is not permission to select an
+                    # enchant; actual quality/E/SimC binding is unchanged.
+                    return {**preview,
+                        "schema":"v216_final_user_equipment_enchant_mask_source_v1",
+                        "reference_representative_not_user_equipment":False,
+                        "actual_user_item_from_v098_final_rows":True}
                 return preview
-        return pending("NO_SOURCE_MASK_MATCH_FOR_THIS_REFERENCE_REPRESENTATIVE")
+        return pending("SELECTED_USER_ENCHANT_WAGO_SIMC_OR_MASK_PENDING"
+                       if user_selected else
+                       "NO_SOURCE_MASK_MATCH_FOR_THIS_REFERENCE_REPRESENTATIVE")
     except (EnvironmentBuildBlocked,simc_item_metadata.ItemMetadataBlocked,
             user_catalog.CatalogBlocked,OSError,ValueError,KeyError,
             TypeError,AttributeError) as exc:
