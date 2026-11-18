@@ -68,6 +68,26 @@ class UserSessionControls(unittest.TestCase):
         user=ux.user_scenario(ux.standard_controls())
         return root,binary,user
 
+    def test_v596_generic_user_E0_syntax_not_authorization(self):
+        source=ux.standard_controls(("hunter","survival"))
+        for slot in ("finger1","finger2"):
+            with self.subTest(slot=slot):
+                controls={**source,"enchant_choices":{slot:89999}}
+                user=ux.user_scenario(controls)
+                self.assertEqual(user["selected_season_enchants"],
+                                 {slot:89999})
+                self.assertNotIn("fixed_E",user)
+        for bad in ({"finger3":7967},{"finger1":0},
+                    {"finger1":True},{"finger1":"7967"},
+                    {"finger1":7967,"finger2":7967}):
+            with self.subTest(bad=bad):
+                with self.assertRaises(ux.SessionBlocked):
+                    ux.user_scenario({**source,"enchant_choices":bad})
+        # An apparently valid numeric ID is NOT a product approval;
+        # without a verified v212 physical item it fails later in v098.
+        self.assertFalse(ux.standard_controls().get("enchant_choices"))
+
+
     def test_all_26_dps_user_defaults_require_no_full_gear(self):
         self.assertEqual(len(ux.SUPPORTED),26)
         self.assertEqual(len(ux.bootstrap.ARCHETYPES),24)
