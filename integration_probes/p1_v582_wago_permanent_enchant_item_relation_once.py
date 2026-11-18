@@ -28,6 +28,8 @@ import v191_unified_season_data_update as season
 import v280_consumable_item_use_spell_source as use
 import v281_consumable_simc_relation as spell
 import v583_permanent_enchant_physical_source as production_join
+import v211_enchant_source_effect_classification as classifier
+import v584_supplemental_permanent_enchant_classification as supplement
 
 TABLES = ("Item", "ItemSparse", "ItemXItemEffect", "ItemEffect", "SpellEffect",
           "CraftingData", "CraftingDataEnchantQuality")
@@ -358,6 +360,58 @@ def run(build, revision, expansion_id, out):
                            "wago_rank":w["quality_rank_wago"]}
                           for w in row["physical_items"]]}
                      for row in additional]}
+        # Independent one-off *real* existing v211/v213 source-input
+        # crosscheck: the production source compiler ordinarily reuses v275's
+        # six pinned files. This standalone read-only Wago probe downloads
+        # those exact five missing pinned SimC files ONCE, reusing the
+        # permanent_enchant.inc bytes downloaded above. No Native.
+        actual_paths={
+            **classifier.FRESH_FIXED_PATHS,
+            # This 70783 diagnostic only: real pinned expansion handler.
+            # Generic product v275 independently determines this path.
+            "unique_gear.cpp":"engine/player/unique_gear_midnight.cpp"}
+        manifest={"schema":classifier.FRESH_SOURCE_SCHEMA,
+                  "game_build":build,"simc_revision":revision,"files":{}}
+        for name in classifier.FRESH_REQUIRED:
+            source_path=actual_paths[name]
+            path=directory/name
+            if name!="permanent_enchant.inc":
+                url=("https://raw.githubusercontent.com/simulationcraft/simc/"
+                     +revision+"/"+source_path)
+                sources["simc_v211_"+name]=fetch_to_file(url,path,SIMC_MAX)
+            raw=path.read_bytes()
+            manifest["files"][name]={
+                "source_path":source_path,"size_bytes":len(raw),
+                "sha256":sha(raw),
+                "git_blob_sha1":classifier.git_blob_sha(raw)}
+        simc_manifest=directory/"v211_source_manifest.json"
+        simc_manifest.write_text(json.dumps(manifest),encoding="utf8")
+        extra=supplement.classify(
+            relation=production,source_dir=directory,
+            manifest_path=simc_manifest,game_build=build,
+            simc_revision=revision)
+        result["production_v584_additional_effect_quality"]={
+            "status":extra["status"],
+            "reason":extra.get("reason"),
+            "candidate_count":extra.get("candidate_count"),
+            "slot_resolved_count":extra.get("slot_resolved_count"),
+            "weapon_hand_pending_count":extra.get("weapon_hand_pending_count"),
+            "static_chmv_candidate_count":extra.get("static_chmv_candidate_count"),
+            "quality_noninferior_source_count":
+                extra.get("quality_noninferior_source_count"),
+            "source_quality_observations":extra.get(
+                "source_quality_observations",[]),
+            "rows":extra.get("rows",[]),
+            "new_native_calls":extra["native_calls"],
+            "ui_selectable":extra["ui_selectable"]}
+        need(extra["status"]==supplement.COMPLETE,
+             "ACTUAL_70783_V584_EFFECT_SOURCE_PENDING:"
+             +str(extra.get("reason")))
+        need(extra["candidate_count"]==production[
+             "additional_dps_gear_highest_source_rank_candidate_count"]
+             and extra["native_calls"]==0
+             and extra["ui_selectable"] is False,
+             "ACTUAL_70783_V584_CANDIDATE_SCOPE_DRIFT")
         result["production_v583_same_original_bytes_crosscheck"]={
             "status":"EXACT_PAIR_SET_EQUAL",
             "highest_simc_candidate_linked":
@@ -400,6 +454,12 @@ def main():
         "unlinked": len(result["highest_source_rank_unlinked_ids"]),
         "physical": result["matched_physical_item_ids"],
         "production_v583":result["production_v583_same_original_bytes_crosscheck"],
+        "supplement_v584":{
+             key:result["production_v584_additional_effect_quality"].get(key)
+             for key in ("status","reason","candidate_count",
+                         "slot_resolved_count","weapon_hand_pending_count",
+                         "static_chmv_candidate_count",
+                         "quality_noninferior_source_count")},
         "additional":{key:result["production_v583_additional_scope_classification"][key]
                       for key in ("actual_source_unscoped_count","scope_counts",
                                   "new_gear_source_candidate_count",
