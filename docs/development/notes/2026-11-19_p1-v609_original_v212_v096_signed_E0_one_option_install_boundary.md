@@ -20,6 +20,10 @@ v607은 봉인된 v191+v583 원본 최고 품질 계열 → 네 기존 Policy A 
 - 이 접근 환경에서는 사용자의 PC 로컬 시즌 stage root 또는 원본 GitHub Actions의 보존되지 않은 runtime 임시 디렉터리를 직접 읽을 수 없음. 파일이 없다고 새로 SHA를 만들거나 신뢰 증거를 조합하지 않고, 현재 시즌 자동 등록 개수와 새 마부 Native DPS/SEM/95%는 **미측정·PENDING**.
 - [v570 Windows 64 Native 사용자 기본 E2E #44074372451](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44074372451), v572 재개 등의 역사 실증은 유지. 이번 변경의 등록한 실마부 새 DPS E2E로 주장하지 않음.
 
+### 최종 정밀화: 설치 파일과 v217 영수증 실기록/재사용
+
+추가 테스트-only commit `352d17743bdc11c0d8d518da3882623a725b78ba`는 합성 승인된 한 마부에 대해 **원본 `v216._install_verified_fresh_environment_only`의 `v217.execute_stage`를 실제 실행**한다. 첫 번째 실행에서 `EXECUTED_AND_SEALED` + 실제 `v212_installed_*.json` 파일 저장/manifest SHA 검증, 똑같은 두 번째 요청에서 `REUSED_VERIFIED` + 동일 파일 경로/manifest SHA 재사용 확인. 이어 `v096._signed_installed_user_E0_profile`의 입력을 메모리 사본이 아닌 **저장된 설치 문서**로 변경해 부위/ItemID/마부ID 한 번 적용과 중복 거부를 확인했다. **해당 ZIP/receipt는 합성 테스트로만 생성되고 70783 실제 새 마부 승인 증거는 아님.** [최종 focused CI #44423460159](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44423460159) **SUCCESS**.
+
 ## Actions 확인, 변경과 비용
 
 최종 코드/테스트 commit `48e2cbc727a303dcf2a8e9cc02a861da6a43c133` 기준:
