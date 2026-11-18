@@ -1770,7 +1770,7 @@ function buildRequest() {
     if(field("dk_rune_off"))runeByHand.off_hand=Number(field("dk_rune_off"));
     if(Object.keys(runeByHand).length) {
       if(!Object.values(runeByHand).every(id=>state.dkRuneIds.has(id)))
-        throw Error("이번 시즌 검증된 죽음의 기사 룬만 새 세션에 적용할 수 있습니다.");
+        throw Error("설치된 SimC에서 확인된 죽음의 기사 룬만 새 세션에 적용할 수 있습니다.");
       controls.runeforge_by_hand=runeByHand;
     }
   }
@@ -2704,7 +2704,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     }catch(error){
       renderSeasonOptionCatalog(null);
       $("dk-runeforge-status").textContent=
-        "시즌 룬 설치 원본 확인 실패 · 선택 잠금";
+        "설치된 SimC 룬 원본 확인 실패 · 선택 잠금";
     }
     try{await refreshInstalledOilLoadouts();}
     catch(error){$("optimizer-oil-loadout-status").textContent=
@@ -3188,8 +3188,8 @@ function renderSeasonOptionCatalog(catalog) {
     }
   }
   $("dk-runeforge-status").textContent=state.dkRuneIds.size?
-    "현재 시즌 SimC 원본 검증 룬 "+state.dkRuneIds.size+"종 선택 가능":
-    "이번 시즌 검증된 룬 원본이 설치되지 않아 신규 선택 잠금";
+    "설치된 SimC 원본 확인 룬 "+state.dkRuneIds.size+"종 선택 가능":
+    "SimC 룬 원본이 설치되지 않아 신규 선택 잠금";
   runeCompatibility();
   const status=$("season-option-catalog-status");
   const host=$("season-enchant-groups");
