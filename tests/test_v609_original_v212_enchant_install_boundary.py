@@ -7,8 +7,13 @@ No new source fetch, Native call, or optimizer implementation.
 import copy
 import json
 import pathlib
+import sys
 import tempfile
 import unittest
+
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/"runner"))
+sys.path.insert(0,str(ROOT))
 
 from runner import v211_enchant_source_effect_classification as classify
 from runner import v213_source_to_catalog as join
