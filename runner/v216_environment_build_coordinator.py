@@ -1902,6 +1902,53 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
     return proofs
 
 
+def _v216_reuse_sealed_v584_selected_supplemental(join, selected_id):
+    """One existing v583↔v584 selected DPS gear source; NO new catalog.
+
+    Original physical relation and the v584 classification MUST agree on
+    the same SimC enchant ID, Wago physical ItemIDs, token/rank and masks.
+    This is input to the old v196/v220 source matcher, NOT effect/quality
+    dominance, E=0, Policy A or user publication.
+    """
+    source=join.get("supplemental_gear_effects_source_only") or {}
+    if (source.get("status")!=
+            "SUPPLEMENTAL_DPS_ENCHANT_EFFECTS_CLASSIFIED_UNADMITTED"
+        or source.get("source_only") is not True
+        or source.get("ui_selectable") is not False):
+        return None
+    selected=[r for r in source.get("rows",[])
+              if r.get("enchant_id")==selected_id]
+    physical=[r for r in join.get("additional_enchants_unadmitted",[])
+              if r.get("enchant_id")==selected_id
+              and r.get("scope")==
+                  "DPS_EQUIPMENT_PERMANENT_CANDIDATE_UNADMITTED"]
+    if len(selected)!=1 or len(physical)!=1:
+        return None
+    row,linked=selected[0],physical[0]
+    original=linked.get("simc_source_rows")
+    by_physical=linked.get("physical_items")
+    if not (type(original) is list and len(original)==1
+            and type(by_physical) is list and bool(by_physical)
+            and type(row.get("source_class_and_masks")) is dict
+            and row.get("simc_token")==original[0].get("simc_token")
+            and row.get("quality_rank_simc")==original[0].get("quality_rank")
+            and all(row["source_class_and_masks"].get(k)==original[0].get(k)
+                    for k in ("item_class","inventory_type_mask",
+                              "item_subclass_mask"))
+            and sorted(row.get("physical_item_ids",[]))==sorted({
+                p["item_id"] for p in by_physical})
+            and row.get("selection_status")==
+                "SUPPLEMENTAL_SOURCE_ONLY_NOT_USER_PUBLISHED"
+            and row.get("ui_selectable") is False
+            and row.get("raw_rank_component_evidence",{}).get(
+                "quality_noninferiority_runtime_verified") is False):
+        return None
+    return {"enchant_id":selected_id,
+            "simc_rank_rows":[{**original[0],"enchant_id":selected_id}],
+            "physical_items":by_physical,
+            "supplemental_source":row}
+
+
 def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
                                                             compilation,
                                                             selected_user_item=None,
@@ -1970,12 +2017,18 @@ def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
              original_join["status"]==
                  "PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",
              "V216_SELECTED_ENCHANT_SAME_BUILD_SOURCE_REQUIRED")
-        # Filter exact user-selected enchant BEFORE reparsing the pinned
-        # 32 MB item_data source. An unlinked optional source costs no scan.
+        # Match exact selected source BEFORE scanning large v230 item_data.
+        # Original v213's enchant_ set and v584's verified *additional*
+        # physical families remain separate; neither grants a UI choice.
+        joined_rows=original_join["matches"]
         if user_selected and not any(
                 r.get("enchant_id")==selected_enchant_id
-                for r in original_join.get("matches",[])):
-            return pending("SELECTED_USER_ENCHANT_WAGO_SIMC_SOURCE_PENDING")
+                for r in joined_rows):
+            supplemental=_v216_reuse_sealed_v584_selected_supplemental(
+                original_join,selected_enchant_id)
+            if supplemental is None:
+                return pending("SELECTED_USER_ENCHANT_WAGO_SIMC_SOURCE_PENDING")
+            joined_rows=[supplemental]
         ids=representative["selected_G_slot_ids"]
         need(type(ids) is dict and 1<=len(ids)<=15 and
              all(type(k) is str and type(v) is int and v>0
@@ -2008,12 +2061,14 @@ def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
         # Bounded first positive source-only comparison. v583 guarantees
         # a Wago physical item ↔ SimC enchant ID relationship; it does NOT
         # prove that this enchant is usable/stronger/selected by the user.
-        for candidate in sorted(original_join["matches"],
+        for candidate in sorted(joined_rows,
                                 key=lambda row:row["enchant_id"]):
             eid=candidate["enchant_id"]
             if user_selected and eid!=selected_enchant_id:
                 continue
-            origin=by_enchant.get(eid)
+            extra=candidate.get("supplemental_source")
+            origin=(extra["source_class_and_masks"] if extra is not None
+                    else by_enchant.get(eid))
             if origin is None or not candidate.get("physical_items"):
                 continue
             if not any(all(row.get(k)==origin.get(k) for k in (
@@ -2040,7 +2095,8 @@ def _fresh_first_sealed_representative_enchant_mask_preview(*, collected,
                         "item_metadata":exact,"wago_item_id":wago_item,
                         "v232_receipt_sha256":rep_sha,
                         "v583_receipt_sha256":join_sha,
-                        "v230_item_data_sha256":metadata["source_sha256"]})
+                        "v230_item_data_sha256":metadata["source_sha256"]},
+                    supplemental_source=extra)
                 need(preview["matched"]==checked["matched"] and
                      preview["ui_selectable"] is False and
                      preview["policy_A_product_input_verified"] is False,
