@@ -256,6 +256,62 @@ def prepare_verified_fresh_choices(source_catalog, source_ui,
     # computed single-pass decision instead of walking the candidates twice.
     return (prepared,decision) if return_policy_A_preview else prepared
 
+def preview_sealed_representative_enchant_mask(*, source_catalog, scope):
+    """Consume ONE v216-authenticated v230 representative item, source-only.
+
+    Never accept a client-provided metadata row as Policy A product_input:
+    the ordinary v216 source owner must first authenticate v232/v230/v583
+    against its sealed same-build files. This projection does not add any of
+    v220's four evidence families, authorize a user choice or bind SimC E.
+    """
+    source_bridge.verify_catalog(source_catalog)
+    need(type(scope) is dict and
+         set(scope)=={"game_build","simc_revision","enchant_id",
+                      "selected_slot","item_metadata","wago_item_id",
+                      "v232_receipt_sha256","v583_receipt_sha256",
+                      "v230_item_data_sha256"} and
+         scope["game_build"]==source_catalog["game_build"] and
+         scope["simc_revision"]==source_catalog["simc_revision"] and
+         type(scope["enchant_id"]) is int and scope["enchant_id"]>0 and
+         type(scope["wago_item_id"]) is int and scope["wago_item_id"]>0 and
+         all(type(scope[k]) is str and auto_admission.HEX64.fullmatch(scope[k])
+             for k in ("v232_receipt_sha256","v583_receipt_sha256",
+                       "v230_item_data_sha256")),
+         "V196_SELECTED_REPRESENTATIVE_ORIGINAL_SOURCE_SCOPE_REQUIRED")
+    rows=[row for row in source_catalog["v196_enchant_source"]["rows"]
+          if row["enchant_id"]==scope["enchant_id"]]
+    need(len(rows)==1,"V196_SELECTED_ENCHANT_NOT_IN_EXACT_SOURCE_CATALOG")
+    row=rows[0]
+    physical=auto_admission.selected_equipment_source_mask_match(
+        permanent_source={
+            "item_class":row["item_class"],
+            "inventory_type_mask":row["inventory_type_mask"],
+            "item_subclass_mask":row["item_subclass_mask"]},
+        item_metadata=scope["item_metadata"],
+        selected_slot=scope["selected_slot"])
+    return {
+        "schema":"v196_selected_representative_source_mask_unadmitted_v1",
+        "status":physical["status"],
+        "game_build":scope["game_build"],
+        "simc_revision":scope["simc_revision"],
+        "source_catalog_manifest_sha256":source_catalog["manifest_sha256"],
+        "enchant_id":scope["enchant_id"],
+        "wago_physical_enchant_item_id":scope["wago_item_id"],
+        "selected_slot":scope["selected_slot"],
+        "selected_representative_item_id":physical["selected_item_id"],
+        "matched":physical["matched"],
+        "source_mask_comparison":physical,
+        "v232_receipt_sha256":scope["v232_receipt_sha256"],
+        "v583_receipt_sha256":scope["v583_receipt_sha256"],
+        "v230_item_data_sha256":scope["v230_item_data_sha256"],
+        "reference_representative_not_user_equipment":True,
+        "policy_A_product_input_verified":False,
+        "same_effect_and_highest_quality_verified":False,
+        "fixed_E_or_no_E_verified":False,
+        "ui_selectable":False,"native_calls":0,"network_calls":0,
+    }
+
+
 def public_options(path=DEFAULT, *, trusted_internal_receipts_by_id=None):
     """Project source candidates and existing v220 decisions, not an approval.
 
