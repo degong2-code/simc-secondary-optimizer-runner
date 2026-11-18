@@ -36,6 +36,18 @@ Existing offline tests augmented, no new workflow:
 
 A source-only/physical-mask result is **not** itself a Policy A receipt. At runtime the exact signed v212 item and confirmed E0 CHMV owner are also required. This is deterministic input correctness, not independent spell-effect authentication.
 
+## Latest verified offline Actions, no new Native
+
+**The final new code/test commit was `1675ee8d8af7b6701666dd13293776c4808b6c8b`.** Re-run only existing exact-change focused offline CI, not an entire new live SimC test matrix.
+
+- [Original offline focused continuity #44264004427](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44264004427): **SUCCESS** on that exact code/test commit, log `Ran 682 tests`, `OK (skipped=2)` = **680 PASS / 2 SKIP / 0 FAIL**. This includes original v096 signed installed E0 source replay, proper physical-profile ID once, and previous budget/optimizer/cache regressions.
+- [Original v401 78-element contract #44264004439](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44264004439): **SUCCESS** on the same exact code/test commit; contract guard only, no full-product acceptance or Native.
+- [Web/API Windows+Ubuntu #44263274946](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44263274946): **BOTH SUCCESS** on earlier code commit `f09b5510748e9bcc58f06ceac1462901384a74b2`, each job `Ran 484 tests`, `OK (skipped=1)` = **483 PASS / 1 SKIP / 0 FAIL per OS**. That commit contained the E0 v113+UI+v098/v096 production code; subsequent changes before final focused success were to the synthetic v096 replay test only.
+- [UI Windows+Ubuntu #44263274886](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44263274886): **BOTH SUCCESS** on same earlier production code, original **107 + 199 + 4** offline test groups per OS, including the original Node E0 option visibility/installed SHA and continued DK rune behavior.
+- [v098 source-only/offline #44263275021](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44263275021): **SUCCESS**, `Ran 506 tests` on that previous head; not a Native DPS E2E.
+- Earlier focused #44263509667 and #44263834325 were **FAIL** because of two mistakes in the new synthetic v096 test: missing `simc_revision` in its mocked installed v212 document, then expecting an `EntryBlocked` for a legitimately raised original `v212.EnvironmentBlocked` on a forged ID. Both **test-only** mistakes were corrected, and #44264004427 final focused PASS; never present those intermediate failures as product bugs or as successful receipts.
+- **New SimC Native calls: 0.** New network/Wago/DB2 source collection: **0**. Historical [v570 basic Windows Chrome-to-real-DPS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44074372451) and [v572 real ZIP cancel/resume](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44082378854) are *reused historical one-scope evidence*, **not** proofs that the new general E0 permanent enchant input has run through actual SimC Native.
+
 ## Still pending
 
 - A **real installed original v212 E0 registered item** meeting the final-user ring mask source on ordinary product hardware should be run through one exact v113→v098→v096 session and observed SimC user result; prefer reuse of identical-scope cached Native, otherwise minimal targeted run, no wholesale Native matrix. Record actual full-profile and persistent resume identity. Do not label the new generic E0 DPS E2E PASS before that receipt.
