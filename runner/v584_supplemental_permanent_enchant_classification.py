@@ -9,6 +9,7 @@ an independent catalog/optimizer or a new user admission gate.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import v191_unified_season_data_update as simc_season
@@ -25,6 +26,26 @@ def pending(reason):
             "rows":[],"source_only":True,
             "ui_selectable":False,"native_calls":0,
             "mechanics_owner":"SimC"}
+
+
+
+def weapon_subclasses_from_pinned_source(item_subclass_mask, source):
+    """Original SimC enum is the sole name authority; preserve unknown IDs."""
+    resolved={}
+    for line in source.splitlines():
+        m=re.match(r"^\\s*ITEM_SUBCLASS_WEAPON_([A-Z0-9_]+)\\s*=\\s*(\\d+)\\s*,?",line)
+        if m:
+            key,val=m.group(1),int(m.group(2))
+            if key!="INVALID" and val not in resolved:
+                resolved[val]=key
+    ids=[i for i in range(32) if item_subclass_mask & (1<<i)]
+    return {"source_item_subclass_ids":ids,
+            "source_enum_names":[resolved.get(i) for i in ids],
+            "source_enum_all_ids_resolved":bool(ids) and all(i in resolved for i in ids),
+            "source_ranged_weapon_types_only":bool(ids) and all(
+                resolved.get(i) in ("BOW","GUN","CROSSBOW") for i in ids),
+            "hand_applicability_verified":False}
+
 
 
 def _slot(row):
@@ -134,6 +155,9 @@ def classify(*, relation, source_dir, manifest_path, game_build, simc_revision):
                 r,dbc[r["enchant_id"]],enums,texts,handlers,{},
                 unknown_item_mods_pending=True)
             allowed=_slot(r)
+            if r["item_class"]==2 and r["item_subclass_mask"]>0:
+                allowed["pinned_weapon_subclasses"]=weapon_subclasses_from_pinned_source(
+                    r["item_subclass_mask"],sources["data_enums.hh"])
             physical=by_id[r["enchant_id"]]["physical_items"]
             if not isinstance(physical,list) or not physical:
                 return pending("V584_PHYSICAL_ITEM_ID_REQUIRED")
@@ -171,6 +195,13 @@ def classify(*, relation, source_dir, manifest_path, game_build, simc_revision):
         quality=effect._fresh_static_quality_source_only(
             sample,selected,original,sources["spell_item_enchantment.inc"],enums)
         observations=quality.get("observations",[])
+        by_observation={o["selected_enchant_id"]:o for o in observations}
+        for row in rows:
+            src_quality=by_observation.get(row["enchant_id"],{})
+            # Entire family comes from the same independent pinned SimC
+            # source; this source-only comparison never approves its rank.
+            row["raw_rank_component_evidence"]=src_quality.get(
+                "source_rank_component_comparison")
         unknown_ids={r["enchant_id"] for r in rows
                      if r["unknown_components"]}
         # v211's raw numeric comparator may compare the same unknown stat
@@ -195,6 +226,11 @@ def classify(*, relation, source_dir, manifest_path, game_build, simc_revision):
                 "static_chmv_candidate_count":sum(x["static_chmv_present"] for x in rows),
                 "quality_noninferior_source_count":sum(
                     x.get("source_only_noninferior") is True for x in observations),
+                "raw_static_component_nondecreasing_candidate_count":sum(
+                    x.get("source_rank_component_comparison",{}).get(
+                        "source_raw_amount_and_coefficient_nondecreasing") is True
+                    for x in observations),
+                "raw_static_component_rank_evidence_only":True,
                 "source_quality_observations":observations,
                 "rows":rows,"source_only":True,
                 "ui_selectable":False,"native_calls":0,
