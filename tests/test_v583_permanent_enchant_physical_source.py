@@ -192,6 +192,84 @@ class TestV583(unittest.TestCase):
         self.assertEqual(len(attempts),1)
         self.assertFalse(result["environment_ready"])
 
+    def test_additional_scope_does_not_depend_on_token_prefix_or_name(self):
+        row={"enchant_id":7939,"quality_rank":2,
+             "item_class":4,"inventory_type_mask":0x80,
+             "item_subclass_mask":0x1e,
+             "simc_token":"bright_linen_spellthread"}
+        armor=v583._additional_scope_from_original_simc([row])
+        self.assertEqual(armor["scope"],
+                         "DPS_EQUIPMENT_PERMANENT_CANDIDATE_UNADMITTED")
+        self.assertEqual(armor["gear_kind"],"armor")
+        weapon=v583._additional_scope_from_original_simc([
+            {**row,"item_class":2,"inventory_type_mask":0,
+             "item_subclass_mask":0x4000c,
+             "simc_token":"farstriders_hawkeye"}])
+        self.assertEqual(weapon["gear_kind"],"weapon")
+        tool=v583._additional_scope_from_original_simc([
+            {**row,"item_class":19,"inventory_type_mask":0x20000000,
+             "simc_token":"enchant_tool__haranir_finesse"}])
+        self.assertEqual(tool["scope"],"PROFESSION_TOOL_OUTSIDE_DPS_EQUIPMENT")
+        self.assertEqual(v583._additional_scope_from_original_simc([])["scope"],
+                         "SIMC_PERMANENT_EQUIPMENT_SCOPE_UNRESOLVED")
+
+    def test_additional_same_expansion_gear_is_discovered_not_auto_approved(self):
+        # Reuse exactly the source-only v583 chain; no extra CSV GET/Native.
+        row={"enchant_id":7939,"quality_rank":2,"item_class":4,
+             "inventory_type_mask":0x80,"item_subclass_mask":0x1e,
+             "simc_token":"bright_linen_spellthread"}
+        self.rows.append(row)
+        # Patch returns list by reference. Appending to self.rows also extends
+        # generated["rows"], while the old enchant_ highest subset remains 8025.
+        root=self.root
+        def write(name,fields,rows):
+            (root/name).write_bytes(csv_bytes(fields,rows))
+        write("wago/Item.csv",("ID","ClassID","SubclassID"),[
+            {"ID":244014,"ClassID":8,"SubclassID":0},
+            {"ID":244015,"ClassID":8,"SubclassID":0},
+            {"ID":240157,"ClassID":8,"SubclassID":8},
+            {"ID":244016,"ClassID":8,"SubclassID":0}])
+        write("wago/ItemSparse.csv",("ID","ExpansionID","Display_lang"),[
+            {"ID":244014,"ExpansionID":11,"Display_lang":"Lesser enchant"},
+            {"ID":244015,"ExpansionID":11,"Display_lang":"Greater enchant"},
+            {"ID":240157,"ExpansionID":11,"Display_lang":"Any localized spellthread"},
+            {"ID":244016,"ExpansionID":10,"Display_lang":"Old enchant"}])
+        write("source/fake_ItemXItemEffect.csv",("ItemID","ItemEffectID"),[
+            {"ItemID":244014,"ItemEffectID":100},
+            {"ItemID":244015,"ItemEffectID":101},
+            {"ItemID":240157,"ItemEffectID":103}])
+        write("source/fake_ItemEffect.csv",("ID","SpellID","TriggerType"),[
+            {"ID":100,"SpellID":777,"TriggerType":0},
+            {"ID":101,"SpellID":778,"TriggerType":0},
+            {"ID":103,"SpellID":780,"TriggerType":0}])
+        write("source/fake_SpellEffect.csv",
+              ("SpellID","Effect","EffectIndex","EffectMiscValue_0","DifficultyID"),[
+            {"SpellID":777,"Effect":301,"EffectIndex":0,
+             "EffectMiscValue_0":3828,"DifficultyID":0},
+            {"SpellID":778,"Effect":301,"EffectIndex":0,
+             "EffectMiscValue_0":3829,"DifficultyID":0},
+            {"SpellID":780,"Effect":53,"EffectIndex":0,
+             "EffectMiscValue_0":7939,"DifficultyID":0}])
+        raw=root/"source"/"test_quality_extra.csv"
+        raw.write_bytes(self.quality)
+        result=v583.join_existing_sources(
+            item=root/"wago/Item.csv",sparse=root/"wago/ItemSparse.csv",
+            crafting=root/"wago/CraftingData.csv",
+            relation=root/"source/fake_ItemXItemEffect.csv",
+            effect=root/"source/fake_ItemEffect.csv",
+            spell_effect=root/"source/fake_SpellEffect.csv",
+            quality=raw,simc_enchants=root/"source/fake_permanent_enchant.inc",
+            build=BUILD,expansion_id=EXPANSION)
+        self.assertEqual(result["all_rank_simc_id_linked"],2)
+        self.assertEqual(result["additional_dps_gear_candidate_count"],1)
+        self.assertEqual(result["additional_dps_gear_highest_source_rank_candidate_ids"],
+                         [7939])
+        self.assertEqual(result["additional_wago_id_classification_counts"],{
+            "DPS_EQUIPMENT_PERMANENT_CANDIDATE_UNADMITTED":1})
+        x=result["additional_enchants_unadmitted"][0]
+        self.assertEqual(x["physical_items"][0]["item_id"],240157)
+        self.assertFalse(x["ui_selectable"])
+
 
 if __name__=="__main__":
     unittest.main()
