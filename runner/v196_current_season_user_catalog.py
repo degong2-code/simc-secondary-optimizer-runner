@@ -256,7 +256,8 @@ def prepare_verified_fresh_choices(source_catalog, source_ui,
     # computed single-pass decision instead of walking the candidates twice.
     return (prepared,decision) if return_policy_A_preview else prepared
 
-def preview_sealed_representative_enchant_mask(*, source_catalog, scope):
+def preview_sealed_representative_enchant_mask(*, source_catalog, scope,
+                                               supplemental_source=None):
     """Consume ONE v216-authenticated v230 representative item, source-only.
 
     Never accept a client-provided metadata row as Policy A product_input:
@@ -280,8 +281,43 @@ def preview_sealed_representative_enchant_mask(*, source_catalog, scope):
          "V196_SELECTED_REPRESENTATIVE_ORIGINAL_SOURCE_SCOPE_REQUIRED")
     rows=[row for row in source_catalog["v196_enchant_source"]["rows"]
           if row["enchant_id"]==scope["enchant_id"]]
-    need(len(rows)==1,"V196_SELECTED_ENCHANT_NOT_IN_EXACT_SOURCE_CATALOG")
-    row=rows[0]
+    # The eight v584 supplemental physical families are not among the old
+    # v213 "enchant_" token categories. Accept only their EXACT sealed
+    # v583/v584 source projection for a SOURCE-ONLY comparison; never insert
+    # these rows into the public v196 catalog or mint a Policy A receipt.
+    additional=False
+    if not rows and supplemental_source is not None:
+        x=supplemental_source
+        need(type(x) is dict
+             and x.get("enchant_id")==scope["enchant_id"]
+             and type(x.get("simc_token")) is str and bool(x["simc_token"])
+             and type(x.get("quality_rank_simc")) is int
+             and x["quality_rank_simc"]>=0
+             and x.get("selection_status")==
+                 "SUPPLEMENTAL_SOURCE_ONLY_NOT_USER_PUBLISHED"
+             and x.get("ui_selectable") is False
+             and type(x.get("physical_item_ids")) is list
+             and scope["wago_item_id"] in x["physical_item_ids"]
+             and type(x.get("source_class_and_masks")) is dict
+             and set(x["source_class_and_masks"])=={
+                 "item_class","inventory_type_mask","item_subclass_mask"}
+             and type(x.get("source_slot")) is dict
+             and type(x.get("raw_rank_component_evidence")) is dict
+             and x["raw_rank_component_evidence"].get(
+                 "same_effect_and_use_conditions_verified") is False
+             and x["raw_rank_component_evidence"].get(
+                 "quality_noninferiority_runtime_verified") is False
+             and x.get("static_E_source_status") in (
+                 "NO_STATIC_CHMV_COMPONENT_IN_SIMC_DBC",
+                 "UNKNOWN_STATIC_COMPONENT_REVIEW_PENDING",
+                 "STATIC_CHMV_NUMERIC_MEASUREMENT_PENDING"),
+             "V196_SUPPLEMENTAL_SEALED_ENCHANT_SOURCE_INVALID")
+        row=x["source_class_and_masks"]
+        additional=True
+    else:
+        need(supplemental_source is None and len(rows)==1,
+             "V196_SELECTED_ENCHANT_NOT_IN_EXACT_SOURCE_CATALOG")
+        row=rows[0]
     physical=auto_admission.selected_equipment_source_mask_match(
         permanent_source={
             "item_class":row["item_class"],
@@ -301,6 +337,11 @@ def preview_sealed_representative_enchant_mask(*, source_catalog, scope):
         "selected_representative_item_id":physical["selected_item_id"],
         "matched":physical["matched"],
         "source_mask_comparison":physical,
+        "supplemental_v583_v584_source_only":additional,
+        "source_rank_comparison_not_quality_approval":True,
+        "source_observed_static_E_status":(
+            supplemental_source["static_E_source_status"]
+            if additional else None),
         "v232_receipt_sha256":scope["v232_receipt_sha256"],
         "v583_receipt_sha256":scope["v583_receipt_sha256"],
         "v230_item_data_sha256":scope["v230_item_data_sha256"],
