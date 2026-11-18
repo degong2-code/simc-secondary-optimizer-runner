@@ -211,7 +211,8 @@ class TestSupplementalV584(unittest.TestCase):
             "ITEM_MOD_LEECH_RATING=62,\nITEM_MOD_AVOIDANCE_RATING=63,\n"
             "ITEM_MOD_STRENGTH_AGILITY_INTELLECT=71,\n")
         enums=v584.effect.parse_enums(enum_string)
-        dbc={"ench_type":[4,0,0],"ench_amount":[0,0,0],
+        dbc={"dbc_name":"Synthetic Resistance Enchant",
+             "ench_type":[4,0,0],"ench_amount":[0,0,0],
              "ench_prop":[0,0,0],"ench_coeff":[0.8028,0.0,0.0],
              "id_scaling":0}
         candidate={"enchant_id":91004,"token":"synth_spellthread",
