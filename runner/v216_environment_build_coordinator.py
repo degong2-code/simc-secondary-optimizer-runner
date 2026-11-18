@@ -1885,8 +1885,12 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
              item["inventory_type_mask"]==
                  projected["inventory_type_mask"],
              "V216_POLICY_A_SOURCE_JOIN_ID_TOKEN_MASK_DRIFT")
+        # Source_relation MUST use the same already authenticated v213
+        # physical ring-family scope as v196/v220's decision. Otherwise a
+        # ring's older SOURCE_SLOT_UNRESOLVED identity would conflict with
+        # the later finger1/finger2 family identity even with four receipts.
         candidate=auto_admission.candidate_from_source_enchant(
-            source_context,row)
+            source_context,row,original_source_row=item)
         identity=auto_admission._identity(candidate)
         payload={"identity":identity,"v217_source_receipts":stamps,
                  "v213_catalog_manifest_sha256":catalog["manifest_sha256"],
