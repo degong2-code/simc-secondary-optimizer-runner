@@ -629,7 +629,8 @@ function enhanceSelect(select){
 function initializeSearchChoices(){
   for(const id of ["class-choice","spec","trinket1","trinket2","food","potion",
     "augmentation","diamond","omnium","optimizer-oil-loadout",
-    "dk_rune_main","dk_rune_off","season_enchant_finger1"])
+    "dk_rune_main","dk_rune_off","season_enchant_finger1",
+    "season_enchant_finger2"])
     enhanceSelect($(id));
   for(const row of document.querySelectorAll(".gear-row")){
     const fields=row.dataset.group==="special-rows"?["item_id"]:["embellishment","slot"];
@@ -920,6 +921,7 @@ function fillDefault(item) {
   for (const id of ["food","potion","augmentation","diamond","omnium"]) $(id).selectedIndex=0;
   refreshDefaultConsumableSummaries();
   $("season_enchant_finger1").value="";
+  $("season_enchant_finger2").value="";
   // Reset optional slots on specialization changes, including hidden extra rows.
   fillGearRows("special-rows",[]);
   fillGearRows("crafted-rows",[]);
@@ -1628,6 +1630,17 @@ function fillSessionInputs(payload) {
   }
   savedEnchant.value=(restoredSignedE0||restoredEagle)?
     String(restoredId):"";
+  // History stays visible without permitting a new finger2 SimC session.
+  const restoredFinger2=u.selected_season_enchants?.finger2;
+  const savedFinger2=$("season_enchant_finger2");
+  for(const prior of Array.from(savedFinger2.options))
+    if(prior.dataset?.historic==="true")prior.remove();
+  if(restoredFinger2&&!state.installedE0Ids?.has(restoredFinger2)) {
+    const old=option(String(restoredFinger2),
+      "이전 반지 2 마부 #"+restoredFinger2+" · 새 최적화는 원본 검증 필요");
+    old.dataset.historic="true";savedFinger2.appendChild(old);
+  }
+  savedFinger2.value=restoredFinger2?String(restoredFinger2):"";
   // Recover the exact local inputs from this machine's saved session only.
   // No talent strings or OS file paths are stored in browser localStorage.
   $("binary").value=payload.binary;
@@ -1786,6 +1799,10 @@ function buildRequest() {
       controls.runeforge_by_hand=runeByHand;
     }
   }
+  // v106/v098/v096 accepts ONE selected ring; do not discard another.
+  const selectedFinger2Enchant=field("season_enchant_finger2");
+  if(field("season_enchant_finger1")&&selectedFinger2Enchant)
+    throw Error("현재 검증된 영구 마부는 반지 1 또는 반지 2 한 곳만 선택할 수 있습니다. 두 반지 동시 적용은 아직 지원하지 않습니다.");
   if(field("season_enchant_finger1")) {
     const eid=Number(field("season_enchant_finger1"));
     const exact=state.exactUserEnchantIds.has(eid) &&
@@ -1794,6 +1811,16 @@ function buildRequest() {
        !state.installedE0Ids?.has(eid))
       throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
     controls.enchant_choices={finger1:eid};
+  }
+  if(selectedFinger2Enchant) {
+    const eid=Number(selectedFinger2Enchant);
+    // The historical 7967/8025/7965 pilot is finger1-only. This hand
+    // requires the same v212-signed E0 registered item as the final SimC.
+    if(!state.installedE0Ids?.has(eid) ||
+       !Array.from($("season_enchant_finger2").options).some(
+         opt=>opt.value===selectedFinger2Enchant&&opt.disabled!==true))
+      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+    controls.enchant_choices={finger2:eid};
   }
   if(!Number.isInteger(controls.ilevel)||controls.ilevel<1||controls.ilevel>1000)
     throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
@@ -3178,6 +3205,9 @@ function refreshExactEnchantAvailability() {
   const hasE0=!!state.installedE0Ids?.size;
   if(!state.exactUserEnchantIds.size&&!hasE0)return;
   const selector=$("season_enchant_finger1");
+  const second=$("season_enchant_finger2");
+  second.disabled=!hasE0;
+  if(!hasE0)second.value="";
   const permitted=state.exactUserEnchantIds.size &&
     exactUserEnchantInputsMatch();
   selector.disabled=!permitted&&!hasE0;
@@ -3216,12 +3246,15 @@ function renderSeasonOptionCatalog(catalog) {
   const status=$("season-option-catalog-status");
   const host=$("season-enchant-groups");
   const selector=$("season_enchant_finger1");
+  const second=$("season_enchant_finger2");
   state.eagleApproved=false;
   state.exactUserEnchantIds=new Set();
   state.installedE0Ids=new Set();
   state.exactUserEnchantScope=null;
   selector.replaceChildren(option("","마법부여 없음 (기존 설정)"));
   selector.disabled=true;
+  second.replaceChildren(option("","마법부여 없음 (검증 대기)"));
+  second.disabled=true;
   host.replaceChildren();
   if(catalog?.schema==="v196_current_season_ui_catalog_v1" &&
      catalog.status==="FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY") {
@@ -3264,12 +3297,15 @@ function renderSeasonOptionCatalog(catalog) {
       selector.appendChild(option(String(item.enchant_id),
         "정적 E=0 검증 · 마부 #"+item.enchant_id+
         " · 실행 시 실제 반지/SimC 입력 재확인"));
+      second.appendChild(option(String(item.enchant_id),
+        "정적 E=0 검증 · 마부 #"+item.enchant_id+
+        " · 반지 2 실제 아이템/SimC 입력 재확인"));
     }
     if(state.installedE0Ids.size) {
       refreshExactEnchantAvailability();
       status.textContent="설치 원본으로 정적 CHMV E=0이 확인된 반지 마부 "+
         state.installedE0Ids.size+
-        "종 선택 가능 · 실제 반지 ID와 SimC 입력은 실행 전에 다시 검증."+
+        "종 선택 가능 · 반지 1 또는 반지 2 한 곳만 선택 · 실제 반지 ID와 SimC 입력은 실행 전에 다시 검증."+
         " 다른 마부는 계속 잠금.";
     }
     const exact=catalog.verified_exact_user_enchant_runtime;
@@ -3322,7 +3358,7 @@ function renderSeasonOptionCatalog(catalog) {
             ?" · 정적 CHMV E=0 (정상, 효과는 SimC 처리)"
             :" · 고정 E 원본 확인"):" · 고정 E 미확정")+
           (state.installedE0Ids.has(item.enchant_id)
-            ?" · 반지 1 선택 가능, 실행 전 장비/SimC 확인"
+            ?" · 반지 1·2 중 한 곳 선택 가능, 실행 전 장비/SimC 확인"
             :" · 최종 SimC 프로필 연결 대기 (선택 불가)");
         list.appendChild(li);
       }
@@ -3601,7 +3637,8 @@ function registerHandlers() {
     "season-selected-flask-id","season-verified-flask",
     "optimizer-oil-enabled","optimizer-oil-loadout",
     "optimizer-oil-main-id","optimizer-oil-off-id","oil_main","oil_off",
-    "season_enchant_finger1","dk_rune_main","dk_rune_off"
+    "season_enchant_finger1","season_enchant_finger2",
+    "dk_rune_main","dk_rune_off"
   ]);
   const editedUserChoice=event=>{
     const target=event.target;
@@ -3649,7 +3686,7 @@ function registerHandlers() {
     "season-selected-flask-id","season-verified-flask","optimizer-oil-loadout",
     "optimizer-oil-main-id","optimizer-oil-off-id","oil_main","oil_off",
     "spec","trinket1","trinket2","season_enchant_finger1",
-    "diamond","omnium"])
+    "season_enchant_finger2","diamond","omnium"])
     $(id).addEventListener("change",updateBudgetPreview);
   for(const group of ["special-rows","crafted-rows"])
     $(group).addEventListener("change",updateBudgetPreview);

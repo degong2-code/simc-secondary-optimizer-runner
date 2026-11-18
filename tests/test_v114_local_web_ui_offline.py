@@ -486,7 +486,7 @@ const apply=Function("state","$","field","valueInt",
         self.assertLess(env.index('id="augmentation"'),env.index('id="raid_buffs"'))
         self.assertIn('id="env-enchant-panel" open',env)
         self.assertIn('id="season_enchant_finger1" disabled',env)
-        self.assertIn('id="env-enchant-finger2" disabled',env)
+        self.assertIn('id="season_enchant_finger2" disabled',env)
         for slot in ("weapon","helm","shoulders","chest","boots"):
             self.assertIn('id="env-enchant-'+slot+'" disabled',env)
         self.assertIn('id="optimizer-season-itemid-expert"',env)
@@ -516,7 +516,7 @@ const apply=Function("state","$","field","valueInt",
         page=self.client.get("/").text
         css=self.client.get("/assets/styles.css").text
         self.assertLess(page.index('id="season_enchant_finger1"'),
-                        page.index('id="env-enchant-finger2"'))
+                        page.index('id="season_enchant_finger2"'))
         self.assertIn('grid-template-rows:17px 33px;',css)
         self.assertIn('grid-template-columns:repeat(4,minmax(0,1fr))',css)
         self.assertIn('border-top:0!important;border-bottom:0!important',css)
@@ -2291,10 +2291,15 @@ const a=raw.indexOf("  const restoredId=u.selected_season_enchants?.finger1;");
 const b=raw.indexOf("  // Recover the exact local inputs",a);
 assert(a>=0&&b>a,"real saved enchant restore block missing");
 const input={options:[],value:"",appendChild(v){this.options.push(v);}};
-const $=id=>{assert.strictEqual(id,"season_enchant_finger1");return input};
+const input2={options:[],value:"",appendChild(v){this.options.push(v);}};
+const $=id=>id==="season_enchant_finger1"?input:
+  id==="season_enchant_finger2"?input2:assert.fail("BAD_INPUT_ID_"+id);
 const option=(v,textContent)=>({value:v,textContent,dataset:{},
-                               remove(){input.options.splice(input.options.indexOf(this),1)}});
-const state={eagleApproved:false,exactUserEnchantIds:new Set()};
+  remove(){for(const x of [input,input2]) {
+    const at=x.options.indexOf(this);if(at>=0)x.options.splice(at,1);
+  }}});
+const state={eagleApproved:false,exactUserEnchantIds:new Set(),
+  installedE0Ids:new Set()};
 const restore=Function("u","state","$","option",raw.slice(a,b));
 const u={selected_season_enchants:{finger1:7967}};
 restore(u,state,$,option);
@@ -2302,9 +2307,15 @@ assert.strictEqual(input.value,"7967","old selected enchant remains visible");
 assert.strictEqual(input.options.length,1);
 assert.strictEqual(input.options[0].dataset.historic,"true");
 assert(input.options[0].textContent.includes("새 최적화는 원본 검증 필요"));
+restore({selected_season_enchants:{finger2:89999}},state,$,option);
+assert.strictEqual(input2.value,"89999");
+assert.strictEqual(input2.options[0].dataset.historic,"true");
+assert(input2.options[0].textContent.includes("새 최적화는 원본 검증 필요"));
 restore({selected_season_enchants:{}},state,$,option);
 assert.strictEqual(input.value,"");
 assert.strictEqual(input.options.length,0,"historical selection must not leak");
+assert.strictEqual(input2.value,"");
+assert.strictEqual(input2.options.length,0,"historical finger2 must not leak");
 const body=raw.slice(raw.indexOf("function buildRequest() {"),
                      raw.indexOf("async function api(",raw.indexOf("function buildRequest() {")));
 assert(body.includes('state.exactUserEnchantIds.has(eid)') &&
@@ -2380,6 +2391,52 @@ console.log("V473_BUILD_ILEVEL_REVOKE_ENCHANT_RUNE_PASS");
         self.assertIn("V473_BUILD_ILEVEL_REVOKE_ENCHANT_RUNE_PASS",
                       result.stdout)
 
+    def test_v600_signed_E0_single_finger2_real_browser_request(self):
+        """Actual selected UI option -> original one-ring Python contract."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node missing")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const scope=raw.indexOf("function buildRequest() {");
+const a=raw.indexOf('  const selectedFinger2Enchant=field("season_enchant_finger2");',scope);
+const b=raw.indexOf("  if(!Number.isInteger(controls.ilevel)",a);
+assert(scope>=0&&a>scope&&b>a,"actual source-only request block missing");
+const el={season_enchant_finger1:{value:"",options:[]},
+          season_enchant_finger2:{value:"",options:[
+            {value:"89999",disabled:false}]}};
+const $=id=>el[id],field=id=>el[id].value;
+const state={installedE0Ids:new Set([89999]),
+ exactUserEnchantIds:new Set([7967]),eagleApproved:false};
+const run=Function("state","$","field",
+  "exactUserEnchantInputsMatch","controls",
+  raw.slice(a,b)+"return controls.enchant_choices||null;");
+function selected(one,two){
+ el.season_enchant_finger1.value=one;
+ el.season_enchant_finger2.value=two;
+ return run(state,$,field,()=>false,{});
+}
+assert.strictEqual(selected("",""),null);
+assert.deepStrictEqual(selected("","89999"),{finger2:89999});
+assert.deepStrictEqual(selected("89999",""),{finger1:89999});
+assert.throws(()=>selected("89999","89999"),/한 곳만 선택/);
+assert.throws(()=>selected("","7967"),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
+assert.throws(()=>selected("","81234"),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
+el.season_enchant_finger2.options[0].disabled=true;
+assert.throws(()=>selected("","89999"),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
+el.season_enchant_finger2.options[0].disabled=false;
+state.installedE0Ids.clear();
+assert.throws(()=>selected("","89999"),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
+console.log("V600_SINGLE_SIGNED_E0_FINGER2_REQUEST_AND_BLOCK_PASS");
+"""
+        res=subprocess.run([node,"-e",script,
+            str(ROOT/"runner/webui/app.js")],
+            capture_output=True,text=True,timeout=15,check=False)
+        self.assertEqual(res.returncode,0,res.stderr)
+        self.assertIn("V600_SINGLE_SIGNED_E0_FINGER2_REQUEST_AND_BLOCK_PASS",
+                      res.stdout)
+
     def test_v467_fresh_v212_dk_runes_survive_unapproved_v213_enchants(self):
         """Real UI: sealed installed DK runes stay usable; E stays blocked."""
         import shutil,subprocess
@@ -2436,6 +2493,8 @@ assert($("dk_rune_off").options.some(o=>o.value==="3370"));
 assert.strictEqual(state.eagleApproved,false);
 assert.strictEqual($("season_enchant_finger1").disabled,true);
 assert.strictEqual($("season_enchant_finger1").options.length,1);
+assert.strictEqual($("season_enchant_finger2").disabled,true);
+assert.strictEqual($("season_enchant_finger2").options.length,1);
 assert($("season-option-catalog-status").textContent.includes("미승인"));
 assert($("season-option-catalog-status").textContent.includes("실행 선택 불가"));
 assert.strictEqual($("season-enchant-groups").children.length,1);
@@ -2482,6 +2541,9 @@ render(signedE0);
 assert.strictEqual($("season_enchant_finger1").disabled,false,
   "only installed authenticated v212 Policy A E0 may choose a final ring");
 assert($("season_enchant_finger1").options.some(x=>x.value==="89999"));
+assert.strictEqual($("season_enchant_finger2").disabled,false);
+assert($("season_enchant_finger2").options.some(x=>x.value==="89999"),
+ "a verified E0 may be selected on the other actual ring");
 assert(state.installedE0Ids.has(89999));
 assert($("season-option-catalog-status").textContent.includes("E=0"));
 assert.strictEqual(state.eagleApproved,false);
@@ -2493,6 +2555,8 @@ assert.strictEqual($("season-enchant-groups").children.length,0,
 render(null);
 assert.strictEqual(state.dkRuneIds.size,0);
 assert.strictEqual(state.eagleApproved,false);
+assert.strictEqual($("season_enchant_finger2").disabled,true);
+assert.strictEqual($("season_enchant_finger2").options.length,1);
 assert.strictEqual($("dk_rune_main").options.length,1);
 assert.strictEqual(compatibility,6,
   "signed E0 option render also recomputes DK rune compatibility");
