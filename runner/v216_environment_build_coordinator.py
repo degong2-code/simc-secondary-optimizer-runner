@@ -1811,9 +1811,146 @@ def _reuse_v277_G_in_preprofile(*, catalog, target_ilevel, native_G,
     }
 
 
+
+def _v607_sealed_highest_crafting_quality(*, catalog, original_v191,
+                                          physical_v583, v191_sha, v583_sha):
+    """Exact same-crafting-family top rank; never spell strength or DPS proof.
+
+    Both caller-supplied documents MUST first be authenticated against their
+    original stage receipts. The v583 join supplies physical Wago ItemID ->
+    CraftingDataEnchantQuality -> SimC enchant ID for the same game build.
+    Different SimC tokens or class/masks are different choices, even when
+    their English names resemble one another. Wago 13/14 and SimC 1/2
+    quality scales are compared by order, NEVER by direct integer equality.
+    """
+    if not (type(original_v191) is dict and type(physical_v583) is dict
+            and original_v191.get("game_build")==catalog.get("game_build")
+            and original_v191.get("simc_revision")==catalog.get("simc_revision")
+            and physical_v583.get("game_build")==catalog.get("game_build")
+            and physical_v583.get("simc_revision")==catalog.get("simc_revision")
+            and physical_v583.get("status")==
+                "PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY"
+            and physical_v583.get("source_only") is True
+            and physical_v583.get("automatic_ui_promotion") is False
+            and type(physical_v583.get("matches")) is list
+            and type(v191_sha) is str and auto_admission.HEX64.fullmatch(v191_sha)
+            and type(v583_sha) is str and auto_admission.HEX64.fullmatch(v583_sha)):
+        return {}
+    records=(original_v191.get("enchants",{}).get("permanent",{})
+             .get("source_records"))
+    if type(records) is not list:
+        return {}
+    by_id={}
+    families={}
+    fields=("simc_token","item_class","inventory_type_mask",
+            "item_subclass_mask")
+    for row in records:
+        if (type(row) is not dict or
+                type(row.get("enchant_id")) is not int or
+                type(row.get("quality_rank")) is not int or
+                any(key not in row for key in fields)):
+            return {}
+        if row["enchant_id"] in by_id:
+            # A contradictory original ID must never be arbitrarily chosen.
+            return {}
+        by_id[row["enchant_id"]]=row
+        key=tuple(row[key] for key in fields)
+        families.setdefault(key,[]).append(row)
+    links={}
+    for match in physical_v583["matches"]:
+        if type(match) is not dict:
+            return {}
+        eid=match.get("enchant_id")
+        if type(eid) is not int or eid in links:
+            return {}
+        links[eid]=match
+    ready={}
+    for row in catalog["v196_enchant_source"]["rows"]:
+        eid=row["enchant_id"]
+        source=by_id.get(eid)
+        if source is None:
+            continue
+        key=tuple(source[k] for k in fields)
+        family=families[key]
+        ranks=[r["quality_rank"] for r in family]
+        if (len(set(ranks))!=len(ranks)
+                or source["quality_rank"]!=max(ranks)
+                or source["simc_token"]!=row["token"]
+                or source["inventory_type_mask"]!=row["inventory_type_mask"]
+                or source["quality_rank"]!=row["quality_rank"]):
+            continue
+        # Every rank must have the same ORIGINAL Wago CraftingDataID,
+        # a unique exact physical scroll and a matching SimC source row.
+        rank_links=[]
+        for member in sorted(family,key=lambda r:r["quality_rank"]):
+            match=links.get(member["enchant_id"])
+            if not (type(match) is dict
+                    and type(match.get("simc_rank_rows")) is list
+                    and len(match["simc_rank_rows"])==1
+                    and all(match["simc_rank_rows"][0].get(k)==member[k]
+                            for k in ("enchant_id","quality_rank",*fields))
+                    and type(match.get("physical_items")) is list):
+                break
+            eligible=[p for p in match["physical_items"]
+                      if type(p) is dict
+                      and p.get("exact_join")==
+                          "WAGO_301_CRAFTDATA_QUALITY_TO_SIMC_ID"
+                      and type(p.get("crafting_data_id")) is int
+                      and p["crafting_data_id"]>0
+                      and type(p.get("quality_rank_wago")) is int
+                      and type(p.get("wago_quality_row_id")) is int
+                      and type(p.get("item_id")) is int
+                      and p["item_id"]>0
+                      and type(p.get("expansion_id")) is int
+                      and p["expansion_id"]==
+                          physical_v583.get("expansion_id")]
+            rank_links.append((member,eligible))
+        if len(rank_links)!=len(family):
+            continue
+        common=set(p["crafting_data_id"] for p in rank_links[0][1])
+        for _,options in rank_links[1:]:
+            common.intersection_update(p["crafting_data_id"] for p in options)
+        if len(common)!=1:
+            continue
+        crafting_id=next(iter(common))
+        selected=[]
+        for member,options in rank_links:
+            exact=[p for p in options if p["crafting_data_id"]==crafting_id]
+            if len(exact)!=1:
+                break
+            selected.append({"enchant_id":member["enchant_id"],
+                             "simc_rank":member["quality_rank"],
+                             "wago_rank":exact[0]["quality_rank_wago"],
+                             "physical_item_id":exact[0]["item_id"],
+                             "wago_quality_row_id":exact[0]["wago_quality_row_id"]})
+        if (len(selected)!=len(family)
+                or len(set(p["physical_item_id"] for p in selected))!=len(selected)
+                or any(selected[i]["wago_rank"]>=selected[i+1]["wago_rank"]
+                       for i in range(len(selected)-1))):
+            continue
+        payload={"source_scope":"SEALED_SAME_BUILD_SAME_CRAFTING_DATA_FAMILY",
+                 "v191_stage_sha256":v191_sha,"v583_stage_sha256":v583_sha,
+                 "simc_token":source["simc_token"],
+                 "item_class":source["item_class"],
+                 "inventory_type_mask":source["inventory_type_mask"],
+                 "item_subclass_mask":source["item_subclass_mask"],
+                 "crafting_data_id":crafting_id,"ranks":selected,
+                 "highest_enchant_id":eid,
+                 "game_build":catalog["game_build"]}
+        ready[eid]={
+            "verified_quality_rank":source["quality_rank"],
+            "quality_source_sha256":digest(canonical(payload).encode("utf8")),
+            "source_quality_family_verified":True,
+            "same_build_physical_join_verified":True,
+            "exact_application_scope_verified":True,
+            "quality_owner":"SEALED_V191_V583_CRAFTING_FAMILY_NOT_EFFECT_STRENGTH"}
+    return ready
+
+
 def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
                                            catalog_path, stage_attestations,
-                                           public_rows):
+                                           public_rows,
+                                           physical_enchant_source=None):
     """Consume ORIGINAL sealed v241/v217 source joins; no new trust gate.
 
     This attests only exact source ItemID/token/slot-mask provenance within
@@ -1904,6 +2041,44 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
                 if input_route_verified else {})
     input_route_verified=(input_route_verified and
                           len(v211_by_id)==len(classified))
+    # The v583 physical relation is optional and may be absent in an
+    # otherwise valid G/J/F/O Build. Reuse its sealed compact projection:
+    # never re-fetch Wago, certify spell mechanics, or block the base budget.
+    original_quality={}
+    if physical_enchant_source is not None:
+        try:
+            link=physical_enchant_source
+            stage=link["source_stage"]
+            rel=stage["output_paths"]["candidate"]
+            path=pathlib.Path(link["candidate_path"]).resolve()
+            original=stage_root/"fresh_source"/"v191_candidate.json"
+            need(type(rel) is str and rel.startswith("source/")
+                 and path==stage_root/rel and path.is_file()
+                 and not path.is_symlink() and path.stat().st_size<=25_000_000
+                 and original.is_file() and not original.is_symlink(),
+                 "V607_OPTIONAL_QUALITY_STAGE_PATH_INVALID")
+            stage_receipt=stage_engine._read_receipt(
+                stage_root/".stage_receipts"/(stage["stage_id"]+".json"))
+            raw=path.read_bytes()
+            need(stage_receipt.get("receipt_sha256")==stage["receipt_sha256"]
+                 and stage_receipt.get("output_paths",{}).get("candidate")==rel
+                 and stage_receipt.get("outputs",{}).get("candidate",{})
+                     .get("sha256")==digest(raw)
+                 and link.get("status")==
+                     "PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",
+                 "V607_OPTIONAL_QUALITY_STAGE_SHA_INVALID")
+            v191_original,v191_hash=environment_manifest.read_json(original)
+            need(v191_hash==source_provenance["v191"]["sha256"],
+                 "V607_OPTIONAL_V191_SOURCE_SHA_INVALID")
+            original_quality=_v607_sealed_highest_crafting_quality(
+                catalog=catalog,original_v191=v191_original,
+                physical_v583=json.loads(raw),
+                v191_sha=stamps["v191"],
+                v583_sha=stage["receipt_sha256"])
+        except (EnvironmentBuildBlocked,OSError,ValueError,TypeError,
+                KeyError,AttributeError,IndexError):
+            # Optional item pending; never block verified base G/J/F/O.
+            original_quality={}
     proofs={}
     for row in public_rows:
         item=catalog_items.get(row["enchant_id"])
@@ -1931,6 +2106,20 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
                 "identity":identity,
                 "status":"EXACT_SOURCE_RELATION_VERIFIED",
                 "evidence_sha256":digest(canonical(payload).encode("utf8"))}}
+        # Exact Wago CraftingData rank family, original SimC ID/masks,
+        # and current build are the needed user-option quality facts.
+        # Do NOT request spell/proc/effective-stat dominance: SimC owns that.
+        family=original_quality.get(row["enchant_id"])
+        if family is not None:
+            quality_payload={"identity":identity,**family,
+                             "v217_source_sha256":
+                                 proofs[row["enchant_id"]]["source_relation"]
+                                     ["evidence_sha256"]}
+            proofs[row["enchant_id"]]["product_input"]={
+                "identity":identity,
+                "status":auto_admission.PROOF_STATUSES["product_input"],
+                "evidence_sha256":digest(canonical(quality_payload).encode("utf8")),
+                **family}
         classified_row=v211_by_id.get(row["enchant_id"])
         if (input_route_verified and type(classified_row) is dict
             and item.get("classification")==classified_row
@@ -2302,7 +2491,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 pinned_dbc_gem_source=None,
                                 native_gear_gem_source=None,
                                 policy_A_v217_stages=None,
-                                pinned_gem_simc_source_folder=None):
+                                pinned_gem_simc_source_folder=None,
+                                policy_A_v583_physical_source=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
 
     This does not install an environment. Reuse authenticated source
@@ -2329,7 +2519,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             source_relations=_v217_policy_A_source_relation_receipts(
                 catalog=source,artifact_sha256=raw_sha,catalog_path=supplied,
                 stage_attestations=policy_A_v217_stages,
-                public_rows=ui.get("enchant_candidates",{}).get("items",[]))
+                public_rows=ui.get("enchant_candidates",{}).get("items",[]),
+                physical_enchant_source=policy_A_v583_physical_source)
         prepared_options=None
         if source_relations:
             prepared_options,projected=(
@@ -7854,7 +8045,11 @@ def _fresh_source_owner_merge_policy_A_original_source_relation(
              and type(parts) is dict
              and set(parts) in ({"source_relation"},
                                 {"source_relation","simc_input"},
+                                {"source_relation","product_input"},
+                                {"source_relation","simc_input","product_input"},
                                 {"source_relation","simc_input",
+                                 "chmv_budget"},
+                                {"source_relation","simc_input","product_input",
                                  "chmv_budget"})
              and type(parts["source_relation"]) is dict,
              "V216_POLICY_A_V217_SOURCE_RELATION_SHAPE_DRIFT")
@@ -7899,6 +8094,29 @@ def _fresh_source_owner_merge_policy_A_original_source_relation(
                  existing["simc_input"]==simc,
                  "V216_POLICY_A_PROVIDER_SIMC_INPUT_CONFLICT")
             incoming["simc_input"]=dict(simc)
+        if "product_input" in parts:
+            product=parts["product_input"]
+            need(type(product) is dict
+                 and product.get("identity")==ident
+                 and product.get("status")==auto_admission.PROOF_STATUSES[
+                     "product_input"]
+                 and type(product.get("evidence_sha256")) is str
+                 and season_budget_contract.SHA.fullmatch(
+                     product["evidence_sha256"]) is not None
+                 and product.get("source_quality_family_verified") is True
+                 and product.get("same_build_physical_join_verified") is True
+                 and product.get("exact_application_scope_verified") is True
+                 and product.get("quality_owner")==
+                     "SEALED_V191_V583_CRAFTING_FAMILY_NOT_EFFECT_STRENGTH"
+                 and type(product.get("verified_quality_rank")) is int
+                 and type(product.get("quality_source_sha256")) is str
+                 and season_budget_contract.SHA.fullmatch(
+                     product["quality_source_sha256"]) is not None,
+                 "V607_POLICY_A_SOURCE_QUALITY_IDENTITY_OR_OWNER_INVALID")
+            need("product_input" not in existing or
+                 existing["product_input"]==product,
+                 "V607_POLICY_A_PROVIDER_PRODUCT_QUALITY_CONFLICT")
+            incoming["product_input"]=dict(product)
         if "chmv_budget" in parts:
             owner=parts["chmv_budget"]
             zero=dict.fromkeys(season_budget_contract.STATS,0)
@@ -8638,6 +8856,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         "v191_stage":source_compilation.get("v191_stage"),
                         "v211_stage":source_compilation.get("v211_stage"),
                         "v213_stage":source_compilation.get("v213_stage")},
+                    policy_A_v583_physical_source=collected.get(
+                        "fresh_permanent_enchant_item_source"),
                     budget_evidence=zero_history_budget_evidence,
                     gem_layout_receipt=zero_history_gem_layout,
                     gem_rating_by_id=zero_history_gem_ratings,
