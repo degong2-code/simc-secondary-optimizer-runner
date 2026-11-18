@@ -499,11 +499,17 @@ function drawClassSpecTiles(){
     specs.appendChild(btn);
   }
 }
+// This is an advisory UI check. Unlike valueInt(), it never throws while
+// the user clears or edits the number field; the server remains authoritative.
+function validTargetIlevel() {
+  const raw=field("ilevel");
+  return /^[0-9]+$/.test(raw) && Number.isSafeInteger(Number(raw)) &&
+    Number(raw)>=1 && Number(raw)<=1000;
+}
 function hasRequiredSelections(){
   return Boolean(state.token&&field("spec")&&field("race")&&
     field("trinket1")&&field("trinket2")&&
-    field("trinket1")!==field("trinket2")&&
-    Number.isInteger(Number(field("ilevel")))&&Number(field("ilevel"))>0);
+    field("trinket1")!==field("trinket2")&&validTargetIlevel());
 }
 
 function setNotice(message, error=false) {
@@ -1688,7 +1694,10 @@ function verifiedInstalledGearScopeMatchesRun(build,ilevel) {
 function optimizerNeedsSeasonPreparation() {
   const build=field("season-game-build") ||
     state.verifiedInstalledBuildFromThisPage;
-  return !verifiedInstalledGearScopeMatchesRun(build,valueInt("ilevel"));
+  // Status refresh must not raise before withBusy() can show an input error.
+  // A temporarily invalid ilvl is not a verified installed season scope.
+  if(!validTargetIlevel())return true;
+  return !verifiedInstalledGearScopeMatchesRun(build,Number(field("ilevel")));
 }
 // v568: existing v113/v216/v212 source owners only. This user click does
 // not automatically run DPS; exact installed SHA gear is required first.
@@ -1911,7 +1920,7 @@ function buttonState(active=false,ready=false) {
   $("start-btn").textContent=needsEnvironment?
     "시즌 환경 준비 · 장신구 목록 불러오기":"최적 스탯 찾기";
   $("start-btn").disabled=busy||active||!state.token||
-    (!needsEnvironment&&!hasRequiredSelections());
+    !validTargetIlevel()||(!needsEnvironment&&!hasRequiredSelections());
   $("resume-btn").disabled=busy||active||!state.session||state.longrunCompleted;
   $("cache-btn").disabled=busy||active||!state.session||!ready;
   $("cancel-btn").disabled=busy||!active;

@@ -2800,6 +2800,76 @@ const inputs={current_season_product:true,
         self.assertNotIn("flask",options)
         self.assertNotIn("bis",str(options).lower())
 
+    def test_v598_invalid_target_ilevel_does_not_throw_during_button_refresh(self):
+        """Real UI functions: editing/blank ilvl must not break buttonState."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+function cut(start,end) {
+  const a=raw.indexOf(start);
+  const b=raw.indexOf(end,a);
+  assert(a>=0&&b>a,"real UI source block missing: "+start);
+  return raw.slice(a,b)+"\n";
+}
+const code=[
+  cut("function validTargetIlevel() {","function setNotice("),
+  cut("function optimizerNeedsSeasonPreparation() {","// v568:"),
+  cut("function buttonState(active=false,ready=false) {","async function withBusy(")
+].join("\n");
+const nodes={};
+const $=id=>nodes[id]??={value:"",textContent:"",disabled:false};
+const field=id=>String($(id).value).trim();
+for(const [id,value] of Object.entries({
+  "season-game-build":"12.1.5.70783","spec":"hunter/survival",
+  "race":"human","trinket1":"270175","trinket2":"270173"
+}))$(id).value=value;
+const state={token:"local-token",verifiedInstalledBuildFromThisPage:
+ "12.1.5.70783",busy:false,session:"",longrunEnabled:false,
+ longrunResultReady:false,longrunCompleted:false};
+const matches=(build,level)=>build==="12.1.5.70783"&&level===334;
+const funcs=Function("state","$","field","verifiedInstalledGearScopeMatchesRun",
+ "valueInt",code+
+ "return {validTargetIlevel,hasRequiredSelections,"+
+ "optimizerNeedsSeasonPreparation,buttonState};")(
+  state,$,field,matches,()=>{throw Error("STATUS_MUST_NOT_CALL_VALUEINT");});
+for(const bad of ["","0","1001","1e2","-2","foo","334.5"]) {
+  $("ilevel").value=bad;
+  assert.strictEqual(funcs.validTargetIlevel(),false,bad);
+  assert.strictEqual(funcs.optimizerNeedsSeasonPreparation(),true,bad);
+  funcs.buttonState();
+  assert.strictEqual($("start-btn").disabled,true,
+     "invalid ilvl must not enable a season Build: "+bad);
+}
+$("ilevel").value="334";
+assert.strictEqual(funcs.validTargetIlevel(),true);
+assert.strictEqual(funcs.optimizerNeedsSeasonPreparation(),false);
+funcs.buttonState();
+assert.strictEqual($("start-btn").disabled,false);
+assert.strictEqual($("start-btn").textContent,"최적 스탯 찾기");
+$("ilevel").value="335";
+assert.strictEqual(funcs.optimizerNeedsSeasonPreparation(),true);
+funcs.buttonState();
+assert.strictEqual($("start-btn").disabled,false);
+assert($("start-btn").textContent.includes("시즌 환경 준비"));
+$("trinket2").value="";
+funcs.buttonState();
+assert.strictEqual($("start-btn").disabled,false,
+ "preparation may start before two trinkets are chosen");
+$("ilevel").value="";
+funcs.buttonState();
+assert.strictEqual($("start-btn").disabled,true);
+console.log("V598_TARGET_ILEVEL_INPUT_REFRESH_PASS");
+"""
+        result=subprocess.run([node,"-e",script,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V598_TARGET_ILEVEL_INPUT_REFRESH_PASS",result.stdout)
+
     def test_ui_static_get_and_options_do_not_touch_user_sessions(self):
         # API test uses a different root and no configured SimC binary.
         import tempfile
