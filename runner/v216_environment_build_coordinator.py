@@ -1913,6 +1913,17 @@ def _v607_sealed_highest_crafting_quality(*, catalog, original_v191,
         if len(common)!=1:
             continue
         crafting_id=next(iter(common))
+        # The exact Wago crafting family must contain NO additional
+        # physical quality rank whose SimC ID is missing or has drifted
+        # into another token/class/inventory/subclass family.
+        physical_family_ids={
+            link["enchant_id"] for link in physical_v583["matches"]
+            if any(type(p) is dict and p.get("exact_join")==
+                   "WAGO_301_CRAFTDATA_QUALITY_TO_SIMC_ID"
+                   and p.get("crafting_data_id")==crafting_id
+                   for p in link["physical_items"])}
+        if physical_family_ids!={member["enchant_id"] for member in family}:
+            continue
         selected=[]
         for member,options in rank_links:
             exact=[p for p in options if p["crafting_data_id"]==crafting_id]
