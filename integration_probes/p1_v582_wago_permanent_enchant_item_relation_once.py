@@ -129,9 +129,12 @@ def wago_join(directory, simc_by_id, highest, expansion_id):
     uses = {}
     for eid, ids in relations.items():
         value = item_effects.get(eid)
-        if value is None or value["trigger_type"] != 0 or not value["spell_id"]:
+        # Enchant scroll ItemEffects may use trigger types other than 0.
+        # Keep the observed type; do not borrow v280 food/flask ON_USE=0.
+        if value is None or not value["spell_id"]:
             continue
-        uses.setdefault(value["spell_id"], []).extend((iid, eid) for iid in ids)
+        uses.setdefault(value["spell_id"], []).extend(
+            (iid, eid, value["trigger_type"]) for iid in ids)
     observed = spell.scan_spell_effects(root / "SpellEffect.csv", set(uses))
     found = {}
     wago_unmatched = set()
@@ -143,15 +146,16 @@ def wago_join(directory, simc_by_id, highest, expansion_id):
         if target_id not in simc_by_id:
             wago_unmatched.add(target_id)
             continue
-        for iid, item_effect_id in uses.get(effect["spell_id"], []):
+        for iid, item_effect_id, trigger_type in uses.get(effect["spell_id"], []):
             unique = (target_id, iid, effect["spell_id"], item_effect_id,
-                      effect["effect_index"], effect["difficulty_id"])
+                      trigger_type, effect["effect_index"], effect["difficulty_id"])
             if unique in seen:
                 continue
             seen.add(unique)
             found.setdefault(target_id, []).append({
                 **physical_ids[iid], "apply_spell_id": effect["spell_id"],
                 "item_effect_id": item_effect_id,
+                "item_effect_trigger_type": trigger_type,
                 "effect_index": effect["effect_index"],
                 "difficulty_id": effect["difficulty_id"],
                 "exact_join": "WAGO_SPELL_EFFECT_53_MISC_EQUALS_SIMC_ENCHANT_ID"})
