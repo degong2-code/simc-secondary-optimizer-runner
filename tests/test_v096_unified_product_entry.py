@@ -18,6 +18,78 @@ from test_v091_weapon_oil_external_adapter import (
 class InstalledE0NativeProfileInputTests(unittest.TestCase):
     """Original v212 CHMV E0 + actual SimC item fields, zero Native/effect probes."""
 
+    def test_admitted_fresh_source_rebinds_signed_e0_into_native_identity(self):
+        """Original v096 signed installed source path; no SimC subprocess."""
+        from tests.test_v212_environment_manifest import (
+            SelectedPermanentEnchantE0BudgetTests)
+        import v212_environment_manifest as installed
+        zero=dict.fromkeys(installed.season_budget.STATS,0)
+        doc=SelectedPermanentEnchantE0BudgetTests().installed([{
+            "enchant_id":89999,"simc_token":"enchant_ring__synthetic_e0",
+            "slot":"finger1/finger2","ui_selectable":True,
+            "verified_fixed_E":zero,
+            "chmv_budget_receipt_sha256":"d"*64}])
+        doc["trusted_budget_component_source_identities"]={
+            k:{"source_sha256":str(i)*64}
+            for i,k in enumerate(("G","J","F","O"),1)}
+        F={**zero,"versatility_rating":165}
+        doc["official_F_physical_source"]={
+            "static_CHMV_vector":F,"F_rating":165,
+            "simc_input_token":"test_flask"}
+        profile="\n".join((
+            "hunter=Selected","flask=test_flask",
+            "finger1=id=268266,ilevel=334,enchant_id=89999",
+            "finger2=id=268268,ilevel=334",""))
+        normalized={
+            "scenario":{"target":{"mode":"manual_total",
+                "ilevel":334,"manual_total":3107}},
+            "budget":{"T":3107,"J":92,"F":165,
+                      "external_temporary_rating":zero}}
+        with mock.patch.object(installed,
+                "verify_fresh_installed_environment",return_value=True):
+            preview=installed.preview_installed_selected_enchant_budget(
+                document=doc,slot="finger1",item_id=268266,
+                enchant_id=89999)
+            selection={"identity_sha256":preview["selected_identity_sha256"],
+                       "slot":"finger1","item_id":268266,
+                       "enchant_id":89999}
+            original_load={"stage_receipt_sha256":"f"*64}
+            season={"schema":entry.FRESH_SEASON_SCHEMA,
+                    "installed_environment_path":"/fake/v212.json",
+                    "installed_manifest_sha256":doc["manifest_sha256"],
+                    "oil_by_hand":{},"selected_user_installed_E0":selection}
+            with (mock.patch.object(entry,
+                    "_verified_installed_fresh_v217",
+                    return_value=(doc,original_load)),
+                  mock.patch.object(entry.contract,"normalize",
+                    return_value=normalized)):
+                result=entry._admitted_fresh_season_source(
+                    manifest_path=pathlib.Path("/fake/manifest.json"),
+                    season=season,revision="d"*40,user_scenario={},
+                    flask_F=F,oil_hands=[],profile=profile)
+            self.assertEqual(result["season_budget"]["base_B"],3107)
+            self.assertEqual(result["season_budget"]["final_T"],3107)
+            self.assertEqual(result["selected_user_installed_E0"]["choice"],
+                             {"finger1":89999})
+            self.assertEqual(result["selected_user_installed_E0"]["fixed_E"],
+                             zero)
+            self.assertEqual(len(result["season_source_identity"][
+                "source_input_sha256"]),64)
+            # Modified options may not replay under the same signed identity.
+            changed={**season,"selected_user_installed_E0":{
+                **selection,"enchant_id":89998}}
+            with (mock.patch.object(entry,
+                    "_verified_installed_fresh_v217",
+                    return_value=(doc,original_load)),
+                  mock.patch.object(entry.contract,"normalize",
+                    return_value=normalized)):
+                with self.assertRaises(entry.EntryBlocked):
+                    entry._admitted_fresh_season_source(
+                        manifest_path=pathlib.Path("/fake/manifest.json"),
+                        season=changed,revision="d"*40,user_scenario={},
+                        flask_F=F,oil_hands=[],profile=profile)
+
+
     def test_signed_v212_e0_option_matches_exact_finger_profile_once(self):
         from tests.test_v212_environment_manifest import (
             SelectedPermanentEnchantE0BudgetTests)
