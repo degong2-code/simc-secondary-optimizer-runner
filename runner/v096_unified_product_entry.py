@@ -383,7 +383,14 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
                 "selected_user_installed_E0_chmv_owner":
                    bound_E0["selected_identity"][
                        "chmv_budget_receipt_sha256"]}
-               if bound_E0 is not None else {})},
+               if bound_E0 is not None else {}),
+            **({"selected_user_installed_E0_multi_identities":[
+                   {"slot":item["slot"],
+                    "identity_sha256":proof["selected_identity_sha256"],
+                    "chmv_owner":proof["selected_identity"][
+                        "chmv_budget_receipt_sha256"]}
+                   for item,proof in zip(selected_multi,bound_multi)]}
+               if bound_multi is not None else {})},
             sort_keys=True,separators=(",",":")).encode("utf8")).hexdigest()}
     budget={"game_build":doc["game_build"],
             "simc_revision":doc["simc_revision"],
@@ -410,7 +417,17 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
                     "enchant_id":selected_E0["enchant_id"],
                     "fixed_E":dict(bound_E0["fixed_E"]),
                     "effect_proc_dps_owner":"SimC"}}
-               if bound_E0 is not None else {})}
+               if bound_E0 is not None else {}),
+            **({"selected_user_installed_E0_multi":{
+                    "status":"EXACT_INSTALLED_MULTI_ARMOR_E0_PROFILE_BOUND",
+                    "choice":{item["slot"]:item["enchant_id"]
+                              for item in selected_multi},
+                    "selected_identity_sha256":[
+                        proof["selected_identity_sha256"]
+                        for proof in bound_multi],
+                    "fixed_E":dict(zeros),
+                    "effect_proc_dps_owner":"SimC"}}
+               if bound_multi is not None else {})}
 
 
 
@@ -851,8 +868,10 @@ def source(manifest_path):
         # and one physical SimC enchant_id have ALREADY been rechecked in
         # _admitted_fresh_season_source; no extra Native effect/proc Gate.
         if (season_source is not None and
-                "selected_user_installed_E0" in season_source):
-            bound=season_source["selected_user_installed_E0"]
+                ("selected_user_installed_E0" in season_source or
+                 "selected_user_installed_E0_multi" in season_source)):
+            bound=(season_source.get("selected_user_installed_E0") or
+                   season_source["selected_user_installed_E0_multi"])
             need(user[NONCHMV_ENCHANT_FIELD]==bound["choice"] and
                  all(value==0 for value in bound["fixed_E"].values()),
                  "FRESH_SELECTED_E0_USER_CHOICE_AND_BUDGET_DRIFT")
