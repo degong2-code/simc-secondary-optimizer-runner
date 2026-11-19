@@ -256,7 +256,8 @@ class SealedCraftingQualityTests(unittest.TestCase):
                 "catalog":{"enchants":{"items":[category_item]}},
                 "v196_enchant_source":{"rows":[
                     {"enchant_id":99012,"token":self.token,"quality_rank":2,
-                     "inventory_type_mask":self.mask}]}}
+                     "item_class":4,"inventory_type_mask":self.mask,
+                     "item_subclass_mask":0}]}}
             public={"enchant_id":99012,"token":self.token,
                     "highest_source_quality_rank":2,"source_slots":["feet"]}
             def produce():
