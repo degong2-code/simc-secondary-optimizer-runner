@@ -112,6 +112,9 @@ def run(binary,output_folder,*,postinstall=None):
             E_repair=comp.get("optional_enchant_E_repair_plan_unadmitted")
             if type(E_repair) is dict:
                 doc["optional_enchant_E_repair_plan_unadmitted"]=E_repair
+            measured=comp.get("optional_permanent_enchant_E_native_repair")
+            if type(measured) is dict:
+                doc["original_v633_E_native_repair"]=measured
             doc["real_v583_source_status"]=physically.get("status")
             doc["real_v583_source_counts"]=physically.get("counts")
             doc["new_core_environment_native_calls"]=outcome.get("native_calls")
