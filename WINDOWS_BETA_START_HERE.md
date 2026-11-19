@@ -1,6 +1,6 @@
 # SIMC Secondary Optimizer — Windows 로컬 베타 시작
 
-## 지금 처음 실행하는 사용자 — 최신 소스 베타 절차 (2026-11-19)
+## 지금 처음 실행하는 사용자 — 최신 소스 베타 절차 (2026-11-20)
 
 이 문서의 아래 **날짜별 v181~v581 설명은 작성 당시 기록**입니다. 지금 사용하는 ZIP에는 이 안내가 들어 있어야 하며, 오래전에 다운로드한 ZIP은 GitHub 코드 변경만으로 자동 갱신되지 않습니다.
 
@@ -11,9 +11,17 @@
 5. 준비된 **같은 빌드·ilvl·옵션의 검증 설치 SHA**가 표시된 다음 별도의 **`최적 스탯 찾기`**를 클릭합니다. 이 실행은 기본적으로 **최대 64개 적응형 SimC 후보 탐색**이며 자동 T는 검증된 시즌 G/J/F/O 및 정확한 선택 고정치로 결정합니다. **수동 T가 입력되면 그 총량이 최우선**이고, 기름 O는 T 안에서 비자유분배, 마부 E·특수장비 L은 중복 가산 없이 고정 하한으로 보호합니다.
 6. 취소해도 같은 입력·바이너리·SimC·시즌·후보·iterations의 세션/캐시는 유지됩니다. 재시작 후 **`결과 확인 → 이 PC의 이전 세션 불러오기`**에서 다시 열어 이어 실행하거나 완료된 절대 CHMV rating·비율·DPS·SEM·**95% 판정**·근접 대안을 열람합니다. 95% 방향 미확정과 관측 1순위는 별도로 표시하며 전역 최적해 증명이 아닙니다.
 
-**현재 검증의 정확한 경계:** [실제 Windows 70961 마부 38개 정적 E 자동 등록 v633](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44478946469), [E+ 두 반지/가슴 E0의 자동 B=3165·취소/재개 v636](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44486603654), [수동 최종 T=3500·세 마부·Native4·재시작/재개 v637](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44488595284) **PASS**. [동일 시즌 E0 한 부위의 실제 64후보·결과 저장·재열람 v624](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44454908607) **별도 PASS**. 이를 **모든 전문화·마부 조합의 64후보 완주, 개인 Windows PC 설치 확인, 전체 제품 E2E 완료**로 확대하지 않습니다.
+**현재 실증된 ZIP 범위:** [v638 Windows ZIP 자체 실제 KR 70961 환경 구축·E+ 두 반지·수동 T3500·Native4 취소/재개](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44508695759)와 [v639 **동일 원본 ZIP**의 E0 대표 사용자 Native64 완주·DPS/SEM/95%·근접 대안·결과 저장/재열람](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44539361949)이 각각 **PASS**입니다. 후자는 징벌 성기사·ilvl334·자동 T3107·가슴 마부7957 조건입니다. **수동 T3500·양수 E58의 64회 완주, 26개 전문화 전체, 개인 PC 첫 설치는 별개 미검증 범위**입니다.
 
-**배포 상태:** 이 ZIP은 **Python 소스 Windows 베타**이고 독립 설치형 EXE나 내장 SimC 배포판이 아닙니다. 본인 PC의 개별 키·원본 설치·세션·캐시는 ZIP에 포함되지 않으며 ZIP 교체 시 `%USERPROFILE%\SIMC_Secondary_Optimizer\runs`를 삭제/덮어쓰면 안 됩니다. `full_product_e2e=PENDING`.
+**배포 상태:** 이 ZIP은 **Python 소스 Windows 베타**이고 독립 설치형 EXE나 내장 SimC 배포판이 아닙니다. 본인 PC의 인증키·SimC 설치·세션·캐시는 ZIP에 포함되지 않습니다. ZIP을 교체해도 `%USERPROFILE%\SIMC_Secondary_Optimizer\runs`와 `%LOCALAPPDATA%\SIMC_Secondary_Optimizer\web-python`을 임의 삭제/초기화하지 마세요. 대표 1건의 ZIP E2E는 PASS지만 **전체 제품 범위의** `full_product_e2e=PENDING`은 유지됩니다.
+
+### 첫 실행이 막힐 때 — 먼저 확인할 것
+
+- **Python을 찾지 못함:** Python 3.12 이상이 없으면 BAT가 `winget` 설치 여부를 별도 확인합니다. 설치 후 실행 중인 CMD가 새 PATH를 읽지 못할 때는 Python 3.12 표준 설치 경로를 검증하고, 찾지 못하면 공식 Python 사이트에서 수동 설치 후 다시 실행하도록 안내합니다. 실제 모든 PC의 `winget` 설치 성공을 보장하지 않습니다.
+- **웹 라이브러리 설치 동의:** 처음 또는 복구가 필요할 때만 `Y/N`을 묻고 `Y`일 때만 사용자별 별도 Python 환경에 설치합니다. `N`이면 설치하지 않습니다. 사용자 서버 런타임은 FastAPI·Uvicorn 중심이며 HTTP 시험 클라이언트 라이브러리를 설치 요구사항에 넣지 않습니다. 회사 PC의 설치 정책·네트워크 차단은 해당 출력 오류를 확인합니다.
+- **웹 브라우저가 안 열림:** CMD 창에 표시된 `http://127.0.0.1:8765/`를 직접 엽니다. 이미 포트 8765를 점유한 프로그램이 있다면 먼저 충돌을 해소합니다. 서버는 로컬 전용이며 외부 공개 주소가 아닙니다.
+- **SimC/시즌 준비가 멈춤:** 정확한 Windows `simc.exe`와 게임 빌드가 맞는지, 필요한 원본 API 키와 인터넷 접근이 준비됐는지 확인합니다. **동일 빌드 검증값이 없으면 PENDING을 그대로 유지**하고 과거 시즌 G/J/F/O를 복사해 시작하지 않습니다.
+
 
 ---
 
