@@ -2452,6 +2452,70 @@ console.log("V600_SINGLE_SIGNED_E0_FINGER2_REQUEST_AND_BLOCK_PASS");
         self.assertIn("V600_SINGLE_SIGNED_E0_FINGER2_REQUEST_AND_BLOCK_PASS",
                       res.stdout)
 
+    def test_v620_visible_armor_enchant_is_exact_existing_one_choice(self):
+        """Real UI mirror, never a new unsigned per-slot server selection."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node missing")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function synchronizeInstalledEnchantChoice(sourceId) {");
+const b=raw.indexOf("function registerHandlers() {",a);
+assert(a>=0&&b>a,"actual visible enchant mirror handler missing");
+const ids=["env-enchant-helm","env-enchant-shoulders",
+           "env-enchant-chest","env-enchant-boots"];
+const el={};
+for(const name of [...ids,"season_enchant_other",
+  "season_enchant_finger1","season_enchant_finger2"])
+  el[name]={value:"",options:[]};
+for(const [slot,name,id] of [
+  ["head","env-enchant-helm",7951],
+  ["shoulders","env-enchant-shoulders",7952],
+  ["chest","env-enchant-chest",7957],
+  ["feet","env-enchant-boots",7953]]) {
+  const key=slot+":"+id;
+  el[name].options.push({value:key,disabled:false});
+  el.season_enchant_other.options.push({value:key,disabled:false});
+}
+const $=name=>el[name],field=name=>el[name].value;
+let updates=0;
+const state={installedOtherE0Choices:
+  new Set(["head:7951","shoulders:7952","chest:7957","feet:7953"])};
+const sync=Function("state","$","field","updateBudgetPreview",
+ raw.slice(a,b)+"return synchronizeInstalledEnchantChoice;")(
+ state,$,field,()=>updates++);
+el["env-enchant-chest"].value="chest:7957";
+sync("env-enchant-chest");
+assert.strictEqual(el.season_enchant_other.value,"chest:7957",
+  "dedicated slot must mirror original v106 generic exactly-one choice");
+el["env-enchant-boots"].value="feet:7953";
+sync("env-enchant-boots");
+assert.strictEqual(el["env-enchant-chest"].value,"");
+assert.strictEqual(el.season_enchant_other.value,"feet:7953");
+el.season_enchant_finger1.value="89999";
+sync("season_enchant_finger1");
+assert.strictEqual(el.season_enchant_other.value,"");
+assert.strictEqual(el["env-enchant-boots"].value,"");
+el.season_enchant_other.value="head:7951";
+sync("season_enchant_other");
+assert.strictEqual(el["env-enchant-helm"].value,"head:7951");
+assert.strictEqual(el.season_enchant_finger1.value,"");
+el["env-enchant-head"].value="tampered";
+el["env-enchant-chest"].value="chest:99999";
+sync("env-enchant-chest");
+assert.strictEqual(el.season_enchant_other.value,"",
+  "unsigned choice must not be mirrored to actual backend controls");
+assert.strictEqual(el["env-enchant-chest"].value,"");
+assert.strictEqual(updates,5);
+console.log("V620_SIGNED_E0_PER_SLOT_PROXY_ONLY_PASS");
+"""
+        result=subprocess.run([node,"-e",script,
+            str(ROOT/"runner/webui/app.js")],capture_output=True,
+            text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V620_SIGNED_E0_PER_SLOT_PROXY_ONLY_PASS",result.stdout)
+
     def test_v467_fresh_v212_dk_runes_survive_unapproved_v213_enchants(self):
         """Real UI: sealed installed DK runes stay usable; E stays blocked."""
         import shutil,subprocess
@@ -2542,6 +2606,12 @@ assert.strictEqual($("season_enchant_finger1").disabled,true,
   "other-gear E0 does not unlock finger1");
 assert.strictEqual($("season_enchant_other").disabled,false);
 assert($("season_enchant_other").options.some(x=>x.value==="feet:91234"));
+assert.strictEqual($("env-enchant-boots").disabled,false,
+  "same signed v212 E0 feet item enables visible individual slot");
+assert($("env-enchant-boots").options.some(x=>x.value==="feet:91234"));
+for(const id of ["env-enchant-helm","env-enchant-shoulders",
+                 "env-enchant-chest"])
+  assert.strictEqual($(id).disabled,true,"unregistered slot remains locked");
 assert($("season-option-catalog-status").textContent.includes(
   "기타 일반 장비 마부 1종 선택 가능"));
 assert(!$("season-option-catalog-status").textContent.includes(
@@ -2596,6 +2666,12 @@ assert.strictEqual($("season_enchant_finger2").disabled,true);
 assert.strictEqual($("season_enchant_finger2").options.length,1);
 assert.strictEqual($("season_enchant_other").disabled,true);
 assert.strictEqual($("season_enchant_other").options.length,1);
+for(const id of ["env-enchant-helm","env-enchant-shoulders",
+                 "env-enchant-chest","env-enchant-boots"]){
+  assert.strictEqual($(id).disabled,true,
+    "stale signed E0 slots must relock when v212 SHA disappears");
+  assert.strictEqual($(id).options.length,1);
+}
 assert.strictEqual($("dk_rune_main").options.length,1);
 assert.strictEqual(compatibility,7,
   "signed E0 option render also recomputes DK rune compatibility");
