@@ -312,6 +312,58 @@ class SelectedPermanentEnchantE0BudgetTests(unittest.TestCase):
                     enchant_id=8025)
 
 
+    def test_v634_multi_signed_E_aggregate_auto_manual_and_no_duplicate_slot(self):
+        zero=dict.fromkeys(("crit_rating","haste_rating",
+                            "mastery_rating","versatility_rating"),0)
+        signed=[
+            {"enchant_id":8025,
+             "slot":"finger1/finger2","simc_token":"enchant_ring__haste",
+             "ui_selectable":True,
+             "verified_fixed_E":{**zero,"haste_rating":29},
+             "chmv_budget_receipt_sha256":"d"*64},
+            {"enchant_id":7997,
+             "slot":"finger1/finger2","simc_token":"enchant_ring__crit",
+             "ui_selectable":True,
+             "verified_fixed_E":{**zero,"crit_rating":29},
+             "chmv_budget_receipt_sha256":"e"*64},
+            {"enchant_id":7957,
+             "slot":"chest","simc_token":"enchant_chest__example",
+             "ui_selectable":True,"verified_fixed_E":dict(zero),
+             "chmv_budget_receipt_sha256":"f"*64}]
+        doc=self.installed(signed)
+        chosen=[{"slot":"finger2","item_id":268268,"enchant_id":7997},
+                {"slot":"chest","item_id":260011,"enchant_id":7957},
+                {"slot":"finger1","item_id":268266,"enchant_id":8025}]
+        with mock.patch.object(p,"verify_fresh_installed_environment",
+                               return_value=True):
+            auto=p.preview_installed_selected_enchants_budget(
+                document=doc,selected=chosen)
+            manual=p.preview_installed_selected_enchants_budget(
+                document=doc,selected=chosen,manual_final_T=3500)
+            again=p.preview_installed_selected_enchants_budget(
+                document=doc,selected=list(reversed(chosen)))
+        self.assertEqual(auto["fixed_E"],
+                         {**zero,"haste_rating":29,"crit_rating":29})
+        self.assertEqual((auto["base_B"],auto["final_T"]),(3165,3165))
+        self.assertEqual((manual["base_B"],manual["final_T"]),(3500,3500))
+        self.assertEqual(auto["selected_identity_sha256"],
+                         again["selected_identity_sha256"])
+        self.assertNotEqual(auto["selected_identity_sha256"],
+                            manual["selected_identity_sha256"])
+        self.assertEqual((auto["native_calls"],auto["network_calls"]),(0,0))
+        self.assertFalse(auto["runtime_selectable"])
+        with mock.patch.object(p,"verify_fresh_installed_environment",
+                               return_value=True):
+            with self.assertRaisesRegex(p.EnvironmentBlocked,
+                                        "ONE_PER_PHYSICAL_SLOT"):
+                p.preview_installed_selected_enchants_budget(
+                    document=doc,selected=chosen+[chosen[0]])
+            with self.assertRaisesRegex(p.EnvironmentBlocked,
+                                        "SUM_EXCEEDS_FREE_G"):
+                p.preview_installed_selected_enchants_budget(
+                    document=doc,selected=chosen,manual_final_T=300)
+
+
 class FreshEnvironmentSourceStageTests(unittest.TestCase):
     """Only season source staging; no user v098, Native or installed READY."""
 
