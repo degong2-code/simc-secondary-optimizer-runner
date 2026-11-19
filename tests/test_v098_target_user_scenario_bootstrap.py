@@ -59,6 +59,65 @@ class InstalledE0ActualV098RingTests(unittest.TestCase):
                               "options":{"enchant_id":"89999"}}},
                         mask=mask,installed_path=path)
 
+    def test_v625_two_signed_E0_armors_join_each_final_physical_item(self):
+        """Reuses v216 mask and original v212 budget for each, Native 0."""
+        from tests.test_v212_environment_manifest import (
+            SelectedPermanentEnchantE0BudgetTests)
+        zero=dict.fromkeys(boot.installed_manifest.season_budget.STATS,0)
+        doc=SelectedPermanentEnchantE0BudgetTests().installed([
+            {"enchant_id":7951,"simc_token":"enchant_head__synthetic_e0",
+             "slot":"head","ui_selectable":True,
+             "verified_fixed_E":zero,"chmv_budget_receipt_sha256":"d"*64},
+            {"enchant_id":7957,"simc_token":"enchant_chest__synthetic_e0",
+             "slot":"chest","ui_selectable":True,
+             "verified_fixed_E":zero,"chmv_budget_receipt_sha256":"e"*64}])
+        user={"target":{"ilevel":334,"final_T":None},
+              boot.SEASON_ENCHANT_FIELD:{"head":7951,"chest":7957}}
+        rows={"head":{"item_id":260001,"options":{}},
+              "chest":{"item_id":260002,"options":{}}}
+        def source_mask(slot,item_id,eid):
+            return {
+                "status":"EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED",
+                "actual_user_item_from_v098_final_rows":True,
+                "selected_slot":slot,"selected_representative_item_id":item_id,
+                "enchant_id":eid,"ui_selectable":False,
+                "policy_A_product_input_verified":False,
+                "native_calls":0,"network_calls":0}
+        mask=boot._final_user_enchant_source_mask(
+            user=user,rows=rows,consumer=source_mask)
+        self.assertEqual(mask["status"],
+            "EXACT_MULTI_ARMOR_SOURCE_MASK_MATCH_UNADMITTED")
+        self.assertEqual(set(mask["by_slot"]),{"head","chest"})
+        with tempfile.TemporaryDirectory() as td:
+            path=pathlib.Path(td)/"v212.json"
+            path.write_text("{}",encoding="utf8")
+            with (mock.patch.object(boot.installed_manifest,"read_json",
+                                   return_value=(doc,"a"*64)),
+                  mock.patch.object(boot.installed_manifest,
+                                   "verify_fresh_installed_environment",
+                                   return_value=True)):
+                chosen=boot._selected_installed_E0_multi_on_final_user_items(
+                    user=user,rows=rows,mask=mask,installed_path=path)
+                self.assertEqual(len(chosen),2)
+                self.assertEqual([x["base_B"] for x in chosen],
+                                 [3107,3107])
+                self.assertEqual(rows["head"]["options"]["enchant_id"],"7951")
+                self.assertEqual(rows["chest"]["options"]["enchant_id"],"7957")
+                with self.assertRaises(boot.UserScenarioBlocked):
+                    boot._selected_installed_E0_multi_on_final_user_items(
+                        user=user,rows={"head":{"item_id":260001,
+                                               "options":{}},
+                                        "chest":{"item_id":260003,
+                                                 "options":{}}},
+                        mask=mask,installed_path=path)
+        with self.assertRaises(boot.UserScenarioBlocked):
+            boot._final_user_enchant_source_mask(
+                user=user,rows=rows,consumer=lambda slot,item,eid:{
+                    **source_mask(slot,item,eid),
+                    "status":("SOURCE_MASK_OR_HAND_NOT_MATCHED"
+                              if slot=="head" else
+                              "EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED")})
+
     def test_e0_profile_injection_after_final_equipment_and_exact_source(self):
         from tests.test_v212_environment_manifest import (
             SelectedPermanentEnchantE0BudgetTests)
