@@ -1,0 +1,85 @@
+# First actual selected E0 permanent enchant to existing v096/v094 adaptive SimC.
+# No user gear picker, no performance/effect certification, no 26-spec loop.
+name: P1 v619 actual installed E0 enchant to original user SimC DPS once
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v619_original_real_70961_user_enchant_native_once.yml
+      - integration_probes/p1_v619_real_70961_user_enchant_dps_once.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v619-70961-one-real-user-enchant-dps
+  cancel-in-progress: false
+jobs:
+  real-original-one-user:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v619-real-user-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 48
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: 9933ffb946fb55b1fa66657b848f519ac19006e1
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70961
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Restore exact source-bound v618 Windows CLI (never rebuild here)
+        id: simc_binary
+        uses: actions/cache/restore@v4
+        with:
+          path: .v618-simc-cache
+          key: v618-simc70961-source-9933ffb946fb55b1fa66657b848f519ac19006e1-win2022-msvc-cli
+      - name: Verify cached executable source and SHA and quarantine old season data
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          if ('${{ steps.simc_binary.outputs.cache-hit }}' -ne 'true') { throw 'V619_SOURCE_BOUND_SIMC_CACHE_NOT_FOUND_NO_REBUILD' }
+          $exe=Join-Path $PWD '.v618-simc-cache/simc.exe'
+          $metadata=Join-Path $PWD '.v618-simc-cache/identity.json'
+          if (!(Test-Path $exe -PathType Leaf) -or !(Test-Path $metadata -PathType Leaf)) { throw 'V619_BINARY_CACHE_BYTES_MISSING' }
+          $stored=Get-Content -Raw $metadata | ConvertFrom-Json
+          $sha=(Get-FileHash -Algorithm SHA256 $exe).Hash.ToLowerInvariant()
+          if ($stored.source_commit -ne $env:SIMC_PINNED_SOURCE_COMMIT -or $stored.game_build -ne $env:SIMC_PINNED_GAME_BUILD -or $stored.binary_sha256 -ne $sha) { throw 'V619_ORIGINAL_70961_BINARY_IDENTITY_MISMATCH' }
+          "V619_SIMC_EXE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $env:SIMC_PINNED_SOURCE_COMMIT | Set-Content -NoNewline -Encoding ascii -Path .v619-source-commit.txt
+          $quarantine=Join-Path $env:RUNNER_TEMP 'v619-old-season-quarantine'
+          New-Item -ItemType Directory -Force $quarantine | Out-Null
+          $old=@(Get-ChildItem data -File -Filter 'current_season_*.json')
+          $old+=@(Get-ChildItem data -File -Filter 'v202_*.json')
+          $old+=@(Get-ChildItem data -File -Filter 'v206_*.json')
+          $old+=@(Get-ChildItem data/season_ordinary_gem_nominal -File -Filter '*.json')
+          foreach ($source in $old) { Move-Item -LiteralPath $source.FullName -Destination (Join-Path $quarantine $source.Name) }
+          if ($old.Count -lt 2) { throw 'V619_HISTORICAL_INPUT_QUARANTINE_NOT_APPLIED' }
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V619_DEPENDENCIES_FAILED' }
+          python -m py_compile integration_probes/p1_v610_real_installed_enchant_one_build.py integration_probes/p1_v619_real_70961_user_enchant_dps_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V619_SYNTAX_FAILED' }
+          Write-Host "V619_SOURCE_BOUND_BINARY_SHA256=$sha"
+      - name: Single real 70961 GJFO install then one selected enchant v096 adaptive DPS
+        shell: pwsh
+        timeout-minutes: 38
+        run: |
+          New-Item -ItemType Directory -Force out/v619 | Out-Null
+          python -u integration_probes/p1_v619_real_70961_user_enchant_dps_once.py --simc "$env:V619_SIMC_EXE" --source-commit-file .v619-source-commit.txt --out out/v619
+          if ($LASTEXITCODE -ne 0) { throw 'V619_EXACT_USER_FIRST_BLOCKER_SEE_COMPACT_RECEIPT' }
+      - name: Store bounded actual admission and user DPS verdicts, not personal profile
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v619-actual-installed-E0-one-user-native
+          path: |
+            out/v619/V610_REAL_ENCHANT_ADMISSION_ONE_BUILD.json
+            out/v619/V619_REAL_USER_ENCHANT_DPS.json
+            out/v619/V618_REAL_INSTALLED_V212.json
+          retention-days: 14
+          if-no-files-found: warn
