@@ -2293,10 +2293,14 @@ const b=raw.indexOf("  // Recover the exact local inputs",a);
 assert(a>=0&&b>a,"real saved enchant restore block missing");
 const input={options:[],value:"",appendChild(v){this.options.push(v);}};
 const input2={options:[],value:"",appendChild(v){this.options.push(v);}};
+const direct={};
+for(const id of ["env-enchant-helm","env-enchant-shoulders",
+                 "env-enchant-chest","env-enchant-boots"])
+  direct[id]={options:[],value:""};
 const $=id=>id==="season_enchant_finger1"?input:
   id==="season_enchant_finger2"?input2:
   id==="season_enchant_other"?{options:[],value:"",appendChild(){}}
-  :assert.fail("BAD_INPUT_ID_"+id);
+  :direct[id]??assert.fail("BAD_INPUT_ID_"+id);
 const option=(v,textContent)=>({value:v,textContent,dataset:{},
   remove(){for(const x of [input,input2]) {
     const at=x.options.indexOf(this);if(at>=0)x.options.splice(at,1);
