@@ -2242,11 +2242,12 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
                     type(comp.get("coefficient")) in (int,float) and
                     type(comp.get("scaling_id")) is int
                     for comp in static)
-                and all(type(comp.get("driver_spell_id")) is int
-                        and comp["driver_spell_id"]>0
-                        for comp in classified_row.get("spell_effects",[])
-                        if type(comp) is dict)
                 and type(classified_row.get("spell_effects")) is list
+                and all(type(comp) is dict
+                        and type(comp.get("component_index")) is int
+                        and type(comp.get("driver_spell_id")) is int
+                        and comp["driver_spell_id"]>0
+                        for comp in classified_row["spell_effects"])
             ):
                 E_candidate=dict.fromkeys(season_budget_contract.STATS,0)
                 stat_components=[comp for comp in static
@@ -8244,7 +8245,9 @@ def _fresh_source_owner_merge_policy_A_original_source_relation(
                    owner.get("static_E_evidence_owner")==
                      "PINNED_SIMC_EXACT_UNSCALED_STATIC_CHMV_DBC_COMPONENTS")) and
                  owner.get("gameplay_or_native_effect_attested") is False,
-                 "V216_POLICY_A_ORIGINAL_STATIC_E_SOURCE_PROOF_DRIFT")
+                 ("V216_POLICY_A_ORIGINAL_STATIC_E0_SOURCE_PROOF_DRIFT"
+                  if owner.get("fixed_E")==zero else
+                  "V216_POLICY_A_ORIGINAL_STATIC_E_SOURCE_PROOF_DRIFT"))
             need("chmv_budget" not in existing or
                  existing["chmv_budget"]==owner,
                  "V216_POLICY_A_PROVIDER_CHMV_E0_CONFLICT")
