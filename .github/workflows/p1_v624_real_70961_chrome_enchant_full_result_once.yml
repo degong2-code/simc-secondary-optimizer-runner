@@ -1,5 +1,6 @@
 # Real Chrome: one same-build signed 70961 E0 user scenario with exactly one
 # original 64-case full completion and result restore; the v621 partial path stays intact.
+# One-shot launch only after native-zero syntax check succeeds; source build drift aborts.
 name: P1 v624 real Chrome 70961 signed E0 full result and restore once
 on:
   push:
