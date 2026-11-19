@@ -92,13 +92,15 @@ class InstalledE0ActualV098RingTests(unittest.TestCase):
             path=pathlib.Path(td)/"v212.json"
             path.write_text("{}",encoding="utf8")
             with (mock.patch.object(boot.installed_manifest,"read_json",
-                                   return_value=(doc,"a"*64)),
+                                   return_value=(doc,"a"*64)) as read_file,
                   mock.patch.object(boot.installed_manifest,
                                    "verify_fresh_installed_environment",
                                    return_value=True)):
                 chosen=boot._selected_installed_E0_multi_on_final_user_items(
                     user=user,rows=rows,mask=mask,installed_path=path)
                 self.assertEqual(len(chosen),2)
+                self.assertEqual(read_file.call_count,1,
+                                 "a multi-slot session must read v212 once")
                 self.assertEqual([x["base_B"] for x in chosen],
                                  [3107,3107])
                 self.assertEqual(rows["head"]["options"]["enchant_id"],"7951")

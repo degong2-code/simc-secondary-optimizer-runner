@@ -1134,7 +1134,8 @@ def _historical_exact_enchant_user_scope(user, *,game_build=None,
     return False
 
 
-def _selected_installed_E0_on_final_user_item(*,user,rows,mask,installed_path):
+def _selected_installed_E0_on_final_user_item(*,user,rows,mask,installed_path,
+                                               installed_document=None):
     """Join existing signed v212 E0 to v101's ACTUAL final item, not a proc Gate.
 
     Exact v216 physical source-mask comparison is mandatory. The original
@@ -1162,8 +1163,14 @@ def _selected_installed_E0_on_final_user_item(*,user,rows,mask,installed_path):
     path=pathlib.Path(installed_path).resolve()
     need(path.is_file() and not path.is_symlink(),
          "FRESH_USER_E0_INSTALLED_V212_FILE_REQUIRED")
-    doc,_=installed_manifest.read_json(path)
-    installed_manifest.verify_fresh_installed_environment(doc)
+    # A multi-slot session reads the SAME immutable v212 once. The original
+    # preview still verifies its seal and exact per-slot ID before admission.
+    if installed_document is None:
+        doc,_=installed_manifest.read_json(path)
+    else:
+        need(type(installed_document) is dict,
+             "FRESH_MULTI_E0_INSTALLED_DOCUMENT_REQUIRED")
+        doc=installed_document
     result=installed_manifest.preview_installed_selected_enchant_budget(
         document=doc,slot=slot,item_id=rows[slot]["item_id"],
         enchant_id=eid,manual_final_T=user["target"]["final_T"])
@@ -1192,13 +1199,20 @@ def _selected_installed_E0_multi_on_final_user_items(*,user,rows,mask,
          mask.get("status")=="EXACT_MULTI_SLOT_SOURCE_MASK_MATCH_UNADMITTED"
          and set(mask.get("by_slot",{}))==set(choices),
          "FRESH_MULTI_E0_ALL_FINAL_ITEM_MASKS_REQUIRED")
+    # The previous loop performed one identical v212 JSON read PER slot.
+    # Read once, then retain v212.preview's per-item sealed validation.
+    source=pathlib.Path(installed_path).resolve()
+    need(source.is_file() and not source.is_symlink(),
+         "FRESH_MULTI_E0_INSTALLED_V212_FILE_REQUIRED")
+    document,_=installed_manifest.read_json(source)
+    installed_manifest.verify_fresh_installed_environment(document)
     selected=[]
     for slot in sorted(choices):
         single=dict(user)
         single[SEASON_ENCHANT_FIELD]={slot:choices[slot]}
         result=_selected_installed_E0_on_final_user_item(
             user=single,rows=rows,mask=mask["by_slot"][slot],
-            installed_path=installed_path)
+            installed_path=source,installed_document=document)
         need(result["fixed_E_zero_is_valid"] is True and
              not any(result["fixed_E"].values()),
              "FRESH_MULTI_E0_NO_UNKNOWN_OR_POSITIVE_E")
