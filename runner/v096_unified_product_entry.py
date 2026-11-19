@@ -219,10 +219,10 @@ def _signed_installed_user_E0_profile(*,doc,selected,profile,user_final_T,
         item_id=selected["item_id"],enchant_id=selected["enchant_id"],
         manual_final_T=user_final_T)
     need(source.get("selected_identity_sha256")==selected["identity_sha256"]
-         and source.get("fixed_E_zero_is_valid") is True
-         and not any(source["fixed_E"].values())
+         and type(source.get("fixed_E")) is dict
+         and source.get("fixed_E_in_G_once") is True
          and source.get("runtime_selectable") is False,
-         "FRESH_SELECTED_E0_SIGNED_SOURCE_OR_BUDGET_MISMATCH")
+         "FRESH_SELECTED_SIGNED_E_SOURCE_OR_BUDGET_MISMATCH")
     equipment=[line for line in profile.splitlines()
                if line.startswith(selected["slot"]+"=")]
     need(len(equipment)==1 and
@@ -292,15 +292,39 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
             expected_same_id_count=sum(
                 row["enchant_id"]==x["enchant_id"] for row in selected_multi))
             for x in selected_multi]
-        need(all(x["fixed_E_zero_is_valid"] is True and
-                 not any(x["fixed_E"].values()) for x in bound_multi),
-             "FRESH_MULTI_E0_FIXED_E_MUST_BE_ZERO")
-    if positive_id is not None:
+        need(all(x["fixed_E_in_G_once"] is True
+                 for x in bound_multi),
+             "FRESH_MULTI_SIGNED_E_SOURCE_NOT_OWNED")
+    signed=None
+    if bound_E0 is not None or bound_multi is not None:
+        import v212_environment_manifest as installed_environment
+        selected_rows=([selected_E0] if bound_E0 is not None
+                       else selected_multi)
+        actual_installed=installed_environment.preview_installed_selected_enchants_budget(
+            document=doc,
+            selected=[{"slot":x["slot"],"item_id":x["item_id"],
+                       "enchant_id":x["enchant_id"]}
+                      for x in selected_rows],
+            manual_final_T=user_final_T)
+        expected=[bound_E0] if bound_E0 is not None else bound_multi
+        need(actual_installed["selected"]==[
+             {"slot":item["slot"],"item_id":item["item_id"],
+              "enchant_id":item["enchant_id"],
+              "selected_identity_sha256":proof["selected_identity_sha256"],
+              "chmv_budget_receipt_sha256":proof["selected_identity"][
+                  "chmv_budget_receipt_sha256"]}
+             for item,proof in sorted(
+                zip(selected_rows,expected),key=lambda x:x[0]["slot"])],
+             "FRESH_MULTI_SIGNED_SOURCE_IDENTITIES_CHANGED")
+        signed=actual_installed
+        approved_B=signed["base_B"]
+        approved_T=signed["final_T"]
+    elif positive_id is not None:
         need(type(positive_id) is int and
              positive_id in positive_enchant.ENCHANTS,
              "FRESH_POSITIVE_E_ITEM_ID_INVALID")
-        # Preserve authoritative final T. v222 converts to internal B
-        # and the E+ source witness supplies a fixed stat floor once.
+        # Legacy exactly scoped E+ user witness; never a new-season
+        # default or an alternative to a signed v212 installation.
         actual=positive_enchant.project(
             doc,{"finger1":positive_id},manual_final_T=user_final_T)
         approved_B=actual["base_B"]
@@ -394,7 +418,10 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
                     "chmv_owner":proof["selected_identity"][
                         "chmv_budget_receipt_sha256"]}
                    for item,proof in zip(selected_multi,bound_multi)]}
-               if bound_multi is not None else {})},
+               if bound_multi is not None else {}),
+            **({"v634_signed_E_total":signed["fixed_E"],
+                "v634_signed_multi_identity":signed["selected_identity_sha256"]}
+               if signed is not None else {})},
             sort_keys=True,separators=(",",":")).encode("utf8")).hexdigest()}
     budget={"game_build":doc["game_build"],
             "simc_revision":doc["simc_revision"],
@@ -408,6 +435,10 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
     return {"season_budget":budget,"season_source_identity":identity,
             "oil_by_hand":selected_oil,"fresh_v212_installed":True,
             "user_manual_final_T":user_final_T,
+            **({"signed_installed_E":dict(signed["fixed_E"]),
+                "signed_installed_E_identity_sha256":
+                    signed["selected_identity_sha256"]}
+               if signed is not None else {}),
             **({"positive_user_E":actual["fixed_E"],
                 "positive_user_enchant_id":positive_id}
                if positive_id is not None else {}),
@@ -429,7 +460,7 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
                     "selected_identity_sha256":[
                         proof["selected_identity_sha256"]
                         for proof in bound_multi],
-                    "fixed_E":dict(zeros),
+                    "fixed_E":dict(signed["fixed_E"]),
                     "effect_proc_dps_owner":"SimC"}}
                if bound_multi is not None else {})}
 
@@ -847,6 +878,10 @@ def source(manifest_path):
             flask_F=user["flask_F"],oil_hands=user["oil_hands"],
             profile=profile)
         if FRESH_SEASON_FIELD in user else None)
+    if season_source is not None and "signed_installed_E" in season_source:
+        need(selected_fixed_E is None,
+             "FRESH_SIGNED_E_CONFLICTS_WITH_LEGACY_E")
+        selected_fixed_E=dict(season_source["signed_installed_E"])
     prepared=oil_adapter.prepare(
         profile,doc,fillers,cache,
         user["weapon_layout"],user["oil_hands"],
@@ -877,8 +912,8 @@ def source(manifest_path):
             bound=(season_source.get("selected_user_installed_E0") or
                    season_source["selected_user_installed_E0_multi"])
             need(user[NONCHMV_ENCHANT_FIELD]==bound["choice"] and
-                 all(value==0 for value in bound["fixed_E"].values()),
-                 "FRESH_SELECTED_E0_USER_CHOICE_AND_BUDGET_DRIFT")
+                 bound["fixed_E"]==season_source["signed_installed_E"],
+                 "FRESH_SELECTED_SIGNED_E_USER_CHOICE_AND_BUDGET_DRIFT")
             approved_nonchmv=bound
         # The previous exact v528 one-profile E0 and positive-E cases
         # retain their original scope/binary proofs and old identities.
@@ -994,7 +1029,15 @@ def source(manifest_path):
     if approved_nonchmv is not None:
         need(enchant_reference.KEY not in provenance,
              "NONCHMV_EFFECT_MUST_NOT_ADD_REFERENCE_B")
-        if "positive_user_E" in (season_source or {}):
+        if "signed_installed_E" in (season_source or {}):
+            plan["selected_signed_enchants"]=approved_nonchmv
+            plan["selected_fixed_enchant_E"]=dict(
+                season_source["signed_installed_E"])
+            plan["selected_enchant_budget_policy"]=(
+                "V634_MANUAL_FINAL_T_AUTHORITATIVE_MULTI_E_FIXED_FLOOR"
+                if season_source["user_manual_final_T"] is not None else
+                "V634_AUTO_G_PLUS_SUM_SELECTED_SIGNED_E_ONCE")
+        elif "positive_user_E" in (season_source or {}):
             plan["selected_positive_enchant"]=approved_nonchmv
             plan["selected_fixed_enchant_E"]=dict(
                 season_source["positive_user_E"])
