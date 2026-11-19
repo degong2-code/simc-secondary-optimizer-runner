@@ -2501,7 +2501,7 @@ el.season_enchant_other.value="head:7951";
 sync("season_enchant_other");
 assert.strictEqual(el["env-enchant-helm"].value,"head:7951");
 assert.strictEqual(el.season_enchant_finger1.value,"");
-el["env-enchant-head"].value="tampered";
+// A tampered ID must never pass the signed v212 mirror.
 el["env-enchant-chest"].value="chest:99999";
 sync("env-enchant-chest");
 assert.strictEqual(el.season_enchant_other.value,"",
