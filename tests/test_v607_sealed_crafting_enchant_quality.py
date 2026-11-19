@@ -130,7 +130,8 @@ class SealedCraftingQualityTests(unittest.TestCase):
                     "item_subclass_mask":0,"slot_group":"feet",
                     "slot_resolution_status":"SOURCE_MASK_RESOLVED"}
         source={**self.catalog,
-            "v196_enchant_source":{"rows":[source_row]}}
+            "v196_enchant_source":{"rows":[source_row]},
+            "catalog":{"enchants":{"items":[dict(source_row)]}}}
         public_row={"enchant_id":99012,"token":self.token,
                     "highest_source_quality_rank":2,
                     "source_slots":["feet"],"ui_selectable":False}

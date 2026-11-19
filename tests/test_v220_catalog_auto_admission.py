@@ -69,7 +69,8 @@ class AutoAdmissionTests(unittest.TestCase):
         context={"game_build":"12.1.5.70783",
                  "simc_revision":"a"*40,"manifest_sha256":"b"*64}
         source={**context,
-                "v196_enchant_source":{"rows":[original]}}
+                "v196_enchant_source":{"rows":[original]},
+                "catalog":{"enchants":{"items":[dict(original)]}}}
         row={"enchant_id":8025,"token":token,
              "highest_source_quality_rank":2,
              "source_slots":["finger1/finger2"],"ui_selectable":False}
@@ -141,6 +142,87 @@ class AutoAdmissionTests(unittest.TestCase):
         source_only=policy.decide(candidate)
         self.assertFalse(source_only["eligible"])
 
+
+    def test_v629_sealed_v213_ring_and_weapon_slot_state_reaches_installer(self):
+        """Original v196 raw rows omit slot status; v213 is the sealed owner."""
+        ctx={"game_build":"12.1.5.70961",
+             "simc_revision":"a"*40,"manifest_sha256":"b"*64}
+        original=[
+            {"enchant_id":7967,"token":"enchant_ring__example",
+             "quality_rank":2,"item_class":4,
+             "inventory_type_mask":1<<11,"item_subclass_mask":0,
+             "slot_group":"finger1/finger2",
+             "slot_resolution_status":"SOURCE_MASK_RESOLVED"},
+            {"enchant_id":8037,"token":"enchant_weapon__example",
+             "quality_rank":2,"item_class":2,
+             "inventory_type_mask":0,"item_subclass_mask":1<<7,
+             "slot_group":"WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED",
+             "slot_resolution_status":
+                 "WEAPON_SUBCLASS_PENDING_EXACT_HAND_APPLICABILITY"}]
+        raw=[{k:v for k,v in row.items() if k in (
+             "enchant_id","token","quality_rank","item_class",
+             "inventory_type_mask","item_subclass_mask")}
+             for row in original]
+        self.assertTrue(all("slot_group" not in x for x in raw))
+        source={**ctx,"v196_enchant_source":{"rows":raw},
+                "catalog":{"enchants":{"items":original}}}
+        items=[{"enchant_id":r["enchant_id"],"token":r["token"],
+                "highest_source_quality_rank":r["quality_rank"],
+                "source_slots":[r["slot_group"]],
+                "ui_selectable":False} for r in original]
+        ui={"schema":catalog.SCHEMA,
+            "status":"FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY",
+            "environment_ready":False,"season_build":ctx["game_build"],
+            "simc_revision":ctx["simc_revision"],
+            "source_catalog":{"manifest_sha256":ctx["manifest_sha256"]},
+            "enchant_candidates":{"selectable_count":0,"items":items}}
+        proofs={}
+        for row,item in zip(original,items):
+            candidate=policy.candidate_from_source_enchant(
+                ctx,item,original_source_row=row)
+            self.assertNotEqual(candidate["slot"],"SOURCE_SLOT_UNRESOLVED")
+            identity=policy._identity(candidate)
+            p={family:{"identity":dict(identity),"status":status,
+                       "evidence_sha256":str(i)*64}
+               for i,(family,status) in enumerate(
+                   policy.PROOF_STATUSES.items(),1)}
+            p["product_input"].update({
+                "exact_application_scope_verified":True,
+                "same_effect_and_use_conditions_verified":True,
+                "no_inferior_effect_components_verified":True,
+                "quality_source_sha256":"f"*64,
+                "verified_quality_rank":2})
+            p["chmv_budget"].update({
+                "no_double_count":True,"unknown_static_chmv":False,
+                "fixed_E":dict.fromkeys(policy.CHMV_STATS,0)})
+            proofs[row["enchant_id"]]=p
+        with mock.patch.object(catalog.source_bridge,"verify_catalog"):
+            prepared=catalog.prepare_verified_fresh_choices(
+                source,ui,proofs)
+            self.assertEqual(prepared["v220_exact_proof_eligible_count"],2)
+            self.assertEqual({x["slot"] for x in
+                prepared["verified_option_inputs_unpublished"]},
+                {"finger1/finger2",
+                 "WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED"})
+            self.assertTrue(all(r["verified_fixed_E"]==
+                dict.fromkeys(policy.CHMV_STATS,0) for r in
+                prepared["verified_option_inputs_unpublished"]))
+            broken=copy.deepcopy(source)
+            broken["catalog"]["enchants"]["items"][0][
+                "inventory_type_mask"]=1<<8
+            with self.assertRaisesRegex(catalog.CatalogBlocked,
+                    "V196_V213_ENCHANT_MASK_OR_SLOT_DRIFT"):
+                catalog.prepare_verified_fresh_choices(
+                    broken,ui,proofs)
+            partial=copy.deepcopy(proofs)
+            partial[7967].pop("chmv_budget")
+            remaining=catalog.prepare_verified_fresh_choices(
+                source,ui,partial)
+            self.assertEqual(len(
+                remaining["verified_option_inputs_unpublished"]),1)
+            self.assertIn("7967",
+                remaining["other_proofs_pending_by_item_id"])
+        # Synthetic receipts never authorize a real game option or SimC.
 
     def test_source_bound_dual_ring_family_is_not_an_invented_hand(self):
         """Four synthetic receipts test source semantics, NOT an actual UI grant."""

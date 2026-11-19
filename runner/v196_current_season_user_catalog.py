@@ -165,9 +165,31 @@ def prepare_verified_fresh_choices(source_catalog, source_ui,
                      for x in source_items)
          and all(x.get("ui_selectable") is False for x in items),
          "FRESH_POLICY_A_ITEM_SOURCE_ROW_DRIFT")
-    # An internal caller may not replace an unresolved ring/weapon source
-    # mask with a convenient single slot to bypass v220's applicability.
-    original_by_id={r["enchant_id"]:r for r in source_items}
+    # The v196 projection intentionally omits v213's slot_group/status.
+    # v220 can only recognize a source-verified ring family / weapon mask
+    # when it sees those ORIGINAL, already-sealed v213 source fields.
+    # Never synthesize a hand or accept unverified client fields.
+    sealed=source_catalog["catalog"]["enchants"]["items"]
+    need(type(sealed) is list and len(sealed)==len(source_items)
+         and all(type(x) is dict and type(x.get("enchant_id")) is int
+                 for x in sealed),
+         "FRESH_POLICY_A_SEALED_V213_ENCHANT_ROWS_REQUIRED")
+    original_by_id={r["enchant_id"]:r for r in sealed}
+    raw_by_id={r["enchant_id"]:r for r in source_items}
+    need(len(original_by_id)==len(raw_by_id)==len(source_items) and
+         set(original_by_id)==set(raw_by_id),
+         "FRESH_POLICY_A_V196_V213_ID_COVERAGE_DRIFT")
+    for item_id,original in original_by_id.items():
+        raw=raw_by_id[item_id]
+        need(all(original.get(k)==raw.get(k) for k in
+                 ("token","quality_rank","item_class",
+                  "inventory_type_mask","item_subclass_mask")) and
+             original.get("slot_resolution_status") in (
+                 "SOURCE_MASK_RESOLVED",
+                 "WEAPON_SUBCLASS_PENDING_EXACT_HAND_APPLICABILITY") and
+             type(original.get("slot_group")) is str and
+             bool(original["slot_group"]),
+             "FRESH_POLICY_A_V196_V213_ENCHANT_MASK_OR_SLOT_DRIFT")
     for row in items:
         original=original_by_id[row["enchant_id"]]
         if row["token"].startswith("enchant_weapon__"):
