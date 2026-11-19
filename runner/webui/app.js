@@ -923,6 +923,9 @@ function fillDefault(item) {
   $("season_enchant_finger1").value="";
   $("season_enchant_finger2").value="";
   $("season_enchant_other").value="";
+  for(const id of ["env-enchant-helm","env-enchant-shoulders",
+                    "env-enchant-chest","env-enchant-boots"])
+    $(id).value="";
   // Reset optional slots on specialization changes, including hidden extra rows.
   fillGearRows("special-rows",[]);
   fillGearRows("crafted-rows",[]);
@@ -1655,7 +1658,18 @@ function fillSessionInputs(payload) {
       prior.dataset.historic="true";otherNode.appendChild(prior);
     }
     otherNode.value=key;
-  } else otherNode.value="";
+    for(const id of ["env-enchant-helm","env-enchant-shoulders",
+                     "env-enchant-chest","env-enchant-boots"]) {
+      const node=$(id);
+      node.value=state.installedOtherE0Choices?.has(key) &&
+        Array.from(node.options).some(opt=>opt.value===key&&!opt.disabled)?
+        key:"";
+    }
+  } else {
+    otherNode.value="";
+    for(const id of ["env-enchant-helm","env-enchant-shoulders",
+                     "env-enchant-chest","env-enchant-boots"]) $(id).value="";
+  }
   // Recover the exact local inputs from this machine's saved session only.
   // No talent strings or OS file paths are stored in browser localStorage.
   $("binary").value=payload.binary;
@@ -3287,6 +3301,16 @@ function renderSeasonOptionCatalog(catalog) {
   second.disabled=true;
   other.replaceChildren(option("","마법부여 없음 (검증 대기)"));
   other.disabled=true;
+  // The dedicated visible slot controls are mirrors of the EXISTING
+  // signed, exactly-one generic E0 user input, not a new approval route.
+  const directSlotSelectors={head:"env-enchant-helm",
+    shoulders:"env-enchant-shoulders",chest:"env-enchant-chest",
+    feet:"env-enchant-boots"};
+  for(const id of Object.values(directSlotSelectors)) {
+    const node=$(id);
+    node.replaceChildren(option("","선택 없음 (검증 대기)"));
+    node.disabled=true;
+  }
   host.replaceChildren();
   if(catalog?.schema==="v196_current_season_ui_catalog_v1" &&
      catalog.status==="FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY") {
@@ -3354,6 +3378,13 @@ function renderSeasonOptionCatalog(catalog) {
       other.appendChild(option(key,
         names[item.slot]+" · 마부 #"+item.enchant_id+
         " · 정적 E=0 검증 (실물/SimC 재확인)"));
+      const directId=directSlotSelectors[item.slot];
+      if(directId) {
+        const widget=$(directId);
+        widget.appendChild(option(key,
+          "마부 #"+item.enchant_id+" · 정적 E=0 검증"));
+        widget.disabled=false;
+      }
     }
     other.disabled=state.installedOtherE0Choices.size===0;
     const signedRingCount=state.installedE0Ids.size;
@@ -3693,6 +3724,41 @@ async function rollbackSimcUpdater() {
   $("simc-update-candidate").textContent="복원 완료. 기존 세션과 계산 결과는 그대로 보존됩니다.";
   setNotice("SimC 관리 버전 복원 완료 · 사용자 원본 설치는 유지됩니다.");
 }
+// v620: independent visible armor-slot controls feed the SAME existing
+// season_enchant_other field and server-side v106/v098/v096 E0 contract.
+// One physical enchant at a time until multi-slot B/T proof is implemented.
+function synchronizeInstalledEnchantChoice(sourceId) {
+  const directIds=["env-enchant-helm","env-enchant-shoulders",
+                   "env-enchant-chest","env-enchant-boots"];
+  const rings=["season_enchant_finger1","season_enchant_finger2"];
+  let chosen=field(sourceId);
+  if(directIds.includes(sourceId)) {
+    // A stale user-edit/browser option must not be promoted by a mirror.
+    const selected=$(sourceId);
+    if(chosen && (!state.installedOtherE0Choices?.has(chosen) ||
+       !Array.from(selected.options).some(opt=>
+         opt.value===chosen&&opt.disabled!==true))) {
+      selected.value=""; chosen="";
+    }
+    $("season_enchant_other").value=chosen;
+  }
+  if(sourceId==="season_enchant_other" || directIds.includes(sourceId)) {
+    const key=field("season_enchant_other");
+    for(const id of directIds) {
+      if(id===sourceId)continue;
+      const node=$(id);
+      node.value=key && (sourceId==="season_enchant_other") &&
+        Array.from(node.options).some(opt=>opt.value===key&&
+          opt.disabled!==true) ?key:"";
+    }
+    if(key)for(const id of rings)$(id).value="";
+  } else if(rings.includes(sourceId) && chosen) {
+    for(const id of rings)if(id!==sourceId)$(id).value="";
+    $("season_enchant_other").value="";
+    for(const id of directIds)$(id).value="";
+  }
+  updateBudgetPreview();
+}
 function registerHandlers() {
   // The existing result continues to belong to its sealed session.
   // Ignore search text and unapplied profile drafts; track actual user choices.
@@ -3705,7 +3771,9 @@ function registerHandlers() {
     "optimizer-oil-enabled","optimizer-oil-loadout",
     "optimizer-oil-main-id","optimizer-oil-off-id","oil_main","oil_off",
     "season_enchant_finger1","season_enchant_finger2",
-    "season_enchant_other","dk_rune_main","dk_rune_off"
+    "season_enchant_other","env-enchant-helm","env-enchant-shoulders",
+    "env-enchant-chest","env-enchant-boots",
+    "dk_rune_main","dk_rune_off"
   ]);
   const editedUserChoice=event=>{
     const target=event.target;
@@ -3746,6 +3814,12 @@ function registerHandlers() {
   for(const button of document.querySelectorAll("[data-view]"))
     button.addEventListener("click",()=>switchView(button.dataset.view));
   $("manual-t-mode").addEventListener("change",updateManualTMode);
+  for(const id of ["season_enchant_finger1","season_enchant_finger2",
+                   "season_enchant_other","env-enchant-helm",
+                   "env-enchant-shoulders","env-enchant-chest",
+                   "env-enchant-boots"])
+    $(id).addEventListener("change",()=>
+      synchronizeInstalledEnchantChoice(id));
   $("final_T").addEventListener("input",updateBudgetPreview);
   // A verified T is scoped to the exact user choices. Any CHMV ownership
   // change invalidates its visual preview, never just the backend cache key.
