@@ -298,6 +298,47 @@ class SealedCraftingQualityTests(unittest.TestCase):
             self.assertEqual(selected["verified_fixed_E"],
                              dict.fromkeys(admission.CHMV_STATS,0))
             self.assertFalse(prepared["options_published"])
+            # v631: a genuinely unscaled, integer, same-build sealed
+            # ITEM_ENCHANTMENT_STAT source is an exact positive E value.
+            # This does not prove gameplay or grant a separate effect gate.
+            old_category=copy.deepcopy(category)
+            source_component={"component_index":1,"item_mod_id":36,
+                "item_mod":"haste_rating",
+                "category":"CHMV_SECONDARY_RATING",
+                "dbc_amount":30,"scaling_id":0,"coefficient":0.0}
+            category.update({"static_components":[source_component],
+                "static_chmv_rating_present_in_dbc":True,
+                "static_chmv_stats":["haste_rating"],
+                "budget_policy":
+                    "STATIC_E_REQUIRES_EXACT_MATCHED_NATIVE_PROFILE_AND_IS_FIXED_INSIDE_G"})
+            positive=produce()
+            self.assertEqual(positive["chmv_budget"]["fixed_E"],{
+                "crit_rating":0,"haste_rating":30,
+                "mastery_rating":0,"versatility_rating":0})
+            self.assertEqual(positive["chmv_budget"][
+                "static_E_evidence_owner"],
+                "PINNED_SIMC_EXACT_UNSCALED_STATIC_CHMV_DBC_COMPONENTS")
+            self.assertFalse(positive["chmv_budget"][
+                "gameplay_or_native_effect_attested"])
+            with mock.patch.object(catalog.source_bridge,"verify_catalog"):
+                projected=catalog.prepare_verified_fresh_choices(
+                    data,ui,{99012:positive})
+            self.assertEqual(projected[
+                "verified_option_inputs_unpublished"][0]["verified_fixed_E"][
+                "haste_rating"],30)
+            # Scaled/zero-amount/unknown source rows MUST remain pending
+            # instead of promoting a hard-coded +30 or a forged E0.
+            for changes in (
+                {"scaling_id":224},
+                {"dbc_amount":0},
+                {"coefficient":1.25},
+                {"item_mod_id":999}):
+                with self.subTest(changes=changes):
+                    category["static_components"]=[{
+                        **source_component,**changes}]
+                    self.assertNotIn("chmv_budget",produce())
+            category.clear()
+            category.update(old_category)
             joinpath.write_text(joinpath.read_text("utf8")+" ",encoding="utf8")
             # Tampered optional v583 source leaves G/J/F/O and original
             # source relation alone, without a forged quality certificate.
