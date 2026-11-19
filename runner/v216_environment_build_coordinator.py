@@ -2210,8 +2210,70 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
                     "ui_selectable":False,"source_file":None}
                 and classified_row.get("selection_status")==
                     "LOCKED_PENDING_CURRENT_SEASON_ITEM_EFFECT_PROOF")
-            if exact_source_E0:
-                E=dict.fromkeys(season_budget_contract.STATS,0)
+            # Reuse the SAME sealed SimC v211 DBC classification for exact
+            # *unscaled* positive E. This is not tooltip math or an effect
+            # simulator: the original ITEM_ENCHANTMENT_STAT mod IDs and
+            # integer base amounts are the only numerical inputs. Scaling,
+            # unknown components and non-integral values require a matched
+            # SimC static-rating measurement instead of a fabricated zero.
+            source_positive_E=None
+            stat_mod_ids={32:"crit_rating",36:"haste_rating",
+                          49:"mastery_rating",40:"versatility_rating"}
+            if (
+                classified_row.get("effect_source_status")==
+                    "DBC_STAT_AND_SPELLTEXT_SOURCE_CLASSIFIED"
+                and classified_row.get("budget_policy")==
+                    "STATIC_E_REQUIRES_EXACT_MATCHED_NATIVE_PROFILE_AND_IS_FIXED_INSIDE_G"
+                and classified_row.get("static_chmv_rating_present_in_dbc") is True
+                and type(static) is list and bool(static)
+                and classified_row.get("unknown_components")==[]
+                and classified_row.get("native_E_evidence")=={
+                    "status":"NOT_MEASURED_NEW_BUILD","static_E":None,
+                    "ui_selectable":False,"source_file":None}
+                and classified_row.get("selection_status")==
+                    "LOCKED_PENDING_CURRENT_SEASON_ITEM_EFFECT_PROOF"
+                and all(
+                    type(comp) is dict and
+                    comp.get("category") in known_nonchmv|
+                        {"CHMV_SECONDARY_RATING"} and
+                    type(comp.get("item_mod_id")) is int and
+                    type(comp.get("component_index")) is int and
+                    type(comp.get("dbc_amount")) is int and
+                    type(comp.get("coefficient")) in (int,float) and
+                    type(comp.get("scaling_id")) is int
+                    for comp in static)
+                and all(type(comp.get("driver_spell_id")) is int
+                        and comp["driver_spell_id"]>0
+                        for comp in classified_row.get("spell_effects",[])
+                        if type(comp) is dict)
+                and type(classified_row.get("spell_effects")) is list
+            ):
+                E_candidate=dict.fromkeys(season_budget_contract.STATS,0)
+                stat_components=[comp for comp in static
+                    if comp["category"]=="CHMV_SECONDARY_RATING"]
+                if (stat_components and all(
+                        comp["item_mod_id"] in stat_mod_ids
+                        and comp.get("item_mod")==stat_mod_ids[comp["item_mod_id"]]
+                        and comp["dbc_amount"]>0
+                        and comp["scaling_id"]==0
+                        and comp["coefficient"]==0
+                        for comp in stat_components)):
+                    for comp in stat_components:
+                        E_candidate[stat_mod_ids[comp["item_mod_id"]]]+=(
+                            comp["dbc_amount"])
+                    if (
+                        0<sum(E_candidate.values())<=100000
+                        and all(n<=100000 for n in E_candidate.values())
+                        and classified_row.get("static_chmv_stats")==
+                            sorted(k for k,v in E_candidate.items() if v)
+                    ):
+                        source_positive_E=E_candidate
+            if exact_source_E0 or source_positive_E is not None:
+                E=(dict.fromkeys(season_budget_contract.STATS,0)
+                   if exact_source_E0 else source_positive_E)
+                E_owner=("PINNED_SIMC_STATIC_NONCHMV_DBC_COMPONENTS"
+                         if exact_source_E0 else
+                         "PINNED_SIMC_EXACT_UNSCALED_STATIC_CHMV_DBC_COMPONENTS")
                 budget_payload={
                     "identity":identity,
                     "input_source_receipt_sha256":proofs[row["enchant_id"]][
@@ -2224,7 +2286,9 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
                     "simc_spell_components_not_in_static_E":
                         len(classified_row["spell_effects"]),
                     "fixed_E":E,
-                    "scope":"PINNED_SIMC_NO_STATIC_CHMV_ITEM_MOD_SPELLS_SIMC_OWNED",
+                    "scope":("PINNED_SIMC_NO_STATIC_CHMV_ITEM_MOD_SPELLS_SIMC_OWNED"
+                             if exact_source_E0 else
+                             "PINNED_SIMC_UNSCALED_STATIC_CHMV_ITEM_MOD_SPELLS_SIMC_OWNED"),
                     "source_receipts":stamps}
                 proofs[row["enchant_id"]]["chmv_budget"]={
                     "identity":identity,
@@ -2234,8 +2298,7 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
                     "no_double_count":True,
                     "unknown_static_chmv":False,
                     "fixed_E":E,
-                    "static_E_evidence_owner":
-                        "PINNED_SIMC_STATIC_NONCHMV_DBC_COMPONENTS",
+                    "static_E_evidence_owner":E_owner,
                     "gameplay_or_native_effect_attested":False}
     return proofs
 
@@ -8160,11 +8223,19 @@ def _fresh_source_owner_merge_policy_A_original_source_relation(
                      owner["evidence_sha256"]) is not None and
                  owner.get("no_double_count") is True and
                  owner.get("unknown_static_chmv") is False and
-                 owner.get("fixed_E")==zero and
-                 owner.get("static_E_evidence_owner")==
-                     "PINNED_SIMC_STATIC_NONCHMV_DBC_COMPONENTS" and
+                 type(owner.get("fixed_E")) is dict and
+                 set(owner["fixed_E"])==set(zero) and
+                 all(type(owner["fixed_E"][stat]) is int and
+                     0<=owner["fixed_E"][stat]<=100000
+                     for stat in zero) and
+                 ((owner["fixed_E"]==zero and
+                   owner.get("static_E_evidence_owner")==
+                     "PINNED_SIMC_STATIC_NONCHMV_DBC_COMPONENTS") or
+                  (sum(owner["fixed_E"].values())>0 and
+                   owner.get("static_E_evidence_owner")==
+                     "PINNED_SIMC_EXACT_UNSCALED_STATIC_CHMV_DBC_COMPONENTS")) and
                  owner.get("gameplay_or_native_effect_attested") is False,
-                 "V216_POLICY_A_ORIGINAL_STATIC_E0_SOURCE_PROOF_DRIFT")
+                 "V216_POLICY_A_ORIGINAL_STATIC_E_SOURCE_PROOF_DRIFT")
             need("chmv_budget" not in existing or
                  existing["chmv_budget"]==owner,
                  "V216_POLICY_A_PROVIDER_CHMV_E0_CONFLICT")
