@@ -335,8 +335,29 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False,
             report["same_signed_manifest_user_start"]=True
             save()
             clickable(driver,driver.find_element(By.ID,"start-btn"))
-            sid=elapsed_wait(driver,
-                    "state.session && /^[a-f0-9]{20}$/.test(state.session) ? state.session : null",75)
+            try:
+                sid=elapsed_wait(driver,
+                        "state.session && /^[a-f0-9]{20}$/.test(state.session) ? state.session : null",75)
+            except Exception:
+                if positive_rings:
+                    report["start_session_failure_diagnostic"]={
+                        "browser":driver.execute_script("""return {
+                          notice:document.getElementById('notice')?.textContent,
+                          session:state.session,
+                          busy:state.busy,
+                          running:state.running,
+                          start_disabled:document.getElementById('start-btn')?.disabled,
+                          start_label:document.getElementById('start-btn')?.textContent
+                        };"""),
+                        "session_dirs":[{"id_sha256":hashlib.sha256(
+                            p.name.encode()).hexdigest(),
+                            "manifest_present":(p/"generated"/"manifest.json").is_file(),
+                            "user_present":(p/"user.json").is_file(),
+                            "log_present":(p/"worker.log").is_file()}
+                            for p in root.iterdir() if p.is_dir()
+                            and re.fullmatch("[a-f0-9]{20}",p.name)][:6]}
+                    save()
+                raise
             report["session_id_sha256"]=hashlib.sha256(sid.encode()).hexdigest()
             folder=root/sid
             require(longrun.config(folder)["native_budget"]==64,
