@@ -2472,14 +2472,18 @@ console.log("V473_BUILD_ILEVEL_REVOKE_ENCHANT_RUNE_PASS");
 const fs=require("fs"),assert=require("assert");
 const raw=fs.readFileSync(process.argv[1],"utf8");
 const scope=raw.indexOf("function buildRequest() {");
-const a=raw.indexOf('  const selectedFinger2Enchant=field("season_enchant_finger2");',scope);
+const a=raw.indexOf('  // Signed E0 on up to four actual armor slots:',scope);
 const b=raw.indexOf("  if(!Number.isInteger(controls.ilevel)",a);
 assert(scope>=0&&a>scope&&b>a,"actual source-only request block missing");
 const el={season_enchant_finger1:{value:"",options:[]},
           season_enchant_finger2:{value:"",options:[
             {value:"89999",disabled:false}]},
           season_enchant_other:{value:"",options:[
-            {value:"legs:89999",disabled:false}]}};
+            {value:"legs:89999",disabled:false}]},
+          "env-enchant-helm":{value:"",options:[]},
+          "env-enchant-shoulders":{value:"",options:[]},
+          "env-enchant-chest":{value:"",options:[]},
+          "env-enchant-boots":{value:"",options:[]}};
 const $=id=>el[id],field=id=>el[id].value;
 const state={installedE0Ids:new Set([89999]),
  exactUserEnchantIds:new Set([7967]),eagleApproved:false,
@@ -2560,8 +2564,9 @@ assert.strictEqual(el.season_enchant_other.value,"chest:7957",
   "dedicated slot must mirror original v106 generic exactly-one choice");
 el["env-enchant-boots"].value="feet:7953";
 sync("env-enchant-boots");
-assert.strictEqual(el["env-enchant-chest"].value,"");
-assert.strictEqual(el.season_enchant_other.value,"feet:7953");
+assert.strictEqual(el["env-enchant-chest"].value,"chest:7957");
+assert.strictEqual(el.season_enchant_other.value,"");
+assert.strictEqual(el["env-enchant-boots"].value,"feet:7953");
 el.season_enchant_finger1.value="89999";
 sync("season_enchant_finger1");
 assert.strictEqual(el.season_enchant_other.value,"");
@@ -2573,8 +2578,8 @@ assert.strictEqual(el.season_enchant_finger1.value,"");
 // A tampered ID must never pass the signed v212 mirror.
 el["env-enchant-chest"].value="chest:99999";
 sync("env-enchant-chest");
-assert.strictEqual(el.season_enchant_other.value,"",
-  "unsigned choice must not be mirrored to actual backend controls");
+assert.strictEqual(el.season_enchant_other.value,"head:7951",
+  "unsigned choice cannot replace another signed generic choice");
 assert.strictEqual(el["env-enchant-chest"].value,"");
 assert.strictEqual(updates,5);
 console.log("V620_SIGNED_E0_PER_SLOT_PROXY_ONLY_PASS");
