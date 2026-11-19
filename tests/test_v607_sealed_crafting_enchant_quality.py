@@ -97,6 +97,33 @@ class SealedCraftingQualityTests(unittest.TestCase):
         altered["automatic_ui_promotion"]=True
         self.assertEqual(self.eligible(v583=altered),{})
 
+    def test_v616_unrelated_full_permanent_source_duplicates_do_not_veto_DPS(self):
+        # The actual 70961 v191 retained 1,062 permanent records: multiple
+        # non-enchant_ or non-armor/weapon entries legitimately reuse IDs.
+        # Only the original exact v583 subset can be considered for Policy A.
+        extended=copy.deepcopy(self.v191)
+        records=extended["enchants"]["permanent"]["source_records"]
+        irrelevant={
+            "enchant_id":1891,"quality_rank":0,
+            "simc_token":"profession_tool_enchant_misc",
+            "item_class":19,"inventory_type_mask":0,
+            "item_subclass_mask":0}
+        records.extend([dict(irrelevant),dict(irrelevant),
+                        {**irrelevant,"enchant_id":99012,
+                         "simc_token":"non_dps_legacy"},
+                        {**irrelevant,"enchant_id":1887,
+                         "item_class":4,
+                         "simc_token":"legacy_non_enchant_secondary"}])
+        self.assertEqual(list(self.eligible(v191=extended)),[99012])
+        malicious=copy.deepcopy(extended)
+        malicious["enchants"]["permanent"]["source_records"].append(
+            dict(self.rows[0]))
+        self.assertEqual(self.eligible(v191=malicious),{})
+        malformed=copy.deepcopy(extended)
+        malformed["enchants"]["permanent"]["source_records"][0][
+            "quality_rank"]="not_a_rank"
+        self.assertEqual(self.eligible(v191=malformed),{})
+
     def test_original_v196_policy_A_uses_quality_without_effect_dominance(self):
         source_row={"enchant_id":99012,"token":self.token,"quality_rank":2,
                     "item_class":4,"inventory_type_mask":self.mask,
