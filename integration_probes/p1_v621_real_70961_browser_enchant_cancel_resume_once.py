@@ -63,6 +63,11 @@ def browser_enchant_snapshot(driver):
       active_build:state.verifiedInstalledBuildFromThisPage,
       status:document.getElementById("season-option-catalog-status").textContent,
       approved:state.installedOtherE0Choices?.has("chest:7957")===true,
+      head_approved:state.installedOtherE0Choices?.has("head:7951")===true,
+      head_enabled:!document.getElementById("env-enchant-helm").disabled,
+      head_options:[...document.getElementById("env-enchant-helm").options]
+         .filter(x=>x.value).map(x=>({value:x.value,disabled:x.disabled})),
+      head_selected:document.getElementById("env-enchant-helm").value,
       chest_enabled:!document.getElementById("env-enchant-chest").disabled,
       chest_options:[...document.getElementById("env-enchant-chest").options]
          .filter(x=>x.value).map(x=>({value:x.value,disabled:x.disabled})),
@@ -73,10 +78,14 @@ def browser_enchant_snapshot(driver):
     };""")
 
 
-def run(binary,out,*,complete_after_resume=False):
+def run(binary,out,*,complete_after_resume=False,multi_armor=False):
     import platform
     out=pathlib.Path(out).resolve();out.mkdir(parents=True,exist_ok=True)
-    report={"schema":("p1_v624_real_70961_signed_e0_browser_full_result_restore_v1"
+    require(not (complete_after_resume and multi_armor),
+            "MULTI_ENCHANT_DOES_NOT_REPEAT_64")
+    report={"schema":("p2_v627_70961_two_signed_e0_web_cancel_resume_v1"
+                      if multi_armor else
+                      "p1_v624_real_70961_signed_e0_browser_full_result_restore_v1"
                       if complete_after_resume else SCHEMA),"status":"STARTED",
         "game_build":BUILD,"simc_revision":REV,
         "actual_chrome":False,"signed_registered_option_not_fabricated":True,
@@ -86,10 +95,13 @@ def run(binary,out,*,complete_after_resume=False):
         "reused_prior_v619_user_DPS_for_current_result":False,
         "original_adaptive_engine_unchanged":True,
         "partial_cancel_resume_not_full_64_or_global_optimum":not complete_after_resume,
+        "two_signed_E0_armor_slots":multi_armor,
         "new_native_calls":None,
         "official_78_complete_not_modified":True,
         "full_product_e2e":"PENDING"}
-    receipt=out/("V624_REAL_CHROME_ENCHANT_FULL_RESULT_RESTORE.json"
+    receipt=out/("V627_REAL_CHROME_TWO_ARMOR_E0_CANCEL_RESUME.json"
+                 if multi_armor else
+                 "V624_REAL_CHROME_ENCHANT_FULL_RESULT_RESTORE.json"
                  if complete_after_resume else "V621_REAL_CHROME_ENCHANT_CANCEL_RESUME.json")
     def save():
         receipt.write_text(json.dumps(report,ensure_ascii=False,indent=2,
@@ -202,6 +214,14 @@ def run(binary,out,*,complete_after_resume=False):
                      "crit_rating":0,"haste_rating":0,
                      "mastery_rating":0,"versatility_rating":0},
                     "SIGNED_7957_E0_NOT_IN_REAL_V212")
+            if multi_armor:
+                heads=[x for x in installed["published_verified_options"]
+                       if x.get("enchant_id")==7951 and x.get("slot")=="head"]
+                require(len(heads)==1 and
+                        heads[0].get("verified_fixed_E")=={
+                            "crit_rating":0,"haste_rating":0,
+                            "mastery_rating":0,"versatility_rating":0},
+                        "SIGNED_HEAD_7951_E0_NOT_IN_REAL_V212")
             report["actual_v212_registered_count"]=len(
                 installed["published_verified_options"])
             report["actual_v212_manifest_sha256"]=source_sha
@@ -211,14 +231,23 @@ def run(binary,out,*,complete_after_resume=False):
                     any(x["value"]=="chest:7957" and not x["disabled"]
                         for x in selection["chest_options"]),
                     "V620_VISIBLE_SIGNED_CHEST_OPTION_NOT_SELECTABLE")
-            # REAL Selenium native select action, no JS state mutation.
+            # REAL Selenium native selects; no state/DOM injection.
+            if multi_armor:
+                require(selection["head_approved"] and
+                        selection["head_enabled"] and
+                        any(x["value"]=="head:7951" and not x["disabled"]
+                            for x in selection["head_options"]),
+                        "VISIBLE_SIGNED_HEAD_OPTION_NOT_SELECTABLE")
+                Select(driver.find_element(By.ID,
+                       "env-enchant-helm")).select_by_value("head:7951")
             widget=driver.find_element(By.ID,"env-enchant-chest")
             Select(widget).select_by_value("chest:7957")
             chosen=browser_enchant_snapshot(driver)
             require(chosen["chest_selected"]=="chest:7957" and
-                    chosen["underlying"]=="chest:7957" and
+                    chosen["head_selected"]==("head:7951" if multi_armor else "") and
+                    chosen["underlying"]==("" if multi_armor else "chest:7957") and
                     not chosen["ring1"] and not chosen["ring2"],
-                    "VISIBLE_CHEST_CLICK_NOT_MIRRORED_EXACT_ONE")
+                    "VISIBLE_SIGNED_PHYSICAL_SLOTS_NOT_INDEPENDENT")
             report["actual_visible_slot_selected"]=True
             report["visible_selected_chest_option"]="chest:7957"
             report["actual_chest_selection_summary"]=chosen
@@ -250,7 +279,9 @@ def run(binary,out,*,complete_after_resume=False):
                 "ilevel":req.get("ilvl"),"oil_hands":req.get("oil_hands"),
                 "request_keys":sorted(req),"manual_final_T":req.get("final_T")}
             require(req.get("sha")==source_sha and req.get("season")==BUILD and
-                    req.get("enchant")=={"chest":7957} and
+                    req.get("enchant")==(
+                        {"head":7951,"chest":7957} if multi_armor
+                        else {"chest":7957}) and
                     req.get("trinkets")==list(TRINKETS) and
                     req.get("final_T") is None and req.get("ilvl")==334 and
                     req.get("oil_hands")==[] and req.get("current") is True and
@@ -267,6 +298,21 @@ def run(binary,out,*,complete_after_resume=False):
             folder=root/sid
             require(longrun.config(folder)["native_budget"]==64,
                     "ORIGINAL_LONGRUN_BUDGET_NOT_SEALED")
+            if multi_armor:
+                profile=(folder/"generated"/"profile.simc").read_text("utf8")
+                lines=profile.splitlines()
+                for slot,eid in (("head",7951),("chest",7957)):
+                    matched=[line for line in lines if line.startswith(slot+"=")]
+                    require(len(matched)==1 and
+                            matched[0].count("enchant_id="+str(eid))==1 and
+                            re.search(r"(^|,)id=[1-9][0-9]*",matched[0]),
+                            "REAL_SIGNED_TWO_SLOT_SIMC_PROFILE_MISSING")
+                require(profile.count("enchant_id=7951")==1 and
+                        profile.count("enchant_id=7957")==1,
+                        "REAL_SIGNED_TWO_SLOT_PROFILE_DUPLICATE")
+                report["actual_generated_profile_sha256"]=hashlib.sha256(
+                    profile.encode("utf8")).hexdigest()
+                report["two_final_armor_enchants_exact_once"]=True
             inputs=json.loads((folder/"V106_SESSION_USER.json").read_text("utf8")) \
                 if (folder/"V106_SESSION_USER.json").is_file() else None
             # Do not presume private file layout: the existing session
@@ -309,8 +355,10 @@ def run(binary,out,*,complete_after_resume=False):
             restored=browser_enchant_snapshot(driver)
             report["reopened_signed_enchant_summary"]=restored
             require(restored["chest_selected"]=="chest:7957" and
-                    restored["underlying"]=="chest:7957" and
-                    restored["approved"],
+                    restored["head_selected"]==("head:7951" if multi_armor else "") and
+                    restored["underlying"]==("" if multi_armor else "chest:7957") and
+                    restored["approved"] and
+                    (not multi_armor or restored["head_approved"]),
                     "EXACT_SIGNED_ENCHANT_NOT_RESTORED_AFTER_RESTART")
             clickable(driver,driver.find_element(By.ID,"resume-btn"))
             elapsed_wait(driver,"state.session === '"+sid+"' && state.running === true",35)
@@ -475,7 +523,10 @@ def run(binary,out,*,complete_after_resume=False):
             require(post["progress"]["native_attempts"]>=new_count and
                     post["progress"]["completed_jobs"]>=prior,
                     "PARTIAL_CACHE_CHECKPOINT_REGRESSION")
-            report["status"]="PASS_REAL_CHROME_SIGNED_E0_START_CANCEL_RESTART_RESUME"
+            report["status"]=(
+                "PASS_REAL_CHROME_TWO_SIGNED_E0_START_CANCEL_RESTART_RESUME"
+                if multi_armor else
+                "PASS_REAL_CHROME_SIGNED_E0_START_CANCEL_RESTART_RESUME")
             save()
             return 0
     except Exception as exc:
