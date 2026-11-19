@@ -3005,6 +3005,14 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
     # without per-item diagnostic detail. Do not reinterpret absent proof
     # data as zero missing items or as approved product choices.
     admission=ui.get("automatic_admission") or {}
+    # The normal existing Policy A preview already knows which optional
+    # numeric proofs are missing. Convert ONLY those same sealed failures
+    # into bounded, source-identity-linked recovery work; never treat a
+    # missing E as zero or make all optional enchants a mandatory Build gate.
+    E_repair=(auto_admission.plan_optional_permanent_enchant_budget_repair(
+        source,source_relations,
+        admission.get("per_item_missing_reasons") or {},
+        target_ilevel=target_ilevel) if source_relations else None)
     payload={
         "schema":FRESH_SOURCE_PREFLIGHT_SCHEMA,
         "status":"FRESH_SOURCE_CANDIDATES_VALID_GJFO_PENDING_NOT_INSTALLED",
@@ -3036,6 +3044,7 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                 admission.get("per_item_missing_reasons") or {}),
             "per_item_conflict_reasons":dict(
                 admission.get("per_item_conflict_reasons") or {}),
+            "static_E_repair_plan_unadmitted":E_repair,
             "source_evidence_projection_provided":bool(admission),
             "v217_source_relation_receipt_count":len(source_relations),
             "v217_source_relation_scoped_only":True,
@@ -9055,6 +9064,12 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         "preprofile_budget_arithmetic_unadmitted"]=arithmetic
                     progress["requires"].append(
                         "V222_GJFO_SOURCE_ADMISSION_AND_V098_PROFILE_PENDING")
+                E_repair=(preflight.get(
+                    "optional_policy_A_evidence_unadmitted") or {}).get(
+                    "static_E_repair_plan_unadmitted")
+                if E_repair is not None:
+                    source_compilation[
+                        "optional_enchant_E_repair_plan_unadmitted"]=E_repair
                 source_compilation["preflight_sha256"]=preflight[
                     "preflight_sha256"]
                 source_compilation["preflight_status"]=preflight["status"]
