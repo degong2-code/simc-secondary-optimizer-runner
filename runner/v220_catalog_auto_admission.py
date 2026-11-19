@@ -471,8 +471,76 @@ def plan_optional_permanent_enchant_budget_repair(
                 action=="REUSE_EXACT_NATIVE_PAIR_OR_MEASURE_SELECTED_ITEM"),
             "fixed_E":None,"verified":False,"user_selectable":False})
     items.sort(key=lambda x:x["enchant_id"])
+    # v631: one exact numeric-shape work order per source-equivalent
+    # *single-stat* scaling family, not one Native pair per item ID.
+    # Exclude stat direction from the grouping key ONLY when SimC's
+    # ITEM_ENCHANTMENT_STAT source has exactly one known CHMV component,
+    # no other source components/spells and identical physical masks.
+    # The grouping is a collection efficiency hint, NOT a proof that a
+    # measured representative's rating applies to its unmeasured siblings.
+    groups={}
+    for item in items:
+        if item["next_action"]!=(
+                "REUSE_EXACT_NATIVE_PAIR_OR_MEASURE_SELECTED_ITEM"):
+            continue
+        eid=item["enchant_id"]
+        row=types[eid]
+        comps=row.get("static_components")
+        origin=by_id[eid]
+        only=(comps[0] if type(comps) is list and
+              len(comps)==1 and type(comps[0]) is dict else None)
+        sharable=(
+            only is not None
+            and only.get("category")=="CHMV_SECONDARY_RATING"
+            and only.get("item_mod") in CHMV_STATS
+            and type(only.get("component_index")) is int
+            and type(only.get("item_mod_id")) is int
+            and type(only.get("scaling_id")) is int
+            and only["scaling_id"] not in (0,-1)
+            and type(only.get("dbc_amount")) is int
+            and only["dbc_amount"]==0
+            and type(only.get("coefficient")) in (int,float)
+            and 0<only["coefficient"]<100000
+            and row.get("unknown_components")==[]
+            and row.get("spell_effects")==[])
+        scope={"game_build":source_catalog.get("game_build"),
+               "simc_revision":source_catalog.get("simc_revision"),
+               "catalog_sha256":source_catalog.get("manifest_sha256"),
+               "target_ilevel":target_ilevel,
+               "slot_family":origin.get("slot_group"),
+               "item_class":origin.get("item_class"),
+               "inventory_type_mask":origin.get("inventory_type_mask"),
+               "item_subclass_mask":origin.get("item_subclass_mask")}
+        if sharable:
+            scope.update({
+                "source_component_index":only["component_index"],
+                "scaling_id":only["scaling_id"],
+                "dbc_amount":only["dbc_amount"],
+                "coefficient":only["coefficient"]})
+        else:
+            scope.update({"unshareable_enchant_id":eid})
+        group_sha=hashlib.sha256(json.dumps(
+            scope,sort_keys=True,ensure_ascii=False,
+            separators=(",",":")).encode("utf8")).hexdigest()
+        group=groups.setdefault(group_sha,{
+            "source_numeric_group_sha256":group_sha,
+            "group_kind":("EXACT_SINGLE_CHMV_SOURCE_SCALING_SHAPE"
+                          if sharable else "INDIVIDUAL_ENCHANT_SOURCE_SCOPE"),
+            "representative_enchant_id":eid,
+            "member_enchant_ids":[],
+            "requires_same_representative_item_ilevel_and_slot":True,
+            "numeric_transfer_approved":False,
+            "new_native_calls_at_most_if_uncached":2})
+        group["member_enchant_ids"].append(eid)
+        item["source_numeric_group_sha256"]=group_sha
+    ordered_groups=sorted(groups.values(),
+                          key=lambda group:group["representative_enchant_id"])
     return {
         "schema":"v220_sealed_optional_enchant_E_repair_plan_v1",
+        "source_numeric_measurement_groups_unadmitted":ordered_groups,
+        "numeric_group_count":len(ordered_groups),
+        "native_calls_at_most_if_each_group_uncached":2*len(ordered_groups),
+        "identical_source_scale_is_not_a_native_numeric_proof":True,
         "status":("OPTIONAL_EVIDENCE_REPAIR_REQUIRED" if items else
                   "NO_MISSING_ENCHANT_EVIDENCE"),
         "pending_count":len(items),
