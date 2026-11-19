@@ -868,6 +868,80 @@ def preview_installed_selected_enchant_budget(*, document, slot,
     }
 
 
+
+def preview_installed_selected_enchants_budget(*, document, selected,
+                                               manual_final_T=None):
+    """Sum selected signed E ONCE across distinct physical slots.
+
+    Every selection is checked against the existing original v212 Policy A
+    registration, not a browser-provided vector. The unenchanted reference
+    B receives only the SUM of fixed E in automatic-ilvl mode. In manual-T
+    mode the user-specified inclusive total has priority, no E addition.
+    Real final equipment/mask/SimC profile still require v098/v096.
+    """
+    need(type(selected) is list and
+         1<=len(selected)<=14 and
+         all(type(row) is dict and set(row)=={
+             "slot","item_id","enchant_id"} for row in selected),
+         "FRESH_MULTI_E_EXACT_PHYSICAL_SELECTION_REQUIRED")
+    ordered=sorted(selected,key=lambda row:row["slot"])
+    need(len({row["slot"] for row in ordered})==len(ordered),
+         "FRESH_MULTI_E_ONE_PER_PHYSICAL_SLOT")
+    verified=[]
+    for row in ordered:
+        verified.append(preview_installed_selected_enchant_budget(
+            document=document,slot=row["slot"],item_id=row["item_id"],
+            enchant_id=row["enchant_id"],manual_final_T=manual_final_T))
+    base=season_budget.retarget_verified_install(
+        document=document,manual_final_T=manual_final_T)
+    E={stat:sum(proof["fixed_E"][stat] for proof in verified)
+       for stat in season_budget.STATS}
+    need(all(0<=v<=100000 for v in E.values()),
+         "FRESH_MULTI_E_TOTAL_FIXED_VECTOR_OUT_OF_RANGE")
+    extra=sum(E.values())
+    # Individual preview proves source ownership and per-slot feasibility,
+    # but cannot prove SUM(E) fits a user manual budget.
+    if extra:
+        need(document["v222_reconciled_budget"].get(
+            "G_reference_excludes_selected_E") is True,
+            "FRESH_MULTI_E_REFERENCE_ALREADY_CONTAINS_ENCHANT")
+    B=base["base_B"]+(extra if manual_final_T is None else 0)
+    T=B+sum(base["fixed_O"].values())
+    need(manual_final_T is None or T==manual_final_T,
+         "FRESH_MULTI_E_MANUAL_T_OVERRIDDEN")
+    minima=base["J"]+base["F"]+sum(base["fixed_L"].values())+extra
+    need(B>=minima,"FRESH_MULTI_E_SUM_EXCEEDS_FREE_G")
+    identity={"installed_manifest_sha256":document["manifest_sha256"],
+              "game_build":document["game_build"],
+              "target_ilevel":document["target_ilevel"],
+              "manual_final_T":manual_final_T,
+              "selected":[{"slot":row["slot"],
+                           "item_id":row["item_id"],
+                           "enchant_id":row["enchant_id"],
+                           "selected_identity_sha256":
+                               proof["selected_identity_sha256"],
+                           "chmv_budget_receipt_sha256":
+                               proof["selected_identity"][
+                                   "chmv_budget_receipt_sha256"]}
+                          for row,proof in zip(ordered,verified)],
+              "fixed_E":E,"base_B":B,"final_T":T}
+    return {
+        "schema":"v634_installed_multi_slot_fixed_E_budget_v1",
+        "status":"EXACT_INSTALLED_MULTI_SLOT_STATIC_E_BUDGET_ONLY",
+        "selected_identity_sha256":sha(canonical(identity).encode("utf8")),
+        "selected":identity["selected"],"selected_proofs":verified,
+        "fixed_E":E,"base_B":B,"final_T":T,
+        "fixed_O":dict(base["fixed_O"]),
+        "J":base["J"],"F":base["F"],
+        "fixed_L":dict(base["fixed_L"]),
+        "manual_final_T_authoritative":manual_final_T is not None,
+        "fixed_E_in_G_once":True,
+        "user_physical_profile_binding_pending":True,
+        "runtime_selectable":False,
+        "native_calls":0,"network_calls":0,
+    }
+
+
 def verify_windows_package_manifest(package_manifest_path, source_catalog_path,
                                       source_catalog, source_catalog_sha):
     if package_manifest_path is None:
