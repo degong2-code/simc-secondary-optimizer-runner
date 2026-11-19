@@ -1,5 +1,22 @@
 # SIMC Secondary Optimizer — Windows 로컬 베타 시작
 
+## 지금 처음 실행하는 사용자 — 최신 소스 베타 절차 (2026-11-19)
+
+이 문서의 아래 **날짜별 v181~v581 설명은 작성 당시 기록**입니다. 지금 사용하는 ZIP에는 이 안내가 들어 있어야 하며, 오래전에 다운로드한 ZIP은 GitHub 코드 변경만으로 자동 갱신되지 않습니다.
+
+1. **최신 Windows 베타 ZIP을 전부 압축 해제**한 뒤 폴더 안의 `START_HERE_AUTO_SETUP_AND_RUN.bat`를 실행합니다. Python 3.12+·웹 라이브러리가 없다면 **동의를 받아** 사용자 PC의 별도 환경에 설치합니다. 설치 동의를 거절해도 기존 SimC/세션을 변경하지 않습니다. ZIP 내부에서 BAT/CMD를 직접 실행하지 않습니다.
+2. 앱은 **본인 PC의 `http://127.0.0.1:8765/`**에서 열립니다. `설정 · SimulationCraft 관리`에서 별도로 확보한 정확한 Windows x64 `simc.exe`와 그 Git revision을 확인하거나, 공식 설치/로컬 `.7z` 경로를 선택합니다. **소스 ZIP에는 SimC 실행파일이 없습니다.** 공식 SimC 설치/업데이트에는 별도의 7-Zip과 사용자의 명시적 선택이 필요할 수 있습니다.
+3. **새 시즌 환경 준비**를 먼저 실행해 프로그램이 실제 KR 게임 빌드의 대표 일반 장비·티어·보석 J·영약 F·기름 O·G·장신구/검증 옵션을 수집·검증하게 합니다. 공개 원본뿐 아니라 인증 출처가 필요한 경우 `설정 · 내 Blizzard·Warcraft Logs API 인증정보`에 본인 키를 입력해야 할 수 있습니다. 게임 빌드·출처가 미확정이면 숫자를 임의로 채우지 않고 PENDING으로 표시합니다.
+4. 직업·전문화(지원 **DPS 26개 한정**)·종족·특성과 **목표 ilvl** 또는 **수동 최종 T**를 지정하고, 장신구 2개·선택 특수장비/장식·보석·영약·영구 마부·무기 기름·전투조건을 확인합니다. 사용자는 **전체 현재 장비를 입력하지 않습니다.** 일반 장비·무기·티어는 프로그램이 대표 장비로 구성합니다. 영구 마부는 **실제로 설치·검증된 항목만** 해당 물리 부위에 선택할 수 있습니다.
+5. 준비된 **같은 빌드·ilvl·옵션의 검증 설치 SHA**가 표시된 다음 별도의 **`최적 스탯 찾기`**를 클릭합니다. 이 실행은 기본적으로 **최대 64개 적응형 SimC 후보 탐색**이며 자동 T는 검증된 시즌 G/J/F/O 및 정확한 선택 고정치로 결정합니다. **수동 T가 입력되면 그 총량이 최우선**이고, 기름 O는 T 안에서 비자유분배, 마부 E·특수장비 L은 중복 가산 없이 고정 하한으로 보호합니다.
+6. 취소해도 같은 입력·바이너리·SimC·시즌·후보·iterations의 세션/캐시는 유지됩니다. 재시작 후 **`결과 확인 → 이 PC의 이전 세션 불러오기`**에서 다시 열어 이어 실행하거나 완료된 절대 CHMV rating·비율·DPS·SEM·**95% 판정**·근접 대안을 열람합니다. 95% 방향 미확정과 관측 1순위는 별도로 표시하며 전역 최적해 증명이 아닙니다.
+
+**현재 검증의 정확한 경계:** [실제 Windows 70961 마부 38개 정적 E 자동 등록 v633](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44478946469), [E+ 두 반지/가슴 E0의 자동 B=3165·취소/재개 v636](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44486603654), [수동 최종 T=3500·세 마부·Native4·재시작/재개 v637](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44488595284) **PASS**. [동일 시즌 E0 한 부위의 실제 64후보·결과 저장·재열람 v624](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44454908607) **별도 PASS**. 이를 **모든 전문화·마부 조합의 64후보 완주, 개인 Windows PC 설치 확인, 전체 제품 E2E 완료**로 확대하지 않습니다.
+
+**배포 상태:** 이 ZIP은 **Python 소스 Windows 베타**이고 독립 설치형 EXE나 내장 SimC 배포판이 아닙니다. 본인 PC의 개별 키·원본 설치·세션·캐시는 ZIP에 포함되지 않으며 ZIP 교체 시 `%USERPROFILE%\SIMC_Secondary_Optimizer\runs`를 삭제/덮어쓰면 안 됩니다. `full_product_e2e=PENDING`.
+
+---
+
 ## 2026-11-18 실제 기름 O 포함 SimC DPS 2건 및 재개 확인 (v581)
 
 2026년 11월 18일(KST) 실제 Windows Chrome에서 **징벌 성기사·ilvl 334·주무기 기름 #243734·영약 #241324·수동 최종 T3500**을 선택한 환경의 첫 적응형 SimC 후보 2개를 계산했습니다. 실제 시즌 원본 구축에 Native **5회**, 사용자 DPS 후보에 Native **2회**, 마지막 캐시 전용 재조회에는 Native **0회**를 사용했습니다.
@@ -117,7 +134,7 @@ Python 자체가 없으면 **`winget`으로 Python 3.12를 설치할지 별도 �
 >
 > **v204 개발용 선택 마부 예산 교정 (Windows 사용자 기능 미승격):** 검증된 마부를 실제 선택한 *개발용 정확 프로필*에 한하여 목표 ilvl 참조 B와 최종 T에 해당 고정 rating을 한 번 포함시키도록 격리 브랜치의 계산 계약을 교정했습니다. 마부를 선택하지 않은 일반 Windows 실행·수동 최종 T·기존 Native 캐시는 그대로입니다. 현재 일반 사용자 마부 38종은 **읽기 전용**이며, Linux v203의 예전 B3150/T3182 Native 결과는 변경된 새 예산 B3180/T3212의 DPS 결과로 재사용하지 않습니다. 새 v204 Actions PASS와 Windows 실제 Native 확인 전까지 마부 선택을 켜거나 Windows 결과가 검증됐다고 주장하지 않습니다. [변경 영향·검증 상세](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V204_SELECTED_ENCHANT_BUDGET_IMPACT_AND_EVIDENCE.md).
 
-## 시작하기
+## 역사: 2026-10-30 v181 초기 시작 절차 (현재는 최상단 최신 절차를 사용)
 
 1. `SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip`을 **압축 해제**합니다. 압축파일 내부에서 직접 CMD를 실행하지 않습니다.
 2. 먼저 Python 3.12 이상을 설치하고, 압축 해제한 `SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA` 폴더에서 터미널을 열어 아래 중 본인 Python 환경에 맞는 **한 줄만** 실행합니다.
