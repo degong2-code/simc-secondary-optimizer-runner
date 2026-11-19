@@ -77,8 +77,7 @@ class UserSessionControls(unittest.TestCase):
                 self.assertEqual(user["selected_season_enchants"],
                                  {slot:89999})
                 self.assertNotIn("fixed_E",user)
-        for bad in ({"finger3":7967},{"main_hand":89999},
-                    {"off_hand":89999},{"trinket1":89999},{"finger1":0},
+        for bad in ({"finger3":7967},{"trinket1":89999},{"finger1":0},
                     {"finger1":True},{"finger1":"7967"},
                     {"trinket1":7967,"finger2":7967}):
             with self.subTest(bad=bad):

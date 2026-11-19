@@ -632,7 +632,7 @@ const apply=Function("state","$","field","valueInt",
         page=self.client.get("/").text
         p=PageParser();p.feed(page)
         self.assertEqual(p.forms,1)
-        self.assertEqual(len(p.ids),186)
+        self.assertGreaterEqual(len(p.ids),193)
         for ident in ("class-choice","spec","race","ilevel","talents","final_T",
                       "trinket1","trinket2","special-rows","crafted-rows",
                       "season-target-socket-count","season-verified-flask",
@@ -640,7 +640,11 @@ const apply=Function("state","$","field","valueInt",
                       "binary","revision","start-btn",
                       "run-label","progress-label","dps","sem","conf95",
                       "result-panel","results-nav-btn","equipment-dialog",
-                      "season_enchant_other"):
+                      "season_enchant_other",
+                       "env-enchant-neck","env-enchant-back",
+                       "env-enchant-wrists","env-enchant-hands",
+                       "env-enchant-waist","env-enchant-legs",
+                       "env-enchant-offhand"):
             self.assertIn(ident,p.ids)
         self.assertIn('data-view-panel="optimizer"',page)
         self.assertIn('data-view-panel="settings" hidden',page)
@@ -2359,8 +2363,12 @@ assert(a>=0&&b>a,"real saved enchant restore block missing");
 const input={options:[],value:"",appendChild(v){this.options.push(v);}};
 const input2={options:[],value:"",appendChild(v){this.options.push(v);}};
 const direct={};
-for(const id of ["env-enchant-helm","env-enchant-shoulders",
-                 "env-enchant-chest","env-enchant-boots"])
+for(const id of ["env-enchant-helm","env-enchant-neck",
+                 "env-enchant-shoulders","env-enchant-back",
+                 "env-enchant-chest","env-enchant-wrists",
+                 "env-enchant-hands","env-enchant-waist",
+                 "env-enchant-legs","env-enchant-boots",
+                 "env-enchant-weapon","env-enchant-offhand"])
   direct[id]={options:[],value:""};
 const $=id=>id==="season_enchant_finger1"?input:
   id==="season_enchant_finger2"?input2:

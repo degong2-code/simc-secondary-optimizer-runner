@@ -34,7 +34,7 @@ class ExactEnchantUiScope(unittest.TestCase):
     def test_browser_rejects_other_class_race_items_or_unsupported_id(self):
         js=(ROOT/"runner/webui/app.js").read_text("utf8")
         self.assertIn('function exactUserEnchantInputsMatch()',js)
-        self.assertIn('state.exactUserEnchantIds.has(eid)',js)
+        self.assertIn('state.exactUserEnchantIds?.has(eid)',js)
         self.assertIn('exactUserEnchantInputsMatch();',js)
         self.assertIn('exact.scope.trinket_ids.join(",")==="270175,270173"',js)
         self.assertIn('exact.scope?.finger1_item_id===268266',js)

@@ -248,7 +248,9 @@ class InstalledE0NativeProfileInputTests(unittest.TestCase):
                         entry._signed_installed_user_E0_profile(
                             doc=doc,selected=selected,profile=broken,
                             user_final_T=None)
-            with self.assertRaises(entry.EntryBlocked):
+            # The user may select a weapon hand, but a boots enchant
+            # is rejected by the original signed v212 slot/hand mask.
+            with self.assertRaises(installed.EnvironmentBlocked):
                 entry._signed_installed_user_E0_profile(
                     doc=doc,selected={**selected,"slot":"main_hand"},
                     profile=profile,user_final_T=None)
