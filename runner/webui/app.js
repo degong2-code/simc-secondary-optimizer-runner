@@ -1646,12 +1646,31 @@ function fillSessionInputs(payload) {
   }
   savedFinger2.value=restoredFinger2?String(restoredFinger2):"";
   // A saved old option is displayed, never accepted without current v212.
-  const savedOther=Object.entries(u.selected_season_enchants||{}).find(
+  const savedOthers=Object.entries(u.selected_season_enchants||{}).filter(
     ([slot])=>!["finger1","finger2"].includes(slot));
+  const savedOther=savedOthers[0];
   const otherNode=$("season_enchant_other");
   for(const old of Array.from(otherNode.options))
     if(old.dataset?.historic==="true")old.remove();
-  if(savedOther) {
+  if(savedOthers.length>1) {
+    // Restore each signed physical armor slot without inventing approval.
+    otherNode.value="";
+    const selected=new Map(savedOthers.map(
+      ([slot,eid])=>[slot,slot+":"+eid]));
+    for(const [slot,id] of [["head","env-enchant-helm"],
+                            ["shoulders","env-enchant-shoulders"],
+                            ["chest","env-enchant-chest"],
+                            ["feet","env-enchant-boots"]]) {
+      const node=$(id),key=selected.get(slot)||"";
+      if(key && !Array.from(node.options).some(opt=>opt.value===key)) {
+        const historic=option(key,
+          "이전 마부 "+key+" · 새 최적화는 원본 검증 필요");
+        historic.dataset.historic="true";
+        node.appendChild(historic);
+      }
+      node.value=key;
+    }
+  } else if(savedOther) {
     const key=savedOther[0]+":"+savedOther[1];
     if(!state.installedOtherE0Choices?.has(key)) {
       const prior=option(key,"이전 일반 마부 "+key+" · 새 최적화는 원본 검증 필요");
@@ -1828,41 +1847,66 @@ function buildRequest() {
       controls.runeforge_by_hand=runeByHand;
     }
   }
-  // v106/v098/v096 accepts ONE selected ring; do not discard another.
-  const selectedFinger2Enchant=field("season_enchant_finger2");
-  const selectedOtherEnchant=field("season_enchant_other");
-  if(Number(!!field("season_enchant_finger1"))+
-     Number(!!selectedFinger2Enchant)+Number(!!selectedOtherEnchant)>1)
-    throw Error("현재 검증된 영구 마부는 반지 1 또는 반지 2 한 곳만 선택할 수 있습니다. 두 반지 동시 적용은 아직 지원하지 않습니다.");
-  if(field("season_enchant_finger1")) {
-    const eid=Number(field("season_enchant_finger1"));
-    const exact=state.exactUserEnchantIds.has(eid) &&
-      exactUserEnchantInputsMatch();
-    if(!exact&&!(eid===7967&&state.eagleApproved)&&
-       !state.installedE0Ids?.has(eid))
-      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
-    controls.enchant_choices={finger1:eid};
-  }
-  if(selectedFinger2Enchant) {
-    const eid=Number(selectedFinger2Enchant);
-    // The historical 7967/8025/7965 pilot is finger1-only. This hand
-    // requires the same v212-signed E0 registered item as the final SimC.
-    if(!state.installedE0Ids?.has(eid) ||
-       !Array.from($("season_enchant_finger2").options).some(
-         opt=>opt.value===selectedFinger2Enchant&&opt.disabled!==true))
-      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
-    controls.enchant_choices={finger2:eid};
-  }
-  if(selectedOtherEnchant) {
-    const match=/^([a-z][a-z0-9_]*):([1-9][0-9]*)$/.exec(selectedOtherEnchant);
-    if(!match || !state.installedOtherE0Choices?.has(selectedOtherEnchant) ||
-       !Array.from($("season_enchant_other").options).some(
-         opt=>opt.value===selectedOtherEnchant&&opt.disabled!==true))
-      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
-    const eid=Number(match[2]);
-    if(!Number.isSafeInteger(eid))
-      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
-    controls.enchant_choices={[match[1]]:eid};
+  // Signed E0 on up to four actual armor slots: keep the existing single
+  // ring/historical input path unchanged. v106/v098/v096 reverify every
+  // final physical ItemID, installed SHA and per-slot SimC enchant_id.
+  const armorChoices=[["head","env-enchant-helm"],
+    ["shoulders","env-enchant-shoulders"],["chest","env-enchant-chest"],
+    ["feet","env-enchant-boots"]].filter(([,id])=>!!field(id));
+  if(armorChoices.length>1) {
+    if(field("season_enchant_finger1")||field("season_enchant_finger2")||
+       field("season_enchant_other"))
+      throw Error("여러 부위 마부는 검증된 머리·어깨·가슴·장화 E0만 함께 선택할 수 있습니다.");
+    const chosen={};
+    for(const [slot,id] of armorChoices) {
+      const key=field(id);
+      const matched=new RegExp("^"+slot+":([1-9][0-9]*)$").exec(key);
+      if(!matched || !state.installedOtherE0Choices?.has(key) ||
+         !Array.from($(id).options).some(opt=>opt.value===key&&!opt.disabled))
+        throw Error("UNVERIFIED_MULTI_ENCHANT_SELECTION_BLOCKED");
+      const eid=Number(matched[1]);
+      if(!Number.isSafeInteger(eid))
+        throw Error("UNVERIFIED_MULTI_ENCHANT_SELECTION_BLOCKED");
+      chosen[slot]=eid;
+    }
+    controls.enchant_choices=chosen;
+  } else {
+    // v106/v098/v096 accepts ONE selected ring; do not discard another.
+    const selectedFinger2Enchant=field("season_enchant_finger2");
+    const selectedOtherEnchant=field("season_enchant_other");
+    if(Number(!!field("season_enchant_finger1"))+
+       Number(!!selectedFinger2Enchant)+Number(!!selectedOtherEnchant)>1)
+      throw Error("현재 검증된 영구 마부는 반지 1 또는 반지 2 한 곳만 선택할 수 있습니다. 두 반지 동시 적용은 아직 지원하지 않습니다.");
+    if(field("season_enchant_finger1")) {
+      const eid=Number(field("season_enchant_finger1"));
+      const exact=state.exactUserEnchantIds.has(eid) &&
+        exactUserEnchantInputsMatch();
+      if(!exact&&!(eid===7967&&state.eagleApproved)&&
+         !state.installedE0Ids?.has(eid))
+        throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+      controls.enchant_choices={finger1:eid};
+    }
+    if(selectedFinger2Enchant) {
+      const eid=Number(selectedFinger2Enchant);
+      // The historical 7967/8025/7965 pilot is finger1-only. This hand
+      // requires the same v212-signed E0 registered item as the final SimC.
+      if(!state.installedE0Ids?.has(eid) ||
+         !Array.from($("season_enchant_finger2").options).some(
+           opt=>opt.value===selectedFinger2Enchant&&opt.disabled!==true))
+        throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+      controls.enchant_choices={finger2:eid};
+    }
+    if(selectedOtherEnchant) {
+      const match=/^([a-z][a-z0-9_]*):([1-9][0-9]*)$/.exec(selectedOtherEnchant);
+      if(!match || !state.installedOtherE0Choices?.has(selectedOtherEnchant) ||
+         !Array.from($("season_enchant_other").options).some(
+           opt=>opt.value===selectedOtherEnchant&&opt.disabled!==true))
+        throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+      const eid=Number(match[2]);
+      if(!Number.isSafeInteger(eid))
+        throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+      controls.enchant_choices={[match[1]]:eid};
+    }
   }
   if(!Number.isInteger(controls.ilevel)||controls.ilevel<1||controls.ilevel>1000)
     throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
@@ -3409,7 +3453,7 @@ function renderSeasonOptionCatalog(catalog) {
         (signedRingCount?"반지 마부 "+signedRingCount+"종":"")+
         (signedRingCount&&signedOrdinaryCount?" · ":"")+
         (signedOrdinaryCount?"기타 일반 장비 마부 "+signedOrdinaryCount+"종":"")+
-        " 선택 가능 · 한 번에 장비 한 부위만 선택 · "+
+        " 선택 가능 · 검증된 머리·어깨·가슴·발 E0는 부위별 동시 선택 가능 · "+
         "최종 실물 ID와 SimC 입력은 실행 전에 다시 검증. "+
         "원본 미승인·고정 E 미확정·E>0 마부는 잠금 유지.";
     }
@@ -3747,26 +3791,25 @@ function synchronizeInstalledEnchantChoice(sourceId) {
   const rings=["season_enchant_finger1","season_enchant_finger2"];
   let chosen=field(sourceId);
   if(directIds.includes(sourceId)) {
-    // A stale user-edit/browser option must not be promoted by a mirror.
-    const selected=$(sourceId);
+    const node=$(sourceId);
     if(chosen && (!state.installedOtherE0Choices?.has(chosen) ||
-       !Array.from(selected.options).some(opt=>
-         opt.value===chosen&&opt.disabled!==true))) {
-      selected.value=""; chosen="";
+        !Array.from(node.options).some(opt=>opt.value===chosen&&!opt.disabled))) {
+      node.value="";chosen="";
     }
-    $("season_enchant_other").value=chosen;
-  }
-  if(sourceId==="season_enchant_other" || directIds.includes(sourceId)) {
+    const selected=directIds.map(id=>field(id)).filter(Boolean);
+    // The legacy generic input mirrors a SINGLE armor slot only.
+    $("season_enchant_other").value=selected.length===1?selected[0]:"";
+    if(selected.length)for(const id of rings)$(id).value="";
+  } else if(sourceId==="season_enchant_other") {
     const key=field("season_enchant_other");
     for(const id of directIds) {
-      if(id===sourceId)continue;
       const node=$(id);
-      node.value=key && (sourceId==="season_enchant_other") &&
-        Array.from(node.options).some(opt=>opt.value===key&&
-          opt.disabled!==true) ?key:"";
+      node.value=key && Array.from(node.options).some(opt=>
+        opt.value===key&&!opt.disabled)?key:"";
     }
     if(key)for(const id of rings)$(id).value="";
   } else if(rings.includes(sourceId) && chosen) {
+    // Ring and historical positive-E pilots remain one-at-a-time.
     for(const id of rings)if(id!==sourceId)$(id).value="";
     $("season_enchant_other").value="";
     for(const id of directIds)$(id).value="";
