@@ -104,6 +104,93 @@ def run(out):
                 data=json.loads(p.read_text("utf8"))
                 doc["v583_exact_game_build"]=data.get("game_build")
                 doc["v583_original_match_count"]=len(data.get("matches") or [])
+                # v615 diagnostic: use the ORIGINAL zero-Native Build/compilers
+                # on the SAME source root. Sealed v217 stages are reused; do
+                # not promote the synthetic review into product approval.
+                try:
+                    reread=build.build_environment(
+                        sessions_root=Path(temp)/"runs",
+                        session_folder=None,user=None,binary=None,
+                        revision=None,static_cache=None,
+                        source_catalog_path=None,bootstrap_result=None,
+                        fresh_collection_inputs={
+                            "expected_game_build":BUILD,
+                            "representative_request":{
+                                "class":"paladin","spec":"retribution",
+                                "target_ilevel":334},
+                            "g_probe_character":{"race":"dwarf"},
+                            "simc_revision_hint":REV,"credentials":cred})
+                    comp=reread.get("source_compilation") or {}
+                    doc["v615_compilation_status"]=comp.get("status")
+                    doc["v615_compilation_missing"]=comp.get("missing")
+                    doc["v615_reused_network_calls"]=(reread.get(
+                        "network_calls_by_stage"))
+                    doc["v615_native_calls"]=reread.get("native_calls")
+                    if (type(comp.get("source_catalog_path")) is str
+                        and type(comp.get("stage_root")) is str
+                        and all(type(comp.get(n)) is dict for n in (
+                                "v191_stage","v211_stage","v213_stage"))):
+                        stage_root=Path(comp["stage_root"])
+                        catalog,_=build.environment_manifest.read_json(
+                            comp["source_catalog_path"])
+                        original,v191_hash=build.environment_manifest.read_json(
+                            stage_root/"fresh_source"/"v191_candidate.json")
+                        doc["v615_v191_sha_matches_catalog"]=(
+                            v191_hash==catalog["source_provenance"]["v191"][
+                                "sha256"])
+                        doc["v615_v583_revision_matches_catalog"]=(
+                            data.get("simc_revision")==catalog.get("simc_revision"))
+                        doc["v615_v583_build_matches_catalog"]=(
+                            data.get("game_build")==catalog.get("game_build"))
+                        doc["v615_v191_record_count"]=len(
+                            original.get("enchants",{}).get("permanent",{})
+                                .get("source_records") or [])
+                        doc["v615_catalog_enchant_candidate_count"]=len(
+                            catalog.get("v196_enchant_source",{}).get("rows") or [])
+                        direct=build._v607_sealed_highest_crafting_quality(
+                            catalog=catalog,original_v191=original,
+                            physical_v583=data,
+                            v191_sha=comp["v191_stage"]["receipt_sha256"],
+                            v583_sha=v583["source_stage"]["receipt_sha256"])
+                        doc["v615_direct_sealed_quality_owner_count"]=len(direct)
+                        doc["v615_direct_sealed_quality_owner_first_ids"]=(
+                            sorted(direct)[:10])
+                        # The actual published Policy A producer is reused
+                        # unchanged; count only real original receipts.
+                        pre=build.preflight_new_season_source(
+                            source_catalog_path=comp["source_catalog_path"],
+                            expected_game_build=BUILD,
+                            expected_simc_revision=REV,
+                            policy_A_v217_stages={
+                                "stage_root":comp["stage_root"],
+                                "v191_stage":comp["v191_stage"],
+                                "v211_stage":comp["v211_stage"],
+                                "v213_stage":comp["v213_stage"]},
+                            policy_A_v583_physical_source=v583)
+                        meta=pre.get("optional_policy_A_evidence_unadmitted") or {}
+                        receipts=meta.get(
+                            "original_v217_source_relation_receipts_internal") or {}
+                        doc["v615_product_receipt_production_count"]=sum(
+                            "product_input" in proof for proof in receipts.values())
+                        doc["v615_static_E_receipt_production_count"]=sum(
+                            "chmv_budget" in proof for proof in receipts.values())
+                        doc["v615_replay_stage_statuses"]={
+                            k:comp[k].get("status") for k in (
+                                "v191_stage","v211_stage","v213_stage")}
+                        if not direct:
+                            doc["v615_first_quality_boundary"] = (
+                                "V607_SOURCE_PROJECTION_RETURNED_ZERO")
+                        elif not doc["v615_product_receipt_production_count"]:
+                            doc["v615_first_quality_boundary"] = (
+                                "V607_STAGE_ATTESTATION_OR_SHA_CHECK_PENDING")
+                        else:
+                            doc["v615_first_quality_boundary"] = None
+                    else:
+                        doc["v615_first_quality_boundary"] = (
+                            "V191_V211_V213_ORIGINAL_STAGE_COMPILATION_PENDING")
+                except Exception as exp:
+                    doc["v615_diagnostic_status"]="BLOCKED_"+type(exp).__name__
+                    doc["v615_diagnostic_first_blocker"]=bounded_code(exp)
                 doc["status"]="PASS_REAL_V583_SOURCE_ONLY"
             else:
                 doc["status"]="PENDING_REAL_V583_SOURCE_FIRST_BLOCKER_IDENTIFIED"
