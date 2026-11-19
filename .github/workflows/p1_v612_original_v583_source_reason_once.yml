@@ -6,6 +6,8 @@ on:
     paths:
       - .github/workflows/p1_v612_original_v583_source_reason_once.yml
       - integration_probes/p1_v612_v583_original_source_first_blocker.py
+      - runner/v216_environment_build_coordinator.py
+      - tests/test_v216_environment_build_coordinator.py
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   source-only:
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v612-real-v583-once]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v613-real-source-once]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 19
     env:
@@ -35,8 +37,9 @@ jobs:
       - name: Reuse source collector, verify Python and requirements
         run: |
           set -euo pipefail
-          python -m py_compile integration_probes/p1_v612_v583_original_source_first_blocker.py
+          python -m py_compile integration_probes/p1_v612_v583_original_source_first_blocker.py runner/v216_environment_build_coordinator.py
           python -m pip install -r requirements-web-test.txt
+          python -m unittest tests.test_v216_environment_build_coordinator.EnvironmentBuildCoordinatorTests.test_v613_v583_expansion_uses_authenticated_v163_public_scope -v
       - name: ONE real matched-build original Wago source collection, no Native
         timeout-minutes: 15
         run: |
