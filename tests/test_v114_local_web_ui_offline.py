@@ -2398,7 +2398,7 @@ assert.strictEqual(input2.value,"");
 assert.strictEqual(input2.options.length,0,"historical finger2 must not leak");
 const body=raw.slice(raw.indexOf("function buildRequest() {"),
                      raw.indexOf("async function api(",raw.indexOf("function buildRequest() {")));
-assert(body.includes('state.exactUserEnchantIds.has(eid)') &&
+assert(body.includes('state.exactUserEnchantIds?.has(eid)') &&
        body.includes('exactUserEnchantInputsMatch()') &&
        body.includes('UNVERIFIED_ENCHANT_SELECTION_BLOCKED'),
        "fresh run must still block unapproved or out-of-scope enchant");
