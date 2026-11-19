@@ -1845,8 +1845,17 @@ def _v607_sealed_highest_crafting_quality(*, catalog, original_v191,
     fields=("simc_token","item_class","inventory_type_mask",
             "item_subclass_mask")
     for row in records:
-        if (type(row) is not dict or
-                type(row.get("enchant_id")) is not int or
+        # The sealed v191 catalog preserves ALL original 1,062 SimC
+        # permanent_enchant.inc rows, including legitimate repeated IDs
+        # for profession/non-DPS systems. v583's exact physical Wago join
+        # covers only enchant_ armor/weapon gear rows (class 4/2).
+        # Do not veto every valid user enchant due to unrelated source IDs.
+        if type(row) is not dict or type(row.get("simc_token")) is not str:
+            return {}
+        if (not row["simc_token"].startswith("enchant_")
+                or row.get("item_class") not in (2,4)):
+            continue
+        if (type(row.get("enchant_id")) is not int or
                 type(row.get("quality_rank")) is not int or
                 any(key not in row for key in fields)):
             return {}
