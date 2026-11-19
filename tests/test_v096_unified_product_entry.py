@@ -337,7 +337,7 @@ class InstalledE0NativeProfileInputTests(unittest.TestCase):
         doc["official_F_physical_source"]={
             "static_CHMV_vector":F,"F_rating":165,
             "simc_input_token":"test_flask"}
-        profile="\\n".join((
+        profile="\n".join((
             "hunter=Selected","flask=test_flask",
             "finger1=id=268266,ilevel=334,enchant_id=8025",
             "finger2=id=268268,ilevel=334,enchant_id=7997",
