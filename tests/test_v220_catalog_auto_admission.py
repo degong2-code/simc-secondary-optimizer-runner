@@ -880,5 +880,64 @@ class SealedRepresentativeConsumerTests(unittest.TestCase):
                 changed,{},pending)
 
 
+    def test_v631_group_scaled_E_measurements_by_numeric_shape_not_id(self):
+        """Four-stat/quality variant is not four unnecessary source probes."""
+        cases=[(99001,"haste_rating",36,0.7136),
+               (99002,"crit_rating",32,0.7136),
+               (99003,"mastery_rating",49,0.8623)]
+        items=[];classification=[]
+        for eid,stat,mod,coeff in cases:
+            source={"enchant_id":eid,
+                    "token":"enchant_ring__case_"+str(eid),
+                    "item_class":4,"inventory_type_mask":1<<11,
+                    "item_subclass_mask":0,"slot_group":"finger1/finger2"}
+            items.append(source)
+            classification.append({
+                **{k:source[k] for k in
+                   ("enchant_id","token","item_class",
+                    "inventory_type_mask","item_subclass_mask")},
+                "static_components":[{
+                    "component_index":1,"category":"CHMV_SECONDARY_RATING",
+                    "item_mod":stat,"item_mod_id":mod,
+                    "dbc_amount":0,"scaling_id":-7,
+                    "coefficient":coeff}],
+                "spell_effects":[],"unknown_components":[],
+                "static_chmv_rating_present_in_dbc":True,
+                "budget_policy":
+                    "STATIC_E_REQUIRES_EXACT_MATCHED_NATIVE_PROFILE_AND_IS_FIXED_INSIDE_G"})
+        source={"game_build":"12.1.5.70961","simc_revision":"a"*40,
+                "manifest_sha256":"b"*64,
+                "catalog":{"enchants":{"items":items}},
+                "enchant_classification":{"rows":classification}}
+        requested={str(eid):["EVIDENCE_MISSING:chmv_budget"]
+                   for eid,_,_,_ in cases}
+        plan=policy.plan_optional_permanent_enchant_budget_repair(
+            source,{},requested,target_ilevel=334)
+        self.assertEqual(plan["pending_count"],3)
+        self.assertEqual(plan["numeric_group_count"],2)
+        self.assertEqual(plan["native_calls_at_most_if_each_group_uncached"],4)
+        groups=plan["source_numeric_measurement_groups_unadmitted"]
+        self.assertEqual(groups[0]["representative_enchant_id"],99001)
+        self.assertEqual(groups[0]["member_enchant_ids"],[99001,99002])
+        self.assertEqual(groups[1]["member_enchant_ids"],[99003])
+        self.assertTrue(all(not g["numeric_transfer_approved"] for g in groups))
+        self.assertTrue(all(x["fixed_E"] is None and not x["user_selectable"]
+                            for x in plan["items"]))
+        # An extra spell component or different class/mask cannot inherit
+        # a measurement group, even when the scalar looks identical.
+        changed=copy.deepcopy(source)
+        changed["enchant_classification"]["rows"][1][
+            "spell_effects"]=[{"component_index":2,"driver_spell_id":123456}]
+        isolated=policy.plan_optional_permanent_enchant_budget_repair(
+            changed,{},requested,target_ilevel=334)
+        self.assertEqual(isolated["numeric_group_count"],3)
+        changed=copy.deepcopy(source)
+        changed["catalog"]["enchants"]["items"][1]["item_subclass_mask"]=1
+        changed["enchant_classification"]["rows"][1]["item_subclass_mask"]=1
+        isolated=policy.plan_optional_permanent_enchant_budget_repair(
+            changed,{},requested,target_ilevel=334)
+        self.assertEqual(isolated["numeric_group_count"],3)
+
+
 if __name__=="__main__":
     unittest.main()
