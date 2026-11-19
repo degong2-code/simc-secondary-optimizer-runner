@@ -1803,12 +1803,31 @@ class LocalJobs:
                         continue
                     status=recorded["status"]
                 source=(state_file if state_file.is_file() else seal)
+                result_saved=result_file.is_file()
+                # Normal web Start uses v293/v291, not V106_USER_RESULT.
+                # Use the existing sealed, zero-Native status reader; only a
+                # fully exhausted run is a completed saved result. A paused
+                # run may keep V291_RESULT.json observations for resume.
+                if longrun_sessions.config_path(folder).is_file():
+                    latest=longrun_sessions.read_status(folder,active=False)
+                    worker=latest["progress"].get("worker",{})
+                    if type(worker) is not dict:
+                        continue
+                    status=worker.get("status") or latest["progress"]["status"]
+                    result_saved=(status=="BUDGET_EXHAUSTED" and
+                                  latest["result_ready"] and
+                                  latest["progress"]["completed_jobs"]==
+                                  latest["progress"]["planned_jobs"])
+                    longrun_state=longrun_sessions.worker_state_path(folder)
+                    if (longrun_state.is_file() and
+                            not longrun_state.is_symlink()):
+                        source=longrun_state
                 candidates.append((source.stat().st_mtime,{
                     "session_id":folder.name,
                     "class":character["class"],"spec":character["spec"],
                     "target_ilevel":target["ilevel"],
                     "recorded_status":status,
-                    "result_saved":result_file.is_file(),
+                    "result_saved":result_saved,
                     "independent_target334_profile":
                         identity.get("independent_334",False),
                     "updated_unix":int(source.stat().st_mtime)}))
