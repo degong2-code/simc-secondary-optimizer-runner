@@ -175,24 +175,33 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
                     "native_status":case["receipt"]["status"],
                     "native_log_excerpt":native_cases.log_excerpt(case["folder"]),
                     "new_native_calls":new_calls}
-    verify_only_target_changed(
-        (results[0]["folder"]/"native.json").read_bytes(),
-        (results[1]["folder"]/"native.json").read_bytes(),
-        slot=slot,item_id=item_id,enchant_id=enchant_id,
-        simc_revision=simc_revision)
-    parsed=[]
-    for case in results:
-        log=case["folder"]/"simc.log"
-        need(log.is_file() and not log.is_symlink()
-             and 0<log.stat().st_size<=MAX_LOG,
-             "V632_SIMC_INITIAL_GEAR_LOG_MISSING")
-        parsed.append(initial_gear.parse_total_gear(
-            log.read_text("utf8",errors="replace"),actor))
     try:
+        verify_only_target_changed(
+            (results[0]["folder"]/"native.json").read_bytes(),
+            (results[1]["folder"]/"native.json").read_bytes(),
+            slot=slot,item_id=item_id,enchant_id=enchant_id,
+            simc_revision=simc_revision)
+        parsed=[]
+        for case in results:
+            log=case["folder"]/"simc.log"
+            need(log.is_file() and not log.is_symlink()
+                 and 0<log.stat().st_size<=MAX_LOG,
+                 "V632_SIMC_INITIAL_GEAR_LOG_MISSING")
+            parsed.append(initial_gear.parse_total_gear(
+                log.read_text("utf8",errors="replace"),actor))
         E=initial_gear.compare(off=parsed[0],on=parsed[1])
-    except initial_gear.OilGearBlocked as exc:
-        raise EnchantEBlocked(
-            "V632_PRECOMBAT_CHMV_NOT_EXACT:"+str(exc).split(":",1)[0]) from exc
+    except (EnchantEBlocked,initial_gear.OilGearBlocked,
+            ValueError,KeyError,TypeError,UnicodeError,OSError) as exc:
+        # A malformed/impossible observation must never turn into E=0.
+        # Count actual already-spent Native cases and preserve cached
+        # before/after receipts; do not trigger a retry or item admission.
+        return {**pending,
+            "status":"SIMC_ENCHANT_STATIC_E_MEASUREMENT_PENDING",
+            "reason":str(exc).split(":",1)[0],
+            "native_case_receipt_sha256":[
+                native_cases.file_sha(case["folder"]/"receipt.json")
+                for case in results],
+            "new_native_calls":new_calls}
     need(set(E)==set(initial_gear.CHMV) and
          all(type(n) is int and 0<=n<=100000 for n in E.values()),
          "V632_EXACT_E_VECTOR_REQUIRED")
