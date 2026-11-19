@@ -263,12 +263,22 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False,
             if positive_rings:
                 for id,eid in (("season_enchant_finger1",8025),
                                ("season_enchant_finger2",7997)):
-                    node=driver.find_element(By.ID,id)
-                    require(any(opt.get_attribute("value")==str(eid)
-                                and opt.is_enabled()
-                                for opt in node.find_elements(By.TAG_NAME,"option")),
-                            "POSITIVE_RING_OPTION_NOT_VISIBLE")
-                    Select(node).select_by_value(str(eid))
+                    # A native <select> is deliberately aria-hidden in the
+                    # real searchable product. Click the VISIBLE combobox
+                    # result, never Selenium-select the hidden source node.
+                    observed=driver.execute_script(
+                        "const node=document.getElementById(arguments[0]);"+
+                        "const opt=[...node.options].find(x=>x.value===arguments[1]);"+
+                        "return opt&&!opt.disabled?opt.textContent:null;",
+                        id,str(eid))
+                    require(isinstance(observed,str) and
+                            "마부 #"+str(eid) in observed,
+                            "POSITIVE_RING_SIGNED_VISIBLE_LABEL_MISSING")
+                    choose_visible_search(driver,id,str(eid),observed)
+                    require(driver.execute_script(
+                        "return document.getElementById(arguments[0]).value;",
+                        id)==str(eid),
+                        "POSITIVE_RING_VISIBLE_LISTBOX_NOT_SELECTED")
             chosen=browser_enchant_snapshot(driver)
             if positive_rings:
                 report["exact_three_slot_visible_state_before_gate"]=chosen
