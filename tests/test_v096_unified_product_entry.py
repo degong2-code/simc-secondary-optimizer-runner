@@ -310,6 +310,90 @@ class InstalledE0NativeProfileInputTests(unittest.TestCase):
 
 
 
+    def test_v635_signed_positive_rings_and_e0_chest_auto_manual_T(self):
+        """Signed new-season multi-slot E can leave the old one-profile gate."""
+        from tests.test_v212_environment_manifest import (
+            SelectedPermanentEnchantE0BudgetTests)
+        import v212_environment_manifest as installed
+        zero=dict.fromkeys(installed.season_budget.STATS,0)
+        doc=SelectedPermanentEnchantE0BudgetTests().installed([
+            {"enchant_id":8025,"simc_token":"enchant_ring__haste",
+             "slot":"finger1/finger2","ui_selectable":True,
+             "verified_fixed_E":{**zero,"haste_rating":29},
+             "chmv_budget_receipt_sha256":"d"*64},
+            {"enchant_id":7997,"simc_token":"enchant_ring__crit",
+             "slot":"finger1/finger2","ui_selectable":True,
+             "verified_fixed_E":{**zero,"crit_rating":29},
+             "chmv_budget_receipt_sha256":"e"*64},
+            {"enchant_id":7957,"simc_token":"enchant_chest__e0",
+             "slot":"chest","ui_selectable":True,
+             "verified_fixed_E":zero,
+             "chmv_budget_receipt_sha256":"a"*64}])
+        doc["simc_revision"]="d"*40
+        doc["trusted_budget_component_source_identities"]={
+            k:{"source_sha256":str(i)*64}
+            for i,k in enumerate(("G","J","F","O"),1)}
+        F={**zero,"versatility_rating":165}
+        doc["official_F_physical_source"]={
+            "static_CHMV_vector":F,"F_rating":165,
+            "simc_input_token":"test_flask"}
+        profile="\\n".join((
+            "hunter=Selected","flask=test_flask",
+            "finger1=id=268266,ilevel=334,enchant_id=8025",
+            "finger2=id=268268,ilevel=334,enchant_id=7997",
+            "chest=id=260002,ilevel=334,enchant_id=7957",""))
+        def bind(manual):
+            with mock.patch.object(installed,
+                    "verify_fresh_installed_environment",return_value=True):
+                selection=[]
+                for slot,item_id,eid in (
+                        ("finger1",268266,8025),
+                        ("finger2",268268,7997),
+                        ("chest",260002,7957)):
+                    proof=installed.preview_installed_selected_enchant_budget(
+                        document=doc,slot=slot,item_id=item_id,
+                        enchant_id=eid,manual_final_T=manual)
+                    selection.append({
+                        "identity_sha256":proof["selected_identity_sha256"],
+                        "slot":slot,"item_id":item_id,"enchant_id":eid})
+            season={"schema":entry.FRESH_SEASON_SCHEMA,
+                    "installed_environment_path":"/fake/v212.json",
+                    "installed_manifest_sha256":doc["manifest_sha256"],
+                    "oil_by_hand":{},"selected_user_installed_E0_multi":selection}
+            normalized={
+                "scenario":{"target":{"mode":"manual_total",
+                    "ilevel":334,"manual_total":manual or 3165}},
+                "budget":{"T":manual or 3165,"J":92,"F":165,
+                          "external_temporary_rating":zero}}
+            with (mock.patch.object(installed,
+                    "verify_fresh_installed_environment",return_value=True),
+                  mock.patch.object(entry,
+                    "_verified_installed_fresh_v217",
+                    return_value=(doc,{"stage_receipt_sha256":"f"*64})),
+                  mock.patch.object(entry.contract,"normalize",
+                    return_value=normalized)):
+                return entry._admitted_fresh_season_source(
+                    manifest_path=pathlib.Path("/fake/manifest.json"),
+                    season=season,revision="d"*40,user_scenario={},
+                    flask_F=F,oil_hands=[],profile=profile)
+        auto=bind(None)
+        manual=bind(3500)
+        expected={**zero,"crit_rating":29,"haste_rating":29}
+        for proof,B in ((auto,3165),(manual,3500)):
+            self.assertEqual(proof["signed_installed_E"],expected)
+            self.assertEqual(proof["selected_user_installed_E0_multi"][
+                "fixed_E"],expected)
+            self.assertEqual(proof["season_budget"]["base_B"],B)
+            self.assertEqual(proof["season_budget"]["final_T"],B)
+            self.assertTrue(proof["season_source_identity"][
+                "source_input_sha256"])
+        self.assertNotEqual(auto["signed_installed_E_identity_sha256"],
+                            manual["signed_installed_E_identity_sha256"])
+        self.assertNotEqual(auto["season_source_identity"][
+            "source_input_sha256"],manual["season_source_identity"][
+            "source_input_sha256"])
+
+
 class V096Unified(unittest.TestCase):
     def fixture(self,td,kind="fury"):
         p,c,fill=(fury(td) if kind=="fury" else frost(td))
