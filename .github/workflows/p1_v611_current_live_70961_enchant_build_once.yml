@@ -1,5 +1,5 @@
 # Exact live 70961, one source-pinned SimC build plus normal M1/M2 product.
-name: P1 v611 current 70961 real SimC original season enchant M1-M2 once
+name: P1 v614 current 70961 real v613 fixed enchant M1-M2 once
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   one-current-real-source:
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v611-real-enchant-once]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v614-real-enchant-once]') }}
     runs-on: windows-2022
     timeout-minutes: 45
     env:
