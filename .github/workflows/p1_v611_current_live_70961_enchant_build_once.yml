@@ -1,0 +1,97 @@
+# Exact live 70961, one source-pinned SimC build plus normal M1/M2 product.
+name: P1 v611 current 70961 real SimC original season enchant M1-M2 once
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v611_current_live_70961_enchant_build_once.yml
+      - integration_probes/p1_v611_current_live_70961_enchant_registration_once.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v611-70961-one-source-compiled-enchant
+  cancel-in-progress: false
+jobs:
+  one-current-real-source:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v611-real-enchant-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 45
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: 9933ffb946fb55b1fa66657b848f519ac19006e1
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70961
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Exact Git source formatting
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - name: Checkout actual 70961 source SHA not previous binary
+        uses: actions/checkout@v5
+        with:
+          repository: simulationcraft/simc
+          ref: 9933ffb946fb55b1fa66657b848f519ac19006e1
+          path: .v611-simc-src
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - uses: step-security/msvc-dev-cmd@v1
+        with: {arch: x64}
+      - name: Verify exact source commit and compile CLI once
+        shell: pwsh
+        timeout-minutes: 23
+        run: |
+          $ErrorActionPreference='Stop'
+          $sha=(& git -C .v611-simc-src rev-parse HEAD).Trim()
+          if ($sha -ne $env:SIMC_PINNED_SOURCE_COMMIT) { throw 'V611_SIMC_SOURCE_COMMIT_DRIFT' }
+          $sha | Set-Content -NoNewline -Encoding ascii -Path .v611-source-commit.txt
+          cmake -S .v611-simc-src -B .v611-simc-build -GNinja -DBUILD_GUI=OFF -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
+          if ($LASTEXITCODE -ne 0) { throw 'V611_PINNED_SIMC_CMAKE_CONFIGURE_FAILED' }
+          cmake --build .v611-simc-build --target simc --parallel 2
+          if ($LASTEXITCODE -ne 0) { throw 'V611_PINNED_SIMC_CMAKE_BUILD_FAILED' }
+          $exes=@(Get-ChildItem .v611-simc-build -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V611_SINGLE_COMPILED_SIMC_EXE_REQUIRED' }
+          $bin=$exes[0].FullName
+          "V611_SIMC_EXE=$bin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "V611_BIN_SHA256=$((Get-FileHash -Algorithm SHA256 $bin).Hash.ToLowerInvariant())"
+          python -m py_compile integration_probes/p1_v611_current_live_70961_enchant_registration_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V611_PROBE_SYNTAX_FAILED' }
+      - name: Quarantine historical season files and reuse original web dependencies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $quarantine=Join-Path $env:RUNNER_TEMP 'v611-old-season-quarantine'
+          New-Item -ItemType Directory -Force $quarantine | Out-Null
+          $old=@(Get-ChildItem data -File -Filter 'current_season_*.json')
+          $old+=@(Get-ChildItem data -File -Filter 'v202_*.json')
+          $old+=@(Get-ChildItem data -File -Filter 'v206_*.json')
+          $old+=@(Get-ChildItem data/season_ordinary_gem_nominal -File -Filter '*.json')
+          foreach ($source in $old) { Move-Item -LiteralPath $source.FullName -Destination (Join-Path $quarantine $source.Name) }
+          if ($old.Count -lt 2) { throw 'V611_HISTORICAL_INPUT_QUARANTINE_FAILED' }
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V611_REQUIREMENTS_FAILED' }
+      - name: ONE exact current season G J F O / original v216 v212 real enchant admission
+        shell: pwsh
+        timeout-minutes: 17
+        run: |
+          New-Item -ItemType Directory -Force out/v611 | Out-Null
+          python -u integration_probes/p1_v611_current_live_70961_enchant_registration_once.py --simc "$env:V611_SIMC_EXE" --source-commit-file .v611-source-commit.txt --out out/v611
+          if ($LASTEXITCODE -ne 0) { throw 'V611_REAL_FIRST_BLOCKER_IN_COMPACT_RECEIPT' }
+      - name: Preserve proof counts and first blocker only
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v611-real-current-70961-enchant-first-attempt
+          path: out/v611/V611_REAL_70961_ENCHANT_ADMISSION_ONE_BUILD.json
+          retention-days: 14
+          if-no-files-found: warn
