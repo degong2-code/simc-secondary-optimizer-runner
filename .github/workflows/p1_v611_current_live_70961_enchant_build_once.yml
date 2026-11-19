@@ -1,5 +1,7 @@
-# Exact live 70961, one source-pinned SimC build plus normal M1/M2 product.
-name: P1 v618 current 70961 original v212 enchant registration once
+# Fresh, same-build 70961 M1/M2 source construction and original v629 Policy A admission.
+# No archived v213 stage input or historical season fixture; no user DPS Native.
+# Preserve the original product v216/v196/v220/v212 runtime and its fail-closed checks.
+name: P2 v630 fresh 70961 source build and v629 enchant admission once
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
@@ -15,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   one-current-real-source:
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v618-real-enchant-once]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v618-real-enchant-once]') || contains(github.event.head_commit.message, '[v630-fresh-source-enchant-once]') }}
     runs-on: windows-2022
     timeout-minutes: 45
     env:
@@ -116,7 +118,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: p1-v618-real-current-70961-v212-enchant-admission
+          name: p2-v630-fresh-70961-v629-enchant-admission
           path: out/v611/V611_REAL_70961_ENCHANT_ADMISSION_ONE_BUILD.json
           retention-days: 14
           if-no-files-found: warn
@@ -125,7 +127,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: p1-v618-real-70961-verified-v212-installed
+          name: p2-v630-fresh-70961-verified-v212-installed
           path: out/v611/V618_REAL_INSTALLED_V212.json
           retention-days: 14
           if-no-files-found: ignore
