@@ -839,7 +839,14 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
                        "selected_identity"]["selected_item_id"],
                    "enchant_id":selected_installed_E0[
                        "selected_identity"]["selected_enchant_id"]}}
-               if selected_installed_E0 is not None else {})}
+               if type(selected_installed_E0) is dict else {}),
+            **({"selected_user_installed_E0_multi":[{
+                   "identity_sha256":proof["selected_identity_sha256"],
+                   "slot":proof["selected_identity"]["selected_slot"],
+                   "item_id":proof["selected_identity"]["selected_item_id"],
+                   "enchant_id":proof["selected_identity"]["selected_enchant_id"]}
+                   for proof in selected_installed_E0]}
+               if type(selected_installed_E0) is list else {})}
         source=entry._admitted_fresh_season_source(
             manifest_path=folder/"manifest.json",season=manifest_source,
             revision=revision,user_scenario=draft["scenario"],
@@ -1051,6 +1058,24 @@ def _final_user_enchant_source_mask(*,user,rows,consumer):
     """Check final v098 gear against sealed same-build source, not approval."""
     if consumer is None:
         return None
+    # Reuse the original physical source-mask comparison for EACH final item.
+    choice=user.get(SEASON_ENCHANT_FIELD) if type(user) is dict else None
+    if type(choice) is dict and len(choice)>1:
+        need(2<=len(choice)<=4 and
+             set(choice)<=set(("head","shoulders","chest","feet")),
+             "FRESH_MULTI_E0_ONLY_VERIFIED_ARMOR_SLOT_SCOPE")
+        by_slot={}
+        for slot in sorted(choice):
+            single=dict(user)
+            single[SEASON_ENCHANT_FIELD]={slot:choice[slot]}
+            proof=_final_user_enchant_source_mask(
+                user=single,rows=rows,consumer=consumer)
+            need(proof["status"]==
+                 "EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED",
+                 "FRESH_MULTI_E0_EACH_PHYSICAL_MASK_MUST_MATCH")
+            by_slot[slot]=proof
+        return {"status":"EXACT_MULTI_ARMOR_SOURCE_MASK_MATCH_UNADMITTED",
+                "by_slot":by_slot}
     need(type(user) is dict and type(rows) is dict and callable(consumer)
          and type(user.get(SEASON_ENCHANT_FIELD)) is dict and
          len(user[SEASON_ENCHANT_FIELD])==1,
@@ -1155,6 +1180,32 @@ def _selected_installed_E0_on_final_user_item(*,user,rows,mask,installed_path):
          "FRESH_USER_E0_BUDGET_OR_EXISTING_ENCHANT_CONFLICT")
     rows[slot]["options"]["enchant_id"]=str(eid)
     return result
+
+def _selected_installed_E0_multi_on_final_user_items(*,user,rows,mask,
+                                                      installed_path):
+    """Compose original v212 single-E0 proof for each actual armor slot."""
+    choices=user.get(SEASON_ENCHANT_FIELD)
+    need(type(choices) is dict and 2<=len(choices)<=4 and
+         set(choices)<=set(("head","shoulders","chest","feet")) and
+         type(mask) is dict and
+         mask.get("status")=="EXACT_MULTI_ARMOR_SOURCE_MASK_MATCH_UNADMITTED"
+         and set(mask.get("by_slot",{}))==set(choices),
+         "FRESH_MULTI_E0_ALL_FINAL_ITEM_MASKS_REQUIRED")
+    selected=[]
+    for slot in sorted(choices):
+        single=dict(user)
+        single[SEASON_ENCHANT_FIELD]={slot:choices[slot]}
+        result=_selected_installed_E0_on_final_user_item(
+            user=single,rows=rows,mask=mask["by_slot"][slot],
+            installed_path=installed_path)
+        need(result["fixed_E_zero_is_valid"] is True and
+             not any(result["fixed_E"].values()),
+             "FRESH_MULTI_E0_NO_UNKNOWN_OR_POSITIVE_E")
+        selected.append(result)
+    need(len({row["selected_identity"]["selected_enchant_id"]
+              for row in selected})==len(selected),
+         "FRESH_MULTI_E0_DUPLICATE_ID_OUTSIDE_REGISTERED_SLOT")
+    return selected
 
 
 def build(user,folder,binary,revision,static_cache_path=None,
@@ -1304,7 +1355,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
                (fresh_installed_environment_path is not None
                 and not selected_season_items
                 and type(user[SEASON_ENCHANT_FIELD]) is dict
-                and len(user[SEASON_ENCHANT_FIELD])==1
+                and 1<=len(user[SEASON_ENCHANT_FIELD])<=4
+                and (len(user[SEASON_ENCHANT_FIELD])==1 or
+                     set(user[SEASON_ENCHANT_FIELD])<=
+                     set(("head","shoulders","chest","feet")))
                 and all(type(id_) is int and id_>0
                         for id_ in user[SEASON_ENCHANT_FIELD].values())
                 and set(user[SEASON_ENCHANT_FIELD])<=
@@ -1622,15 +1676,28 @@ def build(user,folder,binary,revision,static_cache_path=None,
                 not _historical_exact_enchant_user_scope(
                     user,game_build=actual_season_build,
                     revision=revision)):
-            selected_installed_E0=_selected_installed_E0_on_final_user_item(
-                user=user,rows=rows,mask=actual_user_enchant_source,
-                installed_path=fresh_installed_environment_path)
-            selected_nonchmv={
-                "status":"EXACT_INSTALLED_USER_E0_FINAL_ITEM_BOUND_PENDING_V096",
-                "selected_identity_sha256":
-                    selected_installed_E0["selected_identity_sha256"],
-                "fixed_E":dict(selected_installed_E0["fixed_E"]),
-                "simc_mechanics_owner":"SimC"}
+            if len(user[SEASON_ENCHANT_FIELD])==1:
+                selected_installed_E0=_selected_installed_E0_on_final_user_item(
+                    user=user,rows=rows,mask=actual_user_enchant_source,
+                    installed_path=fresh_installed_environment_path)
+                selected_nonchmv={
+                    "status":"EXACT_INSTALLED_USER_E0_FINAL_ITEM_BOUND_PENDING_V096",
+                    "selected_identity_sha256":
+                        selected_installed_E0["selected_identity_sha256"],
+                    "fixed_E":dict(selected_installed_E0["fixed_E"]),
+                    "simc_mechanics_owner":"SimC"}
+            else:
+                selected_installed_E0=(
+                    _selected_installed_E0_multi_on_final_user_items(
+                        user=user,rows=rows,mask=actual_user_enchant_source,
+                        installed_path=fresh_installed_environment_path))
+                selected_nonchmv={
+                    "status":"EXACT_INSTALLED_MULTI_ARMOR_E0_PENDING_V096",
+                    "selected_identity_sha256":[
+                        x["selected_identity_sha256"]
+                        for x in selected_installed_E0],
+                    "fixed_E":{k:0 for k in scenario.STATS},
+                    "simc_mechanics_owner":"SimC"}
         elif fresh_installed_environment_path is not None:
             bridge=(positive_enchant if
                     user[SEASON_ENCHANT_FIELD] in positive_enchant.CHOICES
