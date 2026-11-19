@@ -101,7 +101,7 @@ function run(binaryOK,revisionOK,needsSeason) {
     $,withBusy:cb=>cb(),manualFinalTOrNull:()=>null,
     prepareSeasonBeforeOptimizerStart:async()=>{calls.season++;return needsSeason;},
     switchView:name=>{calls.view=name;},window:{confirm:()=>true},
-    api:async()=>{calls.dps++;return {session_id:"mock-only";}},
+    api:async()=>{calls.dps++;return {session_id:"mock-only"};},
     buildRequest:()=>({}),markSession:()=>{},setNotice:()=>{},pollOnce:async()=>{}
   };
   new Function(...Object.keys(params),source)(...Object.values(params));
