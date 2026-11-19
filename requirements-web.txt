@@ -1,4 +1,3 @@
+# Local user web server runtime. TestClient/httpx is test-only (requirements-web-test.txt).
 fastapi>=0.115,<1.0
 uvicorn>=0.30,<1.0
-# Offline FastAPI/Starlette TestClient only; the SimC server does not import it.
-httpx2>=2.13,<3.0
