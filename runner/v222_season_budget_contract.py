@@ -306,6 +306,11 @@ def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
         "reference_G": amounts["G"], "effective_G": g_effective,
         "J": amounts["J"], "F": amounts["F"],
         "fixed_O": oil, "fixed_L": fixed_L, "fixed_E": fixed_E,
+        # Preserve this source-validated owner bit in the signed v212
+        # installed budget. v212 E+ selection must not infer it from
+        # fixed_E=0 or from a user-controlled option/flag.
+        "G_reference_excludes_selected_E":
+            evidence["G_reference_excludes_selected_E"],
         "reference_B": reference_B, "base_B": B, "final_T": T,
         "manual_final_T_authoritative": manual_final_T is not None,
         **({"O_weapon_proof_not_required_reason":
