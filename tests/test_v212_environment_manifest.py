@@ -310,6 +310,25 @@ class SelectedPermanentEnchantE0BudgetTests(unittest.TestCase):
                 p.preview_installed_selected_enchant_budget(
                     document=unknown,slot="finger1",item_id=268266,
                     enchant_id=8025)
+            # Historical E0-only signed installs omitted this ownership
+            # field even though their source evidence supplied it. They
+            # remain readable but cannot silently promote E+ from a
+            # missing/guessed owner. A fresh signed v222 projection is
+            # required; no new numeric owner or Native algorithm.
+            old_install=self.installed([option])
+            del old_install["v222_reconciled_budget"][
+                "G_reference_excludes_selected_E"]
+            with self.assertRaisesRegex(
+                    p.EnvironmentBlocked,"G_OWNERSHIP_UNKNOWN"):
+                p.preview_installed_selected_enchant_budget(
+                    document=old_install,slot="finger1",item_id=268266,
+                    enchant_id=8025)
+            with self.assertRaisesRegex(
+                    p.EnvironmentBlocked,"REFERENCE_ALREADY_CONTAINS_ENCHANT"):
+                p.preview_installed_selected_enchants_budget(
+                    document=unknown,selected=[{
+                        "slot":"finger1","item_id":268266,
+                        "enchant_id":8025}])
 
 
     def test_v634_multi_signed_E_aggregate_auto_manual_and_no_duplicate_slot(self):
