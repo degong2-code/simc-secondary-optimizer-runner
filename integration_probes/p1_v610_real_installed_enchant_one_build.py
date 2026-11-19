@@ -29,7 +29,7 @@ import v289_retail_live_build_source as retail
 SCHEMA="p1_v610_real_original_v216_v212_permanent_enchant_admission_once_v1"
 
 
-def run(binary,output_folder):
+def run(binary,output_folder,*,postinstall=None):
     output_folder=pathlib.Path(output_folder).resolve()
     output_folder.mkdir(parents=True,exist_ok=True)
     target=output_folder/"V610_REAL_ENCHANT_ADMISSION_ONE_BUILD.json"
@@ -189,6 +189,26 @@ def run(binary,output_folder):
                     for row in installed[:12]]
                 if installed:
                     doc["status"]="PASS_REAL_SEASON_V212_ENCHANTS_AUTO_REGISTERED"
+                    # Optional downstream verification executes only with a
+                    # truly installed original v217/v212 and only AFTER the
+                    # exact same source-owner stage. Never use a copied JSON
+                    # artifact alone to authorize a user/Native session.
+                    if postinstall is not None:
+                        follow=postinstall(
+                            jobs=jobs,environment_result=outcome,
+                            document=original,installed_path=path,
+                            binary=binary,revision=REV,
+                            output_folder=output_folder)
+                        doc["v619_exact_user_stage"]=follow
+                        if follow.get("status")==(
+                                "PASS_ORIGINAL_V098_V096_ENCHANT_NATIVE_DPS"):
+                            doc["status"]=(
+                                "PASS_REAL_INSTALLED_ENCHANT_USER_DPS")
+                        else:
+                            doc["status"]=(
+                                "PENDING_REAL_INSTALLED_ENCHANT_USER_DPS")
+                            doc["first_blocker"]=follow.get(
+                                "first_blocker","SEE_V619_EXACT_USER_STAGE")
                 else:
                     doc["status"]="PENDING_REAL_SEASON_ENCHANT_PRODUCT_A_OR_E"
                     doc["first_blocker"]="SEE_ORIGINAL_PRODUCER_MISSING_REASONS"
@@ -198,7 +218,9 @@ def run(binary,output_folder):
                        if doc["core_build_first_requires"] else
                        "UNKNOWN_ORIGINAL_ENVIRONMENT_BLOCKER")
             save()
-            return 0 if doc["status"]=="PASS_REAL_SEASON_V212_ENCHANTS_AUTO_REGISTERED" else 2
+            return (0 if doc["status"] in (
+                "PASS_REAL_SEASON_V212_ENCHANTS_AUTO_REGISTERED",
+                "PASS_REAL_INSTALLED_ENCHANT_USER_DPS") else 2)
     except Exception as exc:
         # Exceptions are never directly logged with absolute paths/secrets.
         doc["status"]="BLOCKED_"+type(exc).__name__
