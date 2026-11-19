@@ -69,6 +69,7 @@ class SeasonBudgetContractTests(unittest.TestCase):
         self.assertEqual(result["base_B"],3153)
         self.assertEqual(result["final_T"],3185)
         self.assertEqual(result["G_standardization"],meta)
+        self.assertIs(result["G_reference_excludes_selected_E"],True)
         self.assertFalse(result["source_authentication_performed_here"])
         self.assertEqual(result["native_calls"],0)
 
@@ -117,6 +118,18 @@ class SeasonBudgetContractTests(unittest.TestCase):
             evidence=proof,target_ilevel=334)
         self.assertEqual(included["effective_G"],2850)
         self.assertEqual(included["final_T"],3185)
+        self.assertIs(included["G_reference_excludes_selected_E"],False)
+        # The unenchanted-reference owner is a required source input,
+        # not a value reconstructed from fixed_E or G/J/F arithmetic.
+        for wrong in (None,1,"true"):
+            with self.subTest(owner=wrong):
+                altered=copy.deepcopy(proof)
+                altered["G_reference_excludes_selected_E"]=wrong
+                with self.assertRaisesRegex(
+                        p.SeasonBudgetBlocked,"GJFO_E_BUDGET_OWNERSHIP_UNKNOWN"):
+                    p.preprofile_budget(
+                        source_catalog=catalog,source_artifact_sha256="a"*64,
+                        evidence=altered,target_ilevel=334)
 
     def test_rounding_proof_drift_or_unverified_G_is_not_accepted(self):
         catalog, proof, _ = fixture()
