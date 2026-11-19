@@ -9,6 +9,8 @@ calculate effect/proc/DPS, edit sessions or mutate the source catalog.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 
 SCHEMA="v220_exact_evidence_automatic_admission_policy_v1"
@@ -349,6 +351,136 @@ def candidate_from_source_gem(source_catalog, row):
     _identity(candidate)
     return candidate
 
+
+
+def plan_optional_permanent_enchant_budget_repair(
+        source_catalog, trusted_internal_receipts_by_id,
+        missing_reasons_by_id, *, target_ilevel=None):
+    """Diagnose *actual* missing E using the same sealed v213/v211 rows.
+
+    The normal v216 Build calls this after the original Policy A preview.
+    It does not try to prove enchant effects, run Native, change G/J/F/O,
+    or promote an item. Work is bounded to missing chmv_budget receipts:
+    exact unscaled raw numbers should be recovered by the v216 source path;
+    scaled/ambiguous amounts need a previously verified SAME-scope SimC
+    static-delta pair or the existing bounded v198/v297 measurement route.
+    Source classification anomalies are kept distinct from real numeric
+    gaps so a new season is not treated as a list of hard-coded item IDs.
+    """
+    if (type(source_catalog) is not dict or
+        type(trusted_internal_receipts_by_id) is not dict or
+        type(missing_reasons_by_id) is not dict or
+        (target_ilevel is not None and
+         (type(target_ilevel) is not int or target_ilevel<=0))):
+        raise ValueError("AUTO_ADMISSION_E_RECOVERY_INPUT_INVALID")
+    catalog=source_catalog.get("catalog") or {}
+    classification=source_catalog.get("enchant_classification") or {}
+    originals=(catalog.get("enchants") or {}).get("items")
+    classified=classification.get("rows")
+    if type(originals) is not list or type(classified) is not list:
+        raise ValueError("AUTO_ADMISSION_E_RECOVERY_SEALED_ROWS_REQUIRED")
+    by_id={}
+    for row in originals:
+        if (type(row) is not dict or
+            type(row.get("enchant_id")) is not int or
+            row["enchant_id"] in by_id):
+            raise ValueError("AUTO_ADMISSION_E_RECOVERY_ORIGINAL_ID_DRIFT")
+        by_id[row["enchant_id"]]=row
+    types={}
+    for row in classified:
+        if (type(row) is not dict or
+            type(row.get("enchant_id")) is not int or
+            row["enchant_id"] in types):
+            raise ValueError("AUTO_ADMISSION_E_RECOVERY_CLASSIFIED_ID_DRIFT")
+        types[row["enchant_id"]]=row
+    if set(by_id)!=set(types):
+        raise ValueError("AUTO_ADMISSION_E_RECOVERY_SOURCE_COVERAGE_DRIFT")
+    if set(trusted_internal_receipts_by_id)-set(by_id):
+        raise ValueError("AUTO_ADMISSION_E_RECOVERY_NONCANDIDATE_RECEIPT")
+    items=[]
+    for key,reasons in missing_reasons_by_id.items():
+        if (type(key) is not str or not key.isdecimal() or
+            type(reasons) is not list or
+            any(type(reason) is not str for reason in reasons)):
+            raise ValueError("AUTO_ADMISSION_E_RECOVERY_PENDING_SHAPE")
+        eid=int(key)
+        if eid not in by_id:
+            raise ValueError("AUTO_ADMISSION_E_RECOVERY_UNKNOWN_PENDING_ID")
+        if "EVIDENCE_MISSING:chmv_budget" not in reasons:
+            continue
+        row=types[eid]
+        origin=by_id[eid]
+        if (row.get("token")!=origin.get("token") or
+            row.get("item_class")!=origin.get("item_class") or
+            row.get("inventory_type_mask")!=origin.get("inventory_type_mask") or
+            row.get("item_subclass_mask")!=origin.get("item_subclass_mask")):
+            raise ValueError("AUTO_ADMISSION_E_RECOVERY_SOURCE_JOIN_DRIFT")
+        if (eid in trusted_internal_receipts_by_id and
+            "chmv_budget" in trusted_internal_receipts_by_id[eid]):
+            # The receipt exists but its identity/status/shape failed:
+            # do not ask for more Native when the join is actually broken.
+            raise ValueError("AUTO_ADMISSION_E_RECOVERY_RECEIPT_PREVIEW_DRIFT")
+        unknown=row.get("unknown_components")
+        static=row.get("static_components")
+        if type(unknown) is not list or type(static) is not list:
+            cause="CLASSIFICATION_INCOMPLETE"
+            action="RECLASSIFY_ALREADY_PINNED_SIMC_SOURCE"
+        elif unknown:
+            cause="UNKNOWN_SOURCE_STAT_COMPONENT"
+            action="RECLASSIFY_ALREADY_PINNED_SIMC_SOURCE"
+        elif (row.get("static_chmv_rating_present_in_dbc") is True and
+              row.get("budget_policy")==
+                  "STATIC_E_REQUIRES_EXACT_MATCHED_NATIVE_PROFILE_AND_IS_FIXED_INSIDE_G"):
+            cause="STATIC_CHMV_NUMERIC_SCOPE_NOT_YET_PROVEN"
+            action="REUSE_EXACT_NATIVE_PAIR_OR_MEASURE_SELECTED_ITEM"
+        elif row.get("static_chmv_rating_present_in_dbc") is False:
+            cause="EXACT_SOURCE_E0_RECEIPT_WIRING_MISSING"
+            action="REPAIR_SEALED_E0_SOURCE_RECEIPT_NO_NATIVE"
+        else:
+            cause="UNRECOGNIZED_BUDGET_COMPONENT"
+            action="RECLASSIFY_ALREADY_PINNED_SIMC_SOURCE"
+        relevant=[{"stat":component.get("item_mod"),
+                   "scaling_id":component.get("scaling_id"),
+                   "dbc_amount":component.get("dbc_amount"),
+                   "coefficient":component.get("coefficient")}
+                  for component in static or []
+                  if type(component) is dict and
+                  component.get("category")=="CHMV_SECONDARY_RATING"]
+        signature=hashlib.sha256(json.dumps(
+            {"game_build":source_catalog.get("game_build"),
+             "simc_revision":source_catalog.get("simc_revision"),
+             "catalog_sha256":source_catalog.get("manifest_sha256"),
+             "enchant_id":eid,"components":relevant},
+            sort_keys=True,ensure_ascii=False,
+            separators=(",",":")).encode("utf8")).hexdigest()
+        items.append({
+            "enchant_id":eid,"token":origin["token"],
+            "slot_family":origin.get("slot_group"),
+            "game_build":source_catalog.get("game_build"),
+            "simc_revision":source_catalog.get("simc_revision"),
+            "catalog_sha256":source_catalog.get("manifest_sha256"),
+            "target_ilevel":target_ilevel,
+            "source_stat_signature_sha256":signature,
+            "source_chmv_stat_components":relevant,
+            "cause":cause,"next_action":action,
+            "reuse_exact_binary_profile_item_slot_receipt_first":True,
+            "new_native_calls_limit_for_single_target":(
+                2 if action=="REUSE_EXACT_NATIVE_PAIR_OR_MEASURE_SELECTED_ITEM"
+                else 0),
+            "requires_final_representative_slot_and_mask":(
+                action=="REUSE_EXACT_NATIVE_PAIR_OR_MEASURE_SELECTED_ITEM"),
+            "fixed_E":None,"verified":False,"user_selectable":False})
+    items.sort(key=lambda x:x["enchant_id"])
+    return {
+        "schema":"v220_sealed_optional_enchant_E_repair_plan_v1",
+        "status":("OPTIONAL_EVIDENCE_REPAIR_REQUIRED" if items else
+                  "NO_MISSING_ENCHANT_EVIDENCE"),
+        "pending_count":len(items),
+        "items":items,
+        "may_block_verified_base_GJFO":False,
+        "new_native_calls_now":0,"network_calls_now":0,
+        "cache_mutations":0,"options_published":False,
+        "automatic_admission_granted":False}
 
 def preview_enchant_catalog(source_catalog, items, *,
                             trusted_internal_receipts_by_id=None,
