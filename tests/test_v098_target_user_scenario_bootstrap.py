@@ -86,7 +86,7 @@ class InstalledE0ActualV098RingTests(unittest.TestCase):
         mask=boot._final_user_enchant_source_mask(
             user=user,rows=rows,consumer=source_mask)
         self.assertEqual(mask["status"],
-            "EXACT_MULTI_ARMOR_SOURCE_MASK_MATCH_UNADMITTED")
+            "EXACT_MULTI_SLOT_SOURCE_MASK_MATCH_UNADMITTED")
         self.assertEqual(set(mask["by_slot"]),{"head","chest"})
         with tempfile.TemporaryDirectory() as td:
             path=pathlib.Path(td)/"v212.json"
@@ -117,6 +117,44 @@ class InstalledE0ActualV098RingTests(unittest.TestCase):
                     "status":("SOURCE_MASK_OR_HAND_NOT_MATCHED"
                               if slot=="head" else
                               "EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED")})
+
+    def test_v626_ring_pair_can_repeat_same_signed_enchant_id(self):
+        from tests.test_v212_environment_manifest import (
+            SelectedPermanentEnchantE0BudgetTests)
+        zero=dict.fromkeys(boot.installed_manifest.season_budget.STATS,0)
+        doc=SelectedPermanentEnchantE0BudgetTests().installed([{
+            "enchant_id":89999,"simc_token":"enchant_ring__synthetic_e0",
+            "slot":"finger1/finger2","ui_selectable":True,
+            "verified_fixed_E":zero,"chmv_budget_receipt_sha256":"d"*64}])
+        user={"target":{"ilevel":334,"final_T":None},
+              boot.SEASON_ENCHANT_FIELD:{"finger1":89999,"finger2":89999}}
+        rows={"finger1":{"item_id":268266,"options":{}},
+              "finger2":{"item_id":268268,"options":{}}}
+        def matched(slot,item,eid):
+            return {"status":"EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED",
+                    "actual_user_item_from_v098_final_rows":True,
+                    "selected_slot":slot,"selected_representative_item_id":item,
+                    "enchant_id":eid,"ui_selectable":False,
+                    "policy_A_product_input_verified":False,
+                    "native_calls":0,"network_calls":0}
+        mask=boot._final_user_enchant_source_mask(
+            user=user,rows=rows,consumer=matched)
+        self.assertEqual(set(mask["by_slot"]),{"finger1","finger2"})
+        with tempfile.TemporaryDirectory() as td:
+            path=pathlib.Path(td)/"v212.json"
+            path.write_text("{}",encoding="utf8")
+            with (mock.patch.object(boot.installed_manifest,"read_json",
+                                   return_value=(doc,"a"*64)),
+                  mock.patch.object(boot.installed_manifest,
+                                   "verify_fresh_installed_environment",
+                                   return_value=True)):
+                selected=boot._selected_installed_E0_multi_on_final_user_items(
+                    user=user,rows=rows,mask=mask,installed_path=path)
+        self.assertEqual(len(selected),2)
+        self.assertEqual([x["selected_identity"]["selected_enchant_id"]
+                          for x in selected],[89999,89999])
+        self.assertEqual(rows["finger1"]["options"]["enchant_id"],"89999")
+        self.assertEqual(rows["finger2"]["options"]["enchant_id"],"89999")
 
     def test_e0_profile_injection_after_final_equipment_and_exact_source(self):
         from tests.test_v212_environment_manifest import (

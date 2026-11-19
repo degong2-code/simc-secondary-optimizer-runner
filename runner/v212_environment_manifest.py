@@ -804,8 +804,13 @@ def preview_installed_selected_enchant_budget(*, document, slot,
          choices[0].get("ui_selectable") is True,
          "FRESH_SELECTED_ENCHANT_EXACT_INSTALLED_REGISTRATION_REQUIRED")
     chosen=choices[0]
+    # Weapon-family registrations are never hand approval. The caller's
+    # original v216 mask must match each actual final weapon subclass/hand.
     allowed=(("finger1","finger2") if
-             chosen.get("slot")=="finger1/finger2"
+             chosen.get("slot")=="finger1/finger2" else
+             ("main_hand","off_hand") if
+             chosen.get("slot")==
+                 "WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED"
              else (chosen.get("slot"),))
     need(slot in allowed,
          "FRESH_SELECTED_ENCHANT_USER_SLOT_OUTSIDE_ORIGINAL_MASK")

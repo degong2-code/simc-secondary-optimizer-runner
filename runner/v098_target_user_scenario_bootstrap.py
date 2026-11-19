@@ -1061,9 +1061,9 @@ def _final_user_enchant_source_mask(*,user,rows,consumer):
     # Reuse the original physical source-mask comparison for EACH final item.
     choice=user.get(SEASON_ENCHANT_FIELD) if type(user) is dict else None
     if type(choice) is dict and len(choice)>1:
-        need(2<=len(choice)<=4 and
-             set(choice)<=set(("head","shoulders","chest","feet")),
-             "FRESH_MULTI_E0_ONLY_VERIFIED_ARMOR_SLOT_SCOPE")
+        need(2<=len(choice)<=len(SIGNED_E0_SINGLE_SLOTS) and
+             set(choice)<=SIGNED_E0_SINGLE_SLOTS,
+             "FRESH_MULTI_ENCHANT_ONLY_PHYSICAL_GEAR_SLOTS")
         by_slot={}
         for slot in sorted(choice):
             single=dict(user)
@@ -1074,7 +1074,7 @@ def _final_user_enchant_source_mask(*,user,rows,consumer):
                  "EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED",
                  "FRESH_MULTI_E0_EACH_PHYSICAL_MASK_MUST_MATCH")
             by_slot[slot]=proof
-        return {"status":"EXACT_MULTI_ARMOR_SOURCE_MASK_MATCH_UNADMITTED",
+        return {"status":"EXACT_MULTI_SLOT_SOURCE_MASK_MATCH_UNADMITTED",
                 "by_slot":by_slot}
     need(type(user) is dict and type(rows) is dict and callable(consumer)
          and type(user.get(SEASON_ENCHANT_FIELD)) is dict and
@@ -1183,12 +1183,13 @@ def _selected_installed_E0_on_final_user_item(*,user,rows,mask,installed_path):
 
 def _selected_installed_E0_multi_on_final_user_items(*,user,rows,mask,
                                                       installed_path):
-    """Compose original v212 single-E0 proof for each actual armor slot."""
+    """Reuse signed E0 proof on each distinct actual gear slot."""
     choices=user.get(SEASON_ENCHANT_FIELD)
-    need(type(choices) is dict and 2<=len(choices)<=4 and
-         set(choices)<=set(("head","shoulders","chest","feet")) and
+    need(type(choices) is dict and
+         2<=len(choices)<=len(SIGNED_E0_SINGLE_SLOTS) and
+         set(choices)<=SIGNED_E0_SINGLE_SLOTS and
          type(mask) is dict and
-         mask.get("status")=="EXACT_MULTI_ARMOR_SOURCE_MASK_MATCH_UNADMITTED"
+         mask.get("status")=="EXACT_MULTI_SLOT_SOURCE_MASK_MATCH_UNADMITTED"
          and set(mask.get("by_slot",{}))==set(choices),
          "FRESH_MULTI_E0_ALL_FINAL_ITEM_MASKS_REQUIRED")
     selected=[]
@@ -1202,9 +1203,8 @@ def _selected_installed_E0_multi_on_final_user_items(*,user,rows,mask,
              not any(result["fixed_E"].values()),
              "FRESH_MULTI_E0_NO_UNKNOWN_OR_POSITIVE_E")
         selected.append(result)
-    need(len({row["selected_identity"]["selected_enchant_id"]
-              for row in selected})==len(selected),
-         "FRESH_MULTI_E0_DUPLICATE_ID_OUTSIDE_REGISTERED_SLOT")
+    # Repeating an ID is valid on distinct slots, e.g. both rings.
+    # Physical slot keys remain unique and independently attested.
     return selected
 
 
@@ -1355,10 +1355,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
                (fresh_installed_environment_path is not None
                 and not selected_season_items
                 and type(user[SEASON_ENCHANT_FIELD]) is dict
-                and 1<=len(user[SEASON_ENCHANT_FIELD])<=4
-                and (len(user[SEASON_ENCHANT_FIELD])==1 or
-                     set(user[SEASON_ENCHANT_FIELD])<=
-                     set(("head","shoulders","chest","feet")))
+                and 1<=len(user[SEASON_ENCHANT_FIELD])<=len(
+                    SIGNED_E0_SINGLE_SLOTS)
                 and all(type(id_) is int and id_>0
                         for id_ in user[SEASON_ENCHANT_FIELD].values())
                 and set(user[SEASON_ENCHANT_FIELD])<=
@@ -1692,7 +1690,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
                         user=user,rows=rows,mask=actual_user_enchant_source,
                         installed_path=fresh_installed_environment_path))
                 selected_nonchmv={
-                    "status":"EXACT_INSTALLED_MULTI_ARMOR_E0_PENDING_V096",
+                    "status":"EXACT_INSTALLED_MULTI_SLOT_E0_PENDING_V096",
                     "selected_identity_sha256":[
                         x["selected_identity_sha256"]
                         for x in selected_installed_E0],

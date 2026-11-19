@@ -240,6 +240,29 @@ class SelectedPermanentEnchantE0BudgetTests(unittest.TestCase):
                             manual["selected_identity_sha256"])
         self.assertEqual((first["native_calls"],first["network_calls"]),(0,0))
 
+    def test_v626_signed_weapon_family_requires_per_hand_physical_mask_later(self):
+        """v212 recognizes a hand, but v216 still owns subclass applicability."""
+        E0={stat:0 for stat in ("crit_rating","haste_rating",
+                                "mastery_rating","versatility_rating")}
+        option={"enchant_id":89990,"simc_token":"enchant_weapon__example",
+                "slot":"WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED",
+                "ui_selectable":True,"verified_fixed_E":E0,
+                "chmv_budget_receipt_sha256":"d"*64}
+        doc=self.installed([option])
+        with mock.patch.object(p,"verify_fresh_installed_environment",
+                               return_value=True):
+            for slot,item in (("main_hand",260001),("off_hand",260002)):
+                proof=p.preview_installed_selected_enchant_budget(
+                    document=doc,slot=slot,item_id=item,enchant_id=89990)
+                self.assertTrue(proof["fixed_E_zero_is_valid"])
+                self.assertFalse(proof["runtime_selectable"])
+                self.assertTrue(proof["user_physical_item_and_simc_profile_binding_pending"])
+                self.assertEqual(proof["selected_identity"]["selected_slot"],slot)
+            with self.assertRaisesRegex(p.EnvironmentBlocked,
+                                       "USER_SLOT_OUTSIDE_ORIGINAL_MASK"):
+                p.preview_installed_selected_enchant_budget(
+                    document=doc,slot="head",item_id=260001,enchant_id=89990)
+
     def test_positive_static_E_added_once_auto_manual_T_keeps_authority(self):
         zero=dict.fromkeys(("crit_rating","haste_rating",
                             "mastery_rating","versatility_rating"),0)

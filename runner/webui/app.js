@@ -923,8 +923,10 @@ function fillDefault(item) {
   $("season_enchant_finger1").value="";
   $("season_enchant_finger2").value="";
   $("season_enchant_other").value="";
-  for(const id of ["env-enchant-helm","env-enchant-shoulders",
-                    "env-enchant-chest","env-enchant-boots"])
+  for(const id of ["env-enchant-helm","env-enchant-neck","env-enchant-shoulders",
+      "env-enchant-back","env-enchant-chest","env-enchant-wrists",
+      "env-enchant-hands","env-enchant-waist","env-enchant-legs",
+      "env-enchant-boots","env-enchant-weapon","env-enchant-offhand"])
     $(id).value="";
   // Reset optional slots on specialization changes, including hidden extra rows.
   fillGearRows("special-rows",[]);
@@ -1657,10 +1659,12 @@ function fillSessionInputs(payload) {
     otherNode.value="";
     const selected=new Map(savedOthers.map(
       ([slot,eid])=>[slot,slot+":"+eid]));
-    for(const [slot,id] of [["head","env-enchant-helm"],
-                            ["shoulders","env-enchant-shoulders"],
-                            ["chest","env-enchant-chest"],
-                            ["feet","env-enchant-boots"]]) {
+    for(const [slot,id] of [["head","env-enchant-helm"],["neck","env-enchant-neck"],
+    ["shoulders","env-enchant-shoulders"],["back","env-enchant-back"],
+    ["chest","env-enchant-chest"],["wrists","env-enchant-wrists"],
+    ["hands","env-enchant-hands"],["waist","env-enchant-waist"],
+    ["legs","env-enchant-legs"],["feet","env-enchant-boots"],
+    ["main_hand","env-enchant-weapon"],["off_hand","env-enchant-offhand"]]) {
       const node=$(id),key=selected.get(slot)||"";
       if(key && !Array.from(node.options).some(opt=>opt.value===key)) {
         const historic=option(key,
@@ -1677,8 +1681,10 @@ function fillSessionInputs(payload) {
       prior.dataset.historic="true";otherNode.appendChild(prior);
     }
     otherNode.value=key;
-    for(const id of ["env-enchant-helm","env-enchant-shoulders",
-                     "env-enchant-chest","env-enchant-boots"]) {
+    for(const id of ["env-enchant-helm","env-enchant-neck","env-enchant-shoulders",
+      "env-enchant-back","env-enchant-chest","env-enchant-wrists",
+      "env-enchant-hands","env-enchant-waist","env-enchant-legs",
+      "env-enchant-boots","env-enchant-weapon","env-enchant-offhand"]) {
       const node=$(id);
       node.value=state.installedOtherE0Choices?.has(key) &&
         Array.from(node.options).some(opt=>opt.value===key&&!opt.disabled)?
@@ -1686,8 +1692,10 @@ function fillSessionInputs(payload) {
     }
   } else {
     otherNode.value="";
-    for(const id of ["env-enchant-helm","env-enchant-shoulders",
-                     "env-enchant-chest","env-enchant-boots"]) $(id).value="";
+    for(const id of ["env-enchant-helm","env-enchant-neck","env-enchant-shoulders",
+      "env-enchant-back","env-enchant-chest","env-enchant-wrists",
+      "env-enchant-hands","env-enchant-waist","env-enchant-legs",
+      "env-enchant-boots","env-enchant-weapon","env-enchant-offhand"]) $(id).value="";
   }
   // Recover the exact local inputs from this machine's saved session only.
   // No talent strings or OS file paths are stored in browser localStorage.
@@ -1847,67 +1855,71 @@ function buildRequest() {
       controls.runeforge_by_hand=runeByHand;
     }
   }
-  // Signed E0 on up to four actual armor slots: keep the existing single
-  // ring/historical input path unchanged. v106/v098/v096 reverify every
-  // final physical ItemID, installed SHA and per-slot SimC enchant_id.
-  const armorChoices=[["head","env-enchant-helm"],
-    ["shoulders","env-enchant-shoulders"],["chest","env-enchant-chest"],
-    ["feet","env-enchant-boots"]].filter(([,id])=>!!field(id));
-  if(armorChoices.length>1) {
-    if(field("season_enchant_finger1")||field("season_enchant_finger2")||
-       field("season_enchant_other"))
-      throw Error("여러 부위 마부는 검증된 머리·어깨·가슴·장화 E0만 함께 선택할 수 있습니다.");
-    const chosen={};
-    for(const [slot,id] of armorChoices) {
-      const key=field(id);
-      const matched=new RegExp("^"+slot+":([1-9][0-9]*)$").exec(key);
-      if(!matched || !state.installedOtherE0Choices?.has(key) ||
-         !Array.from($(id).options).some(opt=>opt.value===key&&!opt.disabled))
-        throw Error("UNVERIFIED_MULTI_ENCHANT_SELECTION_BLOCKED");
-      const eid=Number(matched[1]);
-      if(!Number.isSafeInteger(eid))
-        throw Error("UNVERIFIED_MULTI_ENCHANT_SELECTION_BLOCKED");
-      chosen[slot]=eid;
-    }
-    controls.enchant_choices=chosen;
-  } else {
-    // v106/v098/v096 accepts ONE selected ring; do not discard another.
-    const selectedFinger2Enchant=field("season_enchant_finger2");
-    const selectedOtherEnchant=field("season_enchant_other");
-    if(Number(!!field("season_enchant_finger1"))+
-       Number(!!selectedFinger2Enchant)+Number(!!selectedOtherEnchant)>1)
-      throw Error("현재 검증된 영구 마부는 반지 1 또는 반지 2 한 곳만 선택할 수 있습니다. 두 반지 동시 적용은 아직 지원하지 않습니다.");
-    if(field("season_enchant_finger1")) {
-      const eid=Number(field("season_enchant_finger1"));
-      const exact=state.exactUserEnchantIds.has(eid) &&
-        exactUserEnchantInputsMatch();
-      if(!exact&&!(eid===7967&&state.eagleApproved)&&
-         !state.installedE0Ids?.has(eid))
-        throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
-      controls.enchant_choices={finger1:eid};
-    }
-    if(selectedFinger2Enchant) {
-      const eid=Number(selectedFinger2Enchant);
-      // The historical 7967/8025/7965 pilot is finger1-only. This hand
-      // requires the same v212-signed E0 registered item as the final SimC.
-      if(!state.installedE0Ids?.has(eid) ||
-         !Array.from($("season_enchant_finger2").options).some(
-           opt=>opt.value===selectedFinger2Enchant&&opt.disabled!==true))
-        throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
-      controls.enchant_choices={finger2:eid};
-    }
-    if(selectedOtherEnchant) {
-      const match=/^([a-z][a-z0-9_]*):([1-9][0-9]*)$/.exec(selectedOtherEnchant);
-      if(!match || !state.installedOtherE0Choices?.has(selectedOtherEnchant) ||
-         !Array.from($("season_enchant_other").options).some(
-           opt=>opt.value===selectedOtherEnchant&&opt.disabled!==true))
-        throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
-      const eid=Number(match[2]);
-      if(!Number.isSafeInteger(eid))
-        throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
-      controls.enchant_choices={[match[1]]:eid};
-    }
+  // Each physical slot can have one registered permanent enchant.
+  // No total slot cap, ring/armor exclusion, or duplicate-ID ban.
+  const slotControls=[["head","env-enchant-helm"],["neck","env-enchant-neck"],
+    ["shoulders","env-enchant-shoulders"],["back","env-enchant-back"],
+    ["chest","env-enchant-chest"],["wrists","env-enchant-wrists"],
+    ["hands","env-enchant-hands"],["waist","env-enchant-waist"],
+    ["legs","env-enchant-legs"],["feet","env-enchant-boots"],
+    ["main_hand","env-enchant-weapon"],["off_hand","env-enchant-offhand"]];
+  const knownSlots=new Map(slotControls);
+  const chosen={};
+  let historicalSingle=false;
+  for(const [slot,id] of [["finger1","season_enchant_finger1"],
+                          ["finger2","season_enchant_finger2"]]) {
+    const value=field(id);
+    if(!value)continue;
+    const eid=Number(value);
+    if(!Number.isSafeInteger(eid)||eid<=0)
+      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+    const installed=state.installedE0Ids?.has(eid);
+    const historic=slot==="finger1" &&
+      ((state.exactUserEnchantIds?.has(eid) &&
+        exactUserEnchantInputsMatch()) ||
+       (eid===7967&&state.eagleApproved));
+    const enabled=Array.from($(id).options).some(
+      item=>item.value===value&&!item.disabled);
+    if(!enabled || (!installed&&!historic))
+      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+    if(!installed)historicalSingle=true;
+    chosen[slot]=eid;
   }
+  for(const [slot,id] of slotControls) {
+    const value=field(id);
+    if(!value)continue;
+    const match=new RegExp("^"+slot+":([1-9][0-9]*)$").exec(value);
+    if(!match || !state.installedOtherE0Choices?.has(value) ||
+       !Array.from($(id).options).some(item=>
+         item.value===value&&!item.disabled))
+      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+    const eid=Number(match[1]);
+    if(!Number.isSafeInteger(eid))
+      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+    chosen[slot]=eid;
+  }
+  // Legacy single-select field mirrors one actual slot, never a second
+  // independent enchant. Keep old saved sessions and v621 browser path.
+  const legacy=field("season_enchant_other");
+  if(legacy) {
+    const match=/^([a-z][a-z0-9_]*):([1-9][0-9]*)$/.exec(legacy);
+    if(!match || !knownSlots.has(match[1]) ||
+       !state.installedOtherE0Choices?.has(legacy) ||
+       !Array.from($("season_enchant_other").options).some(item=>
+         item.value===legacy&&!item.disabled))
+      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+    const eid=Number(match[2]);
+    if(!Number.isSafeInteger(eid) ||
+       (chosen[match[1]]!==undefined && chosen[match[1]]!==eid))
+      throw Error("ENCHANT_ONE_PER_PHYSICAL_SLOT_REQUIRED");
+    chosen[match[1]]=eid;
+  }
+  if(historicalSingle && Object.keys(chosen).length!==1)
+    throw Error("과거 단일 마부 증거는 다른 부위와 동시 적용할 수 없습니다. 검증된 시즌 마부를 선택해 주세요.");
+  for(const hand of ["main_hand","off_hand"])
+    if(chosen[hand] && controls.runeforge_by_hand?.[hand])
+      throw Error("같은 무기에 룬벼리기와 일반 영구 마부를 동시에 적용할 수 없습니다.");
+  if(Object.keys(chosen).length)controls.enchant_choices=chosen;
   if(!Number.isInteger(controls.ilevel)||controls.ilevel<1||controls.ilevel>1000)
     throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
   // Beyond historical reference levels, only a matching v212 installation
@@ -3361,9 +3373,12 @@ function renderSeasonOptionCatalog(catalog) {
   other.disabled=true;
   // The dedicated visible slot controls are mirrors of the EXISTING
   // signed, exactly-one generic E0 user input, not a new approval route.
-  const directSlotSelectors={head:"env-enchant-helm",
-    shoulders:"env-enchant-shoulders",chest:"env-enchant-chest",
-    feet:"env-enchant-boots"};
+  const directSlotSelectors=Object.fromEntries([["head","env-enchant-helm"],["neck","env-enchant-neck"],
+    ["shoulders","env-enchant-shoulders"],["back","env-enchant-back"],
+    ["chest","env-enchant-chest"],["wrists","env-enchant-wrists"],
+    ["hands","env-enchant-hands"],["waist","env-enchant-waist"],
+    ["legs","env-enchant-legs"],["feet","env-enchant-boots"],
+    ["main_hand","env-enchant-weapon"],["off_hand","env-enchant-offhand"]]);
   for(const id of Object.values(directSlotSelectors)) {
     const node=$(id);
     node.replaceChildren(option("","선택 없음 (검증 대기)"));
@@ -3420,28 +3435,34 @@ function renderSeasonOptionCatalog(catalog) {
     const ordinarySlots=new Set(["head","neck","shoulders","back",
       "chest","wrists","hands","waist","legs","feet"]);
     const names={head:"머리",neck:"목",shoulders:"어깨",back:"등",
-      chest:"가슴",wrists:"손목",hands:"손",waist:"허리",legs:"다리",feet:"발"};
+      chest:"가슴",wrists:"손목",hands:"손",waist:"허리",legs:"다리",
+      feet:"발",main_hand:"주무기",off_hand:"보조무기"};
     for(const item of rows) {
-      if(!ordinarySlots.has(item.slot) ||
-         !Number.isSafeInteger(item.enchant_id)||item.enchant_id<=0 ||
-         typeof item.verified_fixed_E!=="object"||
-         item.verified_fixed_E===null ||
-         Object.keys(item.verified_fixed_E).length!==4 ||
-         !["crit_rating","haste_rating","mastery_rating",
-           "versatility_rating"].every(k=>item.verified_fixed_E[k]===0) ||
-         !/^[0-9a-f]{64}$/.test(item.chmv_budget_receipt_sha256||""))
+      if(!Number.isSafeInteger(item.enchant_id)||item.enchant_id<=0 ||
+        typeof item.verified_fixed_E!=="object"||
+        item.verified_fixed_E===null ||
+        Object.keys(item.verified_fixed_E).length!==4 ||
+        !["crit_rating","haste_rating","mastery_rating",
+          "versatility_rating"].every(k=>item.verified_fixed_E[k]===0) ||
+        !/^[0-9a-f]{64}$/.test(item.chmv_budget_receipt_sha256||""))
         continue;
-      const key=item.slot+":"+item.enchant_id;
-      state.installedOtherE0Choices.add(key);
-      other.appendChild(option(key,
-        names[item.slot]+" · 마부 #"+item.enchant_id+
-        " · 정적 E=0 검증 (실물/SimC 재확인)"));
-      const directId=directSlotSelectors[item.slot];
-      if(directId) {
-        const widget=$(directId);
-        widget.appendChild(option(key,
-          "마부 #"+item.enchant_id+" · 정적 E=0 검증"));
-        widget.disabled=false;
+      // A signed weapon family can be SHOWN on each hand; only v216
+      // may accept the actual final physical hand/subclass at Start.
+      const slots=ordinarySlots.has(item.slot)?[item.slot]:
+        item.slot==="WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED"?
+          ["main_hand","off_hand"]:[];
+      for(const slot of slots) {
+        const key=slot+":"+item.enchant_id;
+        state.installedOtherE0Choices.add(key);
+        other.appendChild(option(key,names[slot]+" · 마부 #"+
+          item.enchant_id+" · E=0 (실제 아이템/손 검증)"));
+        const directId=directSlotSelectors[slot];
+        if(directId) {
+          const widget=$(directId);
+          widget.appendChild(option(key,
+            "마부 #"+item.enchant_id+" · 정적 E=0 검증"));
+          widget.disabled=false;
+        }
       }
     }
     other.disabled=state.installedOtherE0Choices.size===0;
@@ -3453,7 +3474,7 @@ function renderSeasonOptionCatalog(catalog) {
         (signedRingCount?"반지 마부 "+signedRingCount+"종":"")+
         (signedRingCount&&signedOrdinaryCount?" · ":"")+
         (signedOrdinaryCount?"기타 일반 장비 마부 "+signedOrdinaryCount+"종":"")+
-        " 선택 가능 · 검증된 머리·어깨·가슴·발 E0는 부위별 동시 선택 가능 · "+
+        " 선택 가능 · 검증된 모든 부위의 마부는 각 부위마다 하나씩 동시 선택 가능 · "+
         "최종 실물 ID와 SimC 입력은 실행 전에 다시 검증. "+
         "원본 미승인·고정 E 미확정·E>0 마부는 잠금 유지.";
     }
@@ -3786,34 +3807,31 @@ async function rollbackSimcUpdater() {
 // season_enchant_other field and server-side v106/v098/v096 E0 contract.
 // One physical enchant at a time until multi-slot B/T proof is implemented.
 function synchronizeInstalledEnchantChoice(sourceId) {
-  const directIds=["env-enchant-helm","env-enchant-shoulders",
-                   "env-enchant-chest","env-enchant-boots"];
-  const rings=["season_enchant_finger1","season_enchant_finger2"];
-  let chosen=field(sourceId);
+  const slotControls=[["head","env-enchant-helm"],["neck","env-enchant-neck"],
+    ["shoulders","env-enchant-shoulders"],["back","env-enchant-back"],
+    ["chest","env-enchant-chest"],["wrists","env-enchant-wrists"],
+    ["hands","env-enchant-hands"],["waist","env-enchant-waist"],
+    ["legs","env-enchant-legs"],["feet","env-enchant-boots"],
+    ["main_hand","env-enchant-weapon"],["off_hand","env-enchant-offhand"]];
+  const directIds=slotControls.map(([,id])=>id);
+  const value=field(sourceId);
   if(directIds.includes(sourceId)) {
     const node=$(sourceId);
-    if(chosen && (!state.installedOtherE0Choices?.has(chosen) ||
-        !Array.from(node.options).some(opt=>opt.value===chosen&&!opt.disabled))) {
-      node.value="";chosen="";
+    if(value && (!state.installedOtherE0Choices?.has(value) ||
+       !Array.from(node.options).some(x=>x.value===value&&!x.disabled)))
+      node.value="";
+    const active=directIds.map(id=>field(id)).filter(Boolean);
+    $("season_enchant_other").value=active.length===1?active[0]:"";
+  } else if(sourceId==="season_enchant_other" && value) {
+    const match=/^([a-z][a-z0-9_]*):([1-9][0-9]*)$/.exec(value);
+    const found=match && slotControls.find(([slot])=>slot===match[1]);
+    if(found) {
+      const node=$(found[1]);
+      node.value=Array.from(node.options).some(x=>
+        x.value===value&&!x.disabled)?value:"";
     }
-    const selected=directIds.map(id=>field(id)).filter(Boolean);
-    // The legacy generic input mirrors a SINGLE armor slot only.
-    $("season_enchant_other").value=selected.length===1?selected[0]:"";
-    if(selected.length)for(const id of rings)$(id).value="";
-  } else if(sourceId==="season_enchant_other") {
-    const key=field("season_enchant_other");
-    for(const id of directIds) {
-      const node=$(id);
-      node.value=key && Array.from(node.options).some(opt=>
-        opt.value===key&&!opt.disabled)?key:"";
-    }
-    if(key)for(const id of rings)$(id).value="";
-  } else if(rings.includes(sourceId) && chosen) {
-    // Ring and historical positive-E pilots remain one-at-a-time.
-    for(const id of rings)if(id!==sourceId)$(id).value="";
-    $("season_enchant_other").value="";
-    for(const id of directIds)$(id).value="";
   }
+  // Rings and all other physical slots are independent selections.
   updateBudgetPreview();
 }
 function registerHandlers() {
@@ -3828,8 +3846,10 @@ function registerHandlers() {
     "optimizer-oil-enabled","optimizer-oil-loadout",
     "optimizer-oil-main-id","optimizer-oil-off-id","oil_main","oil_off",
     "season_enchant_finger1","season_enchant_finger2",
-    "season_enchant_other","env-enchant-helm","env-enchant-shoulders",
-    "env-enchant-chest","env-enchant-boots",
+    "season_enchant_other",...["env-enchant-helm","env-enchant-neck","env-enchant-shoulders",
+      "env-enchant-back","env-enchant-chest","env-enchant-wrists",
+      "env-enchant-hands","env-enchant-waist","env-enchant-legs",
+      "env-enchant-boots","env-enchant-weapon","env-enchant-offhand"],
     "dk_rune_main","dk_rune_off"
   ]);
   const editedUserChoice=event=>{
@@ -3872,9 +3892,10 @@ function registerHandlers() {
     button.addEventListener("click",()=>switchView(button.dataset.view));
   $("manual-t-mode").addEventListener("change",updateManualTMode);
   for(const id of ["season_enchant_finger1","season_enchant_finger2",
-                   "season_enchant_other","env-enchant-helm",
-                   "env-enchant-shoulders","env-enchant-chest",
-                   "env-enchant-boots"])
+                   "season_enchant_other",...["env-enchant-helm","env-enchant-neck","env-enchant-shoulders",
+      "env-enchant-back","env-enchant-chest","env-enchant-wrists",
+      "env-enchant-hands","env-enchant-waist","env-enchant-legs",
+      "env-enchant-boots","env-enchant-weapon","env-enchant-offhand"]])
     $(id).addEventListener("change",()=>
       synchronizeInstalledEnchantChoice(id));
   $("final_T").addEventListener("input",updateBudgetPreview);

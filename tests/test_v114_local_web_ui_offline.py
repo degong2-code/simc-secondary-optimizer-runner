@@ -2464,7 +2464,7 @@ console.log("V473_BUILD_ILEVEL_REVOKE_ENCHANT_RUNE_PASS");
                       result.stdout)
 
     def test_v600_signed_E0_single_finger2_real_browser_request(self):
-        """Actual selected UI option -> original one-ring Python contract."""
+        """Original single-ring, now also same-ID two-ring and armor options."""
         import shutil,subprocess
         node=shutil.which("node")
         if node is None:self.skipTest("node missing")
@@ -2472,118 +2472,125 @@ console.log("V473_BUILD_ILEVEL_REVOKE_ENCHANT_RUNE_PASS");
 const fs=require("fs"),assert=require("assert");
 const raw=fs.readFileSync(process.argv[1],"utf8");
 const scope=raw.indexOf("function buildRequest() {");
-const a=raw.indexOf('  // Signed E0 on up to four actual armor slots:',scope);
+const a=raw.indexOf("  // Each physical slot can have one registered permanent enchant.",scope);
 const b=raw.indexOf("  if(!Number.isInteger(controls.ilevel)",a);
-assert(scope>=0&&a>scope&&b>a,"actual source-only request block missing");
-const el={season_enchant_finger1:{value:"",options:[]},
-          season_enchant_finger2:{value:"",options:[
-            {value:"89999",disabled:false}]},
-          season_enchant_other:{value:"",options:[
-            {value:"legs:89999",disabled:false}]},
-          "env-enchant-helm":{value:"",options:[]},
-          "env-enchant-shoulders":{value:"",options:[]},
-          "env-enchant-chest":{value:"",options:[]},
-          "env-enchant-boots":{value:"",options:[]}};
-const $=id=>el[id],field=id=>el[id].value;
+assert(scope>=0&&a>scope&&b>a);
+const ids=["env-enchant-helm","env-enchant-neck",
+  "env-enchant-shoulders","env-enchant-back","env-enchant-chest",
+  "env-enchant-wrists","env-enchant-hands","env-enchant-waist",
+  "env-enchant-legs","env-enchant-boots","env-enchant-weapon",
+  "env-enchant-offhand"];
+const el={};
+for(const id of [...ids,"season_enchant_finger1",
+    "season_enchant_finger2","season_enchant_other"])
+  el[id]={value:"",options:[]};
+for(const id of ["season_enchant_finger1","season_enchant_finger2"])
+  el[id].options.push({value:"89999",disabled:false});
+el.season_enchant_other.options.push({value:"legs:89998",disabled:false});
 const state={installedE0Ids:new Set([89999]),
- exactUserEnchantIds:new Set([7967]),eagleApproved:false,
- installedOtherE0Choices:new Set(["legs:89999"])};
+  installedOtherE0Choices:new Set(["legs:89998"]),
+  exactUserEnchantIds:new Set(),eagleApproved:false};
+const $=id=>el[id],field=id=>el[id].value;
 const run=Function("state","$","field",
   "exactUserEnchantInputsMatch","controls",
   raw.slice(a,b)+"return controls.enchant_choices||null;");
-function selected(one,two){
- el.season_enchant_finger1.value=one;
- el.season_enchant_finger2.value=two;
- return run(state,$,field,()=>false,{});
-}
-assert.strictEqual(selected("",""),null);
-assert.deepStrictEqual(selected("","89999"),{finger2:89999});
-assert.deepStrictEqual(selected("89999",""),{finger1:89999});
-el.season_enchant_other.value="legs:89999";
-assert.deepStrictEqual(selected("",""),{legs:89999});
-assert.throws(()=>selected("89999",""),/한 곳만 선택/);
-el.season_enchant_other.value="";
+const read=()=>run(state,$,field,()=>false,{});
+assert.strictEqual(read(),null);
+el.season_enchant_finger2.value="89999";
+assert.deepStrictEqual(read(),{finger2:89999});
+el.season_enchant_finger1.value="89999";
+assert.deepStrictEqual(read(),{finger1:89999,finger2:89999});
+el.season_enchant_other.value="legs:89998";
+assert.deepStrictEqual(read(),{finger1:89999,finger2:89999,legs:89998});
 state.installedOtherE0Choices.clear();
-el.season_enchant_other.value="legs:89999";
-assert.throws(()=>selected("",""),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/,
-  "saved option or stale unapproved v212 cannot select ordinary E0");
+assert.throws(read,/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
 el.season_enchant_other.value="";
-assert.throws(()=>selected("89999","89999"),/한 곳만 선택/);
-assert.throws(()=>selected("","7967"),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
-assert.throws(()=>selected("","81234"),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
 el.season_enchant_finger2.options[0].disabled=true;
-assert.throws(()=>selected("","89999"),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
+assert.throws(read,/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
 el.season_enchant_finger2.options[0].disabled=false;
 state.installedE0Ids.clear();
-assert.throws(()=>selected("","89999"),/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
-console.log("V600_SINGLE_SIGNED_E0_FINGER2_REQUEST_AND_BLOCK_PASS");
+assert.throws(read,/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
+console.log("V600_SIGNED_RING_BOTH_HANDS_AND_SINGLE_INPUT_PASS");
 """
         res=subprocess.run([node,"-e",script,
             str(ROOT/"runner/webui/app.js")],
-            capture_output=True,text=True,timeout=15,check=False)
+            capture_output=True,text=True,timeout=20,check=False)
         self.assertEqual(res.returncode,0,res.stderr)
-        self.assertIn("V600_SINGLE_SIGNED_E0_FINGER2_REQUEST_AND_BLOCK_PASS",
+        self.assertIn("V600_SIGNED_RING_BOTH_HANDS_AND_SINGLE_INPUT_PASS",
                       res.stdout)
 
     def test_v625_multi_signed_armor_request_and_unsigned_rejection(self):
-        """Execute original request source: exactly 2 signed slots, zero Native."""
+        """Real JS: 14 slots coexist and still reject unsigned and overlap."""
         import shutil,subprocess
         node=shutil.which("node")
         if node is None:self.skipTest("node unavailable")
         script=r"""
 const fs=require("fs"),assert=require("assert");
 const src=fs.readFileSync(process.argv[1],"utf8");
-const start=src.indexOf("  // Signed E0 on up to four actual armor slots:",
+const start=src.indexOf("  // Each physical slot can have one registered permanent enchant.",
   src.indexOf("function buildRequest() {"));
 const end=src.indexOf("  if(!Number.isInteger(controls.ilevel)",start);
-assert(start>=0&&end>start,"multi-armor actual UI request missing");
+assert(start>=0&&end>start);
+const physical=[
+  ["head","env-enchant-helm",7951],["neck","env-enchant-neck",7954],
+  ["shoulders","env-enchant-shoulders",7952],["back","env-enchant-back",7955],
+  ["chest","env-enchant-chest",7957],["wrists","env-enchant-wrists",7958],
+  ["hands","env-enchant-hands",7959],["waist","env-enchant-waist",7960],
+  ["legs","env-enchant-legs",7961],["feet","env-enchant-boots",7953],
+  ["main_hand","env-enchant-weapon",89990],
+  ["off_hand","env-enchant-offhand",89990]];
 const el={};
-for(const id of ["env-enchant-helm","env-enchant-shoulders",
-                 "env-enchant-chest","env-enchant-boots",
-                 "season_enchant_other","season_enchant_finger1",
-                 "season_enchant_finger2"])
-  el[id]={value:"",options:[]};
-for(const [slot,id,enchant] of [["head","env-enchant-helm",7951],
-  ["shoulders","env-enchant-shoulders",7952],
-  ["chest","env-enchant-chest",7957],["feet","env-enchant-boots",7953]]) {
-  const value=slot+":"+enchant;
-  el[id].options.push({value,disabled:false});
-  el.season_enchant_other.options.push({value,disabled:false});
+for(const name of [...physical.map(x=>x[1]),"season_enchant_finger1",
+  "season_enchant_finger2","season_enchant_other"])
+  el[name]={value:"",options:[]};
+const valid=new Set();
+for(const [slot,name,id] of physical){
+  const key=slot+":"+id;
+  el[name].options.push({value:key,disabled:false});
+  el.season_enchant_other.options.push({value:key,disabled:false});
+  valid.add(key);
 }
-const state={installedOtherE0Choices:
-  new Set(["head:7951","shoulders:7952","chest:7957","feet:7953"]),
-  installedE0Ids:new Set(),exactUserEnchantIds:new Set(),
+for(const name of ["season_enchant_finger1","season_enchant_finger2"])
+  el[name].options.push({value:"89999",disabled:false});
+const state={installedOtherE0Choices:valid,
+  installedE0Ids:new Set([89999]),exactUserEnchantIds:new Set(),
   eagleApproved:false};
 const $=id=>el[id],field=id=>el[id].value;
-const parse=Function("field","$","state","controls",
-   "exactUserEnchantInputsMatch",
-   src.slice(start,end)+"return controls.enchant_choices||null;");
-const collect=()=>parse(field,$,state,{},()=>false);
-el["env-enchant-helm"].value="head:7951";
-el["env-enchant-chest"].value="chest:7957";
-assert.deepStrictEqual(collect(),{head:7951,chest:7957});
-el["env-enchant-chest"].value="chest:89999";
-assert.throws(collect,/UNVERIFIED_MULTI_ENCHANT_SELECTION_BLOCKED/);
-el["env-enchant-chest"].value="chest:7957";
+const parser=Function("state","$","field","controls",
+  "exactUserEnchantInputsMatch",
+  src.slice(start,end)+"return controls.enchant_choices||null;");
+const collect=(controls={})=>parser(state,$,field,controls,()=>false);
+for(const [slot,name,id] of physical)el[name].value=slot+":"+id;
 el.season_enchant_finger1.value="89999";
-assert.throws(collect,/여러 부위 마부/);
-el.season_enchant_finger1.value="";
-el.season_enchant_other.value="head:7951";
-assert.throws(collect,/여러 부위 마부/);
+el.season_enchant_finger2.value="89999";
+let found=collect();
+assert.strictEqual(Object.keys(found).length,14);
+assert.deepStrictEqual([found.finger1,found.finger2],[89999,89999]);
+assert.deepStrictEqual([found.main_hand,found.off_hand],[89990,89990]);
+el["env-enchant-chest"].value="chest:99999";
+assert.throws(collect,/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
+el["env-enchant-chest"].value="chest:7957";
+assert.throws(()=>collect({runeforge_by_hand:{main_hand:3370}}),
+  /같은 무기에/);
+el.season_enchant_other.value="chest:7957";
+assert.strictEqual(Object.keys(collect()).length,14,
+  "legacy mirror must not duplicate an already selected slot");
+el.season_enchant_other.value="chest:89991";
+assert.throws(collect,/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
 el.season_enchant_other.value="";
-state.installedOtherE0Choices.delete("chest:7957");
-assert.throws(collect,/UNVERIFIED_MULTI_ENCHANT_SELECTION_BLOCKED/);
-console.log("V625_TWO_SIGNED_E0_ARMOR_REQUEST_FAIL_CLOSED_PASS");
+state.installedOtherE0Choices.delete("feet:7953");
+assert.throws(collect,/UNVERIFIED_ENCHANT_SELECTION_BLOCKED/);
+console.log("V626_ALL_SIGNED_SLOTS_SAME_ID_RINGS_WEAPONS_FAIL_CLOSED_PASS");
 """
         r=subprocess.run([node,"-e",script,
             str(ROOT/"runner/webui/app.js")],capture_output=True,
             text=True,timeout=20,check=False)
         self.assertEqual(r.returncode,0,r.stderr)
-        self.assertIn("V625_TWO_SIGNED_E0_ARMOR_REQUEST_FAIL_CLOSED_PASS",
+        self.assertIn("V626_ALL_SIGNED_SLOTS_SAME_ID_RINGS_WEAPONS_FAIL_CLOSED_PASS",
                       r.stdout)
 
     def test_v620_visible_armor_enchant_is_exact_existing_one_choice(self):
-        """Real UI mirror, never a new unsigned per-slot server selection."""
+        """Legacy single-select remains a mirror; no slot erases a different one."""
         import shutil,subprocess
         node=shutil.which("node")
         if node is None:self.skipTest("node missing")
@@ -2592,60 +2599,62 @@ const fs=require("fs"),assert=require("assert");
 const raw=fs.readFileSync(process.argv[1],"utf8");
 const a=raw.indexOf("function synchronizeInstalledEnchantChoice(sourceId) {");
 const b=raw.indexOf("function registerHandlers() {",a);
-assert(a>=0&&b>a,"actual visible enchant mirror handler missing");
-const ids=["env-enchant-helm","env-enchant-shoulders",
-           "env-enchant-chest","env-enchant-boots"];
+assert(a>=0&&b>a);
+const physical=[
+  ["head","env-enchant-helm",7951],["neck","env-enchant-neck",7954],
+  ["shoulders","env-enchant-shoulders",7952],["back","env-enchant-back",7955],
+  ["chest","env-enchant-chest",7957],["wrists","env-enchant-wrists",7958],
+  ["hands","env-enchant-hands",7959],["waist","env-enchant-waist",7960],
+  ["legs","env-enchant-legs",7961],["feet","env-enchant-boots",7953],
+  ["main_hand","env-enchant-weapon",89990],
+  ["off_hand","env-enchant-offhand",89990]];
 const el={};
-for(const name of [...ids,"season_enchant_other",
+for(const name of [...physical.map(x=>x[1]),"season_enchant_other",
   "season_enchant_finger1","season_enchant_finger2"])
   el[name]={value:"",options:[]};
-for(const [slot,name,id] of [
-  ["head","env-enchant-helm",7951],
-  ["shoulders","env-enchant-shoulders",7952],
-  ["chest","env-enchant-chest",7957],
-  ["feet","env-enchant-boots",7953]]) {
+const allowed=new Set();
+for(const [slot,name,id] of physical){
   const key=slot+":"+id;
   el[name].options.push({value:key,disabled:false});
   el.season_enchant_other.options.push({value:key,disabled:false});
+  allowed.add(key);
 }
 const $=name=>el[name],field=name=>el[name].value;
 let updates=0;
-const state={installedOtherE0Choices:
-  new Set(["head:7951","shoulders:7952","chest:7957","feet:7953"])};
+const state={installedOtherE0Choices:allowed};
 const sync=Function("state","$","field","updateBudgetPreview",
- raw.slice(a,b)+"return synchronizeInstalledEnchantChoice;")(
- state,$,field,()=>updates++);
+  raw.slice(a,b)+"return synchronizeInstalledEnchantChoice;")(
+    state,$,field,()=>updates++);
 el["env-enchant-chest"].value="chest:7957";
 sync("env-enchant-chest");
-assert.strictEqual(el.season_enchant_other.value,"chest:7957",
-  "dedicated slot must mirror original v106 generic exactly-one choice");
+assert.strictEqual(el.season_enchant_other.value,"chest:7957");
 el["env-enchant-boots"].value="feet:7953";
 sync("env-enchant-boots");
 assert.strictEqual(el["env-enchant-chest"].value,"chest:7957");
 assert.strictEqual(el.season_enchant_other.value,"");
-assert.strictEqual(el["env-enchant-boots"].value,"feet:7953");
 el.season_enchant_finger1.value="89999";
 sync("season_enchant_finger1");
-assert.strictEqual(el.season_enchant_other.value,"");
-assert.strictEqual(el["env-enchant-boots"].value,"");
+assert.strictEqual(el["env-enchant-boots"].value,"feet:7953");
+el.season_enchant_finger2.value="89999";
+sync("season_enchant_finger2");
+assert.strictEqual(el.season_enchant_finger1.value,"89999");
 el.season_enchant_other.value="head:7951";
 sync("season_enchant_other");
 assert.strictEqual(el["env-enchant-helm"].value,"head:7951");
-assert.strictEqual(el.season_enchant_finger1.value,"");
-// A tampered ID must never pass the signed v212 mirror.
+assert.strictEqual(el["env-enchant-boots"].value,"feet:7953");
 el["env-enchant-chest"].value="chest:99999";
 sync("env-enchant-chest");
-assert.strictEqual(el.season_enchant_other.value,"head:7951",
-  "unsigned choice cannot replace another signed generic choice");
-assert.strictEqual(el["env-enchant-chest"].value,"");
-assert.strictEqual(updates,5);
-console.log("V620_SIGNED_E0_PER_SLOT_PROXY_ONLY_PASS");
+assert.strictEqual(el["env-enchant-chest"].value,"",
+  "unsigned ID must never persist in a per-slot selector");
+assert.strictEqual(updates,6);
+console.log("V620_ALL_VISIBLE_ENCHANT_SLOTS_INDEPENDENT_PASS");
 """
         result=subprocess.run([node,"-e",script,
             str(ROOT/"runner/webui/app.js")],capture_output=True,
             text=True,timeout=20,check=False)
         self.assertEqual(result.returncode,0,result.stderr)
-        self.assertIn("V620_SIGNED_E0_PER_SLOT_PROXY_ONLY_PASS",result.stdout)
+        self.assertIn("V620_ALL_VISIBLE_ENCHANT_SLOTS_INDEPENDENT_PASS",
+                      result.stdout)
 
     def test_v467_fresh_v212_dk_runes_survive_unapproved_v213_enchants(self):
         """Real UI: sealed installed DK runes stay usable; E stays blocked."""

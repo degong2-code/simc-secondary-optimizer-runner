@@ -80,7 +80,7 @@ class UserSessionControls(unittest.TestCase):
         for bad in ({"finger3":7967},{"main_hand":89999},
                     {"off_hand":89999},{"trinket1":89999},{"finger1":0},
                     {"finger1":True},{"finger1":"7967"},
-                    {"finger1":7967,"finger2":7967}):
+                    {"trinket1":7967,"finger2":7967}):
             with self.subTest(bad=bad):
                 with self.assertRaises(ux.SessionBlocked):
                     ux.user_scenario({**source,"enchant_choices":bad})
@@ -89,20 +89,29 @@ class UserSessionControls(unittest.TestCase):
         self.assertFalse(ux.standard_controls().get("enchant_choices"))
 
 
-    def test_v625_multi_armor_e0_is_only_form_syntax_not_approval(self):
+    def test_v626_all_eligible_slots_are_independent_not_globally_capped(self):
+        """Slot map is only syntax; v212/v216 still own source admission."""
         controls=ux.standard_controls(("paladin","retribution"))
-        for choices in ({"head":7951,"chest":7957},
-                        {"head":7951,"shoulders":7952,
-                         "chest":7957,"feet":7953}):
-            user=ux.user_scenario({**controls,"enchant_choices":choices})
-            self.assertEqual(user["selected_season_enchants"],choices)
-            self.assertNotIn("fixed_E",user)
-        for invalid in ({"head":7951,"finger1":89999},
+        examples=(
+            {"head":7951,"chest":7957},
+            {"finger1":89999,"finger2":89999},
+            {"finger1":89999,"chest":7957,"feet":7953},
+            {"head":7951,"neck":7952,"shoulders":7953,"back":7954,
+             "chest":7957,"wrists":7958,"hands":7959,"waist":7960,
+             "legs":7961,"feet":7962,"finger1":89999,"finger2":89999,
+             "main_hand":90000,"off_hand":90000},
+        )
+        for selections in examples:
+            with self.subTest(selections=selections):
+                result=ux.user_scenario({
+                    **controls,"enchant_choices":selections})
+                self.assertEqual(result["selected_season_enchants"],selections)
+                self.assertNotIn("fixed_E",result)
+        for invalid in ({"trinket1":1},{"unknown":2},
                         {"head":7951,"chest":0},
                         {"head":7951,"chest":True},
                         {"head":7951,"chest":"7957"},
-                        {"head":7951,"chest":7957,"feet":7953,
-                         "shoulders":7952,"legs":79999}):
+                        {"main_hand":-1},{"finger3":89999}):
             with self.subTest(invalid=invalid):
                 with self.assertRaises(ux.SessionBlocked):
                     ux.user_scenario({**controls,"enchant_choices":invalid})

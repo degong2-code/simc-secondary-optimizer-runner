@@ -301,15 +301,13 @@ def user_scenario(controls):
             # v212 installation + final v098 physical mask + existing CHMV
             # E0 + v096 exactly-once SimC profile may authorize this ID.
             # Old packaged/non-installed paths still reject arbitrary IDs.
-            # Multiple installed E0 armor slots are verified downstream
-            # individually against the final physical items and SimC profile.
-            # Historical positive-E or ring pilots keep exact-one scope.
-            multi_armor=frozenset(("head","shoulders","chest","feet"))
-            need(type(choice) is dict and 1<=len(choice)<=4
+            # A slot map allows one enchant on EACH eligible physical slot.
+            # Form syntax is not source admission or SimC effect proof.
+            need(type(choice) is dict and
+                 1<=len(choice)<=len(bootstrap.SIGNED_E0_SINGLE_SLOTS)
                  and set(choice)<=bootstrap.SIGNED_E0_SINGLE_SLOTS
-                 and (len(choice)==1 or set(choice)<=multi_armor)
                  and all(type(v) is int and v>0 for v in choice.values()),
-                 "USER_INSTALLED_ENCHANT_EXACT_ARMOR_SLOTS_OR_ONE_ID_REQUIRED")
+                 "USER_INSTALLED_ENCHANT_PER_SLOT_ID_REQUIRED")
         output[nonchmv_enchant.FIELD]=dict(choice)
     if "runeforge_by_hand" in controls:
         output["runeforge_by_hand"]=bootstrap.runeforge_mod.check_input(

@@ -174,6 +174,43 @@ class InstalledE0NativeProfileInputTests(unittest.TestCase):
                             "head=id=260001,ilevel=334,enchant_id=7951",
                             "head=id=260001,ilevel=334,enchant_id=7957"))
 
+    def test_v626_repeated_ring_enchant_id_counts_one_per_physical_ring(self):
+        """The ring family is reusable, but each selected slot has one ID."""
+        from tests.test_v212_environment_manifest import (
+            SelectedPermanentEnchantE0BudgetTests)
+        import v212_environment_manifest as installed
+        zero=dict.fromkeys(installed.season_budget.STATS,0)
+        doc=SelectedPermanentEnchantE0BudgetTests().installed([{
+            "enchant_id":89999,"simc_token":"enchant_ring__synthetic_e0",
+            "slot":"finger1/finger2","ui_selectable":True,
+            "verified_fixed_E":zero,"chmv_budget_receipt_sha256":"d"*64}])
+        profile=("hunter=Player\n"
+                 "finger1=id=268266,ilevel=334,enchant_id=89999\n"
+                 "finger2=id=268268,ilevel=334,enchant_id=89999\n")
+        with mock.patch.object(installed,
+              "verify_fresh_installed_environment",return_value=True):
+            for slot,item in (("finger1",268266),("finger2",268268)):
+                scope=installed.preview_installed_selected_enchant_budget(
+                    document=doc,slot=slot,item_id=item,
+                    enchant_id=89999)
+                selected={"identity_sha256":scope["selected_identity_sha256"],
+                          "slot":slot,"item_id":item,"enchant_id":89999}
+                bound=entry._signed_installed_user_E0_profile(
+                    doc=doc,selected=selected,profile=profile,
+                    user_final_T=None,expected_same_id_count=2)
+                self.assertEqual(bound["fixed_E"],zero)
+                with self.assertRaisesRegex(entry.EntryBlocked,
+                      "FRESH_SELECTED_E0_EXACT_ONCE_SIMC_INPUT_REQUIRED"):
+                    entry._signed_installed_user_E0_profile(
+                        doc=doc,selected=selected,profile=profile,
+                        user_final_T=None,expected_same_id_count=1)
+                with self.assertRaises(entry.EntryBlocked):
+                    entry._signed_installed_user_E0_profile(
+                        doc=doc,selected=selected,
+                        profile=profile.replace("id="+str(item),
+                                               "id=999999"),
+                        user_final_T=None,expected_same_id_count=2)
+
     def test_v604_signed_e0_final_feet_profile_and_exact_once(self):
         """One v212 registered ordinary E0; the final SimC item still owns it."""
         from tests.test_v212_environment_manifest import (

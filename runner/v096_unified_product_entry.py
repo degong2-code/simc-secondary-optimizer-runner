@@ -35,10 +35,10 @@ SEASON_FIELD="admitted_season_budget_source"
 SEASON_SCHEMA="v096_internal_admitted_season_budget_source_v1"
 FRESH_SEASON_FIELD="installed_fresh_season_budget_source"
 FRESH_SEASON_SCHEMA="v096_internal_installed_fresh_v212_source_v1"
-# One v212-signed E0 on an actual ordinary representative gear slot.
-# Weapons require a distinct selected-hand mask; trinkets live outside G.
+# Each source-verified permanent enchant occupies one actual equipment slot.
+# Weapon subclass and exact hand are checked by existing v216 physical mask.
 SIGNED_E0_SINGLE_SLOTS=frozenset(
-    gear_slots.SLOTS-{"trinket1","trinket2","main_hand","off_hand"})
+    gear_slots.SLOTS-{"trinket1","trinket2"})
 SELECTED_FRESH_SEASON_FIELD="installed_selected_fresh_v212_source"
 SELECTED_FRESH_SEASON_SCHEMA="v096_internal_selected_fresh_v212_replay_v1"
 # Optional internal stage seal: no Native until physical SimC acceptance.
@@ -194,7 +194,8 @@ def _verified_installed_fresh_v217(*,manifest_path,season):
     return doc,bound
 
 
-def _signed_installed_user_E0_profile(*,doc,selected,profile,user_final_T):
+def _signed_installed_user_E0_profile(*,doc,selected,profile,user_final_T,
+                                      expected_same_id_count=1):
     """Exact v212 CHMV owner + final SimC item input, no effect certification.
 
     SimC owns activation/procs/DPS. The validated selected source's E=0 is
@@ -234,9 +235,12 @@ def _signed_installed_user_E0_profile(*,doc,selected,profile,user_final_T):
     fields=equipment[0].split("=",1)[1].split(",")
     eid="enchant_id="+str(selected["enchant_id"])
     item="id="+str(selected["item_id"])
-    need(fields.count(eid)==1 and fields.count(item)==1
+    # One per slot, but both ring/weapon hands may use the SAME ID.
+    need(type(expected_same_id_count) is int and
+         1<=expected_same_id_count<=len(SIGNED_E0_SINGLE_SLOTS)
+         and fields.count(eid)==1 and fields.count(item)==1
          and sum(line.split(",").count(eid)
-                 for line in profile.splitlines())==1,
+                 for line in profile.splitlines())==expected_same_id_count,
          "FRESH_SELECTED_E0_EXACT_ONCE_SIMC_INPUT_REQUIRED")
     return source
 
@@ -277,16 +281,16 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
     bound_multi=None
     if selected_multi is not None:
         need(type(selected_multi) is list and
-             2<=len(selected_multi)<=4 and
+             2<=len(selected_multi)<=len(SIGNED_E0_SINGLE_SLOTS) and
              all(type(x) is dict and x.get("slot") in
-                 ("head","shoulders","chest","feet") for x in selected_multi)
-             and [x["slot"] for x in selected_multi]==sorted(
-                 set(x["slot"] for x in selected_multi))
-             and len({x.get("enchant_id") for x in selected_multi})==
-                 len(selected_multi),
-             "FRESH_MULTI_E0_SORTED_DISTINCT_ARMOR_REQUIRED")
+                 SIGNED_E0_SINGLE_SLOTS for x in selected_multi) and
+             [x["slot"] for x in selected_multi]==sorted(
+                 set(x["slot"] for x in selected_multi)),
+             "FRESH_MULTI_E0_SORTED_DISTINCT_PHYSICAL_SLOTS_REQUIRED")
         bound_multi=[_signed_installed_user_E0_profile(
-            doc=doc,selected=x,profile=profile,user_final_T=user_final_T)
+            doc=doc,selected=x,profile=profile,user_final_T=user_final_T,
+            expected_same_id_count=sum(
+                row["enchant_id"]==x["enchant_id"] for row in selected_multi))
             for x in selected_multi]
         need(all(x["fixed_E_zero_is_valid"] is True and
                  not any(x["fixed_E"].values()) for x in bound_multi),
@@ -419,7 +423,7 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
                     "effect_proc_dps_owner":"SimC"}}
                if bound_E0 is not None else {}),
             **({"selected_user_installed_E0_multi":{
-                    "status":"EXACT_INSTALLED_MULTI_ARMOR_E0_PROFILE_BOUND",
+                    "status":"EXACT_INSTALLED_MULTI_SLOT_E0_PROFILE_BOUND",
                     "choice":{item["slot"]:item["enchant_id"]
                               for item in selected_multi},
                     "selected_identity_sha256":[
