@@ -20,7 +20,7 @@ import v297_sealed_simc_oil_gear_delta as initial_gear
 
 SCHEMA="v632_original_simc_permanent_enchant_static_E_pair_v1"
 REV=re.compile(r"[0-9a-f]{40}\Z")
-SLOTS=frozenset(("head","neck","shoulders","back","chest","wrist",
+SLOTS=frozenset(("head","neck","shoulders","back","chest","wrists",
                  "hands","waist","legs","feet","finger1","finger2",
                  "main_hand","off_hand"))
 GEAR_OVERRIDE=("gear_crit_rating=","gear_haste_rating=",
