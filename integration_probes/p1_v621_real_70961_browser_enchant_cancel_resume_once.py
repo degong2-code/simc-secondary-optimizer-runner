@@ -78,12 +78,16 @@ def browser_enchant_snapshot(driver):
     };""")
 
 
-def run(binary,out,*,complete_after_resume=False,multi_armor=False):
+def run(binary,out,*,complete_after_resume=False,multi_armor=False,
+        positive_rings=False):
     import platform
     out=pathlib.Path(out).resolve();out.mkdir(parents=True,exist_ok=True)
-    require(not (complete_after_resume and multi_armor),
+    require(not (complete_after_resume and (multi_armor or positive_rings))
+            and not (multi_armor and positive_rings),
             "MULTI_ENCHANT_DOES_NOT_REPEAT_64")
-    report={"schema":("p2_v627_70961_two_signed_e0_web_cancel_resume_v1"
+    report={"schema":("p2_v635_70961_two_positive_rings_web_cancel_resume_v1"
+                      if positive_rings else
+                      "p2_v627_70961_two_signed_e0_web_cancel_resume_v1"
                       if multi_armor else
                       "p1_v624_real_70961_signed_e0_browser_full_result_restore_v1"
                       if complete_after_resume else SCHEMA),"status":"STARTED",
@@ -96,10 +100,13 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False):
         "original_adaptive_engine_unchanged":True,
         "partial_cancel_resume_not_full_64_or_global_optimum":not complete_after_resume,
         "two_signed_E0_armor_slots":multi_armor,
+        "two_signed_positive_E_rings":positive_rings,
         "new_native_calls":None,
         "official_78_complete_not_modified":True,
         "full_product_e2e":"PENDING"}
-    receipt=out/("V627_REAL_CHROME_TWO_ARMOR_E0_CANCEL_RESUME.json"
+    receipt=out/("V635_REAL_CHROME_TWO_POSITIVE_E_RINGS_CANCEL_RESUME.json"
+                 if positive_rings else
+                 "V627_REAL_CHROME_TWO_ARMOR_E0_CANCEL_RESUME.json"
                  if multi_armor else
                  "V624_REAL_CHROME_ENCHANT_FULL_RESULT_RESTORE.json"
                  if complete_after_resume else "V621_REAL_CHROME_ENCHANT_CANCEL_RESUME.json")
@@ -222,6 +229,17 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False):
                             "crit_rating":0,"haste_rating":0,
                             "mastery_rating":0,"versatility_rating":0},
                         "SIGNED_HEAD_7959_E0_NOT_IN_REAL_V212")
+            if positive_rings:
+                for eid,stat in ((8025,"haste_rating"),(7997,"crit_rating")):
+                    matched=[x for x in installed["published_verified_options"]
+                             if x.get("enchant_id")==eid and
+                                x.get("slot")=="finger1/finger2"]
+                    require(len(matched)==1 and
+                            matched[0]["verified_fixed_E"]=={
+                              key:(29 if key==stat else 0)
+                              for key in ("crit_rating","haste_rating",
+                                "mastery_rating","versatility_rating")},
+                            "REAL_SIGNED_POSITIVE_RING_E_NOT_REGISTERED")
             report["actual_v212_registered_count"]=len(
                 installed["published_verified_options"])
             report["actual_v212_manifest_sha256"]=source_sha
@@ -242,11 +260,21 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False):
                        "env-enchant-helm")).select_by_value("head:7959")
             widget=driver.find_element(By.ID,"env-enchant-chest")
             Select(widget).select_by_value("chest:7957")
+            if positive_rings:
+                for id,eid in (("season_enchant_finger1",8025),
+                               ("season_enchant_finger2",7997)):
+                    node=driver.find_element(By.ID,id)
+                    require(any(opt.get_attribute("value")==str(eid)
+                                and opt.is_enabled()
+                                for opt in node.find_elements(By.TAG_NAME,"option")),
+                            "POSITIVE_RING_OPTION_NOT_VISIBLE")
+                    Select(node).select_by_value(str(eid))
             chosen=browser_enchant_snapshot(driver)
             require(chosen["chest_selected"]=="chest:7957" and
                     chosen["head_selected"]==("head:7959" if multi_armor else "") and
                     chosen["underlying"]==("" if multi_armor else "chest:7957") and
-                    not chosen["ring1"] and not chosen["ring2"],
+                    chosen["ring1"]==("8025" if positive_rings else "") and
+                    chosen["ring2"]==("7997" if positive_rings else ""),
                     "VISIBLE_SIGNED_PHYSICAL_SLOTS_NOT_INDEPENDENT")
             report["actual_visible_slot_selected"]=True
             report["visible_selected_chest_option"]="chest:7957"
@@ -280,6 +308,8 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False):
                 "request_keys":sorted(req),"manual_final_T":req.get("final_T")}
             require(req.get("sha")==source_sha and req.get("season")==BUILD and
                     req.get("enchant")==(
+                        {"chest":7957,"finger1":8025,"finger2":7997}
+                        if positive_rings else
                         {"head":7959,"chest":7957} if multi_armor
                         else {"chest":7957}) and
                     req.get("trinkets")==list(TRINKETS) and
@@ -298,18 +328,28 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False):
             folder=root/sid
             require(longrun.config(folder)["native_budget"]==64,
                     "ORIGINAL_LONGRUN_BUDGET_NOT_SEALED")
-            if multi_armor:
+            if multi_armor or positive_rings:
                 profile=(folder/"generated"/"profile.simc").read_text("utf8")
                 lines=profile.splitlines()
-                for slot,eid in (("head",7959),("chest",7957)):
+                chosen_pairs=(
+                    (("chest",7957),("finger1",8025),("finger2",7997))
+                    if positive_rings else (("head",7959),("chest",7957)))
+                for slot,eid in chosen_pairs:
                     matched=[line for line in lines if line.startswith(slot+"=")]
                     require(len(matched)==1 and
                             matched[0].count("enchant_id="+str(eid))==1 and
                             re.search(r"(^|,)id=[1-9][0-9]*",matched[0]),
                             "REAL_SIGNED_TWO_SLOT_SIMC_PROFILE_MISSING")
-                require(profile.count("enchant_id=7959")==1 and
-                        profile.count("enchant_id=7957")==1,
-                        "REAL_SIGNED_TWO_SLOT_PROFILE_DUPLICATE")
+                require(all(profile.count("enchant_id="+str(eid))==1
+                            for slot,eid in chosen_pairs),
+                        "REAL_SIGNED_EACH_SLOT_PROFILE_DUPLICATE")
+                if positive_rings:
+                    typed=json.loads((folder/"generated"/"scenario.json").read_text("utf8"))
+                    require(typed["target"]["mode"]=="manual_total" and
+                            typed["target"]["manual_total"]==3165,
+                            "SIGNED_POSITIVE_E_AUTO_G_PLUS_58_NOT_ONCE")
+                    report["selected_positive_E_total"]=58
+                    report["signed_auto_base_B"]=3165
                 report["actual_generated_profile_sha256"]=hashlib.sha256(
                     profile.encode("utf8")).hexdigest()
                 report["two_final_armor_enchants_exact_once"]=True
@@ -357,6 +397,8 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False):
             require(restored["chest_selected"]=="chest:7957" and
                     restored["head_selected"]==("head:7959" if multi_armor else "") and
                     restored["underlying"]==("" if multi_armor else "chest:7957") and
+                    restored["ring1"]==("8025" if positive_rings else "") and
+                    restored["ring2"]==("7997" if positive_rings else "") and
                     restored["approved"] and
                     (not multi_armor or restored["head_approved"]),
                     "EXACT_SIGNED_ENCHANT_NOT_RESTORED_AFTER_RESTART")
@@ -524,6 +566,8 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False):
                     post["progress"]["completed_jobs"]>=prior,
                     "PARTIAL_CACHE_CHECKPOINT_REGRESSION")
             report["status"]=(
+                "PASS_REAL_CHROME_TWO_POSITIVE_E_RINGS_CANCEL_RESTART_RESUME"
+                if positive_rings else
                 "PASS_REAL_CHROME_TWO_SIGNED_E0_START_CANCEL_RESTART_RESUME"
                 if multi_armor else
                 "PASS_REAL_CHROME_SIGNED_E0_START_CANCEL_RESTART_RESUME")
