@@ -1,4 +1,4 @@
-# P2 v627: exactly ONE 70961 signed head 7951 + chest 7957 Chrome
+# P2 v627: exactly ONE 70961 signed head 7959 + chest 7957 Chrome
 # start/cancel/HTTP restart/resume, bounded partial Native; no 64 case repeat.
 # One-shot approved real 70961 user flow; cache SHA mismatch aborts before Native.
 name: P2 v627 70961 Chrome two E0 armor Start Cancel Resume bounded
@@ -84,7 +84,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'V627_SCRIPT_SYNTAX_INVALID' }
           node --check runner/webui/app.js
           if ($LASTEXITCODE -ne 0) { throw 'V627_REAL_UI_JS_INVALID' }
-      - name: Actual Chrome visible 7951 head + 7957 chest, source build, Native cancel/resume
+      - name: Actual Chrome visible 7959 head + 7957 chest, source build, Native cancel/resume
         timeout-minutes: 37
         shell: pwsh
         run: |

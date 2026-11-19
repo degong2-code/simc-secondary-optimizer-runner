@@ -63,7 +63,7 @@ def browser_enchant_snapshot(driver):
       active_build:state.verifiedInstalledBuildFromThisPage,
       status:document.getElementById("season-option-catalog-status").textContent,
       approved:state.installedOtherE0Choices?.has("chest:7957")===true,
-      head_approved:state.installedOtherE0Choices?.has("head:7951")===true,
+      head_approved:state.installedOtherE0Choices?.has("head:7959")===true,
       head_enabled:!document.getElementById("env-enchant-helm").disabled,
       head_options:[...document.getElementById("env-enchant-helm").options]
          .filter(x=>x.value).map(x=>({value:x.value,disabled:x.disabled})),
@@ -216,12 +216,12 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False):
                     "SIGNED_7957_E0_NOT_IN_REAL_V212")
             if multi_armor:
                 heads=[x for x in installed["published_verified_options"]
-                       if x.get("enchant_id")==7951 and x.get("slot")=="head"]
+                       if x.get("enchant_id")==7959 and x.get("slot")=="head"]
                 require(len(heads)==1 and
                         heads[0].get("verified_fixed_E")=={
                             "crit_rating":0,"haste_rating":0,
                             "mastery_rating":0,"versatility_rating":0},
-                        "SIGNED_HEAD_7951_E0_NOT_IN_REAL_V212")
+                        "SIGNED_HEAD_7959_E0_NOT_IN_REAL_V212")
             report["actual_v212_registered_count"]=len(
                 installed["published_verified_options"])
             report["actual_v212_manifest_sha256"]=source_sha
@@ -235,16 +235,16 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False):
             if multi_armor:
                 require(selection["head_approved"] and
                         selection["head_enabled"] and
-                        any(x["value"]=="head:7951" and not x["disabled"]
+                        any(x["value"]=="head:7959" and not x["disabled"]
                             for x in selection["head_options"]),
                         "VISIBLE_SIGNED_HEAD_OPTION_NOT_SELECTABLE")
                 Select(driver.find_element(By.ID,
-                       "env-enchant-helm")).select_by_value("head:7951")
+                       "env-enchant-helm")).select_by_value("head:7959")
             widget=driver.find_element(By.ID,"env-enchant-chest")
             Select(widget).select_by_value("chest:7957")
             chosen=browser_enchant_snapshot(driver)
             require(chosen["chest_selected"]=="chest:7957" and
-                    chosen["head_selected"]==("head:7951" if multi_armor else "") and
+                    chosen["head_selected"]==("head:7959" if multi_armor else "") and
                     chosen["underlying"]==("" if multi_armor else "chest:7957") and
                     not chosen["ring1"] and not chosen["ring2"],
                     "VISIBLE_SIGNED_PHYSICAL_SLOTS_NOT_INDEPENDENT")
@@ -280,7 +280,7 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False):
                 "request_keys":sorted(req),"manual_final_T":req.get("final_T")}
             require(req.get("sha")==source_sha and req.get("season")==BUILD and
                     req.get("enchant")==(
-                        {"head":7951,"chest":7957} if multi_armor
+                        {"head":7959,"chest":7957} if multi_armor
                         else {"chest":7957}) and
                     req.get("trinkets")==list(TRINKETS) and
                     req.get("final_T") is None and req.get("ilvl")==334 and
@@ -301,13 +301,13 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False):
             if multi_armor:
                 profile=(folder/"generated"/"profile.simc").read_text("utf8")
                 lines=profile.splitlines()
-                for slot,eid in (("head",7951),("chest",7957)):
+                for slot,eid in (("head",7959),("chest",7957)):
                     matched=[line for line in lines if line.startswith(slot+"=")]
                     require(len(matched)==1 and
                             matched[0].count("enchant_id="+str(eid))==1 and
                             re.search(r"(^|,)id=[1-9][0-9]*",matched[0]),
                             "REAL_SIGNED_TWO_SLOT_SIMC_PROFILE_MISSING")
-                require(profile.count("enchant_id=7951")==1 and
+                require(profile.count("enchant_id=7959")==1 and
                         profile.count("enchant_id=7957")==1,
                         "REAL_SIGNED_TWO_SLOT_PROFILE_DUPLICATE")
                 report["actual_generated_profile_sha256"]=hashlib.sha256(
@@ -355,7 +355,7 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False):
             restored=browser_enchant_snapshot(driver)
             report["reopened_signed_enchant_summary"]=restored
             require(restored["chest_selected"]=="chest:7957" and
-                    restored["head_selected"]==("head:7951" if multi_armor else "") and
+                    restored["head_selected"]==("head:7959" if multi_armor else "") and
                     restored["underlying"]==("" if multi_armor else "chest:7957") and
                     restored["approved"] and
                     (not multi_armor or restored["head_approved"]),
