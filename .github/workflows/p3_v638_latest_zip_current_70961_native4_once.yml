@@ -1,0 +1,111 @@
+# One-off P3 packaged-user boundary test. The published v181 ZIP remains unchanged.
+name: P3 v638 published Windows ZIP current 70961 Eplus Native4 bounded
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p3_v638_latest_zip_current_70961_native4_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p3-v638-one-original-extracted-zip
+  cancel-in-progress: false
+jobs:
+  packaged-current-source-native4:
+    if: ${{ contains(github.event.head_commit.message, '[p3-v638-zip-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 42
+    env:
+      SIMC_PINNED_SOURCE_COMMIT: 9933ffb946fb55b1fa66657b848f519ac19006e1
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70961
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve source bytes on Windows
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse same-source exact Windows SimC, never compile
+        id: binary
+        uses: actions/cache/restore@v4
+        with:
+          path: .v618-simc-cache
+          key: v618-simc70961-source-9933ffb946fb55b1fa66657b848f519ac19006e1-win2022-msvc-cli
+      - name: Reuse exact already published Windows beta ZIP
+        uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 44490716235
+          name: v181-windows-source-beta-44490716235
+          path: out/v638/download
+          github-token: ${{ github.token }}
+      - name: Check source SHA, 282 original files, and no historical auto-promotion
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          if ('${{ steps.binary.outputs.cache-hit }}' -ne 'true') { throw 'V638_SIMC_BINARY_CACHE_MISSING_STOP_NO_COMPILE' }
+          $exe=Join-Path $PWD '.v618-simc-cache/simc.exe'
+          $id=Join-Path $PWD '.v618-simc-cache/identity.json'
+          if (!(Test-Path $exe -PathType Leaf) -or !(Test-Path $id -PathType Leaf)) { throw 'V638_SIMC_FILE_MISSING' }
+          $meta=Get-Content -Raw $id | ConvertFrom-Json
+          $sha=(Get-FileHash -Algorithm SHA256 $exe).Hash.ToLowerInvariant()
+          if ($sha -ne '4f4472ac8687d029cd7d6041741f44aa98750ea1b3e953dfa7002dee1f38879f' -or $meta.binary_sha256 -ne $sha -or $meta.game_build -ne $env:SIMC_PINNED_GAME_BUILD -or $meta.source_commit -ne $env:SIMC_PINNED_SOURCE_COMMIT) { throw 'V638_EXACT_BINARY_SHA_SOURCE_MISMATCH' }
+          $zip=Join-Path $PWD 'out/v638/download/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip'
+          if (!(Test-Path $zip -PathType Leaf)) { throw 'V638_ORIGINAL_ZIP_MISSING' }
+          $zipsha=(Get-FileHash -Algorithm SHA256 $zip).Hash.ToLowerInvariant()
+          if ($zipsha -ne '855e8bca8e53f2e7f6efabaa39a20f92c2308f7f409cb4b75a1adc75eb022bfd') { throw 'V638_ORIGINAL_ZIP_SHA_MISMATCH' }
+          Expand-Archive -LiteralPath $zip -DestinationPath 'out/v638/extracted' -Force
+          $pkg=(Resolve-Path 'out/v638/extracted/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA').Path
+          $env:P3_PACKAGE_ROOT=$pkg
+          python -c "import os,pathlib,json,hashlib; p=pathlib.Path(os.environ['P3_PACKAGE_ROOT']); m=json.loads((p/'V181_PACKAGE_MANIFEST.json').read_text('utf8')); assert m['file_count']==282 and len(m['files'])==282; assert not m['native_executable_bundled'] and not m['sessions_bundled']; assert all(hashlib.sha256((p/f['path']).read_bytes()).hexdigest()==f['sha256'] for f in m['files']); print('V638_282_ORIGINAL_ZIP_FILES_SHA_PASS')"
+          if ($LASTEXITCODE -ne 0) { throw 'V638_ORIGINAL_PACKAGE_MANIFEST_DRIFT' }
+          $quarantine=Join-Path $PWD 'out/v638/history-quarantine'
+          New-Item -ItemType Directory -Force $quarantine | Out-Null
+          $old=@(Get-ChildItem (Join-Path $pkg 'data') -File -Filter 'current_season_*.json')
+          $old+=@(Get-ChildItem (Join-Path $pkg 'data') -File -Filter 'v202_*.json')
+          $old+=@(Get-ChildItem (Join-Path $pkg 'data') -File -Filter 'v206_*.json')
+          $old+=@(Get-ChildItem (Join-Path $pkg 'data/season_ordinary_gem_nominal') -File -Filter '*.json')
+          if ($old.Count -lt 2) { throw 'V638_EXPECTED_UNAPPROVED_HISTORY_NOT_PRESENT' }
+          foreach ($item in $old) { Move-Item -LiteralPath $item.FullName -Destination (Join-Path $quarantine $item.Name) }
+          # QA-only probes copied into throwaway unpacked workspace; NEVER added to actual ZIP.
+          $probes=@('p2_v637_real_70961_manual_T_signed_Eplus_cancel_resume_once.py','p1_v621_real_70961_browser_enchant_cancel_resume_once.py','p1_v570_real_windows_cold_browser_to_simc_once.py','p1_v344_windows_real_browser_native64_once.py','p1_v610_real_installed_enchant_one_build.py','p1_v524_m1_m2_source_owner_once.py','p3_haj_real_local_web_native_e2e.py')
+          foreach ($n in $probes) { Copy-Item -LiteralPath (Join-Path $PWD ('integration_probes/'+$n)) -Destination (Join-Path $pkg 'integration_probes') }
+          $env:PYTHONPATH="$pkg\runner;$pkg\integration_probes;$pkg"
+          python -c "import os,pathlib,v113_local_web_api as web,v216_environment_build_coordinator as env,v222_season_budget_contract as budget,v632_permanent_enchant_native_E as E; p=pathlib.Path(os.environ['P3_PACKAGE_ROOT']).resolve(); assert all(pathlib.Path(m.__file__).resolve().is_relative_to(p) for m in (web,env,budget,E)); print('V638_PACKAGED_PRODUCT_MODULE_IDENTITY_PASS')"
+          if ($LASTEXITCODE -ne 0) { throw 'V638_CHECKOUT_NOT_PACKAGE_MODULE_IDENTITY' }
+          "V638_BINARY=$exe" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "V638_PKG=$pkg" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Actual previously successful Chrome v637 scenario from unpacked ZIP, bounded Native4
+        shell: pwsh
+        timeout-minutes: 36
+        run: |
+          $ErrorActionPreference='Stop'
+          python -m pip install -r requirements-web-test.txt 'selenium>=4.24,<5'
+          if ($LASTEXITCODE -ne 0) { throw 'V638_TEST_DEPENDENCIES_UNAVAILABLE' }
+          $out=Join-Path $PWD 'out/v638/receipts'
+          New-Item -ItemType Directory -Force $out | Out-Null
+          Push-Location $env:V638_PKG
+          try {
+            python -u integration_probes/p2_v637_real_70961_manual_T_signed_Eplus_cancel_resume_once.py --simc "$env:V638_BINARY" --out "$out"
+            if ($LASTEXITCODE -ne 0) { throw 'V638_FIRST_PACKAGED_SEASON_USER_BOUNDARY_SEE_COMPACT_RECEIPT' }
+          } finally { Pop-Location }
+          $r=Join-Path $out 'V637_REAL_CHROME_MANUAL_T_TWO_POSITIVE_E_RINGS_CANCEL_RESUME.json'
+          $env:V638_PROOF=$r
+          python -c "import json,pathlib,os; d=json.loads(pathlib.Path(os.environ['V638_PROOF']).read_text('utf8')); assert d['status']=='PASS_REAL_CHROME_MANUAL_T_TWO_POSITIVE_E_RINGS_CANCEL_RESUME' and d['new_native_calls']==4 and d['manual_T_authoritative_verified'] and d['real_user_manual_T_restored'] and d['actual_browser_same_session_resumed']; print('V638_PACKAGED_NATIVE4_USER_CANCEL_RESUME_PASS')"
+          if ($LASTEXITCODE -ne 0) { throw 'V638_PACKAGE_PROOF_MISSING' }
+      - name: Retain only bounded first-boundary receipt, no sources, user sessions, binary or credentials
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p3-v638-published-zip-current-70961-native4
+          path: out/v638/receipts/V637_REAL_CHROME_MANUAL_T_TWO_POSITIVE_E_RINGS_CANCEL_RESUME.json
+          retention-days: 7
+          if-no-files-found: warn
