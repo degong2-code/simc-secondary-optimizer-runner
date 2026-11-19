@@ -2223,6 +2223,57 @@ const app=Function("state","$","api","showEnvironmentBuild","buttonState","numbe
         self.assertIn('interrupted?"실행 중단 · 재개 가능"',js)
         self.assertIn("저장된 세션을 재개할 수 있습니다",js)
 
+    def test_v623_completed_result_stops_repeated_readonly_poll_and_dom_work(self):
+        """Actual UI interval logic; never stop if result rendering is missing."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function beginPolling() {");
+const b=raw.indexOf("async function loadRecentSessions() {",a);
+assert(a>=0 && b>a,"polling JS source not found");
+const state={pollTimer:null,pollBusy:false,busy:false,
+    session:"a".repeat(20),longrunCompleted:true,
+    pollFailures:0,nextPollAt:0};
+const filled={hidden:false},$=id=>filled;
+let tick=null,reads=0,period=null;
+const setInterval=(f,ms)=>{tick=f;period=ms;return 1;};
+const clearInterval=()=>{throw Error("UNEXPECTED_INTERVAL_RESET")};
+const pollOnce=()=>{reads++;return Promise.resolve();};
+const handlePollFailure=e=>{throw e;};
+const begin=Function("state","$","setInterval","clearInterval",
+    "Date","pollOnce","handlePollFailure",
+    raw.slice(a,b)+"return beginPolling;")(
+    state,$,setInterval,clearInterval,Date,pollOnce,handlePollFailure);
+(async()=>{
+  begin();
+  assert.strictEqual(period,1400,"active run cadence must not change");
+  tick();tick();
+  assert.strictEqual(reads,0,
+    "full-budget rendered result cannot trigger repeated status/DOM");
+  state.longrunCompleted=false;
+  tick();await new Promise(resolve=>setImmediate(resolve));
+  assert.strictEqual(reads,1,"active or paused session stays observable");
+  state.longrunCompleted=true;
+  filled.hidden=true;
+  tick();await new Promise(resolve=>setImmediate(resolve));
+  assert.strictEqual(reads,2,
+    "missing rendered result must retry rather than silently stop");
+  filled.hidden=false;
+  tick();
+  assert.strictEqual(reads,2,"completed visible result stops again");
+  console.log("V623_FINAL_RESULT_POLL_STOP_ZERO_NATIVE_PASS");
+})().catch(err=>{console.error(err);process.exitCode=1;});
+"""
+        r=subprocess.run([node,"-e",script,
+            str(ROOT/"runner/webui/app.js")],
+            capture_output=True,text=True,timeout=15,check=False)
+        self.assertEqual(r.returncode,0,r.stderr)
+        self.assertIn("V623_FINAL_RESULT_POLL_STOP_ZERO_NATIVE_PASS",r.stdout)
+
     def test_v622_recent_session_index_uses_readable_status_not_raw_worker_code(self):
         """Completed and paused v293 sessions remain distinguishable after restart."""
         js=self.client.get("/assets/app.js").text
