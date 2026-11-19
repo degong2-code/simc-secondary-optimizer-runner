@@ -951,20 +951,24 @@ def source(manifest_path):
                   prepared["oil"]["profile"],prepared["prepared"]["scenario"],
                   binary_sha,user["native_revision"])
         prepared["oil"]["v202_verified_enchant"]=verified
+    if season_source is not None and "signed_installed_E" in season_source:
+        # v094 repeatedly asks v093 for feasible candidates, not just
+        # the initial seeds. Bind exact signed E identity into the original
+        # reusable adaptive context so ALL subsequent candidates/resumes
+        # retain the fixed stat floors, with no change to season B/T.
+        prepared["oil"]["v634_signed_installed_E"]={
+            "fixed_E":dict(season_source["signed_installed_E"]),
+            "selected_identity_sha256":
+                season_source["signed_installed_E_identity_sha256"],
+            "environment_manifest_sha256":
+                season_source["season_source_identity"][
+                    "environment_manifest_sha256"]}
     context=adaptive.prepare(prepared,binary_sha,user["native_revision"])
     normalized=prepared["prepared"]["scenario"]
-    # The original v093 legacy helper has no v212 multi-enchant owner.
-    # Keep its unchanged cache/session identity and apply the exact signed
-    # fixed E floor through the existing v065 policy without adding B.
-    feasible=(scheduler.budget_with_fixed_components(
-        prepared["prepared"]["scenario"],
-        prepared["prepared"]["static_budget"],
-        user["flask_F"],context["identity"]["oil_vector"],
-        fixed_enchant_E=season_source["signed_installed_E"])
-        if season_source is not None and
-           "signed_installed_E" in season_source else
-        adaptive.feasible_budget(context,user["flask_F"]))
-    B,lo,hi=scheduler.bounds(normalized,feasible)
+    # The same identity-owned v093 E floor is reused by v094 seed/scout,
+    # confirm, cache and cancel/resume, never a one-time preflight rule.
+    B,lo,hi=scheduler.bounds(normalized,
+                          adaptive.feasible_budget(context,user["flask_F"]))
     need(all(scheduler.eligible(tuple(x[s] for s in contract.STATS),
                                 B,lo,hi) for x in seeds)
          and seeds[0]!=seeds[1],"SEEDS_FAIL_BASE_B_L_BOUNDS")
