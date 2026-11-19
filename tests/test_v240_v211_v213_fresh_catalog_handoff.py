@@ -702,8 +702,14 @@ class SameFreshCatalogChain(unittest.TestCase):
                         "mastery_rating":0,"versatility_rating":0})
                     self.assertFalse(proof["chmv_budget"][
                         "gameplay_or_native_effect_attested"])
-            self.assertIn(
+            # v629 consumes the already sealed v213 ring-family mask,
+            # so physical scope itself is no longer lost at v196.
+            # Without v583 quality/product_input this remains unapproved.
+            self.assertNotIn(
                 "EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED",
+                optional["per_item_missing_reasons"]["91001"])
+            self.assertIn(
+                "EVIDENCE_MISSING:product_input",
                 optional["per_item_missing_reasons"]["91001"])
             self.assertFalse(linked["environment_ready"])
             self.assertEqual(linked["approved_new_choices"],0)
