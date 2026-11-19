@@ -43,7 +43,7 @@ jobs:
           if ((Get-FileHash -Algorithm SHA256 $zip).Hash.ToLowerInvariant() -ne 'db6d030832b1fcb852c56b4002774d9416c810d2c5582fe67a72c4491e3086c2') { throw 'V640_CURRENT_ZIP_SHA_DRIFT' }
           python -m py_compile integration_probes/p1_v573_windows_zip_cold_web_setup_consent_once.py
           if ($LASTEXITCODE -ne 0) { throw 'V640_EXISTING_PROBE_SYNTAX_DRIFT' }
-          python -m unittest -q tests.test_v181_windows_beta_package_offline
+          python -m unittest -q tests.test_v181_windows_beta_package_offline.WindowsBetaPackageOffline.test_runtime_web_dependencies_exclude_test_only_httpx2 tests.test_v181_windows_beta_package_offline.WindowsBetaPackageOffline.test_easy_start_stale_python_path_recovery_is_version_checked_and_opt_in
           if ($LASTEXITCODE -ne 0) { throw 'V640_PACKAGE_BOOTSTRAP_REQUIREMENTS_CONTRACT_DRIFT' }
           python -m pip install -r requirements-web-test.txt 'selenium>=4.24,<5'
           if ($LASTEXITCODE -ne 0) { throw 'V640_CI_HARNESS_INSTALL_FAILED' }
