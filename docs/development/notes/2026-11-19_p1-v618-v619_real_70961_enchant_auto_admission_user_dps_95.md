@@ -28,6 +28,10 @@
 - 실질적 근접 대안 **DPS 157790.25965839627, SEM 236.04294383832664**, rating **치명425 / 가속1047 / 특화735 / 유연900**, 관측 상대 DPS -**0.489%**.
 - `confidence_level=0.95`, `confirmation_pair_direction_supported_at_95=true`, `confirmation_scope=TWO_FRESH_SELECTED_CANDIDATES_ONLY_NOT_GLOBAL`. **관측 1순위/근접 대안 사이의 95% 판단만 확인한 것이며 전역 최적해 검증이 아님**.
 
+## 원본 영수증의 Native 호출 계수 표기 구분
+
+**원본 v619 artifact는 변경·재작성하지 않는다.** 첫 `V610_REAL_ENCHANT_ADMISSION_ONE_BUILD.json`의 상단 `new_dps_native_calls:0`은 기존 `v610`이 사용자 callback 전에 초기화한 값으로, 같은 artifact의 `v619_exact_user_stage.new_dps_native_calls:6` 및 별도 `V619_REAL_USER_ENCHANT_DPS.json`에 기록된 **실제 사용자 Native 6회**를 반영하지 못했다. 실제 `v096` 실행 결과 `native_calls_cumulative=6`, `PASS_BOUNDED_GENERIC_NATIVE_SEARCH_AND_CACHE`이 정본이다. 후속 코드 수정 `57841342`는 callback 실행 시 상위 compact 영수증의 DPS 호출 수와 상태도 그 실제 결과로 갱신하게 하며, 지난 Actions 성공/Native PASS를 재실행하거나 소급 변경하지 않는다.
+
 ## 범위·효율·남은 제품 작업
 
 1. 이 v619는 **실제로 등록된 마부 하나 + 프로그램의 기존 최종 대표 장비·사용자 설정(징벌 성기사) + 실제 Native DPS/SEM/95%** 증명이다. 다만 브라우저 UI에서 일반 사용자가 등록 마부를 고르고, 26개 DPS 전문화 모두 동일하게 실제 SimC 성공했다는 증거는 **아직 없다**. 현재 웹 API는 별도의 읽기 전용 `verified_installed_enchant_registrations`를 제공하고 `runtime_selectable=false`를 유지한다. 거짓 선택 가능 표시 금지.
