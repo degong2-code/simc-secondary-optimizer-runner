@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """P2 v635 one real 70961 user flow, signed E+ on two rings + E0 chest.
 
-Reuses v621 Chrome, actual Zero-Source v633 v212 installation,
+Reuses v621 Chrome (with exact pre-gate state capture), actual Zero-Source v633 v212 installation,
 v096/v098 existing adaptive runner, cancel/resume/cache. No 64-case repeat.
 """
 import argparse
