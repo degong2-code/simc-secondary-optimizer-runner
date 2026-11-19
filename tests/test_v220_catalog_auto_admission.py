@@ -818,5 +818,67 @@ class SealedRepresentativeConsumerTests(unittest.TestCase):
                     scope={**self.scope,"enchant_id":999999})
 
 
+    def test_v631_source_bound_E_failure_is_actionable_not_approval(self):
+        """New-season ID agnostic: classify the first missing budget owner."""
+        ids=(99001,99002,99003)
+        items=[{"enchant_id":eid,"token":"enchant_ring__case_"+str(eid),
+                "item_class":4,"inventory_type_mask":1<<11,
+                "item_subclass_mask":0,"slot_group":"finger1/finger2"}
+               for eid in ids]
+        known=[{"enchant_id":eid,"token":row["token"],
+                "item_class":4,"inventory_type_mask":1<<11,
+                "item_subclass_mask":0,
+                "budget_policy":(
+                    "STATIC_E_REQUIRES_EXACT_MATCHED_NATIVE_PROFILE_AND_IS_FIXED_INSIDE_G"
+                    if eid==99001 else
+                    "NO_STATIC_CHMV_COMPONENT_IN_DBC_ROW; DYNAMIC_EFFECTS_STAY_WITH_SIMC"),
+                "static_chmv_rating_present_in_dbc":eid==99001,
+                "unknown_components":(
+                    [{"reason":"UNRECOGNIZED_ITEM_MOD_SOURCE_PENDING"}]
+                    if eid==99003 else []),
+                "static_components":([
+                    {"category":"CHMV_SECONDARY_RATING",
+                     "item_mod":"haste_rating","scaling_id":125,
+                     "dbc_amount":0,"coefficient":1.4}]
+                    if eid==99001 else []),
+                } for eid,row in zip(ids,items)]
+        source={"game_build":"12.1.5.70961","simc_revision":"a"*40,
+                "manifest_sha256":"b"*64,
+                "catalog":{"enchants":{"items":items}},
+                "enchant_classification":{"rows":known}}
+        pending={str(eid):["EVIDENCE_MISSING:chmv_budget"]
+                 for eid in ids}
+        original=copy.deepcopy(source)
+        plan=policy.plan_optional_permanent_enchant_budget_repair(
+            source,{eid:{"source_relation":{}} for eid in ids},pending,
+            target_ilevel=334)
+        self.assertEqual(plan["pending_count"],3)
+        self.assertEqual([x["enchant_id"] for x in plan["items"]],list(ids))
+        self.assertEqual([x["cause"] for x in plan["items"]],[
+            "STATIC_CHMV_NUMERIC_SCOPE_NOT_YET_PROVEN",
+            "EXACT_SOURCE_E0_RECEIPT_WIRING_MISSING",
+            "UNKNOWN_SOURCE_STAT_COMPONENT"])
+        self.assertEqual([x["new_native_calls_limit_for_single_target"]
+                          for x in plan["items"]],[2,0,0])
+        self.assertEqual(plan["new_native_calls_now"],0)
+        self.assertTrue(all(x["fixed_E"] is None and
+                            not x["user_selectable"] and not x["verified"]
+                            for x in plan["items"]))
+        self.assertFalse(plan["may_block_verified_base_GJFO"])
+        self.assertEqual(source,original)
+        # An otherwise missing budget proof may not silently be invented
+        # from a receipt that already failed v220's original identity check.
+        trusted={99001:{"chmv_budget":{"fixed_E":{
+            stat:0 for stat in policy.CHMV_STATS}}}}
+        with self.assertRaisesRegex(ValueError,"RECEIPT_PREVIEW_DRIFT"):
+            policy.plan_optional_permanent_enchant_budget_repair(
+                source,trusted,{"99001":pending["99001"]})
+        changed=copy.deepcopy(source)
+        changed["enchant_classification"]["rows"][0]["token"]="changed"
+        with self.assertRaisesRegex(ValueError,"SOURCE_JOIN_DRIFT"):
+            policy.plan_optional_permanent_enchant_budget_repair(
+                changed,{},pending)
+
+
 if __name__=="__main__":
     unittest.main()
