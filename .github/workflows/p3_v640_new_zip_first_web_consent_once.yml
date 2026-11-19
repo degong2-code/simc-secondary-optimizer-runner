@@ -1,0 +1,70 @@
+# P3 v640: exactly one new source ZIP Windows user-web-venv consent regression.
+# Reuse prior v573 native-zero proof logic; the binary/engine/DB are not run.
+name: P3 v640 exact current Windows ZIP first web consent setup Native0
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p3_v640_new_zip_first_web_consent_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p3-v640-one-current-zip-first-web-consent
+  cancel-in-progress: false
+jobs:
+  first-setup-current-zip:
+    if: ${{ contains(github.event.head_commit.message, '[p3-v640-setup-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 22
+    steps:
+      - name: Preserve Git source SHA bytes
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse exact newly shipped v181 ZIP; no repackaging
+        uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 44635274309
+          name: v181-windows-source-beta-44635274309
+          path: out/v640/zip
+          github-token: ${{ github.token }}
+      - name: Check original new ZIP identity, dependencies and original Windows consent probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $zip=Join-Path $PWD 'out/v640/zip/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip'
+          if (!(Test-Path $zip -PathType Leaf)) { throw 'V640_EXACT_CURRENT_ZIP_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $zip).Hash.ToLowerInvariant() -ne 'db6d030832b1fcb852c56b4002774d9416c810d2c5582fe67a72c4491e3086c2') { throw 'V640_CURRENT_ZIP_SHA_DRIFT' }
+          python -m py_compile integration_probes/p1_v573_windows_zip_cold_web_setup_consent_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V640_EXISTING_PROBE_SYNTAX_DRIFT' }
+          python -m unittest -q tests.test_v181_windows_beta_package_offline
+          if ($LASTEXITCODE -ne 0) { throw 'V640_PACKAGE_BOOTSTRAP_REQUIREMENTS_CONTRACT_DRIFT' }
+          python -m pip install -r requirements-web-test.txt 'selenium>=4.24,<5'
+          if ($LASTEXITCODE -ne 0) { throw 'V640_CI_HARNESS_INSTALL_FAILED' }
+          "V640_ZIP=$zip" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Actual extracted current ZIP decline then consent install, fresh isolated Windows venv, Chrome
+        shell: pwsh
+        timeout-minutes: 14
+        run: |
+          $ErrorActionPreference='Stop'
+          New-Item -ItemType Directory -Force out/v640/receipt | Out-Null
+          python -u integration_probes/p1_v573_windows_zip_cold_web_setup_consent_once.py --zip "$env:V640_ZIP" --out out/v640/receipt
+          if ($LASTEXITCODE -ne 0) { throw 'V640_EXACT_ZIP_FIRST_USER_CONSENT_BLOCKED_CHECK_COMPACT' }
+          $r=Join-Path $PWD 'out/v640/receipt/V573_WINDOWS_COLD_SETUP_EXPLICIT_CONSENT_COMPACT.json'
+          $env:V640_RECEIPT=$r
+          python -c "import json,os,pathlib;d=json.loads(pathlib.Path(os.environ['V640_RECEIPT']).read_text('utf8'));assert d['status']=='PASS_REAL_WINDOWS_ZIP_COLD_WEB_DEPENDENCY_CONSENT_AND_FIRST_CHROME_NATIVE_ZERO' and d['user_consent_no_prevents_dependency_install'] and d['user_consent_yes_performed_real_pip_install'] and d['already_ready_check_is_readonly'] and d['real_cold_chrome_no_native'] and d['native_calls']==0 and d['package_files']==282;print('V640_CURRENT_ZIP_CONSENT_FIRST_INSTALL_PASS')"
+          if ($LASTEXITCODE -ne 0) { throw 'V640_CONSENT_RECEIPT_ASSERTION_FAIL' }
+      - name: Save compact consent proof only, never private venv or credentials
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p3-v640-current-zip-fresh-windows-setup-native0
+          path: out/v640/receipt/V573_WINDOWS_COLD_SETUP_EXPLICIT_CONSENT_COMPACT.json
+          retention-days: 7
+          if-no-files-found: warn
