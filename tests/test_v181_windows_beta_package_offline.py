@@ -100,6 +100,17 @@ class WindowsBetaPackageOffline(unittest.TestCase):
                                        "FILE_LIST_EXTENSION_REQUIRED"):
                 pack.write_file_list(pathlib.Path(temp)/"bad.zip")
 
+    def test_runtime_web_dependencies_exclude_test_only_httpx2(self):
+        """User consent installs only server dependencies; test HTTP client is separate."""
+        runtime=(ROOT/"requirements-web.txt").read_text("utf8")
+        test_only=(ROOT/"requirements-web-test.txt").read_text("utf8")
+        self.assertIn("fastapi>=",runtime)
+        self.assertIn("uvicorn>=",runtime)
+        self.assertNotIn("httpx2",runtime.lower())
+        self.assertNotIn("httpx>=",runtime.lower())
+        self.assertIn("-r requirements-web.txt",test_only)
+        self.assertIn("httpx>=",test_only)
+
     def test_easy_start_stale_python_path_recovery_is_version_checked_and_opt_in(self):
         """v575: harmless absolute-path discovery after winget's stale CMD PATH."""
         batch=(ROOT/"START_HERE_AUTO_SETUP_AND_RUN.bat").read_text("utf8")
