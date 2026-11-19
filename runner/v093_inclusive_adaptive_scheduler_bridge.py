@@ -73,6 +73,30 @@ def identity(bundle,binary_sha,revision,scout_iterations,confirm_iterations):
                                "source_input_sha256")),
              "ADMITTED_SEASON_ENVIRONMENT_IDENTITY_REQUIRED")
         result["admitted_season_environment_identity"]=dict(env)
+    if "v634_signed_installed_E" in o:
+        proof=o["v634_signed_installed_E"]
+        env=bundle.get("admitted_season_environment_identity")
+        need(type(proof) is dict and set(proof)=={
+             "fixed_E","selected_identity_sha256",
+             "environment_manifest_sha256"} and
+             type(env) is dict
+             and env.get("environment_manifest_sha256")==
+                 proof["environment_manifest_sha256"] and
+             type(proof["selected_identity_sha256"]) is str and
+             scenario.HASH_RE.fullmatch(
+                 proof["selected_identity_sha256"]) is not None and
+             type(proof["fixed_E"]) is dict and
+             set(proof["fixed_E"])==set(scenario.STATS) and
+             all(type(value) is int and 0<=value<=100000
+                 for value in proof["fixed_E"].values()) and
+             "v531_verified_positive_E" not in o and
+             "v202_verified_enchant" not in o,
+             "V634_SIGNED_INSTALLED_FIXED_E_IDENTITY_REQUIRED")
+        result["v634_signed_installed_E"]={
+            "fixed_E":dict(proof["fixed_E"]),
+            "selected_identity_sha256":proof["selected_identity_sha256"],
+            "environment_manifest_sha256":
+                proof["environment_manifest_sha256"]}
     if "v531_verified_positive_E" in o:
         proof=o["v531_verified_positive_E"]
         selected=proof.get("choice")
@@ -112,6 +136,14 @@ def feasible_budget(context,flask_vector):
     """Only search constraints change: B+O must cover F on every stat."""
     prepared=context["bundle"]["prepared"]
     bound=context["identity"]
+    if "v634_signed_installed_E" in bound:
+        need("v202_verified_enchant" not in bound and
+             "v531_verified_positive_E" not in bound,
+             "V634_SIGNED_E_LEGACY_OWNER_CONFLICT")
+        return policy.budget_with_fixed_components(
+            prepared["scenario"],prepared["static_budget"],
+            flask_vector,bound["oil_vector"],
+            fixed_enchant_E=bound["v634_signed_installed_E"]["fixed_E"])
     if "v202_verified_enchant" in bound or "v531_verified_positive_E" in bound:
         need(not ("v202_verified_enchant" in bound and
                   "v531_verified_positive_E" in bound),
