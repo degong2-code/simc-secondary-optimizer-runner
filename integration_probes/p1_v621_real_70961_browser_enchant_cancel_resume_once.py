@@ -240,16 +240,19 @@ def run(binary,out):
                 current:r.current_season_product,
                 oil_hands:r.controls.oil_hands,
                 binary:r.binary};""")
+            # Optional manual final_T may be absent in auto-ilvl mode.
+            # Preserve exact explicit build, signed enchant and one item.
             report["actual_browser_request_scoped"]={
-                "sha":req["sha"],"build":req["season"],
-                "enchant":req["enchant"],"trinkets":req["trinkets"],
-                "ilevel":req["ilvl"],"oil_hands":req["oil_hands"]}
-            require(req["sha"]==source_sha and req["season"]==BUILD and
-                    req["enchant"]=={"chest":7957} and
-                    req["trinkets"]==list(TRINKETS) and
-                    req["final_T"] is None and req["ilevel"]==334 and
-                    req["oil_hands"]==[] and req["current"] is True and
-                    req["binary"]==str(binary),
+                "sha":req.get("sha"),"build":req.get("season"),
+                "enchant":req.get("enchant"),"trinkets":req.get("trinkets"),
+                "ilevel":req.get("ilvl"),"oil_hands":req.get("oil_hands"),
+                "request_keys":sorted(req),"manual_final_T":req.get("final_T")}
+            require(req.get("sha")==source_sha and req.get("season")==BUILD and
+                    req.get("enchant")=={"chest":7957} and
+                    req.get("trinkets")==list(TRINKETS) and
+                    req.get("final_T") is None and req.get("ilvl")==334 and
+                    req.get("oil_hands")==[] and req.get("current") is True and
+                    req.get("binary")==str(binary),
                     "EXACT_NEW_BROWSER_SELECTED_ENCHANT_REQUEST_INVALID")
             require(browser_snapshot(driver)["start_label"]=="최적 스탯 찾기",
                     "NATIVE_BROWSER_START_NOT_READY")
