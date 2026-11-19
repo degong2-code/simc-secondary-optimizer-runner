@@ -4075,18 +4075,19 @@ function registerHandlers() {
     await pollOnce();
   }));
   $("start-btn").addEventListener("click",()=>withBusy(async()=>{
-    // Missing manual T cannot trigger expensive season/native preparation.
+    // Validate the SimC link before any costly season-source/API or Native work.
+    // Explicit season-only setup in settings remains independently available.
     manualFinalTOrNull();
+    if(!$("binary").checkValidity()||!$("revision").checkValidity()) {
+      switchView("settings");
+      $("simc-technical-panel").open=true;
+      const invalid=!$("binary").checkValidity()?$("binary"):$("revision");
+      invalid.reportValidity();invalid.focus();
+      throw Error("SimulationCraft 연결 설정을 먼저 완료해 주세요.");
+    }
     // Missing season: first explicit click builds and seals gear only.
     if(await prepareSeasonBeforeOptimizerStart())return;
     // This is the only new-job action. Never start SimC on page load or refresh.
-    if(!field("binary")||!field("revision")) {
-      switchView("settings");
-      $("simc-technical-panel").open=true;
-      const missing=!field("binary")?"binary":"revision";
-      $(missing).focus();
-      throw Error("SimulationCraft 연결 설정을 먼저 완료해 주세요.");
-    }
     if(!window.confirm("이 PC에서 최적화를 시작할까요? 계산 중에도 중단할 수 있습니다."))return;
     const p=await api("/api/v1/longrun/start",{method:"POST",payload:{...buildRequest(),max_native_calls:64,continuous:true}});
     markSession(p.session_id);$("filled-result").hidden=true;
