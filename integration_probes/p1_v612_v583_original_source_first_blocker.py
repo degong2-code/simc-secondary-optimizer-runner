@@ -82,10 +82,13 @@ def run(out):
                          (val.get("source_stage") or {}).get("receipt_sha256"),
                      "network_calls_by_stage":val.get("network_calls_by_stage")}
                 if label=="season_join":
+                    # v163's signed candidate has auto_source_scope INSIDE
+                    # the file; its outward collection result exposes
+                    # the same authenticated data as source_scope.
                     row["expansion_id"]=(
-                        val.get("auto_source_scope") or {}).get("expansion_id")
+                        val.get("source_scope") or {}).get("expansion_id")
                     row["season_source_scope"]=(
-                        val.get("auto_source_scope") or {}).get("status")
+                        val.get("source_scope") or {}).get("source_basis")
                 doc[label]=row
             v583=result.get("fresh_permanent_enchant_item_source") or {}
             doc["v583_first_blocker"]=v583.get("reason")
