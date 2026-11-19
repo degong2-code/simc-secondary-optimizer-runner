@@ -886,7 +886,12 @@ def source(manifest_path):
         profile,doc,fillers,cache,
         user["weapon_layout"],user["oil_hands"],
         manual_final_T=manual_T,
-        verified_enchant_E=selected_fixed_E,
+        # A signed v212 season B already contains the summed E once.
+        # Do not send it to v091's legacy v202 reference-plus-E path:
+        # that path accepts only its original single-profile witness.
+        verified_enchant_E=(None if season_source is not None and
+                            "signed_installed_E" in season_source
+                            else selected_fixed_E),
         season_oil_by_hand=(
             season_source["oil_by_hand"] if season_source else None),
         season_base_B=(
@@ -948,8 +953,18 @@ def source(manifest_path):
         prepared["oil"]["v202_verified_enchant"]=verified
     context=adaptive.prepare(prepared,binary_sha,user["native_revision"])
     normalized=prepared["prepared"]["scenario"]
-    B,lo,hi=scheduler.bounds(normalized,
-                          adaptive.feasible_budget(context,user["flask_F"]))
+    # The original v093 legacy helper has no v212 multi-enchant owner.
+    # Keep its unchanged cache/session identity and apply the exact signed
+    # fixed E floor through the existing v065 policy without adding B.
+    feasible=(scheduler.budget_with_fixed_components(
+        prepared["prepared"]["scenario"],
+        prepared["prepared"]["static_budget"],
+        user["flask_F"],context["identity"]["oil_vector"],
+        fixed_enchant_E=season_source["signed_installed_E"])
+        if season_source is not None and
+           "signed_installed_E" in season_source else
+        adaptive.feasible_budget(context,user["flask_F"]))
+    B,lo,hi=scheduler.bounds(normalized,feasible)
     need(all(scheduler.eligible(tuple(x[s] for s in contract.STATS),
                                 B,lo,hi) for x in seeds)
          and seeds[0]!=seeds[1],"SEEDS_FAIL_BASE_B_L_BOUNDS")
