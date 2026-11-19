@@ -79,13 +79,18 @@ def browser_enchant_snapshot(driver):
 
 
 def run(binary,out,*,complete_after_resume=False,multi_armor=False,
-        positive_rings=False):
+        positive_rings=False,manual_final_T=None):
     import platform
     out=pathlib.Path(out).resolve();out.mkdir(parents=True,exist_ok=True)
     require(not (complete_after_resume and (multi_armor or positive_rings))
-            and not (multi_armor and positive_rings),
+            and not (multi_armor and positive_rings)
+            and (manual_final_T is None or
+                 (positive_rings and type(manual_final_T) is int and
+                  1<=manual_final_T<=100000)),
             "MULTI_ENCHANT_DOES_NOT_REPEAT_64")
-    report={"schema":("p2_v635_70961_two_positive_rings_web_cancel_resume_v1"
+    report={"schema":("p2_v637_70961_manual_T_two_positive_rings_web_cancel_resume_v1"
+                      if manual_final_T is not None else
+                      "p2_v635_70961_two_positive_rings_web_cancel_resume_v1"
                       if positive_rings else
                       "p2_v627_70961_two_signed_e0_web_cancel_resume_v1"
                       if multi_armor else
@@ -101,10 +106,13 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False,
         "partial_cancel_resume_not_full_64_or_global_optimum":not complete_after_resume,
         "two_signed_E0_armor_slots":multi_armor,
         "two_signed_positive_E_rings":positive_rings,
+        "manual_user_final_T":manual_final_T,
         "new_native_calls":None,
         "official_78_complete_not_modified":True,
         "full_product_e2e":"PENDING"}
-    receipt=out/("V635_REAL_CHROME_TWO_POSITIVE_E_RINGS_CANCEL_RESUME.json"
+    receipt=out/("V637_REAL_CHROME_MANUAL_T_TWO_POSITIVE_E_RINGS_CANCEL_RESUME.json"
+                 if manual_final_T is not None else
+                 "V635_REAL_CHROME_TWO_POSITIVE_E_RINGS_CANCEL_RESUME.json"
                  if positive_rings else
                  "V627_REAL_CHROME_TWO_ARMOR_E0_CANCEL_RESUME.json"
                  if multi_armor else
@@ -301,6 +309,18 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False,
             require(browser_snapshot(driver)["trinkets"]==["",""],
                     "OLDER_DEFAULT_TRINKETS_NOT_UNSELECTED")
             for tid in TRINKETS:select_trinket(driver,tid)
+            if manual_final_T is not None:
+                manual_box=driver.find_element(By.ID,"manual-t-mode")
+                require(not manual_box.is_selected(),
+                        "MANUAL_T_DEFAULT_MUST_BE_AUTO")
+                clickable(driver,manual_box)
+                input_text(driver,"final_T",str(manual_final_T))
+                require(driver.execute_script(
+                    "return document.getElementById('manual-t-mode').checked"+
+                    "&&document.getElementById('final_T').value===arguments[0];",
+                    str(manual_final_T)),
+                    "REAL_VISIBLE_MANUAL_T_INPUT_NOT_APPLIED")
+                report["manual_T_visible_field_set_by_user"]=True
             req=driver.execute_script("""const r=buildRequest();return {
                 sha:r.installed_manifest_sha256,
                 season:r.installed_season_game_build,
@@ -326,7 +346,7 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False,
                         {"head":7959,"chest":7957} if multi_armor
                         else {"chest":7957}) and
                     req.get("trinkets")==list(TRINKETS) and
-                    req.get("final_T") is None and req.get("ilvl")==334 and
+                    req.get("final_T")==manual_final_T and req.get("ilvl")==334 and
                     req.get("oil_hands")==[] and req.get("current") is True and
                     req.get("binary")==str(binary),
                     "EXACT_NEW_BROWSER_SELECTED_ENCHANT_REQUEST_INVALID")
@@ -380,10 +400,16 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False,
                 if positive_rings:
                     typed=json.loads((folder/"generated"/"scenario.json").read_text("utf8"))
                     require(typed["target"]["mode"]=="manual_total" and
-                            typed["target"]["manual_total"]==3165,
-                            "SIGNED_POSITIVE_E_AUTO_G_PLUS_58_NOT_ONCE")
+                            typed["target"]["manual_total"]==(
+                                manual_final_T if manual_final_T is not None
+                                else 3165),
+                            "SIGNED_POSITIVE_E_MANUAL_OR_AUTO_TOTAL_DRIFT")
                     report["selected_positive_E_total"]=58
-                    report["signed_auto_base_B"]=3165
+                    report["signed_actual_base_B"]=typed["target"][
+                        "manual_total"]
+                    report["manual_T_authoritative_verified"]=(
+                        manual_final_T is not None and
+                        typed["target"]["manual_total"]==manual_final_T)
                 report["actual_generated_profile_sha256"]=hashlib.sha256(
                     profile.encode("utf8")).hexdigest()
                 report["two_final_armor_enchants_exact_once"]=True
@@ -428,6 +454,17 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False,
             # without turning an old unsigned option into a new approval.
             restored=browser_enchant_snapshot(driver)
             report["reopened_signed_enchant_summary"]=restored
+            if manual_final_T is not None:
+                restore_t=driver.execute_script("""return {
+                  manual:document.getElementById('manual-t-mode').checked,
+                  value:document.getElementById('final_T').value,
+                  request:buildRequest().controls.final_T
+                };""")
+                require(restore_t=={
+                    "manual":True,"value":str(manual_final_T),
+                    "request":manual_final_T},
+                    "RESTORED_USER_MANUAL_T_SCOPE_CHANGED")
+                report["real_user_manual_T_restored"]=True
             require(restored["chest_selected"]=="chest:7957" and
                     restored["head_selected"]==("head:7959" if multi_armor else "") and
                     restored["underlying"]==("" if multi_armor else "chest:7957") and
@@ -600,6 +637,8 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False,
                     post["progress"]["completed_jobs"]>=prior,
                     "PARTIAL_CACHE_CHECKPOINT_REGRESSION")
             report["status"]=(
+                "PASS_REAL_CHROME_MANUAL_T_TWO_POSITIVE_E_RINGS_CANCEL_RESUME"
+                if manual_final_T is not None else
                 "PASS_REAL_CHROME_TWO_POSITIVE_E_RINGS_CANCEL_RESTART_RESUME"
                 if positive_rings else
                 "PASS_REAL_CHROME_TWO_SIGNED_E0_START_CANCEL_RESTART_RESUME"
