@@ -1,4 +1,4 @@
-# P2 v635: exactly ONE 70961 signed head 7959 + chest 7957 Chrome
+# P2 v635: ONE 70961 signed 8025 haste ring1 + 7997 crit ring2 + 7957 E0 chest Chrome
 # start/cancel/HTTP restart/resume, bounded partial Native; no 64 case repeat.
 # One-shot approved real 70961 user flow; cache SHA mismatch aborts before Native.
 name: P2 v635 70961 Chrome two E+ rings and E0 chest Start Cancel Resume bounded
@@ -33,7 +33,7 @@ jobs:
           node --check runner/webui/app.js
   real-chrome-registered-user:
     needs: syntax-only
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v635-real-two-positive-E-once]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v635-real-two-Eplus-once]') }}
     runs-on: windows-2022
     timeout-minutes: 42
     env:
@@ -91,7 +91,7 @@ jobs:
           New-Item -ItemType Directory -Force out/v635 | Out-Null
           python -u integration_probes/p2_v635_real_70961_two_positive_E_rings_cancel_resume_once.py --simc "$env:V635_SIMC_EXE" --out out/v635
           if ($LASTEXITCODE -ne 0) { throw 'V635_FIRST_BLOCKER_IN_COMPACT_RECEIPT' }
-      - name: Preserve one bounded two-armor user session and Native checkpoint only
+      - name: Preserve one bounded two-positive-ring user session and Native checkpoint only
         if: always()
         uses: actions/upload-artifact@v6
         with:
