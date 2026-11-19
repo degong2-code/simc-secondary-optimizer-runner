@@ -3436,6 +3436,51 @@ class LocalWebAPIOffline(unittest.TestCase):
         child.poll.return_value=0
         self.assertEqual(self.post("/api/v1/sessions/"+sid+"/cancel").status_code,409)
 
+    def test_v622_recent_sessions_uses_sealed_v293_completed_vs_paused_status(self):
+        """Normal browser long-run results belong to V291, not legacy V106."""
+        import hashlib
+        sid=self.plan()["session_id"]
+        folder=self.root/"runs"/sid
+        longrun=web.longrun_sessions
+        manifest=folder/"generated"/"manifest.json"
+        self.assertTrue(manifest.is_file())
+        config={"schema":longrun.SCHEMA,"native_budget":64,
+                "manifest_sha256":hashlib.sha256(manifest.read_bytes()).hexdigest()}
+        longrun.config_path(folder).write_text(
+            json.dumps(config),encoding="utf8")
+        result_dir=longrun.stage_path(folder,64)/"simc_results"
+        result_dir.mkdir(parents=True,exist_ok=True)
+        (result_dir/"V291_RESULT.json").write_text(
+            '{"status":"BUDGET_EXHAUSTED"}',encoding="utf8")
+        worker=longrun.worker_state_path(folder)
+        progress=result_dir/"V291_PROGRESS.json"
+
+        def recorded(status,completed):
+            progress.write_text(json.dumps({
+                "status":status,"completed_cases":completed,
+                "native_attempts_cumulative":completed}),encoding="utf8")
+            worker.write_text(json.dumps({
+                "schema":longrun.SCHEMA,"status":status}),encoding="utf8")
+            with mock.patch.object(web.subprocess,"Popen",
+                                   side_effect=AssertionError("NO_NATIVE")):
+                response=self.client.get("/api/v1/sessions",headers=self.headers)
+            self.assertEqual(response.status_code,200,response.text)
+            self.assertTrue(response.json()["read_only"])
+            self.assertEqual(response.json()["native_calls_now"],0)
+            matches=[x for x in response.json()["sessions"]
+                     if x["session_id"]==sid]
+            self.assertEqual(len(matches),1)
+            self.assertEqual(matches[0]["recorded_status"],status)
+            self.assertEqual(matches[0]["updated_unix"],
+                             int(worker.stat().st_mtime))
+            return matches[0]
+
+        self.assertTrue(recorded("BUDGET_EXHAUSTED",64)["result_saved"])
+        # V291_RESULT can persist after cancellation or a failed resume.
+        self.assertFalse(recorded("PAUSED_USER_CANCEL",4)["result_saved"])
+        self.assertFalse(recorded("BLOCKED_OR_PARTIAL",4)["result_saved"])
+        self.assertTrue((result_dir/"V291_RESULT.json").is_file())
+
     def test_result_reads_previous_six_case_user_result_without_native(self):
         sid=self.plan()["session_id"]
         folder=self.root/"runs"/sid
