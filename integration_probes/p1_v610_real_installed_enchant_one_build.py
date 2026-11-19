@@ -200,6 +200,17 @@ def run(binary,output_folder,*,postinstall=None):
                             binary=binary,revision=REV,
                             output_folder=output_folder)
                         doc["v619_exact_user_stage"]=follow
+                        # v610's original field referred only to the base
+                        # admission phase (zero user DPS calls). When the
+                        # optional real v619 callback executes, the summary
+                        # MUST reflect its actual Native attempts too.
+                        doc["new_dps_native_calls"]=follow.get(
+                            "new_dps_native_calls",0)
+                        doc["actual_installed_enchant_user_profile_tested"]=(
+                            follow.get("v098_status")==
+                            "READY_SOURCE_BOUND_SEASON_MANIFEST_ZERO_NATIVE")
+                        doc["actual_user_enchant_native_dps"]=follow.get(
+                            "original_v096_run_status","NOT_EXECUTED")
                         if follow.get("status")==(
                                 "PASS_ORIGINAL_V098_V096_ENCHANT_NATIVE_DPS"):
                             doc["status"]=(
