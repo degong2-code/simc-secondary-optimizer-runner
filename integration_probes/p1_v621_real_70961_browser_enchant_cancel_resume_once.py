@@ -431,6 +431,7 @@ def run(binary,out,*,complete_after_resume=False):
                 # v622 saved-session dropdown, real read-only HTTP GET.
                 # A user must be able to find this v293 completion, not
                 # merely reopen it by knowing the opaque session key.
+                driver.find_element(By.CSS_SELECTOR,"details.restore > summary").click()
                 clickable(driver,driver.find_element(By.ID,"recent-refresh-btn"))
                 elapsed_wait(driver,
                     'Array.from(document.getElementById("recent-session-id").options)'+
