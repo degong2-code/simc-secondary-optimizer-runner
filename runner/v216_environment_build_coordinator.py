@@ -4378,6 +4378,17 @@ def _simc_source_collection_context(*, requested_event, previous_game_build):
             "previous_game_build_is_not_a_season_proof":True}
 
 
+def _original_v163_enchant_expansion_id(linked):
+    """Reuse v163's authenticated outward source_scope, not its inner JSON.
+
+    The sealed v163 candidate file stores auto_source_scope internally, but
+    _join_authenticated_season_source exposes that exact validated scope as
+    source_scope. v190 already consumes that external key. No guessed ID.
+    """
+    scope=linked.get("source_scope") if type(linked) is dict else None
+    return scope.get("expansion_id") if type(scope) is dict else None
+
+
 def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    fetch=None, credentials=None,
                                    discovery_transport=None,
@@ -4750,7 +4761,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     else:
         permanent_source=permanent_enchant_source.collect(
             stage_root=stage_root,build=expected_game_build,
-            expansion_id=(linked.get("auto_source_scope") or {}).get("expansion_id"),
+            expansion_id=_original_v163_enchant_expansion_id(linked),
             wago_stage=stage,fresh_gear=fresh_gear,
             item_spells=fresh_item_spell,simc_effects=simc_consumable_relation,
             pinned_simc=pinned_classifier,
