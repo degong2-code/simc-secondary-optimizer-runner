@@ -3,6 +3,8 @@
 
 Reuses v621 Chrome (with v634 signed E floors in durable v093 identity), actual Zero-Source v633 v212 installation,
 v096/v098 existing adaptive runner, cancel/resume/cache. No 64-case repeat.
+Regression scope: v636 carries original v216 G-excludes-E evidence through
+v222 into newly signed v212, so positive-E users can enter the existing run.
 """
 import argparse
 import pathlib
