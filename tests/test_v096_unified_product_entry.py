@@ -96,6 +96,84 @@ class InstalledE0NativeProfileInputTests(unittest.TestCase):
                         flask_F=F,oil_hands=[],profile=profile)
 
 
+    def test_v625_two_signed_armor_e0_profile_and_unchanged_B_T(self):
+        """Two real-slot source assertions, synthetic v212; zero Native."""
+        from tests.test_v212_environment_manifest import (
+            SelectedPermanentEnchantE0BudgetTests)
+        import v212_environment_manifest as installed
+        zero=dict.fromkeys(installed.season_budget.STATS,0)
+        doc=SelectedPermanentEnchantE0BudgetTests().installed([
+            {"enchant_id":7957,"simc_token":"enchant_chest__synthetic_e0",
+             "slot":"chest","ui_selectable":True,
+             "verified_fixed_E":zero,"chmv_budget_receipt_sha256":"d"*64},
+            {"enchant_id":7951,"simc_token":"enchant_head__synthetic_e0",
+             "slot":"head","ui_selectable":True,
+             "verified_fixed_E":zero,"chmv_budget_receipt_sha256":"e"*64}])
+        doc["simc_revision"]="d"*40
+        doc["trusted_budget_component_source_identities"]={
+            k:{"source_sha256":str(i)*64}
+            for i,k in enumerate(("G","J","F","O"),1)}
+        F={**zero,"versatility_rating":165}
+        doc["official_F_physical_source"]={
+            "static_CHMV_vector":F,"F_rating":165,
+            "simc_input_token":"test_flask"}
+        profile="\n".join((
+            "hunter=Selected","flask=test_flask",
+            "finger1=id=268266,ilevel=334",
+            "finger2=id=268268,ilevel=334",
+            "head=id=260001,ilevel=334,enchant_id=7951",
+            "chest=id=260002,ilevel=334,enchant_id=7957",""))
+        normalized={"scenario":{"target":{"mode":"manual_total",
+                       "ilevel":334,"manual_total":3107}},
+                    "budget":{"T":3107,"J":92,"F":165,
+                              "external_temporary_rating":zero}}
+        with mock.patch.object(installed,
+              "verify_fresh_installed_environment",return_value=True):
+            selections=[]
+            for slot,eid,item in (("chest",7957,260002),
+                                  ("head",7951,260001)):
+                preview=installed.preview_installed_selected_enchant_budget(
+                    document=doc,slot=slot,item_id=item,enchant_id=eid)
+                selections.append({
+                    "identity_sha256":preview["selected_identity_sha256"],
+                    "slot":slot,"item_id":item,"enchant_id":eid})
+            season={"schema":entry.FRESH_SEASON_SCHEMA,
+                    "installed_environment_path":"/fake/v212.json",
+                    "installed_manifest_sha256":doc["manifest_sha256"],
+                    "oil_by_hand":{},
+                    "selected_user_installed_E0_multi":selections}
+            with (mock.patch.object(entry,
+                    "_verified_installed_fresh_v217",
+                    return_value=(doc,{"stage_receipt_sha256":"f"*64})),
+                  mock.patch.object(entry.contract,"normalize",
+                    return_value=normalized)):
+                kwargs=dict(manifest_path=pathlib.Path("/fake/manifest.json"),
+                            season=season,revision="d"*40,user_scenario={},
+                            flask_F=F,oil_hands=[])
+                accepted=entry._admitted_fresh_season_source(
+                    **kwargs,profile=profile)
+                bound=accepted["selected_user_installed_E0_multi"]
+                self.assertEqual(bound["choice"],
+                                 {"chest":7957,"head":7951})
+                self.assertEqual(bound["fixed_E"],zero)
+                self.assertEqual((accepted["season_budget"]["base_B"],
+                                  accepted["season_budget"]["final_T"]),
+                                 (3107,3107))
+                self.assertEqual(len(accepted["season_source_identity"]
+                    ["source_input_sha256"]),64)
+                self.assertEqual(len(bound["selected_identity_sha256"]),2)
+                with self.assertRaisesRegex(entry.EntryBlocked,
+                        "FRESH_SELECTED_E0_EXACT_ONCE_SIMC_INPUT_REQUIRED"):
+                    entry._admitted_fresh_season_source(
+                        **kwargs,profile=profile.replace(
+                            "head=id=260001,ilevel=334,enchant_id=7951",
+                            "head=id=260001,ilevel=334"))
+                with self.assertRaises(entry.EntryBlocked):
+                    entry._admitted_fresh_season_source(
+                        **kwargs,profile=profile.replace(
+                            "head=id=260001,ilevel=334,enchant_id=7951",
+                            "head=id=260001,ilevel=334,enchant_id=7957"))
+
     def test_v604_signed_e0_final_feet_profile_and_exact_once(self):
         """One v212 registered ordinary E0; the final SimC item still owns it."""
         from tests.test_v212_environment_manifest import (
