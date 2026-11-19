@@ -105,6 +105,13 @@ def run(binary,output_folder,*,postinstall=None):
             physically=outcome.get("fresh_permanent_enchant_item_source") or {}
             doc["actual_source_compilation_status"]=comp.get("status")
             doc["source_missing"]=comp.get("missing")
+            # Existing v216 normal-Build recovery plan: exact current
+            # source identity and actionable per-option budget gaps, not
+            # permission to publish or a new Native/effect certification.
+            # Keep only this bounded compact receipt, not stage source tables.
+            E_repair=comp.get("optional_enchant_E_repair_plan_unadmitted")
+            if type(E_repair) is dict:
+                doc["optional_enchant_E_repair_plan_unadmitted"]=E_repair
             doc["real_v583_source_status"]=physically.get("status")
             doc["real_v583_source_counts"]=physically.get("counts")
             doc["new_core_environment_native_calls"]=outcome.get("native_calls")
