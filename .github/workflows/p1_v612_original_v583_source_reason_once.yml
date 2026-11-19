@@ -1,5 +1,5 @@
 # Source-only first-blocker audit; no new SimC Native/DPS or admission gate.
-name: P1 v615 original 70961 v607 quality producer diagnostics (Native0)
+name: P1 v617 actual 70961 v616 scoped source-to-Policy-A quality proof (Native0)
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   source-only:
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v615-real-quality-once]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v617-real-quality-once]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 19
     env:
