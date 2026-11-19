@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """One source-pinned real-current-build v216/v212 enchant M1/M2 attempt.
+v631: exercise the generic sealed source E (including unscaled positives)
+and missing-E recovery plan without past stage input or user DPS.
 
 Reuse the v610 production admission diagnostic, but use a **new** Windows
 CLI binary built from the exact same-build upstream SimC source in CI.
