@@ -3086,6 +3086,9 @@ function handlePollFailure(err,id) {
 function beginPolling() {
   if(state.pollTimer!==null)clearInterval(state.pollTimer);
   state.pollTimer=setInterval(()=>{
+    // A verified full-budget result cannot gain new cases by passive reads.
+    // Keep polling if result rendering failed; explicit restore remains readable.
+    if(state.longrunCompleted && !$("filled-result").hidden)return;
     if(state.busy||state.pollBusy||!state.session||Date.now()<state.nextPollAt)return;
     state.pollBusy=true;
     const id=state.session;
