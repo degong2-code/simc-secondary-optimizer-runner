@@ -359,7 +359,9 @@ class InstalledE0NativeProfileInputTests(unittest.TestCase):
             season={"schema":entry.FRESH_SEASON_SCHEMA,
                     "installed_environment_path":"/fake/v212.json",
                     "installed_manifest_sha256":doc["manifest_sha256"],
-                    "oil_by_hand":{},"selected_user_installed_E0_multi":selection}
+                    "oil_by_hand":{},
+                    "selected_user_installed_E0_multi":sorted(
+                        selection,key=lambda x:x["slot"])}
             normalized={
                 "scenario":{"target":{"mode":"manual_total",
                     "ilevel":334,"manual_total":manual or 3165}},
