@@ -3023,13 +3023,13 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                                 set(environment_manifest.season_budget.STATS)
                             and all(type(entry["verified_fixed_E"][stat])
                                     is int and
-                                    entry["verified_fixed_E"][stat]==0
+                                    0<=entry["verified_fixed_E"][stat]<=100000
                                     for stat in environment_manifest.
                                         season_budget.STATS)
                             and environment_manifest.valid_sha(
                                 entry.get("chmv_budget_receipt_sha256"))],
                         "runtime_selectable":False,
-                        "unresolved":"NONZERO_OR_UNKNOWN_E_AND_OTHER_USER_BINDINGS",
+                        "unresolved":"FINAL_USER_ITEM_AND_SIMC_MASK_STILL_VERIFIED_AT_START",
                         "new_approval_granted":False}
                 source=doc.get("verified_DK_runeforges")
                 if type(source) is dict:
