@@ -73,10 +73,11 @@ def browser_enchant_snapshot(driver):
     };""")
 
 
-def run(binary,out):
+def run(binary,out,*,complete_after_resume=False):
     import platform
     out=pathlib.Path(out).resolve();out.mkdir(parents=True,exist_ok=True)
-    report={"schema":SCHEMA,"status":"STARTED",
+    report={"schema":("p1_v624_real_70961_signed_e0_browser_full_result_restore_v1"
+                      if complete_after_resume else SCHEMA),"status":"STARTED",
         "game_build":BUILD,"simc_revision":REV,
         "actual_chrome":False,"signed_registered_option_not_fabricated":True,
         "new_approval_granted":False,
@@ -84,11 +85,12 @@ def run(binary,out):
         "new_simc_compilation":False,
         "reused_prior_v619_user_DPS_for_current_result":False,
         "original_adaptive_engine_unchanged":True,
-        "partial_cancel_resume_not_full_64_or_global_optimum":True,
+        "partial_cancel_resume_not_full_64_or_global_optimum":not complete_after_resume,
         "new_native_calls":None,
         "official_78_complete_not_modified":True,
         "full_product_e2e":"PENDING"}
-    receipt=out/"V621_REAL_CHROME_ENCHANT_CANCEL_RESUME.json"
+    receipt=out/("V624_REAL_CHROME_ENCHANT_FULL_RESULT_RESTORE.json"
+                 if complete_after_resume else "V621_REAL_CHROME_ENCHANT_CANCEL_RESUME.json")
     def save():
         receipt.write_text(json.dumps(report,ensure_ascii=False,indent=2,
             sort_keys=True,allow_nan=False,default=str)+"\n",encoding="utf8")
@@ -323,6 +325,142 @@ def run(binary,out):
             report["actual_native_attempts_after_resume_start"]=new_count
             require(new_count>prior,
                     "RESUME_HAS_NOT_EVALUATED_ADDITIONAL_NATIVE_CASE")
+            if complete_after_resume:
+                # Existing 64-budget v291 worker, not a new search engine.
+                # This is a separate v624 one-scenario acceptance probe.
+                require(app.state.jobs.children[sid].wait(timeout=1100)==0,
+                        "ORIGINAL_64_WORKER_FAILED")
+                done=app.state.jobs.longrun_status(folder)
+                p=done["progress"]
+                require(not done["active"] and done["result_ready"] and
+                        p["worker"]["status"]=="BUDGET_EXHAUSTED" and
+                        p["completed_jobs"]==p["planned_jobs"]==64 and
+                        p["native_attempts"]==64 and
+                        done["scout_iterations_per_CHMV"]==56,
+                        "EXACT_64_NATIVE_BUDGET_NOT_EXHAUSTED")
+                actual=longrun.read_result(folder)
+                user=actual["user_result"]
+                best=user["observed_first_choice"]
+                ratings=best["absolute_rating_T"]
+                percentages=best["percent_of_final_T"]
+                stat_names=("crit_rating","haste_rating","mastery_rating",
+                            "versatility_rating")
+                alts=user["material_near_alternatives"]
+                require(actual["status"]=="BUDGET_EXHAUSTED" and
+                        actual["native_calls_cumulative"]==64 and
+                        user["confidence_level"]==0.95 and
+                        user["global_optimum_proven"] is False and
+                        user["selected_pair_95_only"] is True and
+                        user["final_T"]==user["base_B"]==3107 and
+                        sum(user["fixed_O"].values())==0 and
+                        set(ratings)==set(percentages)==set(stat_names) and
+                        sum(ratings.values())==3107 and
+                        abs(sum(percentages.values())-100)<0.01 and
+                        best["observed_dps_mean"]>0 and
+                        best["simc_sem"]>=0 and
+                        all(set(a["absolute_rating_T"])==set(stat_names)
+                            for a in alts),
+                        "REAL_64_ABSOLUTE_DPS_SEM_95_OR_O_ACCOUNTING_INVALID")
+                result_file=longrun.stage_path(folder,64)/"simc_results"/"V291_RESULT.json"
+                report["saved_final_v291_sha256"]=sha(result_file)
+                report["saved_user_result"]={
+                    "absolute_rating_T":ratings,
+                    "ratio_percent":percentages,
+                    "dps_mean":best["observed_dps_mean"],
+                    "sem":best["simc_sem"],
+                    "confidence_level":user["confidence_level"],
+                    "pairwise_direction_supported_at_95":
+                        user["confirmation_pair_direction_supported_at_95"],
+                    "selected_pair_95_only":True,
+                    "material_near_alternatives":len(alts),
+                    "final_T":user["final_T"],"base_B":user["base_B"],
+                    "global_optimum_proven":False}
+                # Reuse the real browser polling/rendering (v570/v344), not
+                # synthetic result injection or hand-crafted DOM.
+                elapsed_wait(driver,
+                    'state.session === "'+sid+'" && state.longrunCompleted && '+
+                    '!document.getElementById("filled-result").hidden && '+
+                    'document.getElementById("run-label").textContent.includes("탐색 상한 완료")',
+                    100)
+                def final_ui():
+                    return driver.execute_script("""const e=id=>document.getElementById(id);
+                        return {
+                          dps:e("dps").textContent,
+                          sem:e("sem").textContent,
+                          conf95:e("conf95").textContent,
+                          budget:e("budget").textContent,
+                          alt_count:e("alt-count").textContent,
+                          alt_rows:e("alt-list").querySelectorAll("article.alt-row").length,
+                          stat_lines:[...e("stat-bars").querySelectorAll(".stat-heading")]
+                            .map(n=>n.textContent),
+                          result_visible:!e("filled-result").hidden,
+                          run_label:e("run-label").textContent,
+                          resume_disabled:e("resume-btn").disabled,
+                          completed:state.longrunCompleted,
+                          selected_session:state.session
+                        };""")
+                visible=final_ui()
+                def good_ui(observed):
+                    require(observed["selected_session"]==sid and
+                            observed["completed"] and observed["result_visible"] and
+                            observed["resume_disabled"] and
+                            "탐색 상한 완료" in observed["run_label"] and
+                            observed["dps"]==format(best["observed_dps_mean"],",.1f") and
+                            observed["sem"]==format(best["simc_sem"],",.2f") and
+                            observed["conf95"]==("방향 지지" if
+                                user["confirmation_pair_direction_supported_at_95"]
+                                else "미확정") and
+                            "3,107" in observed["budget"] and
+                            len(observed["stat_lines"])==4 and
+                            observed["alt_rows"]==len(alts) and
+                            observed["alt_count"].startswith(str(len(alts))+"개"),
+                            "REAL_BROWSER_64_DPS_SEM_95_OR_ALTERNATIVES_DRIFT")
+                    for k, label in zip(stat_names,("치명","가속","특화","유연")):
+                        need_line=next((line for line in observed["stat_lines"]
+                                        if label in line),None)
+                        require(need_line is not None and
+                                format(ratings[k],",d") in need_line,
+                                "REAL_BROWSER_FOUR_ABSOLUTE_STATS_DRIFT")
+                good_ui(visible)
+                report["browser_final_verified"]=True
+                report["browser_final_scope"]={
+                    "result_visible":True,"dps":visible["dps"],
+                    "sem":visible["sem"],"conf95":visible["conf95"],
+                    "four_rating_lines":len(visible["stat_lines"]),
+                    "material_alternative_rows":visible["alt_rows"]}
+                # v622 saved-session dropdown, real read-only HTTP GET.
+                # A user must be able to find this v293 completion, not
+                # merely reopen it by knowing the opaque session key.
+                clickable(driver,driver.find_element(By.ID,"recent-refresh-btn"))
+                elapsed_wait(driver,
+                    'Array.from(document.getElementById("recent-session-id").options)'+
+                    '.some(x=>x.value==="'+sid+'" && x.textContent.includes("결과 저장"))',
+                    35)
+                report["v622_saved_result_index_visible"]=True
+                # Existing v570 browser restore, now after an HTTP restart.
+                stop_server(server,thread)
+                server=thread=None
+                app,server,thread=start_server(root)
+                driver.refresh()
+                driver.execute_script("window.confirm=()=>true")
+                elapsed_wait(driver,
+                    'state.session==="'+sid+'" && state.longrunCompleted && '+
+                    '!document.getElementById("filled-result").hidden',120)
+                reopened=final_ui()
+                good_ui(reopened)
+                require(reopened==visible and
+                        sha(result_file)==report["saved_final_v291_sha256"] and
+                        app.state.jobs.longrun_status(folder)["progress"]["native_attempts"]==64,
+                        "RESTART_REOPEN_CHANGED_RESULT_OR_NATIVE_COUNT")
+                report["http_restart_final_result_reopened"]=True
+                report["native_attempts_after_readonly_reopen"]=64
+                report["new_native_calls"]=64
+                report["case_count_after_resume"]=64
+                report["second_cancel_or_completed_worker_status"]="BUDGET_EXHAUSTED"
+                report["native_attempts_were_reused_without_reset"]=True
+                report["status"]="PASS_REAL_CHROME_SIGNED_E0_64_FINAL_RESULT_REOPEN"
+                save()
+                return 0
             if post["active"]:
                 clickable(driver,driver.find_element(By.ID,"cancel-btn"))
                 require(app.state.jobs.children[sid].wait(timeout=190)==0,
