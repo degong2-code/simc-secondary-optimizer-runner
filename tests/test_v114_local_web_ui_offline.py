@@ -2223,6 +2223,20 @@ const app=Function("state","$","api","showEnvironmentBuild","buttonState","numbe
         self.assertIn('interrupted?"실행 중단 · 재개 가능"',js)
         self.assertIn("저장된 세션을 재개할 수 있습니다",js)
 
+    def test_v622_recent_session_index_uses_readable_status_not_raw_worker_code(self):
+        """Completed and paused v293 sessions remain distinguishable after restart."""
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('const status=item.result_saved?"결과 저장":',js)
+        for raw,display in (
+            ("PAUSED_USER_CANCEL","사용자 중단 · 재개 가능"),
+            ("PAUSED_ELAPSED_BUDGET","시간 제한 중단 · 재개 가능"),
+            ("PAUSED_INVOCATION_NATIVE_BUDGET","회차 중단 · 재개 가능"),
+            ("BLOCKED_OR_PARTIAL","실행 차단 · 결과 확인 필요"),
+            ("BUDGET_EXHAUSTED","탐색 상한 도달 · 결과 미확인")):
+            self.assertIn(raw+':"'+display+'"',js)
+        self.assertIn("result_saved",js)
+        self.assertIn("loadRecentSessions()",js)
+
     def test_v342_cancelled_and_full_budget_are_distinct_from_idle(self):
         js=self.client.get("/assets/app.js").text
         self.assertIn('worker==="PAUSED_USER_CANCEL"',js)
