@@ -2739,9 +2739,15 @@ render(proven);
 assert($("season-enchant-groups").children[0].children[1].children[0]
   .textContent.includes("고정 E 원본 확인"));
 assert.strictEqual($("season_enchant_finger1").disabled,true,
-  "verified fixed E alone cannot unlock an unbound user SimC profile");
+  "a signed feet enchant never unlocks the physical finger slot");
 assert.strictEqual($("season_enchant_finger1").options.length,1);
-assert.strictEqual($("season_enchant_other").disabled,true);
+assert.strictEqual($("season_enchant_other").disabled,false,
+  "source-installed fixed E+ may select its exact physical feet slot");
+assert($("season_enchant_other").options.some(x=>x.value==="feet:91234"));
+assert($("env-enchant-boots").options.some(x=>x.value==="feet:91234"));
+assert(!$("env-enchant-boots").disabled);
+assert($("env-enchant-boots").options.some(x=>
+  x.textContent.includes("가속 +30")));
 const provenZero={...proven,verified_installed_enchant_registrations:{
   ...proven.verified_installed_enchant_registrations,
   items:[{...proven.verified_installed_enchant_registrations.items[0],
