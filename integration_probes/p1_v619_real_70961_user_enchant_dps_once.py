@@ -110,7 +110,8 @@ def followup(*,jobs,environment_result,document,installed_path,binary,
             matched[0].encode("utf8")).hexdigest()
         report["real_item_id"]=next(
             int(value.split("=",1)[1]) for value in
-            matched[0].split(",") if value.startswith("id="))
+            matched[0].split("=",1)[1].split(",")
+            if value.startswith("id="))
         report["v096_budget_source"]=result["plan"].get("budget_source")
         report["v096_plan_base_B"]=result["plan"].get("base_B")
         report["v096_plan_final_T"]=result["plan"].get("final_T")
