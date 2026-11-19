@@ -361,7 +361,8 @@ class InstalledE0NativeProfileInputTests(unittest.TestCase):
                     "installed_manifest_sha256":doc["manifest_sha256"],
                     "oil_by_hand":{},
                     "selected_user_installed_E0_multi":sorted(
-                        selection,key=lambda x:x["slot"])}
+                        selection,key=lambda x:x["slot"]),
+                    **({"user_final_T":manual} if manual is not None else {})}
             normalized={
                 "scenario":{"target":{"mode":"manual_total",
                     "ilevel":334,"manual_total":manual or 3165}},
