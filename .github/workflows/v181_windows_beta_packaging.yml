@@ -30,6 +30,7 @@ on:
       - integration_probes/v181_windows_beta_live_http.py
       - integration_probes/v181_windows_beta_packager.py
       - tests/test_v113_local_web_api_offline.py
+      - tests/test_p1_v568_first_user_environment_bridge_offline.py
       - tests/test_v208_special_L_hydration_offline.py
       - tests/test_v212_environment_manifest.py
       - tests/test_v216_environment_build_coordinator.py
