@@ -1,0 +1,53 @@
+# Source-only first-blocker audit; no new SimC Native/DPS or admission gate.
+name: P1 v612 real 70961 v583 first missing source relation once (no Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v612_original_v583_source_reason_once.yml
+      - integration_probes/p1_v612_v583_original_source_first_blocker.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v612-70961-real-v583-original-source
+  cancel-in-progress: false
+jobs:
+  source-only:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v612-real-v583-once]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 19
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: 9933ffb946fb55b1fa66657b848f519ac19006e1
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70961
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse source collector, verify Python and requirements
+        run: |
+          set -euo pipefail
+          python -m py_compile integration_probes/p1_v612_v583_original_source_first_blocker.py
+          python -m pip install -r requirements-web-test.txt
+      - name: ONE real matched-build original Wago source collection, no Native
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          mkdir -p out/v612
+          python -u integration_probes/p1_v612_v583_original_source_first_blocker.py --out out/v612
+      - name: Save compact v583 first missing source proof
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v612-current-70961-v583-first-blocker
+          path: out/v612/V612_REAL_70961_V583_SOURCE_BLOCKER.json
+          retention-days: 14
+          if-no-files-found: warn
