@@ -1340,6 +1340,22 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertIsNone(receipt["G"])
         self.assertFalse(receipt["environment_ready"])
 
+    def test_v613_v583_expansion_uses_authenticated_v163_public_scope(self):
+        # Real v612: all upstream source stages were SEALED, but v583
+        # received None because the collector read an internal source-file
+        # key from the outward v163 join instead of its source_scope.
+        joined={"status":
+            "DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING",
+            "source_scope":{"expansion_id":11,
+                            "source_basis":"WCL_PLUS_WAGO_SEALED"},
+            "auto_source_scope":{"expansion_id":999}}
+        self.assertEqual(
+            v216._original_v163_enchant_expansion_id(joined),11)
+        self.assertIsNone(v216._original_v163_enchant_expansion_id({
+            "status":"AUTHENTICATED_SEASON_JOIN_NOT_READY"}))
+        self.assertIsNone(v216._original_v163_enchant_expansion_id({}))
+        self.assertIsNone(v216._original_v163_enchant_expansion_id(None))
+
     def test_fresh_v189_v190_exact_consumables_reuse_existing_wago_and_simc(self):
         from tests.test_v229_simc_only_source_seed import raw_sources
         from tests.test_v189_simc_choice_discovery import SOURCE
