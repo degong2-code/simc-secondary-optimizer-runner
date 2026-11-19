@@ -79,7 +79,7 @@ jobs:
           $probes=@('p2_v637_real_70961_manual_T_signed_Eplus_cancel_resume_once.py','p1_v621_real_70961_browser_enchant_cancel_resume_once.py','p1_v570_real_windows_cold_browser_to_simc_once.py','p1_v344_windows_real_browser_native64_once.py','p1_v610_real_installed_enchant_one_build.py','p1_v524_m1_m2_source_owner_once.py','p3_haj_real_local_web_native_e2e.py')
           foreach ($n in $probes) { Copy-Item -LiteralPath (Join-Path $PWD ('integration_probes/'+$n)) -Destination (Join-Path $pkg 'integration_probes') }
           $env:PYTHONPATH="$pkg\runner;$pkg\integration_probes;$pkg"
-          python -c "import os,pathlib,v113_local_web_api as web,v216_environment_build_coordinator as env,v222_season_budget_contract as budget,v632_permanent_enchant_native_E as E; p=pathlib.Path(os.environ['P3_PACKAGE_ROOT']).resolve(); assert all(pathlib.Path(m.__file__).resolve().is_relative_to(p) for m in (web,env,budget,E)); print('V638_PACKAGED_PRODUCT_MODULE_IDENTITY_PASS')"
+          python -c "import os,pathlib,importlib.machinery as mh; p=pathlib.Path(os.environ['P3_PACKAGE_ROOT']).resolve(); names=('v113_local_web_api','v216_environment_build_coordinator','v222_season_budget_contract','v632_permanent_enchant_native_E'); assert all(pathlib.Path(mh.PathFinder.find_spec(name,[str(p/'runner')]).origin).resolve().is_relative_to(p) for name in names); print('V638_PACKAGED_PRODUCT_MODULE_IDENTITY_PASS')"
           if ($LASTEXITCODE -ne 0) { throw 'V638_CHECKOUT_NOT_PACKAGE_MODULE_IDENTITY' }
           "V638_BINARY=$exe" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           "V638_PKG=$pkg" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
