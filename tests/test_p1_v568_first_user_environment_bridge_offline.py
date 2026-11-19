@@ -69,4 +69,61 @@ const pending={web_environment_scope:{environment_ready:false,environment_instal
         p=subprocess.run([node,"-e",harness,str(ROOT/"runner/webui/app.js")],
                          cwd=ROOT,capture_output=True,text=True,timeout=15)
         self.assertEqual(p.returncode,0,p.stderr)
+    def test_real_start_handler_checks_simc_before_any_season_or_dps_work(self):
+        """Execute production click handler: invalid SimC cannot spend API/Native."""
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        harness=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf('$("start-btn").addEventListener("click",');
+const b=raw.indexOf('\n  $("resume-btn").addEventListener("click",',a);
+assert(a>=0&&b>a);
+const source=raw.slice(a,b);
+assert(source.indexOf("checkValidity()")<
+       source.indexOf("if(await prepareSeasonBeforeOptimizerStart())return;"));
+function run(binaryOK,revisionOK,needsSeason) {
+  let handler=null;
+  const calls={season:0,dps:0,focus:null,view:null,reported:0};
+  const fields={
+    binary:{checkValidity:()=>binaryOK,
+      reportValidity:()=>{calls.reported++;return binaryOK;},
+      focus:()=>{calls.focus="binary";}},
+    revision:{checkValidity:()=>revisionOK,
+      reportValidity:()=>{calls.reported++;return revisionOK;},
+      focus:()=>{calls.focus="revision";}},
+    "simc-technical-panel":{open:false},
+    "filled-result":{hidden:false},"empty-result":{hidden:true},
+    "start-btn":{addEventListener:(event,fn)=>{handler=fn;}}
+  };
+  const $=id=>fields[id];
+  const params={
+    $,withBusy:cb=>cb(),manualFinalTOrNull:()=>null,
+    prepareSeasonBeforeOptimizerStart:async()=>{calls.season++;return needsSeason;},
+    switchView:name=>{calls.view=name;},window:{confirm:()=>true},
+    api:async()=>{calls.dps++;return {session_id:"mock-only";}},
+    buildRequest:()=>({}),markSession:()=>{},setNotice:()=>{},pollOnce:async()=>{}
+  };
+  new Function(...Object.keys(params),source)(...Object.values(params));
+  return {calls,invoke:()=>handler()};
+}
+(async()=>{
+  let t=run(false,true,false);
+  await assert.rejects(t.invoke(),/SimulationCraft/);
+  assert.deepStrictEqual([t.calls.season,t.calls.dps,t.calls.view,t.calls.focus],
+                         [0,0,"settings","binary"]);
+  t=run(true,false,false);
+  await assert.rejects(t.invoke(),/SimulationCraft/);
+  assert.deepStrictEqual([t.calls.season,t.calls.dps,t.calls.focus],
+                         [0,0,"revision"]);
+  t=run(true,true,true);
+  await t.invoke();assert.equal(t.calls.season,1);assert.equal(t.calls.dps,0);
+  t=run(true,true,false);
+  await t.invoke();assert.equal(t.calls.season,1);assert.equal(t.calls.dps,1);
+})().catch(err=>{console.error(err);process.exitCode=1;});
+"""
+        p=subprocess.run([node,"-e",harness,str(ROOT/"runner/webui/app.js")],
+                         cwd=ROOT,capture_output=True,text=True,timeout=15)
+        self.assertEqual(p.returncode,0,p.stderr)
+
 if __name__=="__main__":unittest.main()
