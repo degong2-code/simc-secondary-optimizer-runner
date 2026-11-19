@@ -567,7 +567,8 @@ def _verified_one_spec_G_profile_scope(*, source_bundle, candidate,
 
 def season_profile_source_only(*, profile, cfg, weapon_layout, user,
                                season_profile_inputs, season_build,
-                               simc_revision, fillers=None):
+                               simc_revision, fillers=None,
+                               signed_installed_E=None):
     """Season-neutral v098 profile composition from v216 numeric preview.
 
     This route reuses v108 J/F and v091 O serializers. It is purposely
@@ -590,7 +591,23 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
          and v216.get("environment_ready") is False
          and type(v216.get("calculation")) is dict,
          "SEASON_PROFILE_REQUIRES_UNADMITTED_V216_PREVIEW")
-    budget=v216["calculation"]
+    # v634: the baseline v216 numeric G/J/F/O remains unchanged.
+    # A later signed v212 installed E may add its SUM once to an auto
+    # ilvl reference, or impose a fixed floor inside an authoritative
+    # manual T. This numeric draft is still NOT an admission receipt.
+    budget=dict(v216["calculation"])
+    if signed_installed_E is not None:
+        need(type(signed_installed_E) is dict and
+             set(signed_installed_E)==set(scenario.STATS)
+             and all(type(v) is int and 0<=v<=100000
+                     for v in signed_installed_E.values()),
+             "SEASON_SIGNED_INSTALLED_E_SOURCE_REQUIRED")
+        extra=sum(signed_installed_E.values())
+        budget["fixed_E"]=dict(signed_installed_E)
+        budget["unenchanted_reference_B"]=budget["base_B"]
+        if user["target"]["final_T"] is None:
+            budget["base_B"]+=extra
+            budget["final_T"]+=extra
     selected=v216.get("selected_physical_items")
     need(type(selected) is dict and type(user) is dict
          and type(season_build) is str
@@ -681,7 +698,9 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
          "SEASON_PROFILE_TYPED_BASE_B_OR_SOURCE_DRIFT")
     # Existing v222 E ownership: derived user B contains ONLY a
     # separately proven increment from the unenchanted reference.
-    positive_E=(positive_enchant.check_choice(user[SEASON_ENCHANT_FIELD])[1]
+    positive_E=(dict(signed_installed_E)
+                if signed_installed_E is not None else
+                positive_enchant.check_choice(user[SEASON_ENCHANT_FIELD])[1]
                 if user.get(SEASON_ENCHANT_FIELD) in
                    positive_enchant.CHOICES and
                    _historical_exact_enchant_user_scope(
@@ -689,15 +708,26 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
                        revision=simc_revision) else None)
     if positive_E is not None:
         user_T=user["target"]["final_T"]
-        expected_B=(3107+sum(positive_E.values()) if user_T is None
-                    else user_T-sum(fixed_o.values()))
-        need(budget.get("fixed_E")==positive_E and
-             budget.get("reference_B")==3107+sum(positive_E.values()) and
-             budget.get("base_B")==expected_B and
-             budget.get("final_T")==expected_B+sum(fixed_o.values()) and
-             budget.get("manual_final_T_authoritative")==(
-                 user_T is not None),
-             "FRESH_USER_POSITIVE_E_SOURCE_BUDGET_NOT_PROJECTED")
+        if signed_installed_E is not None:
+            need(budget.get("fixed_E")==positive_E and
+                 budget.get("unenchanted_reference_B") is not None and
+                 budget["base_B"]==(
+                     budget["unenchanted_reference_B"]+
+                     sum(positive_E.values()) if user_T is None
+                     else user_T-sum(fixed_o.values())) and
+                 budget["final_T"]==budget["base_B"]+
+                     sum(fixed_o.values()),
+                 "FRESH_SIGNED_MULTI_E_BUDGET_NOT_PROJECTED")
+        else:
+            expected_B=(3107+sum(positive_E.values()) if user_T is None
+                        else user_T-sum(fixed_o.values()))
+            need(budget.get("fixed_E")==positive_E and
+                 budget.get("reference_B")==3107+sum(positive_E.values()) and
+                 budget.get("base_B")==expected_B and
+                 budget.get("final_T")==expected_B+sum(fixed_o.values()) and
+                 budget.get("manual_final_T_authoritative")==(
+                     user_T is not None),
+                 "FRESH_USER_POSITIVE_E_SOURCE_BUDGET_NOT_PROJECTED")
     # Reuse the actual v062 static-L budget and v065 feasibility floors
     # with the typed B and exact F/O vectors. This is the same deterministic
     # seed planning policy the existing runnable v098/v096 path uses; a
@@ -1174,9 +1204,7 @@ def _selected_installed_E0_on_final_user_item(*,user,rows,mask,installed_path,
     result=installed_manifest.preview_installed_selected_enchant_budget(
         document=doc,slot=slot,item_id=rows[slot]["item_id"],
         enchant_id=eid,manual_final_T=user["target"]["final_T"])
-    need(result["fixed_E_zero_is_valid"] is True and
-         not any(result["fixed_E"].values()) and
-         result["selected_identity"]["installed_manifest_sha256"]==
+    need(result["selected_identity"]["installed_manifest_sha256"]==
              doc["manifest_sha256"] and
          doc["target_ilevel"]==user["target"]["ilevel"] and
          result["base_B"]>=result["J"]+result["F"]+
@@ -1213,9 +1241,9 @@ def _selected_installed_E0_multi_on_final_user_items(*,user,rows,mask,
         result=_selected_installed_E0_on_final_user_item(
             user=single,rows=rows,mask=mask["by_slot"][slot],
             installed_path=source,installed_document=document)
-        need(result["fixed_E_zero_is_valid"] is True and
-             not any(result["fixed_E"].values()),
-             "FRESH_MULTI_E0_NO_UNKNOWN_OR_POSITIVE_E")
+        need(type(result["fixed_E"]) is dict and
+             set(result["fixed_E"])==set(scenario.STATS),
+             "FRESH_MULTI_SIGNED_E_VECTOR_REQUIRED")
         selected.append(result)
     # Repeating an ID is valid on distinct slots, e.g. both rings.
     # Physical slot keys remain unique and independently attested.
@@ -1708,7 +1736,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
                     "selected_identity_sha256":[
                         x["selected_identity_sha256"]
                         for x in selected_installed_E0],
-                    "fixed_E":{k:0 for k in scenario.STATS},
+                    "fixed_E":{k:sum(
+                        x["fixed_E"][k] for x in selected_installed_E0)
+                        for k in scenario.STATS},
                     "simc_mechanics_owner":"SimC"}
         elif fresh_installed_environment_path is not None:
             bridge=(positive_enchant if
@@ -1794,7 +1824,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
             profile=profile,cfg=cfg,weapon_layout=weapon_layout,user=user,
             season_profile_inputs=season_profile_inputs,
             season_build=actual_season_build,
-            simc_revision=revision,fillers=fillers)
+            simc_revision=revision,fillers=fillers,
+            signed_installed_E=(
+                dict(selected_installed_E0["fixed_E"])
+                if type(selected_installed_E0) is dict else
+                {k:sum(x["fixed_E"][k] for x in selected_installed_E0)
+                 for k in scenario.STATS}
+                if type(selected_installed_E0) is list else None))
         if linked_originals is not None:
             source_only["original_v191_gear_tier_source_unadmitted"]=linked_originals
         if season_socket_plan is not None:
