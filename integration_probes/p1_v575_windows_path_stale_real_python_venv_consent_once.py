@@ -138,7 +138,7 @@ def main(source_zip,out):
             exe=venv/"Scripts"/"python.exe"
             need(exe.is_file(),"VERIFIED_ABSOLUTE_PYTHON_VENV_MISSING")
             check=subprocess.run([str(exe),"-c",
-                "import sys,fastapi,uvicorn,httpx2; print('ready')"],
+                "import sys,fastapi,uvicorn,pydantic; print('ready')"],
                 cwd=root,env=env,capture_output=True,text=True,timeout=30)
             need(check.returncode==0 and check.stdout.strip()=="ready",
                  "REQUIRED_WEB_PACKAGES_NOT_INSTALLED_IN_USER_VENV")
