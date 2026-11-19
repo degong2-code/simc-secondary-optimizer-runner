@@ -175,7 +175,7 @@ def run(zip_file,out):
         python=venvpath/"Scripts"/"python.exe"
         need(python.is_file(),"ISOLATED_NORMAL_VENV_NOT_CREATED")
         check=subprocess.run([str(python),"-c",
-           "import fastapi,uvicorn,httpx2,sys; print('WEB_READY')"],
+           "import fastapi,uvicorn,pydantic,sys; print('WEB_READY')"],
            cwd=root,env=env,capture_output=True,text=True,timeout=35)
         need(check.returncode==0 and "WEB_READY" in check.stdout,
              "WEB_PACKAGES_NOT_IN_FRESH_VENV")
