@@ -253,11 +253,12 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
     fields={"schema","installed_environment_path",
             "installed_manifest_sha256","oil_by_hand"}
     optional=("user_final_T","verified_user_positive_E_enchant_id",
-              "selected_user_installed_E0")
+              "selected_user_installed_E0","selected_user_installed_E0_multi")
     need(type(season) is dict and
          fields<=set(season)<=fields|set(optional) and
-         not ("verified_user_positive_E_enchant_id" in season and
-              "selected_user_installed_E0" in season) and
+         sum(k in season for k in ("verified_user_positive_E_enchant_id",
+                                   "selected_user_installed_E0",
+                                   "selected_user_installed_E0_multi"))<=1 and
          season.get("schema")==FRESH_SEASON_SCHEMA,
          "FRESH_SEASON_INTERNAL_SOURCE_FIELDS")
     doc,bound=_verified_installed_fresh_v217(
@@ -268,10 +269,28 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
     user_final_T=season.get("user_final_T")
     positive_id=season.get("verified_user_positive_E_enchant_id")
     selected_E0=season.get("selected_user_installed_E0")
+    selected_multi=season.get("selected_user_installed_E0_multi")
     bound_E0=(_signed_installed_user_E0_profile(
         doc=doc,selected=selected_E0,profile=profile,
         user_final_T=user_final_T)
         if selected_E0 is not None else None)
+    bound_multi=None
+    if selected_multi is not None:
+        need(type(selected_multi) is list and
+             2<=len(selected_multi)<=4 and
+             all(type(x) is dict and x.get("slot") in
+                 ("head","shoulders","chest","feet") for x in selected_multi)
+             and [x["slot"] for x in selected_multi]==sorted(
+                 set(x["slot"] for x in selected_multi))
+             and len({x.get("enchant_id") for x in selected_multi})==
+                 len(selected_multi),
+             "FRESH_MULTI_E0_SORTED_DISTINCT_ARMOR_REQUIRED")
+        bound_multi=[_signed_installed_user_E0_profile(
+            doc=doc,selected=x,profile=profile,user_final_T=user_final_T)
+            for x in selected_multi]
+        need(all(x["fixed_E_zero_is_valid"] is True and
+                 not any(x["fixed_E"].values()) for x in bound_multi),
+             "FRESH_MULTI_E0_FIXED_E_MUST_BE_ZERO")
     if positive_id is not None:
         need(type(positive_id) is int and
              positive_id in positive_enchant.ENCHANTS,
