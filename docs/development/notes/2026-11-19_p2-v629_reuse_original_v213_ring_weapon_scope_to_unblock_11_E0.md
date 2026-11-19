@@ -29,3 +29,11 @@
 ## 4. 공식 원장·권한
 
 `15/78 COMPLETE`, `full_product_e2e=PENDING`, `next_review=B10` 불변. 기존 주 제품 개발 채팅·격리 브랜치 허용, main 병합·v003 immutable·원본 v016 직접 통합·Project Sources UI·Work OS M0/Shared State 공식 승격 금지.
+
+## 5. 후속 P2-1 기존 70961 stage 재사용 확인 — 원본 부재로 STOP (2026-11-19)
+
+- 조사 당시 GitHub 브랜치 HEAD `efe19459ddf8c40a720e52907caecd6f8cd6b1b2`. `v196` 코드의 봉인 원본 `catalog.enchants.items` 전달 및 `v220` 원래 Policy A 재사용을 읽기 전용 확인. 이번 후속 단계에서 **신규 실제 등록 PASS는 발생하지 않았음**.
+- 기존 실제 70961 [v618 run #44438148520](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44438148520)의 Actions artifact **2개** 확인: `#14490621359`는 `V611_REAL_70961_ENCHANT_ADMISSION_ONE_BUILD.json` 요약만, `#14489588587`은 `V618_REAL_INSTALLED_V212.json` 설치본만 포함. `v191/v211/v213` **원본 stage의 파일 바이트 또는 재사용 가능한 workspace는 업로드되지 않음**. 설치 JSON에 stage receipt SHA(예: `v213_stage=20d10c39b5547c5d175fbc52af64dd507219293ece6e10898768323cb9ab3674`)가 있어도 원래 봉인 파일을 복원·재인증하는 근거가 아님.
+- 실제 실행 코드 `integration_probes/p1_v610_real_installed_enchant_one_build.py`가 `tempfile.TemporaryDirectory(prefix="v610-enchant-",dir=output_folder)`로 원본 `v217` stage를 일시 생성하고 run 종료 시 삭제함을 확인. 당시 workflow `.github/workflows/p1_v611_current_live_70961_enchant_build_once.yml`의 `upload-artifact` 대상도 위 두 JSON만. 브랜치 `data/` 최상위 목록에서도 70961 봉인 stage 원본 미발견. 이는 **확인한 Actions/저장소 범위의 부재**이며 외부 Windows 로컬 등 미접근 workspace 전체의 부재를 증명하지는 않음.
+- 따라서 **첫 장애 = `CURRENT_70961_SEALED_V213_STAGE_NOT_REUSABLE_FROM_CHECKED_ARTIFACTS`**. 19개 실제 등록·보류 11+8·v629 오프라인 PASS는 유지; **19→30 실제 등록 수 확인 PENDING**. 설치본·요약 receipt만으로 원본 슬롯 가족 증거를 합성하거나 8개의 미확정 E를 0으로 만들지 않음.
+- **STOP 및 비용:** 신규 Native 0, 신규 시즌 HTTP/DB2 0, DPS64 0, SimC 컴파일 0, 정적/DPS 캐시 폐기 0, 제품 코드 변경 0. 추후 같은 빌드의 **정확히 인증된 봉인 stage 바이트**를 확보하면 기존 `v196→v220→v212` source-only 검증 한 번으로 재개. 기존 stage가 계속 없다면 source-only 최소 재구축의 원본/비용을 별도로 검토하되 환경 Native6·DPS64·26전문화 전수 재실행을 자동 시작하지 않음. 공식 원장 `15/78 COMPLETE`, `full_product_e2e=PENDING`, `next_review=B10` 변경 없음.
