@@ -1,5 +1,5 @@
 # Exact live 70961, one source-pinned SimC build plus normal M1/M2 product.
-name: P1 v614 current 70961 real v613 fixed enchant M1-M2 once
+name: P1 v618 current 70961 original v212 enchant registration once
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   one-current-real-source:
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v614-real-enchant-once]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v618-real-enchant-once]') }}
     runs-on: windows-2022
     timeout-minutes: 45
     env:
@@ -45,9 +45,15 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@v6
         with: {python-version: '3.12'}
+      - name: Reuse exact source-compiled CLI from this branch cache if present
+        id: simc_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .v618-simc-cache
+          key: v618-simc70961-source-9933ffb946fb55b1fa66657b848f519ac19006e1-win2022-msvc-cli
       - uses: step-security/msvc-dev-cmd@v1
         with: {arch: x64}
-      - name: Verify exact source commit and compile CLI once
+      - name: Verify exact source and reuse or compile CLI once
         shell: pwsh
         timeout-minutes: 23
         run: |
@@ -55,17 +61,36 @@ jobs:
           $sha=(& git -C .v611-simc-src rev-parse HEAD).Trim()
           if ($sha -ne $env:SIMC_PINNED_SOURCE_COMMIT) { throw 'V611_SIMC_SOURCE_COMMIT_DRIFT' }
           $sha | Set-Content -NoNewline -Encoding ascii -Path .v611-source-commit.txt
-          cmake -S .v611-simc-src -B .v611-simc-build -GNinja -DBUILD_GUI=OFF -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
-          if ($LASTEXITCODE -ne 0) { throw 'V611_PINNED_SIMC_CMAKE_CONFIGURE_FAILED' }
-          cmake --build .v611-simc-build --target simc --parallel 2
-          if ($LASTEXITCODE -ne 0) { throw 'V611_PINNED_SIMC_CMAKE_BUILD_FAILED' }
-          $exes=@(Get-ChildItem .v611-simc-build -Recurse -Filter simc.exe -File)
-          if ($exes.Count -ne 1) { throw 'V611_SINGLE_COMPILED_SIMC_EXE_REQUIRED' }
-          $bin=$exes[0].FullName
+          $cacheDir=Join-Path $PWD '.v618-simc-cache'
+          $bin=Join-Path $cacheDir 'simc.exe'
+          $meta=Join-Path $cacheDir 'identity.json'
+          if ((Test-Path $bin -PathType Leaf) -and (Test-Path $meta -PathType Leaf)) {
+            $identity=Get-Content -Raw $meta | ConvertFrom-Json
+            $hash=(Get-FileHash -Algorithm SHA256 $bin).Hash.ToLowerInvariant()
+            if ($identity.source_commit -ne $sha -or $identity.game_build -ne $env:SIMC_PINNED_GAME_BUILD -or $identity.binary_sha256 -ne $hash) { throw 'V618_REUSED_BINARY_SOURCE_IDENTITY_SHA_DRIFT' }
+            Write-Host "V618_REUSED_SOURCE_BOUND_BINARY_SHA256=$hash"
+          } else {
+            cmake -S .v611-simc-src -B .v611-simc-build -GNinja -DBUILD_GUI=OFF -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
+            if ($LASTEXITCODE -ne 0) { throw 'V618_PINNED_SIMC_CMAKE_CONFIGURE_FAILED' }
+            cmake --build .v611-simc-build --target simc --parallel 2
+            if ($LASTEXITCODE -ne 0) { throw 'V618_PINNED_SIMC_CMAKE_BUILD_FAILED' }
+            $exes=@(Get-ChildItem .v611-simc-build -Recurse -Filter simc.exe -File)
+            if ($exes.Count -ne 1) { throw 'V618_SINGLE_COMPILED_SIMC_EXE_REQUIRED' }
+            New-Item -ItemType Directory -Force $cacheDir | Out-Null
+            Copy-Item -LiteralPath $exes[0].FullName -Destination $bin
+            $hash=(Get-FileHash -Algorithm SHA256 $bin).Hash.ToLowerInvariant()
+            @{ source_commit=$sha; game_build=$env:SIMC_PINNED_GAME_BUILD; binary_sha256=$hash } | ConvertTo-Json -Compress | Set-Content -Encoding utf8 $meta
+            Write-Host "V618_NEW_SOURCE_BOUND_BINARY_SHA256=$hash"
+          }
           "V611_SIMC_EXE=$bin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          Write-Host "V611_BIN_SHA256=$((Get-FileHash -Algorithm SHA256 $bin).Hash.ToLowerInvariant())"
-          python -m py_compile integration_probes/p1_v611_current_live_70961_enchant_registration_once.py
-          if ($LASTEXITCODE -ne 0) { throw 'V611_PROBE_SYNTAX_FAILED' }
+          python -m py_compile integration_probes/p1_v610_real_installed_enchant_one_build.py integration_probes/p1_v611_current_live_70961_enchant_registration_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V618_PROBE_SYNTAX_FAILED' }
+      - name: Save one verified source-bound CLI for same-build product follow-ups
+        if: ${{ steps.simc_cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .v618-simc-cache
+          key: v618-simc70961-source-9933ffb946fb55b1fa66657b848f519ac19006e1-win2022-msvc-cli
       - name: Quarantine historical season files and reuse original web dependencies
         shell: pwsh
         run: |
@@ -91,7 +116,16 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: p1-v611-real-current-70961-enchant-first-attempt
+          name: p1-v618-real-current-70961-v212-enchant-admission
           path: out/v611/V611_REAL_70961_ENCHANT_ADMISSION_ONE_BUILD.json
           retention-days: 14
           if-no-files-found: warn
+
+      - name: Preserve the original verified installed v212 document for next user consumer
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v618-real-70961-verified-v212-installed
+          path: out/v611/V618_REAL_INSTALLED_V212.json
+          retention-days: 14
+          if-no-files-found: ignore
