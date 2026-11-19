@@ -2525,6 +2525,63 @@ console.log("V600_SINGLE_SIGNED_E0_FINGER2_REQUEST_AND_BLOCK_PASS");
         self.assertIn("V600_SINGLE_SIGNED_E0_FINGER2_REQUEST_AND_BLOCK_PASS",
                       res.stdout)
 
+    def test_v625_multi_signed_armor_request_and_unsigned_rejection(self):
+        """Execute original request source: exactly 2 signed slots, zero Native."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const src=fs.readFileSync(process.argv[1],"utf8");
+const start=src.indexOf("  // Signed E0 on up to four actual armor slots:",
+  src.indexOf("function buildRequest() {"));
+const end=src.indexOf("  if(!Number.isInteger(controls.ilevel)",start);
+assert(start>=0&&end>start,"multi-armor actual UI request missing");
+const el={};
+for(const id of ["env-enchant-helm","env-enchant-shoulders",
+                 "env-enchant-chest","env-enchant-boots",
+                 "season_enchant_other","season_enchant_finger1",
+                 "season_enchant_finger2"])
+  el[id]={value:"",options:[]};
+for(const [slot,id,enchant] of [["head","env-enchant-helm",7951],
+  ["shoulders","env-enchant-shoulders",7952],
+  ["chest","env-enchant-chest",7957],["feet","env-enchant-boots",7953]]) {
+  const value=slot+":"+enchant;
+  el[id].options.push({value,disabled:false});
+  el.season_enchant_other.options.push({value,disabled:false});
+}
+const state={installedOtherE0Choices:
+  new Set(["head:7951","shoulders:7952","chest:7957","feet:7953"]),
+  installedE0Ids:new Set(),exactUserEnchantIds:new Set(),
+  eagleApproved:false};
+const $=id=>el[id],field=id=>el[id].value;
+const parse=Function("field","$","state","controls",
+   "exactUserEnchantInputsMatch",
+   src.slice(start,end)+"return controls.enchant_choices||null;");
+const collect=()=>parse(field,$,state,{},()=>false);
+el["env-enchant-helm"].value="head:7951";
+el["env-enchant-chest"].value="chest:7957";
+assert.deepStrictEqual(collect(),{head:7951,chest:7957});
+el["env-enchant-chest"].value="chest:89999";
+assert.throws(collect,/UNVERIFIED_MULTI_ENCHANT_SELECTION_BLOCKED/);
+el["env-enchant-chest"].value="chest:7957";
+el.season_enchant_finger1.value="89999";
+assert.throws(collect,/여러 부위 마부/);
+el.season_enchant_finger1.value="";
+el.season_enchant_other.value="head:7951";
+assert.throws(collect,/여러 부위 마부/);
+el.season_enchant_other.value="";
+state.installedOtherE0Choices.delete("chest:7957");
+assert.throws(collect,/UNVERIFIED_MULTI_ENCHANT_SELECTION_BLOCKED/);
+console.log("V625_TWO_SIGNED_E0_ARMOR_REQUEST_FAIL_CLOSED_PASS");
+"""
+        r=subprocess.run([node,"-e",script,
+            str(ROOT/"runner/webui/app.js")],capture_output=True,
+            text=True,timeout=20,check=False)
+        self.assertEqual(r.returncode,0,r.stderr)
+        self.assertIn("V625_TWO_SIGNED_E0_ARMOR_REQUEST_FAIL_CLOSED_PASS",
+                      r.stdout)
+
     def test_v620_visible_armor_enchant_is_exact_existing_one_choice(self):
         """Real UI mirror, never a new unsigned per-slot server selection."""
         import shutil,subprocess
