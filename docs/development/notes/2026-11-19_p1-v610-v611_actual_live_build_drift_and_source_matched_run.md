@@ -8,7 +8,7 @@
 
 - 실제 Win2022 [Actions #44425195290](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44425195290), 최종 **failure** (보안/정합 차단에 따른 예상된 테스트 신호). 압축 영수증 artifact **14482754801**, `V610_REAL_ENCHANT_ADMISSION_ONE_BUILD.json` 실제 다운로드 및 확인.
 - 실제 KR 현재 게임 빌드: **12.1.5.70961** (live source SHA `ed80a261f9a1b91c4480fedb812ea1ec714ef6ed7c6ff14524ae61736ec7dff5`). 기존 재사용 가능한 검증 SimC 바이너리/원본: **12.1.5.70783**, 원본 commit `de11f57df75dda668bae6ac7043a43b98831fa96`; source/binary mismatch.
-- 결과 **`PENDING_MATCHED_CURRENT_GAME_BUILD_SIMC`**, 최초 차단 `LIVE_BUILD_DIFFERS_FROM_70783_PINNED_BINARY`. **게임 HTTP/DB2 신규 수집 0, 시즌 G/J/F/O Native 0, 사용자 DPS Native 0, 자동 승인 0건으로 단정할 수 없음(미측정)**. 기존 70783 수치와 선택지를 새 70961의 유효 값으로 복사하지 않고 중단한 것은 올바른 정책 동작.
+- 결과 **`PENDING_MATCHED_CURRENT_GAME_BUILD_SIMC`**, 최초 차단 `LIVE_BUILD_DIFFERS_FROM_70783_PINNED_BINARY`. **현재 게임 빌드 확인용 HTTP 조회는 수행; 시즌 Wago/DB2 테이블 수집 0, G/J/F/O Native 0, 사용자 DPS Native 0, 새 자동 승인 건수는 미측정**. 기존 70783 수치와 선택지를 새 70961의 유효 값으로 복사하지 않고 중단한 것은 올바른 정책 동작.
 - 코드는 `integration_probes/p1_v610_real_installed_enchant_one_build.py`와 `.github/workflows/p1_v610_real_original_enchant_admission_once.yml`. 실제 빌드 일치 시에만 원래 `v113.LocalJobs.discover_season_myth_target` 및 `build_season_environment`(v216/v217/v212)를 호출한다. 결과는 검증된 per-item 네 receipt, 실제 등록 ID/정적 E, 첫 미확정 소유자와 기존 Native 호출 수만 bounded 기록한다. 소스/개인정보/비밀번호를 업로드하지 않는다.
 
 ## v611 최신 동일 빌드 SimC 확보
