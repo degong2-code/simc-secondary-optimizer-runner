@@ -1,0 +1,100 @@
+# P2 v627: exactly ONE 70961 signed head 7951 + chest 7957 Chrome
+# start/cancel/HTTP restart/resume, bounded partial Native; no 64 case repeat.
+name: P2 v627 70961 Chrome two E0 armor Start Cancel Resume bounded
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p2_v627_real_70961_two_armor_E0_cancel_resume_once.yml
+      - integration_probes/p1_v621_real_70961_browser_enchant_cancel_resume_once.py
+      - integration_probes/p2_v627_real_70961_two_armor_E0_cancel_resume_once.py
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v627-real-current-70961-two-armor-enchant-chrome-resume
+  cancel-in-progress: false
+jobs:
+  syntax-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Offline syntax of reused browser scenario and web UI
+        shell: bash
+        run: |
+          python -m py_compile integration_probes/p1_v621_real_70961_browser_enchant_cancel_resume_once.py
+          python -m py_compile integration_probes/p2_v627_real_70961_two_armor_E0_cancel_resume_once.py
+          node --check runner/webui/app.js
+  real-chrome-registered-user:
+    needs: syntax-only
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v627-real-two-E0-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 42
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: 9933ffb946fb55b1fa66657b848f519ac19006e1
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70961
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Restore v618 exact same-build SimC binary cache (no compile)
+        id: binary
+        uses: actions/cache/restore@v4
+        with:
+          path: .v618-simc-cache
+          key: v618-simc70961-source-9933ffb946fb55b1fa66657b848f519ac19006e1-win2022-msvc-cli
+      - name: Pin original source SHA, quarantine history, validate browser dependencies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          if ('${{ steps.binary.outputs.cache-hit }}' -ne 'true') { throw 'V627_SAME_BUILD_BINARY_CACHE_MISSING_NO_NEW_COMPILATION' }
+          $exe=Join-Path $PWD '.v618-simc-cache/simc.exe'
+          $identity=Join-Path $PWD '.v618-simc-cache/identity.json'
+          if (!(Test-Path $exe -PathType Leaf) -or !(Test-Path $identity -PathType Leaf)) { throw 'V627_ORIGINAL_BINARY_BYTES_MISSING' }
+          $stored=Get-Content -Raw $identity | ConvertFrom-Json
+          $sha=(Get-FileHash -Algorithm SHA256 $exe).Hash.ToLowerInvariant()
+          if ($stored.source_commit -ne $env:SIMC_PINNED_SOURCE_COMMIT -or $stored.game_build -ne $env:SIMC_PINNED_GAME_BUILD -or $stored.binary_sha256 -ne $sha) { throw 'V627_CACHED_BINARY_IDENTITY_DRIFT' }
+          "V627_SIMC_EXE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "V627_REUSED_70961_SOURCE_SIMC_SHA=$sha"
+          $quarantine=Join-Path $env:RUNNER_TEMP 'v627-other-season-quarantine'
+          New-Item -ItemType Directory -Force $quarantine | Out-Null
+          $old=@(Get-ChildItem data -File -Filter 'current_season_*.json')
+          $old+=@(Get-ChildItem data -File -Filter 'v202_*.json')
+          $old+=@(Get-ChildItem data -File -Filter 'v206_*.json')
+          $old+=@(Get-ChildItem data/season_ordinary_gem_nominal -File -Filter '*.json')
+          foreach ($source in $old) { Move-Item -LiteralPath $source.FullName -Destination (Join-Path $quarantine $source.Name) }
+          if ($old.Count -lt 2) { throw 'V627_OLD_SEASON_QUARANTINE_MISSING' }
+          python -m pip install -r requirements-web-test.txt 'selenium>=4.24,<5'
+          if ($LASTEXITCODE -ne 0) { throw 'V627_DEPENDENCIES_FAILED' }
+          python -m py_compile integration_probes/p1_v621_real_70961_browser_enchant_cancel_resume_once.py
+          python -m py_compile integration_probes/p2_v627_real_70961_two_armor_E0_cancel_resume_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V627_SCRIPT_SYNTAX_INVALID' }
+          node --check runner/webui/app.js
+          if ($LASTEXITCODE -ne 0) { throw 'V627_REAL_UI_JS_INVALID' }
+      - name: Actual Chrome visible 7951 head + 7957 chest, source build, Native cancel/resume
+        timeout-minutes: 37
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out/v627 | Out-Null
+          python -u integration_probes/p2_v627_real_70961_two_armor_E0_cancel_resume_once.py --simc "$env:V627_SIMC_EXE" --out out/v627
+          if ($LASTEXITCODE -ne 0) { throw 'V627_FIRST_BLOCKER_IN_COMPACT_RECEIPT' }
+      - name: Preserve one bounded two-armor user session and Native checkpoint only
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p2-v627-real-chrome-two-armor-e0-cancel-resume
+          path: out/v627/V627_REAL_CHROME_TWO_ARMOR_E0_CANCEL_RESUME.json
+          retention-days: 14
+          if-no-files-found: warn
