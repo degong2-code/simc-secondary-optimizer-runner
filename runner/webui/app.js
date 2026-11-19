@@ -3108,7 +3108,18 @@ async function loadRecentSessions() {
        !/^[a-f0-9]{20}$/.test(item.session_id))continue;
     const label=(specLabels[item.class+"/"+item.spec]||
       item.class+" · "+item.spec).split(" (")[0];
-    const status=item.result_saved?"결과 저장":item.recorded_status;
+    const status=item.result_saved?"결과 저장":
+      ({
+        NOT_STARTED:"계산 대기",
+        QUEUED:"계산 대기 또는 재개 필요",
+        RUNNING:"계산 중 또는 재개 필요",
+        PAUSED_USER_CANCEL:"사용자 중단 · 재개 가능",
+        PAUSED_ELAPSED_BUDGET:"시간 제한 중단 · 재개 가능",
+        PAUSED_INVOCATION_NATIVE_BUDGET:"회차 중단 · 재개 가능",
+        BLOCKED_OR_PARTIAL:"실행 차단 · 결과 확인 필요",
+        PARTIAL_OR_BLOCKED:"부분 실행 · 결과 확인 필요",
+        BUDGET_EXHAUSTED:"탐색 상한 도달 · 결과 미확인"
+      }[item.recorded_status]||item.recorded_status);
     const stamp=Number.isFinite(item.updated_unix)?
       new Date(item.updated_unix*1000).toLocaleString("ko-KR"):"";
     list.appendChild(option(item.session_id,
