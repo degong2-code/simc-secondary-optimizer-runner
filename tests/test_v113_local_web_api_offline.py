@@ -462,6 +462,11 @@ class LocalWebAPIOffline(unittest.TestCase):
             "chmv_budget_receipt_sha256":"e"*64}])
         self.assertEqual(
             registered["installed_E0_final_finger_candidates"],[{
+                "enchant_id":8025,
+                "simc_token":"enchant_ring__silvermoons_alacrity",
+                "slot":"finger1/finger2",
+                "highest_verified_quality_rank":2,
+                "chmv_budget_receipt_sha256":"f"*64},{
                 "enchant_id":89999,
                 "simc_token":"enchant_ring__synthetic_e0",
                 "slot":"finger1/finger2",
