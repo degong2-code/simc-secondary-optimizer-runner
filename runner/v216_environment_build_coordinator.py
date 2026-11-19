@@ -29,6 +29,7 @@ import v275_pinned_simc_compiler_inputs as pinned_compiler_source
 import v295_season_runeforge_source as dk_rune_source
 import v296_pinned_oil_static_rating_source as oil_raw_source
 import v297_sealed_simc_oil_gear_delta as oil_precombat_gear
+import v632_permanent_enchant_native_E as permanent_enchant_native_E
 import v276_sealed_tier_compiler_source as compiler_tier_source
 import v277_zero_history_native_G_stage as zero_history_G_native
 import v278_sealed_simc_consumable_native_pair as native_effect_pair
@@ -8257,6 +8258,271 @@ def _fresh_source_owner_merge_policy_A_original_source_relation(
     return merged
 
 
+def _fresh_source_owner_recover_permanent_enchant_scaled_E(
+        *,preflight,compilation,collected,original_receipts,binary,
+        target_ilevel):
+    """Target only Policy A E gaps, reusing actual SimC initial gear Native.
+
+    No item-ID whitelist, effect model, extra optimizer, or user-provided
+    receipts. The original v233/v232/v230/v213 and source-bound binary
+    must agree. Native cases are the existing v278 immutable cache, with
+    v297 reading SimC's unbuffed total gear. Uncertain observations remain
+    per-item pending without blocking a verified G/J/F/O base environment.
+    """
+    result={"schema":"v632_v216_original_scaled_enchant_E_repair_v1",
+            "status":"NO_SCALED_E_MEASUREMENT_NEEDED",
+            "new_native_calls":0,"native_E_registered":0,
+            "native_E_pending":[],"attempted_enchant_ids":[],
+            "original_source_candidates":None,
+            "full_product_e2e":"PENDING",
+            "effect_proc_dps_not_reimplemented":True,
+            "base_GJFO_not_blocked_by_optional_E":True}
+    need(type(original_receipts) is dict and
+         type(preflight) is dict and type(compilation) is dict
+         and type(collected) is dict,
+         "V632_POLICY_A_ORIGINAL_INTERNAL_CONTEXT_REQUIRED")
+    planned=(preflight.get("optional_policy_A_evidence_unadmitted") or {}).get(
+        "static_E_repair_plan_unadmitted")
+    if type(planned) is not dict:
+        return original_receipts,result
+    targets=[item for item in planned.get("items",[])
+             if item.get("next_action")==
+                "REUSE_EXACT_NATIVE_PAIR_OR_MEASURE_SELECTED_ITEM"]
+    result["original_source_candidates"]=(preflight.get("enchant_candidates"))
+    if not targets:
+        return original_receipts,result
+    # Inspect *all* discovered options each new season, but Native is
+    # only for the exact rating gaps. Any source-proven E0 or integral
+    # unscaled E is already in original_receipts and never remeasured.
+    if binary is None:
+        result["status"]="OPTIONAL_ENCHANT_SIMC_BINARY_NOT_CONFIGURED"
+        result["native_E_pending"]=[
+            {"enchant_id":item["enchant_id"],
+             "reason":"SIMC_BINARY_REQUIRED"} for item in targets]
+        return original_receipts,result
+    # Do not silently limit the accepted catalog to a hard-coded 38 IDs.
+    # Bounded optional work per Build: a much larger future catalog can be
+    # resumed on its unchanged source/cache rather than blanket Native.
+    need(len(targets)<=128,"V632_OPTIONAL_ENCHANT_WORKLIST_UNBOUNDED")
+    root=pathlib.Path(compilation["stage_root"]).resolve(strict=True)
+    try:
+        source,sha=environment_manifest.read_json(
+            compilation["source_catalog_path"])
+        need(sha==preflight["source_artifact_sha256"] and
+             source["manifest_sha256"]==
+                preflight["source_catalog_manifest_sha256"] and
+             source["game_build"]==preflight["game_build"] and
+             source["simc_revision"]==preflight["simc_revision"],
+             "V632_ORIGINAL_V213_SOURCE_SHA_DRIFT")
+        representative=collected.get("fresh_one_spec_simc_representative") or {}
+        stage=representative["source_stage"]
+        relative=stage["output_paths"]["candidate"]
+        rep_path=pathlib.Path(representative["candidate_path"]).resolve(strict=True)
+        need(type(relative) is str
+             and relative.startswith("source/")
+             and rep_path==root/relative
+             and rep_path.is_file() and not rep_path.is_symlink(),
+             "V632_ORIGINAL_V232_REPRESENTATIVE_PATH_DRIFT")
+        receipt=stage_engine._read_receipt(
+            root/".stage_receipts"/(stage["stage_id"]+".json"))
+        raw=rep_path.read_bytes()
+        need(receipt.get("receipt_sha256")==stage["receipt_sha256"]
+             and receipt.get("output_paths",{}).get("candidate")==relative
+             and receipt.get("outputs",{}).get("candidate",{}).get(
+                 "sha256")==digest(raw),
+             "V632_ORIGINAL_V232_REPRESENTATIVE_RECEIPT_DRIFT")
+        rep=json.loads(raw)
+        ids=rep["selected_G_slot_ids"]
+        need(rep["game_build"]==source["game_build"]
+             and rep["simc_revision"]==source["simc_revision"]
+             and rep["target_ilevel"]==target_ilevel
+             and type(ids) is dict and 1<=len(ids)<=15
+             and len(set(ids.values()))==len(ids),
+             "V632_ORIGINAL_V232_ITEM_IDENTITY_DRIFT")
+        probe=collected["fresh_one_spec_physical_G_probe"]
+        profile=pathlib.Path(probe["profile_path"]).resolve(strict=True)
+        profile_receipt_path=pathlib.Path(
+            probe["profile_receipt_path"]).resolve(strict=True)
+        need(profile.is_relative_to(root)
+             and profile_receipt_path.is_relative_to(root)
+             and not profile.is_symlink()
+             and profile.is_file()
+             and not profile_receipt_path.is_symlink()
+             and profile_receipt_path.is_file(),
+             "V632_ORIGINAL_V233_PROFILE_STAGE_REQUIRED")
+        profile_receipt=json.loads(profile_receipt_path.read_text("utf8"))
+        need(profile_receipt["status"]==
+                "EXACT_SIMC_SOURCE_PROFILE_PREPARED_NOT_EXECUTED"
+             and profile_receipt["physical_profile_sha256"]==
+                digest(profile.read_bytes())
+             and profile_receipt["selected_G_slot_ids"]==ids
+             and profile_receipt["source_candidate_receipt_sha256"]==
+                rep["receipt_sha256"]
+             and profile_receipt["game_build_declared_by_simc_source"]==
+                source["game_build"]
+             and profile_receipt["target_ilevel"]==target_ilevel,
+             "V632_ORIGINAL_V233_PROFILE_RECEIPT_DRIFT")
+        seed=collected.get("fresh_lazy_full_pinned_simc_item_source") or {}
+        metadata=simc_item_metadata.from_seed(
+            directory=seed["source_dir"],item_ids=sorted(ids.values()))
+        need(metadata["game_build"]==source["game_build"]
+             and metadata["simc_revision"]==source["simc_revision"]
+             and metadata["source_sha256"]==rep["item_data_sha256"]
+             and metadata["source_receipt_sha256"]==
+                rep["source_seed_receipt_sha256"],
+             "V632_ORIGINAL_V230_ITEM_DATA_SHA_DRIFT")
+        by_item={row["item_id"]:row for row in metadata["items"]}
+        originals={item["enchant_id"]:item for item in
+                   source["catalog"]["enchants"]["items"]}
+        classified={item["enchant_id"]:item for item in
+                    source["enchant_classification"]["rows"]}
+        need(len(originals)==len(classified)==preflight[
+            "enchant_candidates"],
+            "V632_ALL_SEASON_ENCHANT_SOURCE_COVERAGE_DRIFT")
+    except (EnvironmentBuildBlocked,KeyError,ValueError,TypeError,OSError,
+            AttributeError,stage_engine.StageExecutionBlocked,
+            simc_item_metadata.ItemMetadataBlocked) as exc:
+        result["status"]="OPTIONAL_ENCHANT_ORIGINAL_SOURCE_NOT_REUSABLE"
+        result["native_E_pending"]=[{
+            "enchant_id":item["enchant_id"],
+            "reason":str(exc).split(":",1)[0]} for item in targets]
+        return original_receipts,result
+    merged={key:dict(value) for key,value in original_receipts.items()}
+    for item in targets:
+        eid=item["enchant_id"]
+        result["attempted_enchant_ids"].append(eid)
+        existing=merged.get(eid,{})
+        original=originals.get(eid)
+        cls=classified.get(eid)
+        if (type(original) is not dict or type(cls) is not dict
+            or set(existing)!={"source_relation","simc_input","product_input"}
+            or cls.get("unknown_components")!=[]
+            or cls.get("static_chmv_rating_present_in_dbc") is not True
+            or cls.get("budget_policy")!=(
+                "STATIC_E_REQUIRES_EXACT_MATCHED_NATIVE_PROFILE_AND_IS_FIXED_INSIDE_G")
+            or type(cls.get("static_chmv_stats")) is not list
+            or not cls["static_chmv_stats"]):
+            result["native_E_pending"].append({
+                "enchant_id":eid,"reason":"SOURCE_PROOF_OR_STATIC_SCOPE_PENDING"})
+            continue
+        origin_mask={key:original[key] for key in (
+            "item_class","inventory_type_mask","item_subclass_mask")}
+        match=None
+        for slot,item_id in sorted(ids.items()):
+            try:
+                scope=auto_admission.selected_equipment_source_mask_match(
+                    permanent_source=origin_mask,
+                    item_metadata=by_item[item_id],selected_slot=slot)
+                if scope["matched"]:
+                    match=(slot,item_id)
+                    break
+            except (ValueError,KeyError,TypeError):
+                continue
+        if match is None:
+            result["native_E_pending"].append({
+                "enchant_id":eid,
+                "reason":"NO_EXACT_REFERENCE_ITEM_MATCHES_SIMC_ENCHANT_MASK"})
+            continue
+        slot,item_id=match
+        try:
+            observed=permanent_enchant_native_E.measure(
+                stage_root=root,source_profile_path=profile,
+                binary=binary,simc_revision=source["simc_revision"],
+                game_build=source["game_build"],
+                target_ilevel=target_ilevel,
+                slot=slot,item_id=item_id,enchant_id=eid)
+        except (permanent_enchant_native_E.EnchantEBlocked,
+                native_effect_pair.NativePairBlocked,
+                oil_precombat_gear.OilGearBlocked,
+                ValueError,TypeError,OSError,KeyError) as exc:
+            result["native_E_pending"].append({
+                "enchant_id":eid,"reason":str(exc).split(":",1)[0]})
+            continue
+        result["new_native_calls"]+=observed["new_native_calls"]
+        E=observed.get("fixed_E_unadmitted")
+        if (observed["status"]!=
+             "SIMC_PERMANENT_ENCHANT_EXACT_INITIAL_GEAR_E_UNADMITTED"
+            or type(E) is not dict
+            or set(E)!=set(season_budget_contract.STATS)
+            or any(type(E[k]) is not int or not 0<=E[k]<=100000
+                   for k in E)
+            or sorted(k for k,v in E.items() if v)!=
+                cls["static_chmv_stats"]):
+            result["native_E_pending"].append({
+                "enchant_id":eid,
+                "reason":observed.get("reason",observed["status"])})
+            continue
+        identity=existing["source_relation"]["identity"]
+        need(existing["simc_input"].get("identity")==identity
+             and existing["product_input"].get("identity")==identity
+             and identity.get("exact_id")==eid
+             and identity.get("game_build")==source["game_build"]
+             and identity.get("simc_revision")==source["simc_revision"]
+             and identity.get("catalog_sha256")==source["manifest_sha256"]
+             and observed["enchant_id"]==eid
+             and observed["item_id"]==item_id
+             and observed["slot"]==slot
+             and observed["target_ilevel"]==target_ilevel
+             and observed["game_build"]==source["game_build"]
+             and observed["simc_revision"]==source["simc_revision"]
+             and observed["source_profile_sha256"]==
+                profile_receipt["physical_profile_sha256"]
+             and observed["unbuffed_initial_gear_stats_from_simc"] is True
+             and observed["gear_override_used"] is False
+             and observed["only_selected_item_enchant_changed"] is True,
+             "V632_INTERNAL_EXACT_SCOPED_NATIVE_PROOF_DRIFT")
+        payload={
+            "identity":identity,
+            "source_artifact_sha256":preflight["source_artifact_sha256"],
+            "source_catalog_sha256":source["manifest_sha256"],
+            "v232_source_receipt_sha256":stage["receipt_sha256"],
+            "v233_profile_receipt_sha256":profile_receipt["receipt_sha256"],
+            "v230_item_data_sha256":metadata["source_sha256"],
+            "original_simc_binary_sha256":observed["binary_sha256"],
+            "original_simc_profile_sha256":observed["source_profile_sha256"],
+            "original_native_pair_receipt_sha256":
+                observed["native_case_receipt_sha256"],
+            "scope":{"slot":slot,"item_id":item_id,
+                     "target_ilevel":target_ilevel},
+            "static_E":E}
+        budget={
+            "identity":identity,
+            "status":auto_admission.PROOF_STATUSES["chmv_budget"],
+            "evidence_sha256":digest(canonical(payload).encode("utf8")),
+            "no_double_count":True,
+            "unknown_static_chmv":False,
+            "fixed_E":dict(E),
+            "static_E_evidence_owner":
+                "SIMC_EXACT_INITIAL_GEAR_NATIVE_TWO_CASE_STATIC_RATING",
+            "gameplay_or_native_effect_attested":False}
+        # Existing v220 and v196 must still check all four exact receipt
+        # families before v212 can atomically publish the option.
+        need(auto_admission.decide({
+            "kind":"permanent_enchant",
+            "exact_id":eid,
+            "simc_token":identity["simc_token"],
+            "slot":identity["slot"],
+            "slot_status":("SOURCE_MASK_RESOLVED"
+                           if "/" not in identity["slot"] and
+                           not identity["slot"].startswith("WEAPON_SUBCLASS_")
+                           else
+                           "RING_HAND_SELECTED_BY_FINAL_USER_EQUIPMENT"
+                           if identity["slot"]=="finger1/finger2" else
+                           "WEAPON_HAND_SELECTED_BY_FINAL_USER_EQUIPMENT"),
+            "game_build":identity["game_build"],
+            "simc_revision":identity["simc_revision"],
+            "catalog_sha256":identity["catalog_sha256"]},
+            {**existing,"chmv_budget":budget})["eligible"],
+            "V632_EXACT_NATIVE_POLICY_A_DECISION_NOT_ELIGIBLE")
+        merged[eid]={**existing,"chmv_budget":budget}
+        result["native_E_registered"]+=1
+    result["status"]=(
+        "OPTIONAL_ENCHANT_SCALED_E_ALL_TARGETS_VERIFIED"
+        if result["native_E_registered"]==len(targets)
+        else "OPTIONAL_ENCHANT_SCALED_E_PARTIAL_PENDING")
+    return merged,result
+
+
 def _fresh_source_owner_exact_no_oil(*, preflight, selected_budget_items,
                                      trusted_budget_evidence):
     """Reuse v222's original O=0 proof ONLY for explicitly selected no oil.
@@ -9608,6 +9874,23 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             preflight=preflight,staged=staged,
                             trusted_policy_A_receipts_by_id=confirmed[
                                 "trusted_policy_A_receipts_by_id"]))
+                    # New-season permanent E coverage: no E0 remeasurement,
+                    # only evidence-missing items with exact scaled CHMV.
+                    # v278 caches each single-profile Native case; v297
+                    # supplies SimC's unbuffed initial gear delta.
+                    policy_A_receipts,E_recovery=(
+                        _fresh_source_owner_recover_permanent_enchant_scaled_E(
+                            preflight=preflight,
+                            compilation=source_compilation,
+                            collected=collected,
+                            original_receipts=policy_A_receipts,
+                            binary=binary,
+                            target_ilevel=fresh_collection_inputs[
+                                "representative_request"]["target_ilevel"]))
+                    progress["new_native_calls"]+=E_recovery[
+                        "new_native_calls"]
+                    source_compilation[
+                        "optional_permanent_enchant_E_native_repair"]=E_recovery
                     installed=_install_verified_fresh_environment_only(
                         compilation=source_compilation,staged=staged,
                         trusted_budget_evidence=trusted_budget,
