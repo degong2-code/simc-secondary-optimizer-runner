@@ -89,6 +89,24 @@ class UserSessionControls(unittest.TestCase):
         self.assertFalse(ux.standard_controls().get("enchant_choices"))
 
 
+    def test_v625_multi_armor_e0_is_only_form_syntax_not_approval(self):
+        controls=ux.standard_controls(("paladin","retribution"))
+        for choices in ({"head":7951,"chest":7957},
+                        {"head":7951,"shoulders":7952,
+                         "chest":7957,"feet":7953}):
+            user=ux.user_scenario({**controls,"enchant_choices":choices})
+            self.assertEqual(user["selected_season_enchants"],choices)
+            self.assertNotIn("fixed_E",user)
+        for invalid in ({"head":7951,"finger1":89999},
+                        {"head":7951,"chest":0},
+                        {"head":7951,"chest":True},
+                        {"head":7951,"chest":"7957"},
+                        {"head":7951,"chest":7957,"feet":7953,
+                         "shoulders":7952,"legs":79999}):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(ux.SessionBlocked):
+                    ux.user_scenario({**controls,"enchant_choices":invalid})
+
     def test_all_26_dps_user_defaults_require_no_full_gear(self):
         self.assertEqual(len(ux.SUPPORTED),26)
         self.assertEqual(len(ux.bootstrap.ARCHETYPES),24)
