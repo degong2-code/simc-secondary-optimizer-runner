@@ -323,8 +323,11 @@ class SelectedPermanentEnchantE0BudgetTests(unittest.TestCase):
                 p.preview_installed_selected_enchant_budget(
                     document=old_install,slot="finger1",item_id=268266,
                     enchant_id=8025)
+            # The multi-slot helper checks every per-item signed owner
+            # first, so this tampering is rejected at the original
+            # G-ownership boundary before the aggregate check.
             with self.assertRaisesRegex(
-                    p.EnvironmentBlocked,"REFERENCE_ALREADY_CONTAINS_ENCHANT"):
+                    p.EnvironmentBlocked,"G_OWNERSHIP_UNKNOWN"):
                 p.preview_installed_selected_enchants_budget(
                     document=unknown,selected=[{
                         "slot":"finger1","item_id":268266,
