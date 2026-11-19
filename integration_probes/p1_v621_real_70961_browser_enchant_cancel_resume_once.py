@@ -270,6 +270,9 @@ def run(binary,out,*,complete_after_resume=False,multi_armor=False,
                             "POSITIVE_RING_OPTION_NOT_VISIBLE")
                     Select(node).select_by_value(str(eid))
             chosen=browser_enchant_snapshot(driver)
+            if positive_rings:
+                report["exact_three_slot_visible_state_before_gate"]=chosen
+                save()
             require(chosen["chest_selected"]=="chest:7957" and
                     chosen["head_selected"]==("head:7959" if multi_armor else "") and
                     chosen["underlying"]==("" if multi_armor else "chest:7957") and
