@@ -8246,7 +8246,8 @@ def _fresh_source_owner_merge_policy_A_original_source_relation(
                      "PINNED_SIMC_EXACT_UNSCALED_STATIC_CHMV_DBC_COMPONENTS")) and
                  owner.get("gameplay_or_native_effect_attested") is False,
                  ("V216_POLICY_A_ORIGINAL_STATIC_E0_SOURCE_PROOF_DRIFT"
-                  if owner.get("fixed_E")==zero else
+                  if owner.get("static_E_evidence_owner")==
+                      "PINNED_SIMC_STATIC_NONCHMV_DBC_COMPONENTS" else
                   "V216_POLICY_A_ORIGINAL_STATIC_E_SOURCE_PROOF_DRIFT"))
             need("chmv_budget" not in existing or
                  existing["chmv_budget"]==owner,
