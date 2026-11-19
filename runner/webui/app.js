@@ -3420,14 +3420,22 @@ function renderSeasonOptionCatalog(catalog) {
               item.chmv_budget_receipt_sha256 &&
            !!row.verified_fixed_E &&
            ["crit_rating","haste_rating","mastery_rating",
-             "versatility_rating"].every(k=>row.verified_fixed_E[k]===0)))
+             "versatility_rating"].every(k=>
+               Number.isSafeInteger(row.verified_fixed_E[k]) &&
+               row.verified_fixed_E[k]>=0&&row.verified_fixed_E[k]<=100000)))
         continue;
       state.installedE0Ids.add(item.enchant_id);
+      const certified=rows.find(row=>row.enchant_id===item.enchant_id);
+      const E=certified?.verified_fixed_E||{};
+      const label=Object.entries(E).filter(([,n])=>n>0)
+        .map(([stat,n])=>({"crit_rating":"치명","haste_rating":"가속",
+          "mastery_rating":"특화","versatility_rating":"유연"}[stat]+" +"+n))
+        .join(" · ")||"정적 E=0";
       selector.appendChild(option(String(item.enchant_id),
-        "정적 E=0 검증 · 마부 #"+item.enchant_id+
+        label+" 검증 · 마부 #"+item.enchant_id+
         " · 실행 시 실제 반지/SimC 입력 재확인"));
       second.appendChild(option(String(item.enchant_id),
-        "정적 E=0 검증 · 마부 #"+item.enchant_id+
+        label+" 검증 · 마부 #"+item.enchant_id+
         " · 반지 2 실제 아이템/SimC 입력 재확인"));
     }
     // Only signed installed v212 E0. v098 must still match actual
@@ -3443,7 +3451,10 @@ function renderSeasonOptionCatalog(catalog) {
         item.verified_fixed_E===null ||
         Object.keys(item.verified_fixed_E).length!==4 ||
         !["crit_rating","haste_rating","mastery_rating",
-          "versatility_rating"].every(k=>item.verified_fixed_E[k]===0) ||
+          "versatility_rating"].every(k=>
+            Number.isSafeInteger(item.verified_fixed_E[k]) &&
+            item.verified_fixed_E[k]>=0 &&
+            item.verified_fixed_E[k]<=100000) ||
         !/^[0-9a-f]{64}$/.test(item.chmv_budget_receipt_sha256||""))
         continue;
       // A signed weapon family can be SHOWN on each hand; only v216
@@ -3451,16 +3462,21 @@ function renderSeasonOptionCatalog(catalog) {
       const slots=ordinarySlots.has(item.slot)?[item.slot]:
         item.slot==="WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED"?
           ["main_hand","off_hand"]:[];
+      const Elabel=Object.entries(item.verified_fixed_E)
+        .filter(([,n])=>n>0).map(([stat,n])=>
+          ({"crit_rating":"치명","haste_rating":"가속",
+            "mastery_rating":"특화","versatility_rating":"유연"}[stat]||stat)+
+          " +"+n).join(" · ")||"정적 E=0";
       for(const slot of slots) {
         const key=slot+":"+item.enchant_id;
         state.installedOtherE0Choices.add(key);
         other.appendChild(option(key,names[slot]+" · 마부 #"+
-          item.enchant_id+" · E=0 (실제 아이템/손 검증)"));
+          item.enchant_id+" · "+Elabel+" (실제 아이템/손 검증)"));
         const directId=directSlotSelectors[slot];
         if(directId) {
           const widget=$(directId);
           widget.appendChild(option(key,
-            "마부 #"+item.enchant_id+" · 정적 E=0 검증"));
+            "마부 #"+item.enchant_id+" · "+Elabel+" 검증"));
           widget.disabled=false;
         }
       }
@@ -3470,13 +3486,13 @@ function renderSeasonOptionCatalog(catalog) {
     const signedOrdinaryCount=state.installedOtherE0Choices.size;
     if(signedRingCount||signedOrdinaryCount) {
       if(signedRingCount)refreshExactEnchantAvailability();
-      status.textContent="설치 검증 원본에서 정적 CHMV E=0 확인 · "+
+      status.textContent="설치 검증 원본에서 마부별 정적 CHMV E 확인 · "+
         (signedRingCount?"반지 마부 "+signedRingCount+"종":"")+
         (signedRingCount&&signedOrdinaryCount?" · ":"")+
         (signedOrdinaryCount?"기타 일반 장비 마부 "+signedOrdinaryCount+"종":"")+
         " 선택 가능 · 검증된 모든 부위의 마부는 각 부위마다 하나씩 동시 선택 가능 · "+
         "최종 실물 ID와 SimC 입력은 실행 전에 다시 검증. "+
-        "원본 미승인·고정 E 미확정·E>0 마부는 잠금 유지.";
+        "원본 미승인·고정 E 미확정 마부는 잠금 유지. 정적 E 양수는 예산에 한 번만 반영.";
     }
     const exact=catalog.verified_exact_user_enchant_runtime;
     if(exact?.status==="EXACT_V528_V530_V532_V533_USER_ONLY" &&
@@ -3514,7 +3530,7 @@ function renderSeasonOptionCatalog(catalog) {
       details.className="catalog-source-group";
       const summary=document.createElement("summary");
       summary.textContent="설치 검증 등록 "+rows.length+
-        "종 · E=0 확정 항목만 입력 가능, 나머지는 적용 대기";
+        "종 · 정확한 정적 E 확정 항목만 입력 가능, 나머지는 적용 대기";
       details.appendChild(summary);
       const list=document.createElement("ul");
       for(const item of rows) {
