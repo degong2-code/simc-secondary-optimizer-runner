@@ -108,6 +108,7 @@ def run(binary,output_folder):
             doc["real_v583_source_status"]=physically.get("status")
             doc["real_v583_source_counts"]=physically.get("counts")
             doc["new_core_environment_native_calls"]=outcome.get("native_calls")
+            doc["diagnostic_no_new_dps_before_real_registration"]=True
             doc["environment_ready"]=outcome.get("environment_ready") is True
             doc["environment_installed"]=outcome.get("environment_installed") is True
             doc["required_core_source_owner_report"]=progress.get(
@@ -167,6 +168,17 @@ def run(binary,output_folder):
                 path=pathlib.Path(initial["stage_output_path"])
                 original,_=installed_manifest.read_json(path)
                 installed_manifest.verify_fresh_installed_environment(original)
+                # Retain the ACTUAL self-hashed v212 product install as a
+                # bounded, non-credential user-consumer artifact for the
+                # next stage, not a forged v217 original source receipt.
+                # This is never used to independently authorize new seasons.
+                product_copy=output_folder/"V618_REAL_INSTALLED_V212.json"
+                product_copy.write_text(json.dumps(original,sort_keys=True,
+                    ensure_ascii=False,indent=2,allow_nan=False)+"\n",
+                    encoding="utf8")
+                doc["saved_real_installed_v212_artifact"]=product_copy.name
+                doc["saved_real_installed_v212_stage_receipt_sha256"]=initial.get(
+                    "stage_receipt_sha256")
                 doc["actual_installed_manifest_sha256"]=original["manifest_sha256"]
                 installed=original["published_verified_options"]
                 doc["actual_enchant_registration_count"]=len(installed)
