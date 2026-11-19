@@ -2795,7 +2795,7 @@ assert.strictEqual($("season_enchant_finger2").disabled,false);
 assert($("season_enchant_finger2").options.some(x=>x.value==="89999"),
  "a verified E0 may be selected on the other actual ring");
 assert(state.installedE0Ids.has(89999));
-assert($("season-option-catalog-status").textContent.includes("E=0"));
+assert($("season-option-catalog-status").textContent.includes("정적 CHMV E 확인"));
 assert.strictEqual(state.eagleApproved,false);
 const both={...signedE0,verified_installed_enchant_registrations:{
   ...signedE0.verified_installed_enchant_registrations,
