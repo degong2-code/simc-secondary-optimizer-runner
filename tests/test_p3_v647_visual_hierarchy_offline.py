@@ -194,5 +194,46 @@ const flush=()=>new Promise(done=>setImmediate(done));
             result.stdout)
 
 
+    def test_v650_item_catalog_sort_cache_reuses_exact_installed_scope(self):
+        """No repeat sort per keystroke; catalog replacement invalidates."""
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node not installed")
+        script=r"""
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const raw=fs.readFileSync(process.argv[1],'utf8');
+const a=raw.indexOf('const equipNorm=');
+const b=raw.indexOf('\nfunction refreshEquipmentSelectionUI()',a);
+assert(a>=0&&b>a);
+const state={seasonGear:null};
+const choices=Function('state',raw.slice(a,b)+
+  '\nreturn eligibleEquipment;')(state);
+assert.deepEqual(choices('trinket'),[]);
+state.seasonGear={choices:{
+  trinket:[{item_id:2,name_ko:'나'},{item_id:1,name_ko:'가'},
+           {item_id:-1,name_ko:'무효'}],
+  special_effect_gear_candidate:[{item_id:3,name_ko:'검'}]
+}};
+const first=choices('trinket');
+assert.deepEqual(first.map(x=>x.item_id),[1,2]);
+assert.strictEqual(choices('trinket'),first);
+assert.equal(choices('special_effect_gear_candidate')[0].item_id,3);
+state.seasonGear.choices.trinket=[{item_id:4,name_ko:'바뀐 목록'}];
+assert.notStrictEqual(choices('trinket'),first);
+assert.deepEqual(choices('trinket').map(x=>x.item_id),[4]);
+state.seasonGear={choices:{trinket:[{item_id:8,name_ko:'새 시즌'}]}};
+assert.deepEqual(choices('trinket').map(x=>x.item_id),[8]);
+state.seasonGear=null;assert.deepEqual(choices('trinket'),[]);
+console.log('V650_EXACT_INSTALLED_CATALOG_MEMO_INVALIDATION_PASS');
+"""
+        result=subprocess.run(
+            [node,"-e",script,str(ROOT/"runner/webui/app.js")],
+            capture_output=True,text=True,encoding="utf8",errors="replace",
+            timeout=20,cwd=ROOT)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V650_EXACT_INSTALLED_CATALOG_MEMO_INVALIDATION_PASS",
+                      result.stdout)
+
+
 if __name__=="__main__":
     unittest.main()
