@@ -155,7 +155,7 @@ const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, s
                 userTargetIlevelManualOverride:false,
                 autoSeasonTargetEnabled:true, lastVerifiedSeasonTarget:null,
                 pollTimer:null, pollBusy:false,
-                pollFailures:0, nextPollAt:0 };
+                pollFailures:0, nextPollAt:0, nextPassivePollAt:0 };
 const number = (value,decimals=0) =>
   typeof value==="number" && Number.isFinite(value) ?
     value.toLocaleString("ko-KR",{minimumFractionDigits:decimals,
@@ -2007,6 +2007,8 @@ function markSession(id) {
   const changed=id!==state.session;
   state.session=id;
   if(changed) {
+    // A different session must not inherit the previous idle poll cooldown.
+    state.nextPassivePollAt=0;
     // A new plan is not the result of the previously selected session.
     $("filled-result").hidden=true;
     $("empty-result").hidden=false;
@@ -3125,6 +3127,12 @@ function renderProgress(data) {
   state.longrunEnabled=Boolean(data?.enabled);
   state.longrunResultReady=Boolean(data?.enabled && data?.result_ready);
   const p=data?.progress||{};
+  // Status GET reads durable worker files. Avoid repeatedly reading unchanged
+  // paused/blocked results; keep active Native at the original 1.4s cadence.
+  // A queued worker is checked sooner so an imminent launch remains visible.
+  const observedWorker=p.worker?.status||p.status||"NOT_STARTED";
+  state.nextPassivePollAt=data?.active ? 0 : Date.now()+(
+    ["RUNNING","QUEUED"].includes(observedWorker)?5000:15000);
   // A resumed v291 run may leave its previous V291_RESULT.json in place.
   // Do not present that older observation as the active run's final result.
   const previousResultOnly=data?.enabled===true &&
@@ -3308,7 +3316,8 @@ function beginPolling() {
     // A verified full-budget result cannot gain new cases by passive reads.
     // Keep polling if result rendering failed; explicit restore remains readable.
     if(state.longrunCompleted && !$("filled-result").hidden)return;
-    if(state.busy||state.pollBusy||!state.session||Date.now()<state.nextPollAt)return;
+    if(state.busy||state.pollBusy||!state.session||
+       Date.now()<state.nextPollAt||Date.now()<state.nextPassivePollAt)return;
     state.pollBusy=true;
     const id=state.session;
     pollOnce().then(()=>{
