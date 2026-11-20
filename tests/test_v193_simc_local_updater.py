@@ -79,6 +79,9 @@ class SimCUpdateUnit(unittest.TestCase):
             return exe
         first=self.m.install(NAME,downloader=download,extractor=extract,sevenzip="mock7z")
         self.assertEqual(first["status"],"NEW_MANAGED_SIMC_ACTIVATED")
+        self.assertEqual(first["native_calls_now"],1)
+        self.assertEqual(first["non_dps_cli_smoke_calls"],1)
+        self.assertEqual(first["dps_native_calls_now"],0)
         self.assertEqual(self.mock_probe.call_count,1)
         before=(self.path/"managed"/"installed.json").read_bytes()
         self.m.check(INDEX)
@@ -87,6 +90,8 @@ class SimCUpdateUnit(unittest.TestCase):
         second=self.m.install(NAME,downloader=must_not_download,
                               extractor=extract,sevenzip="mock7z")
         self.assertEqual(second["status"],"MANAGED_SIMC_ALREADY_CURRENT")
+        self.assertEqual(second["native_calls_now"],0)
+        self.assertEqual(second["non_dps_cli_smoke_calls"],0)
         self.assertEqual(second["active_binary"],first["active_binary"])
         self.assertEqual((self.path/"managed"/"installed.json").read_bytes(),before)
         self.assertEqual(self.mock_probe.call_count,1)

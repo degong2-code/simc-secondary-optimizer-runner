@@ -369,6 +369,7 @@ class SimCManager:
                 self.offer=None
                 result=self.status()
                 result["status"]="MANAGED_SIMC_ALREADY_CURRENT"
+                result["non_dps_cli_smoke_calls"]=0
                 return result
             tool=sevenzip or find_sevenzip()
             need(tool,"SEVEN_ZIP_REQUIRED")
@@ -407,6 +408,10 @@ class SimCManager:
                 self.offer=None
                 result=self.status()
                 result["status"]="NEW_MANAGED_SIMC_ACTIVATED"
+                # One real CLI process started for display_build=2; zero DPS.
+                result["native_calls_now"]=1
+                result["non_dps_cli_smoke_calls"]=1
+                result["dps_native_calls_now"]=0
                 result["hash_kind"]="LOCAL_SHA256_OF_DOWNLOADED_BYTES_NOT_UPSTREAM_SIGNATURE"
                 return result
 
