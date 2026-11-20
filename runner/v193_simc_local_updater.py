@@ -387,16 +387,24 @@ class SimCManager:
                 bin_sha=sha256(exe)
                 dest=self.root/"versions"/bin_sha[:24]
                 # Atomic managed tree; never overwrite user's manual installation.
+                created=False
                 if not dest.exists():
                     dest.parent.mkdir(parents=True,exist_ok=True)
                     ready=scratch/"ready";ready.mkdir()
                     shutil.copy2(exe,ready/"simc.exe")
                     need(sha256(ready/"simc.exe")==bin_sha,"STAGED_BINARY_SHA_DRIFT")
                     os.replace(ready,dest)
-                need(sha256(dest/"simc.exe")==bin_sha,"MANAGED_BINARY_SHA_DRIFT")
-                # Do not activate an executable that cannot start in its final
-                # managed directory. Never use a DPS simulation as installer QA.
-                (probe or probe_cli)(dest/"simc.exe")
+                    created=True
+                try:
+                    need(sha256(dest/"simc.exe")==bin_sha,"MANAGED_BINARY_SHA_DRIFT")
+                    # Do not activate an executable that cannot start in its final
+                    # managed directory. Never use a DPS simulation as installer QA.
+                    (probe or probe_cli)(dest/"simc.exe")
+                except Exception:
+                    # Failed updates must not accumulate newly created orphan
+                    # executables; never delete a pre-existing managed version.
+                    if created:shutil.rmtree(dest,ignore_errors=True)
+                    raise
                 entry={"filename":offered["filename"],
                        "revision_short":offered["revision_short"],
                        "sha256":bin_sha,"archive_sha256":proof["sha256"],

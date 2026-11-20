@@ -117,6 +117,8 @@ class SimCUpdateUnit(unittest.TestCase):
                                sevenzip="mock7z")
         self.assertEqual((self.path/"managed"/"installed.json").read_bytes(),old_pointer)
         self.assertEqual(self.m.status()["active_binary"],before["active_binary"])
+        self.assertEqual(len(list((self.path/"managed"/"versions").iterdir())),1,
+                         "Failed probe must not leave orphan managed binaries")
 
     def test_only_official_windows_nightly_and_no_arbitrary_url(self):
         selected=mod.candidate_urls(INDEX)
