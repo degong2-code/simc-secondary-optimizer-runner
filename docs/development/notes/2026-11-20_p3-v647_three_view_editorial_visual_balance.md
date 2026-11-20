@@ -21,4 +21,7 @@
 
 ## 실행 결과
 
-- [Windows beta v181 CI #44676987811](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44676987811) — 판정은 실제 CI 결과 확인 후 별도 기록. 코드 작성 시점에 PASS 추정 금지.
+- 최초 [Windows beta v181 CI #44676987811](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44676987811)는 v361 역사적 테스트가 **반복 fold/gear-row 밑줄을 반드시 유지하라는 구 디자인 규칙**을 요구한 탓에 기존 288 PASS / 1 FAIL(기능·DOM 결함 아님). 기존 테스트 자체를 삭제/비활성화하지 않고, 실제 CSS의 주요 `section-head` separator 유지 + fold/gear-row 반복선 제거라는 새 사용자 승인 기준으로 기대값 수정. 해당 테스트 변경 시도 Windows ZIP CI를 다시 실행하도록 Workflow `paths`에도 추가.
+- 최종 [Windows beta v181 #44677378569](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44677378569): Windows Python **3.12·3.14 양쪽 모두 SUCCESS**, 각각 패키징 **5 PASS**, 기존 웹/세션/보안 및 신규 3-view UI 계약 **289 PASS**, 실제 ZIP 압축 해제+CMD launcher+localhost HTTP 3가지 계획 PASS, 이번 변경으로 신규 Native/DPS 호출 **0**.
+- 최종 ZIP artifact [#14603195195](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44677378569/artifacts/14603195195): 내부 `SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip`, 바이트 **1,500,443**, SHA256 `debb25affa7e0539f2197a267deb5286d566b57510cec1d3412e838b28edfdd2`. ZIP 내 `V181_PACKAGE_MANIFEST.json` 283개 소스 파일 각각 **283/283 SHA·bytes 일치**, ZIP CRC 검사 PASS; 사용자 세션·SimC 실행파일 미포함.
+- 비주얼 인수 한계: CI는 CSS/DOM/기능의 정적·모의 검사와 실제 Windows localhost 실행을 확인했으나 사용자 PC의 실제 디스플레이 렌더링/미적 확인까지 대체하지 않는다. 과거 Native 근거를 새로 실행한 것처럼 주장하지 않는다.
