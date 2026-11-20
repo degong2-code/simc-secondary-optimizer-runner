@@ -159,6 +159,33 @@ class SimCOnlySeedTests(unittest.TestCase):
                          {"season_token_test","separate_option"})
         self.assertTrue(result["active_season_not_automatically_inferred"])
 
+    def test_set_bonus_real_build_drift_is_not_a_header_parse_failure(self):
+        # A real, well-formed generated header from a different game build
+        # must reach v646's already-existing explicit mismatch recovery UI.
+        raw=raw_sources()
+        raw["item_set_bonus.inc"]=raw["item_set_bonus.inc"].replace(
+            ("// Set bonus data, wow build "+BUILD).encode(),
+            ("// Set bonus data, wow build "+OLD).encode(),1)
+        with self.assertRaisesRegex(seed.SimCSourceBlocked,
+                                    "^V229_GENERATED_SIMC_COMPILED_BUILD_MISMATCH$"):
+            inventory(raw)
+
+        # When the build cannot be parsed, never claim it was different.
+        raw=raw_sources()
+        raw["item_set_bonus.inc"]=raw["item_set_bonus.inc"].replace(
+            b"// Set bonus data, wow build ",
+            b"// Unknown set header, wow build ",1)
+        with self.assertRaisesRegex(seed.SimCSourceBlocked,
+                                    "^V229_SET_BONUS_BUILD_OR_HEADER_MISMATCH$"):
+            inventory(raw)
+        raw=raw_sources()
+        raw["item_set_bonus.inc"]=raw["item_set_bonus.inc"].replace(
+            b"std::array<item_set_bonus_t, 3>",
+            b"std::array<unknown_set_t, 3>",1)
+        with self.assertRaisesRegex(seed.SimCSourceBlocked,
+                                    "^V229_SET_BONUS_BUILD_OR_HEADER_MISMATCH$"):
+            inventory(raw)
+
     def test_set_bonus_conflicting_items_or_count_blocks(self):
         raw=raw_sources()
         raw["item_set_bonus.inc"]=raw["item_set_bonus.inc"].replace(
