@@ -33,6 +33,7 @@ import v196_current_season_user_catalog as ui_catalog
 import v529_current_season_eagle_E0_bridge as exact_e0_enchant
 import v531_current_season_positive_E_bridge as exact_positive_enchant
 import v193_simc_local_updater as simc_updates
+import v645_simc_connection_prefs as simc_connection
 import v148_local_batch_results as batch_view
 import v167_product_season_gear_adapter as season_gear
 import v208_internal_exact_special_L_hydrator as exact_L
@@ -96,6 +97,13 @@ class UpdateInstallRequest(BaseModel):
 class UpdateLocalArchiveRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     archive_path: str = Field(min_length=8,max_length=4096)
+
+class SimCConnectionConfirmRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    binary: str = Field(min_length=1,max_length=4096)
+    revision: str = Field(pattern=r"^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$")
+    static_cache: str = Field(default="",max_length=4096)
+
 
 class LocalSourceCredentialsRequest(BaseModel):
     """Never echoed, written into a session, or accepted as season evidence."""
@@ -2766,6 +2774,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 version="113.0",openapi_url=None,docs_url=None,redoc_url=None)
     app.state.jobs=jobs
     app.state.simc_updates=updater
+    simc_prefs=simc_connection.LocalSimCConnectionPrefs(jobs.root.parent)
 
     @app.exception_handler(RequestValidationError)
     async def redact_source_credential_validation(request: Request, exc):
@@ -3317,6 +3326,26 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         return {"archetypes":archetypes,
                 "allowed_races_by_spec":known_races,
                 "unavailable_missing_legacy_fixtures":[]}
+
+    @app.get("/api/v1/simc-connection/status")
+    def simc_connection_status():
+        try:
+            return simc_prefs.status()
+        except simc_connection.SimCConnectionBlocked as exc:
+            raise HTTPException(422,detail={"code":str(exc)}) from None
+
+    @app.post("/api/v1/simc-connection/confirm")
+    def simc_connection_confirm(request: SimCConnectionConfirmRequest):
+        # Explicit user click only. A tiny display_build=2 CLI call is not DPS.
+        if any(jobs.is_active(jobs.root/sid) for sid in tuple(jobs.children)):
+            raise HTTPException(409,detail={
+                "code":"ACTIVE_SIMC_JOB_CONNECTION_CHECK_BLOCKED"})
+        try:
+            return simc_prefs.confirm(
+                binary=request.binary,revision=request.revision,
+                static_cache=request.static_cache,managed=updater.status())
+        except simc_connection.SimCConnectionBlocked as exc:
+            raise HTTPException(422,detail={"code":str(exc)}) from None
 
     @app.get("/api/v1/source-credentials/status")
     def source_credentials_status():
