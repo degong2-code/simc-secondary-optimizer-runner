@@ -88,8 +88,9 @@ class SimCUpdateWeb(unittest.TestCase):
             status=self.client.get("/api/v1/simc-updates/status",headers=self.h)
         self.assertEqual(status.status_code,200,status.text)
         self.assertIsNone(status.json()["active_binary"])
-        for route,payload in (("check",{}),("install",{"filename":"x"}),
-                              ("install-local",{"archive_path":"x"}),
+        for route,payload in (("check",{}),
+                              ("install",{"filename":"simc-1215-01-win64-710c240.7z"}),
+                              ("install-local",{"archive_path":"C:\\\\SimC\\\\simc-1215-01-win64-710c240.7z"}),
                               ("rollback",{})):
             response=self.client.post("/api/v1/simc-updates/"+route,
                                       json=payload,headers=self.h)

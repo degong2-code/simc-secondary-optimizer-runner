@@ -1,2 +1,5 @@
 -r requirements-web.txt
+# TestClient upstream compatibility: httpx for supported Starlette versions,
+# httpx2 for newer Starlette. Neither is required by the local web server.
 httpx>=0.27,<1.0
+httpx2>=2.13,<3.0
