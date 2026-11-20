@@ -91,9 +91,36 @@ class EnvironmentGridV652(unittest.TestCase):
         self.assertIn('@media(max-width:880px)',css)
         self.assertIn('@media(max-width:480px)',css)
         self.assertIn('grid-template-columns:repeat(2,minmax(0,1fr))',css)
-        self.assertIn('background:#2b2926;border:1px solid #484039',css)
+        # v653 inherits the original class/spec input visual language,
+        # not v652's introduced visible outlines or shaded wrapper card.
+        self.assertIn('v653 — the class/spec selects are the visual authority',css)
+        self.assertIn('border:1px solid transparent!important;border-radius:5px!important',css)
+        self.assertIn('background:#2C2B30!important;',css)
+        self.assertIn('height:33px!important;min-height:33px!important',css)
+        self.assertIn('grid-template-rows:18px 33px',css)
+        self.assertIn('#season-target-socket-count{',css)
+        self.assertIn('width:100%!important;min-width:0!important;max-width:100%!important',css)
+        self.assertIn('background:transparent;border:0;',css)
+        self.assertIn('background:#493c29!important',css)
         self.assertIn('#user-variant-prepare-btn',css)
         self.assertIn('#optimizer-oil-enabled[hidden]{display:none!important}',css)
+        self.assertNotIn('border:1px solid #444045!important',css)
+        self.assertNotIn('background:#2b2926;border:1px solid #484039',css)
+
+    def test_v653_equal_size_four_cells_and_original_control_look(self):
+        css=self.css
+        # Must match the same 33px, borderless controls as the class/spec
+        # fields. This test guards the regression shown in the user's image.
+        self.assertIn('border:1px solid transparent!important;border-radius:5px!important',css)
+        self.assertIn('background:#2C2B30!important;',css)
+        self.assertIn('height:33px!important;min-height:33px!important',css)
+        self.assertIn('grid-template-columns:repeat(4,minmax(0,1fr))',css)
+        self.assertIn('#optimizer-form .conditions-panel #season-gem-layout,',css)
+        self.assertIn('#optimizer-form .conditions-panel #season-gem-layout>.field{',css)
+        self.assertIn('justify-self:stretch;align-self:end',css)
+        self.assertIn('background:transparent;border:0;',css)
+        self.assertNotIn('background:var(--input);border:1px solid #444045!important',css)
+        self.assertNotIn('border-left:3px solid #bb9450;border-radius:8px',css)
 
     def test_actual_oil_sync_uses_existing_boolean_not_new_budget(self):
         self.assertIn('function applyOilUseToggle()',self.js)
