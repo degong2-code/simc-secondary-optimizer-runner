@@ -68,7 +68,7 @@ class LocalSimCConnectionPrefs:
                     "observed_game_build","revision_identity")},
                 "verified_now":False,"native_calls_now":0}
 
-    def confirm(self,*,binary,revision,static_cache="",run=subprocess.run,
+    def confirm(self,*,binary,revision,static_cache="",run=None,
                 managed=None):
         need(type(binary) is str and 0<len(binary)<=4096 and
              not any(c in binary for c in "\x00\r\n"),
@@ -100,7 +100,7 @@ class LocalSimCConnectionPrefs:
                      "SIMC_CONNECTION_MANAGED_REVISION_MISMATCH")
                 controlled=True
         try:
-            proc=run([str(p),"display_build=2"],cwd=str(p.parent),
+            proc=(run or subprocess.run)([str(p),"display_build=2"],cwd=str(p.parent),
                      capture_output=True,timeout=20,
                      creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0))
         except subprocess.TimeoutExpired as exc:
