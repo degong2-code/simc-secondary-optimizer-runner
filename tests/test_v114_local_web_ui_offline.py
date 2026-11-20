@@ -156,8 +156,8 @@ const raw=fs.readFileSync(process.argv[1],'utf8');
 const start=raw.indexOf('function compactSeasonBuildReceipt(data,forUserVariant=false) {');
 const end=raw.indexOf('\nasync function copySeasonBuildDiagnostic()',start);
 assert(start>=0&&end>start,'diagnostic function missing');
-const compact=Function(raw.slice(start,end)+
-  '\nreturn compactSeasonBuildReceipt;')();
+const compact=Function('seasonBuildRecoveryPlan',raw.slice(start,end)+
+  '\nreturn compactSeasonBuildReceipt;')(()=>null);
 const first={
  web_environment_scope:{
    game_build:'12.1.5.70783',target_ilevel:334,
@@ -1341,9 +1341,11 @@ const api=async (url,args)=>{
 };
 const run=Function("$","field","valueInt","state","window","api",
  "beginSeasonBuildActivity","seasonBuildInputScope","oilUseIntent",
+ "displaySeasonBuildRecovery","seasonBuildRecoveryPlan",
  "let lastSeasonDiagnosticReceipt=null;"+src.slice(start,end)+
  "return buildSeasonEnvironment;")(
-  $,field,valueInt,state,window,api,()=>()=>{},()=>JSON.stringify(["inputs"]),false);
+  $,field,valueInt,state,window,api,()=>()=>{},()=>JSON.stringify(["inputs"]),
+  false,()=>{},()=>null);
 (async()=>{
  await assert.rejects(run(false),/REQUEST_CAPTURED_BEFORE_NATIVE/);
  assert.strictEqual(submitted.length,1,
@@ -1415,7 +1417,7 @@ const state={verifiedInstalledBuildFromThisPage:"12.1.5.70783"};
 const args=["state","$","seasonBuildInputScope",
  "installSeasonGearHints","renderSeasonOptionCatalog",
  "updateBudgetPreview","showSeasonEnvironmentBuild",
- "requestedInputScope","forUserVariant","report"];
+ "displaySeasonBuildRecovery","requestedInputScope","forUserVariant","report"];
 const apply=Function(...args,
  src.slice(c,d)+"showSeasonEnvironmentBuild(report,forUserVariant);");
 const afterGear=Function(...args,
@@ -1424,7 +1426,7 @@ const afterGear=Function(...args,
 const check=(saved,variant,guard=apply)=>{
  guard(state,$,scope,
   v=>revoked.push(["gear",v]),v=>revoked.push(["options",v]),
-  ()=>{budgetResets++},v=>shown.push(v),
+  ()=>{budgetResets++},v=>shown.push(v),()=>{},
   saved,variant,{environment_ready:true,T:3333});
 };
 const original=scope(true);
@@ -2076,6 +2078,7 @@ const context={state,$,field:id=>$(id).value,
   statOrder:stats.map(k=>[k,k,"#abc"]),setNotice(){},
   switchView(){},refreshResultNavigation(){},
   refreshExactEnchantAvailability(){},localStorage:{setItem(){}},
+  performSeasonBuildRecovery(){},
   Error,Number,Object,String,Math,Array,Set};
 vm.createContext(context);
 vm.runInContext(update+result+mark+"function attachUserEdits(){"+events+"}",context);

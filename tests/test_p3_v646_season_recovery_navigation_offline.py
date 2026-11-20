@@ -133,7 +133,8 @@ assert.equal(copied,1);
 """
         completed=subprocess.run([node,"-e",harness,
                       str(ROOT/"runner/webui/app.js")],
-                 cwd=ROOT,timeout=20,text=True,capture_output=True)
+                 cwd=ROOT,timeout=20,text=True,encoding="utf8",
+                 errors="replace",capture_output=True)
         self.assertEqual(completed.returncode,0,completed.stderr)
 
 
