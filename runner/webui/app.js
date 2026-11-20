@@ -2431,12 +2431,13 @@ async function refreshSourceCredentialStatus() {
   const status=await api("/api/v1/source-credentials/status");
   $("source-credentials-status").textContent=(
     !status.supported?"Windows 자격 증명 관리자 전용 기능입니다.":
-    status.configured?"Blizzard·WCL API 인증정보가 이 Windows 계정에 저장되어 있습니다.":
+    status.configured?"Blizzard·WCL API 인증정보 저장됨 · 실제 API 인증과 최신 시즌 접근 권한은 아직 별도 확인이 필요합니다.":
     "저장된 API 인증정보가 없습니다. 새 시즌 갱신에 인증이 필요할 경우 등록하세요.");
   $("source-credentials-save-btn").disabled=!status.supported||!state.token;
   $("source-credentials-clear-btn").disabled=!status.supported||!status.configured||!state.token;
 }
 async function saveSourceCredentials() {
+  const status=$("source-credentials-status");
   const payload={};
   for(const [id,key] of sourceCredentialFields){
     payload[key]=$(id).value;
@@ -2444,12 +2445,17 @@ async function saveSourceCredentials() {
       throw Error("네 개의 API 인증정보를 모두 정확히 입력해야 합니다.");
   }
   if(!window.confirm("이 Windows 계정의 자격 증명 관리자에 API 인증정보를 저장할까요? 외부 서버로 키를 전송하지 않습니다."))return;
+  status.textContent="Windows 자격 증명 관리자에 API 키 저장 중…";
   try {
     await api("/api/v1/source-credentials/save",{method:"POST",payload});
-    setNotice("내 API 인증정보 저장 완료 · 실제 시즌 조회는 ‘시즌 환경 확인·설치’에서만 수행됩니다.");
+    // A successful write is not a provider authentication test.
     await refreshSourceCredentialStatus();
-  } finally {
     for(const [id] of sourceCredentialFields)$(id).value="";
+    setNotice("API 키 저장 확인 완료 · 실제 제공자 인증은 시즌 원본 수집 시 검증됩니다.");
+  }catch(err){
+    status.textContent="API 키 저장 실패 ("+err.message+"). 값을 확인하고 다시 저장하세요.";
+    throw err;
+  }finally {
     for(const key of Object.keys(payload))payload[key]="";
   }
 }
@@ -3693,6 +3699,67 @@ function installOptions(options) {
   }
 }
 
+// Confirm a manual SimC link explicitly; the persisted local path is not
+// a season provenance receipt or proof of the user's declared Git revision.
+function displaySimcConnectionReceipt(result,restored=false) {
+  const saved=result?.saved;
+  const line=$("simc-connection-status");
+  if(!saved){
+    line.textContent="확인·저장한 SimC 설정이 없습니다. 경로와 Git revision을 입력한 뒤 확인해 주세요.";
+    return;
+  }
+  const game=saved.observed_game_build?
+    " · SimC 출력 게임 데이터 빌드 "+saved.observed_game_build:
+    " · 내장 게임 빌드는 출력에서 판독되지 않음";
+  const revisionVerified=saved.revision_identity==="USER_ENTERED_REVISION_NOT_ATTESTED"?
+    " · Git revision은 사용자 입력값(자동 인증 불가)":
+    " · Git revision 출처 확인";
+  line.textContent=(restored?
+    "저장된 SimC 설정을 불러왔습니다. 현재 실행파일의 재검증은 아직 수행하지 않았습니다.":
+    "SimC CLI 기동 확인 및 설정 저장 완료 (DPS 계산 0회).")+
+    game+revisionVerified+
+    " · 현재 게임·시즌 원본 일치는 환경 구축에서 별도 확인합니다.";
+}
+async function refreshSavedSimcConnection() {
+  const result=await api("/api/v1/simc-connection/status");
+  if(result.saved){
+    for(const [id,key] of [["binary","binary"],["revision","revision"],
+                           ["static_cache","static_cache"]]){
+      if(!field(id))$(id).value=result.saved[key]||"";
+    }
+  }
+  displaySimcConnectionReceipt(result,true);
+}
+async function confirmSimcConnection() {
+  const button=$("simc-connection-confirm-btn");
+  const message=$("simc-connection-status");
+  const binary=field("binary"),revision=field("revision").toLowerCase();
+  const static_cache=field("static_cache");
+  if(!binary||!$( "binary" ).checkValidity()||
+     !revision||!/^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$/.test(revision)){
+    message.textContent="실행파일 경로와 정확한 Git revision(7~12 또는 40자리)을 확인해 주세요.";
+    $("simc-technical-panel").open=true;
+    throw Error("SIMC_CONNECTION_INPUTS_INVALID");
+  }
+  button.disabled=true;
+  button.textContent="SimC 연결 확인 중…";
+  message.textContent="선택한 simc.exe를 display_build=2로 기동 확인 중입니다. DPS 계산은 실행하지 않습니다.";
+  try{
+    const result=await api("/api/v1/simc-connection/confirm",{
+      method:"POST",payload:{binary,revision,static_cache}});
+    $("revision").value=revision;
+    displaySimcConnectionReceipt(result,false);
+    setNotice("SimC 연결 확인·저장 완료 · 시즌 원본 검증은 별도입니다.");
+  }catch(err){
+    message.textContent="SimC 설정 확인·저장 실패 ("+err.message+
+      "). 실행파일·Git revision·선택 캐시 경로를 확인하세요. 기존 저장 설정은 유지됩니다.";
+    throw err;
+  }finally{
+    button.disabled=false;
+    button.textContent="SimC 연결 확인·저장";
+  }
+}
+
 // Settings: user-triggered official SimC download, separate from season DB.
 // The existing manually supplied binary remains usable and is never overwritten.
 let simcOffer=null;
@@ -3717,6 +3784,8 @@ function applyManagedSimc(data) {
   if(!data?.active_binary||!data?.installed)return false;
   $("binary").value=data.active_binary;
   $("revision").value=data.installed.revision_short;
+  $("simc-connection-status").textContent=
+    "관리 SimC가 현재 입력칸에 적용됐습니다. 다음 실행에도 유지하려면 ‘SimC 연결 확인·저장’을 눌러주세요.";
   return true;
 }
 function displaySimcUpdater(data) {
@@ -3931,8 +4000,13 @@ function registerHandlers() {
     $("optimizer-form").addEventListener(name,editedUserChoice);
   for(const id of ["binary","revision","static_cache","season-game-build"])
     $(id).addEventListener("input",()=>{
+      if(id!=="season-game-build")
+        $("simc-connection-status").textContent=
+          "SimC 설정이 변경됐습니다. 저장된 기존 설정은 유지되며 새 값은 확인·저장 전입니다.";
       if(state.session)updateBudgetPreview();
     });
+  $("simc-connection-confirm-btn").addEventListener("click",
+    ()=>withBusy(confirmSimcConnection));
   $("optimizer-oil-enabled").addEventListener("change",()=>withBusy(applyOilUseToggle));
   $("equipment-trinket-search").addEventListener("input",drawInlineEquipment);
   $("equipment-special-search").addEventListener("input",drawInlineEquipment);
@@ -4202,6 +4276,11 @@ async function initialize() {
     catch(err){
       $("season-option-catalog-status").textContent=
         "시즌 마법부여 데이터 조회 실패 · 기존 승인 선택을 유지합니다: "+err.message;
+    }
+    // A saved local SimC link is a user choice, not a new automatically
+    // validated provenance. Load it before managed-version defaulting.
+    try{await refreshSavedSimcConnection();}catch(err){
+      $("simc-connection-status").textContent="저장된 SimC 설정 조회 오류: "+err.message;
     }
     // Read-only local status. No remote release lookup on page load.
     try{await refreshSimcUpdater(false);}catch(err){
