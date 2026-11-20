@@ -2235,7 +2235,6 @@ function seasonBuildRecoveryPlan(data,errorCode=null) {
     safe(data?.fresh_pinned_v211_source?.reason)].filter(Boolean);
   const mismatches=new Set([
     "V229_GENERATED_SIMC_COMPILED_BUILD_MISMATCH",
-    "V229_SET_BONUS_BUILD_OR_HEADER_MISMATCH",
     "V229_ITEM_DATA_BUILT_FOR_DIFFERENT_GAME_BUILD"
   ]);
   if(codes.some(x=>mismatches.has(x)))return {
