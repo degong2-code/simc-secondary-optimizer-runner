@@ -2238,7 +2238,7 @@ function seasonBuildRecoveryPlan(data,errorCode=null) {
     "V229_ITEM_DATA_BUILT_FOR_DIFFERENT_GAME_BUILD"
   ]);
   if(codes.some(x=>mismatches.has(x)))return {
-    kind:"simc",title:"SimC 원본의 게임 빌드가 요청 빌드와 다릅니다.",
+    kind:"simc",title:"SimC 원본 데이터와 요청 게임 빌드 불일치",
     detail:"대상 "+(expected||"현재 KR Retail")+" 빌드에 맞지 않는 SimC 생성 원본이 발견됐습니다. "+
       "SimC Git revision과 실제 내장 데이터 빌드를 확인하세요. "+
       "GitHub 대체 Nightly는 최신/호환 버전임이 검증되지 않았습니다. "+
