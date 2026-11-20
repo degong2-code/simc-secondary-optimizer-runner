@@ -357,11 +357,28 @@ function drawInlineEquipment(){
 let equipmentDialogTarget=null;
 let equipmentDialogOpener=null;
 const equipNorm=x=>String(x??"").normalize("NFKC").toLocaleLowerCase("ko-KR").trim();
+// Installed catalog candidates never change inside a verified scope. Keep
+// filtering/sorting work out of every search keystroke and selection redraw.
+// A newly installed catalog gets a new object; WeakMap preserves no old UI
+// approval and does not retain obsolete catalogs after replacement.
+const equipmentChoicesByCatalog=new WeakMap();
 function eligibleEquipment(group){
-  return [...(state.seasonGear?.choices?.[group]||[])]
+  const catalog=state.seasonGear;
+  if(!catalog)return [];
+  let cached=equipmentChoicesByCatalog.get(catalog);
+  if(!cached){
+    cached=new Map();
+    equipmentChoicesByCatalog.set(catalog,cached);
+  }
+  const input=catalog.choices?.[group];
+  const saved=cached.get(group);
+  if(saved?.input===input)return saved.items;
+  const items=[...(input||[])]
     .filter(x=>Number.isSafeInteger(Number(x.item_id))&&Number(x.item_id)>0)
     .sort((a,b)=>String(a.name_ko||a.name||"").localeCompare(
       String(b.name_ko||b.name||""),"ko-KR")||a.item_id-b.item_id);
+  cached.set(group,{input,items});
+  return items;
 }
 function refreshEquipmentSelectionUI(){
   for(const id of ["trinket1","trinket2"]){
