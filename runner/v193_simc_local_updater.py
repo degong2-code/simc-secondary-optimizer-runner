@@ -26,8 +26,8 @@ import urllib.parse
 import urllib.request
 
 SCHEMA="v193_explicit_local_simc_nightly_manager_v1"
-BASE="https://download.simulationcraft.org/nightly/"
-GITHUB_RUNS="https://api.github.com/repos/simulationcraft/simc-publish/actions/runs?per_page=8"
+BASE="https://downloads.simulationcraft.org/nightly/"
+GITHUB_RUNS="https://api.github.com/repos/simulationcraft/simc-publish/actions/runs?per_page=4"
 GITHUB_HOME="https://github.com/simulationcraft/simc-publish/actions"
 MAX_GITHUB_JSON=500_000
 # The official GitHub CPack archive uses `simc-1210.01.710c240-win64.7z`.
@@ -97,7 +97,7 @@ def fetch_github_nightly():
     response=fetch_github_json(GITHUB_RUNS)
     runs=response.get("workflow_runs",[])
     need(type(runs) is list,"OFFICIAL_GITHUB_RUNS_SCHEMA_INVALID")
-    for run in runs[:8]:
+    for run in runs[:4]:
         rid=run.get("id")
         if type(rid) is not int or rid<=0 or run.get("name")!="Nightly":
             continue
@@ -125,7 +125,7 @@ def candidate_urls(html):
     for href in p.urls:
         url=urllib.parse.urljoin(BASE,href)
         parts=urllib.parse.urlsplit(url)
-        if (parts.scheme!="https" or parts.hostname!="download.simulationcraft.org"
+        if (parts.scheme!="https" or parts.hostname!="downloads.simulationcraft.org"
             or parts.username or parts.password or parts.query or parts.fragment
             or parts.port not in (None,443)
             or not parts.path.startswith("/nightly/")):
@@ -204,6 +204,23 @@ def extract_safe(archive,folder,sevenzip):
              "SIMC_WINDOWS_BINARY_NOT_AMD64")
     return exe
 
+def probe_cli(exe):
+    """Bounded non-DPS SimC start check. Upstream display_build=2 returns before execute()."""
+    try:
+        result=subprocess.run([str(exe),"display_build=2"],
+              cwd=str(pathlib.Path(exe).parent),capture_output=True,
+              timeout=20,creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0))
+    except subprocess.TimeoutExpired:
+        raise UpdateBlocked("SIMC_CLI_SMOKE_TIMEOUT") from None
+    except OSError:
+        raise UpdateBlocked("SIMC_CLI_LAUNCH_FAILED") from None
+    output=(result.stdout or b"")+(result.stderr or b"")
+    need(result.returncode==0,"SIMC_CLI_SMOKE_FAILED")
+    need(0<len(output)<=16384 and b"simulationcraft" in output.lower(),
+         "SIMC_CLI_SMOKE_OUTPUT_INVALID")
+    return True
+
+
 def find_sevenzip():
     if sys.platform!="win32":
         return shutil.which("7z") or shutil.which("7zz")
@@ -218,7 +235,7 @@ def fetch_index():
     with urllib.request.urlopen(req,timeout=20) as res:
         target=urllib.parse.urlsplit(res.geturl())
         need(res.status==200 and target.scheme=="https" and target.hostname==
-             "download.simulationcraft.org","OFFICIAL_INDEX_SOURCE_INVALID")
+             "downloads.simulationcraft.org","OFFICIAL_INDEX_SOURCE_INVALID")
         raw=res.read(MAX_INDEX+1)
     need(0<len(raw)<=MAX_INDEX,"OFFICIAL_INDEX_SIZE_INVALID")
     return raw.decode("utf8","replace")
@@ -231,7 +248,7 @@ def fetch_archive(url,target):
     with urllib.request.urlopen(req,timeout=60) as src,open(target,"wb") as dst:
         endpoint=urllib.parse.urlsplit(src.geturl())
         need(src.status==200 and endpoint.scheme=="https" and endpoint.hostname==
-             "download.simulationcraft.org",
+             "downloads.simulationcraft.org",
              "OFFICIAL_ARCHIVE_REDIRECT_REFUSED")
         while True:
             block=src.read(1024*1024)
@@ -334,13 +351,25 @@ class SimCManager:
         finally:tmp.unlink(missing_ok=True)
 
     def install(self,filename,*,downloader=fetch_archive,extractor=extract_safe,
-                sevenzip=None,archive_source="OFFICIAL_HTTPS_NIGHTLY"):
+                sevenzip=None,archive_source="OFFICIAL_HTTPS_NIGHTLY",probe=None):
         need(self.platform=="win32","SIMC_UPDATER_WINDOWS_ONLY")
         with self.lock:
             offered=self.offer
             need(offered and filename==offered["filename"]
                  and time.monotonic()-self.offered_at<900,
                  "EXPLICIT_RECENT_OFFICIAL_OFFER_REQUIRED")
+            # Filename identifies a published Git revision, not a local unverified
+            # archive. Only skip a previously verified official managed install.
+            state=self._read()
+            active=state["active"]
+            if (archive_source=="OFFICIAL_HTTPS_NIGHTLY" and active and
+                active["filename"]==filename and
+                active.get("archive_source")=="OFFICIAL_HTTPS_NIGHTLY"):
+                self._binary(active)  # refuse a modified/missing executable
+                self.offer=None
+                result=self.status()
+                result["status"]="MANAGED_SIMC_ALREADY_CURRENT"
+                return result
             tool=sevenzip or find_sevenzip()
             need(tool,"SEVEN_ZIP_REQUIRED")
             self.root.mkdir(parents=True,exist_ok=True)
@@ -364,7 +393,9 @@ class SimCManager:
                     need(sha256(ready/"simc.exe")==bin_sha,"STAGED_BINARY_SHA_DRIFT")
                     os.replace(ready,dest)
                 need(sha256(dest/"simc.exe")==bin_sha,"MANAGED_BINARY_SHA_DRIFT")
-                state=self._read()
+                # Do not activate an executable that cannot start in its final
+                # managed directory. Never use a DPS simulation as installer QA.
+                (probe or probe_cli)(dest/"simc.exe")
                 entry={"filename":offered["filename"],
                        "revision_short":offered["revision_short"],
                        "sha256":bin_sha,"archive_sha256":proof["sha256"],
@@ -379,7 +410,7 @@ class SimCManager:
                 result["hash_kind"]="LOCAL_SHA256_OF_DOWNLOADED_BYTES_NOT_UPSTREAM_SIGNATURE"
                 return result
 
-    def install_local(self,archive_path,*,extractor=extract_safe,sevenzip=None):
+    def install_local(self,archive_path,*,extractor=extract_safe,sevenzip=None,probe=None):
         """User-selected local archive fallback for unavailable TLS nightlies.
 
         An archive renamed to an official-looking file is NOT provenance:
@@ -410,7 +441,7 @@ class SimCManager:
                 return {"sha256":sha256(dest),
                         "bytes":pathlib.Path(dest).stat().st_size}
             return self.install(resolved.name,downloader=local_copy,
-                       extractor=extractor,sevenzip=sevenzip,
+                       extractor=extractor,sevenzip=sevenzip,probe=probe,
                        archive_source="USER_LOCAL_FILE_ORIGIN_NOT_AUTHENTICATED")
 
     def rollback(self):
