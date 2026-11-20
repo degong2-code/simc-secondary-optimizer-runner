@@ -215,8 +215,8 @@ summary small{font-size:10px;color:var(--muted);font-weight:450}
 
 /* v193: user-consented local SimC version management. */
 .simc-update-panel{margin-top:14px}
-.simc-update-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px}
-.simc-update-actions .btn{flex:1 1 145px}
+.simc-update-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin:12px 0 10px}
+.simc-update-actions .btn{flex:0 1 auto;min-width:0}
 .simc-update-panel .hint{overflow-wrap:anywhere}
 .simc-update-panel a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
 
@@ -967,7 +967,10 @@ body{background:#24252B;color:var(--ink)}
   border:0!important;border-bottom:1px solid #655D52!important;
   border-radius:0!important;background:transparent!important
 }
-#view-settings .view-intro,#view-results .view-intro{
+#view-settings .view-intro{
+  border:0;padding-bottom:8px;margin-bottom:20px
+}
+#view-results .view-intro{
   border-bottom:1px solid #5B5349;padding-bottom:10px;margin-bottom:11px
 }
 #view-settings .view-intro h1,#view-results .view-intro h1{
@@ -976,52 +979,97 @@ body{background:#24252B;color:var(--ink)}
 #view-settings .view-intro .eyebrow,#view-results .view-intro .eyebrow{
   color:#CAA56C;font-size:10px
 }
-#view-settings .panel,#view-results .panel{
+#view-settings .panel{
+  border:0!important;border-radius:0!important;
+  box-shadow:none!important;background:transparent!important;
+  padding:14px 0 4px!important;max-width:1140px;margin-inline:auto
+}
+#view-settings .panel+.panel{margin-top:26px}
+#view-settings .simc-technical-panel>.two{margin:7px 14px 4px}
+#view-settings .simc-update-panel{margin-top:20px}
+#view-settings .simc-update-actions{margin:12px 14px 10px;justify-content:flex-start}
+#view-settings .simc-update-panel .field{margin:12px 14px}
+#view-settings #simc-update-candidate,
+#view-settings #simc-local-install-status{
+  margin:9px 14px 11px;max-width:850px;min-height:20px;
+  line-height:1.55;overflow-wrap:anywhere
+}
+#view-settings #simc-update-status{margin-top:10px}
+#view-settings .simc-update-panel>a{display:inline-block}
+#view-settings .simc-technical-panel .field input{
+  overflow:hidden;text-overflow:ellipsis
+}
+
+#view-results .panel{
   border:0!important;border-bottom:1px solid #625749!important;
   border-radius:0!important;box-shadow:none!important;
   background:transparent!important;padding:15px 6px 18px!important
 }
-#view-settings .panel+.panel{margin-top:6px}
-#view-settings .section-head,#view-results .section-head{
+#view-settings .section-head{
+  margin:0 0 15px;border:0;padding:0
+}
+#view-results .section-head{
   margin:0 0 11px;border:0;border-bottom:1px solid #5E564C;
   padding:0 0 9px
 }
 #view-settings .section-head h2,#view-results .section-head h2{font-size:16px}
 #view-settings .micro,#view-results .micro{font-size:10px;color:#B3ABA0}
-#view-settings .fold,#view-results .fold,#view-results .restore{
+#view-settings .fold{
+  border:0!important;background:transparent!important;
+  border-radius:0!important;box-shadow:none!important;
+  margin:0 0 16px;padding:0
+}
+#view-results .fold,#view-results .restore{
   border:0!important;border-bottom:1px solid #514B45!important;
   background:transparent!important;border-radius:0!important;
   box-shadow:none!important;margin:0 0 8px
 }
-#view-settings .fold summary,#view-results .fold summary,
-#view-results .restore summary{
+#view-settings .fold summary{
+  border:0!important;padding:9px 2px;color:#E1D8CC;
+  font-size:12.5px;line-height:1.45
+}
+#view-results .fold summary,#view-results .restore summary{
   border:0!important;padding:9px 2px;color:#E1D8CC;font-size:11.5px
 }
 #view-settings .fold summary:hover,#view-results .fold summary:hover,
 #view-results .restore summary:hover{
   background:rgba(228,171,78,.045);color:#F0C986
 }
-#view-settings .fold[open]>summary,#view-results .fold[open]>summary,
-#view-results .restore[open]>summary{
+#view-settings .fold[open]>summary{
+  border:0!important;color:#F0D29F
+}
+#view-results .fold[open]>summary,#view-results .restore[open]>summary{
   border-bottom:1px solid #514A41!important
 }
-#view-settings .field,#view-results .field{margin:0 0 10px;gap:4px}
-#view-settings .field label,#view-results .field label{font-size:11px;color:#DFD6CC}
+#view-settings .field{margin:0 0 12px;gap:6px;min-width:0}
+#view-results .field{margin:0 0 10px;gap:4px}
+#view-settings .field label{font-size:12px;color:#E4DCD1;line-height:1.45}
+#view-results .field label{font-size:11px;color:#DFD6CC}
 #view-settings .field input,#view-settings .field select,
-#view-settings .field textarea,#view-results .field input,
-#view-results .field select,#view-results .field textarea{
+#view-settings .field textarea{
+  border:1px solid transparent!important;border-radius:7px!important;
+  background:#2D2C30!important;box-shadow:none!important;
+  min-height:39px;padding:8px 10px;font-size:12px;color:#F0EBE3;
+  min-width:0;max-width:100%
+}
+#view-settings .field :is(input,select,textarea):focus-visible{
+  border-color:#D2A351!important;outline:2px solid rgba(232,179,75,.3);
+  outline-offset:1px
+}
+#view-results .field input,#view-results .field select,
+#view-results .field textarea{
   border:0!important;border-bottom:1px solid #665D51!important;
   border-radius:0!important;background:transparent!important;
   box-shadow:none!important;min-height:32px;padding:5px 2px;
   font-size:11.5px;color:#F0EBE3
 }
-#view-settings .field :is(input,select,textarea):focus,
 #view-results .field :is(input,select,textarea):focus{
   border-bottom-color:#E8B34B!important;outline-offset:1px
 }
-#view-settings :is(.two,.season-build-fields),#view-results .two{
-  gap:11px
+#view-settings :is(.two,.season-build-fields){
+  gap:10px 22px;align-items:start
 }
+#view-results .two{gap:11px}
 #view-settings .check-row,#view-results .check-row{
   margin:4px 0 10px;gap:7px 18px;border:0
 }
@@ -1038,7 +1086,11 @@ body{background:#24252B;color:var(--ink)}
 #view-settings .season-activity-track>span,#view-results #progress-bar{
   border-radius:0
 }
-#view-settings .hint,#view-results .hint{
+#view-settings .hint{
+  line-height:1.62;color:#B9B1A7;font-size:11.2px;
+  overflow-wrap:anywhere
+}
+#view-results .hint{
   line-height:1.5;color:#ABA49C;font-size:10.5px
 }
 #view-results .session-meta{
@@ -1088,16 +1140,32 @@ body{background:#24252B;color:var(--ink)}
 #view-results .empty{
   border:0;border-bottom:1px solid #4F4942;padding:45px 6px
 }
-#optimizer-form .btn.secondary,#view-settings .btn,
-#view-results .btn,.view-intro>.btn{
+#optimizer-form .btn.secondary,#view-results .btn,.view-intro>.btn{
   border:0!important;border-bottom:1px solid #79684C!important;
   border-radius:0!important;background:transparent!important;
   color:#E8D8BE;box-shadow:none!important;min-height:31px
 }
+#view-settings .btn{
+  border:1px solid #57514B!important;border-radius:7px!important;
+  background:#302F32!important;color:#E9DFD0!important;
+  box-shadow:none!important;min-height:39px;
+  padding:8px 13px;white-space:normal;text-align:center
+}
+#view-settings .btn.primary{
+  border-color:#D8A750!important;background:#D8A750!important;
+  color:#282015!important
+}
+#view-settings .btn:disabled{opacity:.48;cursor:not-allowed}
 #optimizer-form .btn.secondary:hover:not(:disabled),
-#view-settings .btn:hover:not(:disabled),
 #view-results .btn:hover:not(:disabled),.view-intro>.btn:hover:not(:disabled){
   border-bottom-color:#E8B34B!important;color:#FFD99B
+}
+#view-settings .btn:hover:not(:disabled){
+  border-color:#C29A55!important;background:#3D3731!important;
+  color:#FFDBA2!important
+}
+#view-settings .btn.primary:hover:not(:disabled){
+  background:#E9BC65!important;color:#241A10!important
 }
 #view-results .btn.danger{border-bottom-color:#AB6D68!important;color:#EAB5AD}
 @media(max-width:1050px){
@@ -1114,7 +1182,10 @@ body{background:#24252B;color:var(--ink)}
   #optimizer-form .gear-section .inline-equipment-grid{
     grid-template-columns:repeat(2,minmax(0,1fr))
   }
-  #view-settings .panel,#view-results .panel{padding:12px 0 15px!important}
+  #view-settings :is(.two,.season-build-fields){grid-template-columns:minmax(0,1fr)}
+  #view-settings .simc-update-actions .btn{flex:1 1 100%}
+  #view-settings .panel{padding:12px 0 5px!important}
+  #view-results .panel{padding:12px 0 15px!important}
 }
 @media(max-width:370px){
   #optimizer-form .gear-section .inline-equipment-grid{
