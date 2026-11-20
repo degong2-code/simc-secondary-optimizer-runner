@@ -1423,6 +1423,12 @@ body{background:#24252B;color:var(--ink)}
 #optimizer-form .conditions-panel #season-gem-layout>.field{
   width:100%;min-width:0;max-width:100%;box-sizing:border-box
 }
+/* The old horizontal flex layout kept justify-content:space-between,
+   which shrank the nested implicit grid track to 70px even at width:100%. */
+#optimizer-form .conditions-panel #season-gem-layout>.field{
+  grid-template-columns:minmax(0,1fr)!important;
+  justify-content:stretch!important;justify-items:stretch!important
+}
 #optimizer-form .conditions-panel #season-target-socket-count{
   width:100%!important;min-width:0!important;max-width:100%!important;
   justify-self:stretch;align-self:end
