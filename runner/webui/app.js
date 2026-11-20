@@ -3782,8 +3782,13 @@ async function installSimcUpdater() {
     simcOffer=null;
     displaySimcUpdater(result);
     applyManagedSimc(result);
-    $("simc-update-candidate").textContent="설치 완료 · 신규 최적화에만 새 SimC가 적용됩니다. 시즌 DB와 과거 캐시는 그대로입니다.";
-    setNotice("SimC 설치 완료 · 바이너리 SHA에 따라 새 최적화 세션이 분리됩니다.");
+    const alreadyCurrent=result.status==="MANAGED_SIMC_ALREADY_CURRENT";
+    $("simc-update-candidate").textContent=alreadyCurrent?
+      "이미 설치된 동일 공식 SimC입니다. 다운로드·압축 해제를 반복하지 않았습니다.":
+      "설치 완료 · 신규 최적화에만 새 SimC가 적용됩니다. 시즌 DB와 과거 캐시는 그대로입니다.";
+    setNotice(alreadyCurrent?
+      "동일 공식 SimC 사용 중 · 기존 세션과 캐시를 유지합니다.":
+      "SimC 설치 완료 · 바이너리 SHA에 따라 새 최적화 세션이 분리됩니다.");
   }catch(err){
     $("simc-install-btn").disabled=false;
     throw err;

@@ -2840,10 +2840,10 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
     def browser_styles():
         return FileResponse(WEB_ASSETS / "styles.css",media_type="text/css")
 
-    def updates_action(operation):
-        # Downloads and managed-pointer changes require explicit browser POST.
-        # A currently running SimC worker must not switch the UI's active binary.
-        if any(jobs.is_active(jobs.root/sid) for sid in tuple(jobs.children)):
+    def updates_action(operation,*,read_only=False):
+        # Never switch managed binaries during a running SimC worker.
+        # Authenticated read-only status is safe and must remain available.
+        if not read_only and any(jobs.is_active(jobs.root/sid) for sid in tuple(jobs.children)):
             raise HTTPException(409,detail={"code":"ACTIVE_SIMC_JOB_UPDATE_BLOCKED"})
         try:
             return operation()
@@ -2855,7 +2855,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
 
     @app.get("/api/v1/simc-updates/status")
     def simc_update_status():
-        return updates_action(updater.status)
+        return updates_action(updater.status,read_only=True)
 
     @app.post("/api/v1/simc-updates/check")
     def simc_update_check():

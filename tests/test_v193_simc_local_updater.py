@@ -6,6 +6,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 import v193_simc_local_updater as mod
 
+ORIGINAL_PROBE_CLI=mod.probe_cli
 NAME="simc-1215-01-win64-710c240.7z"
 OFFICIAL_GITHUB_NAME="simc-1210.01.710c240-win64.7z"
 INDEX="""<html><a href="simc-1210-03-win64-7bc1071.7z">old</a>
@@ -21,6 +22,96 @@ class SimCUpdateUnit(unittest.TestCase):
         self.addCleanup(self.t.cleanup)
         self.path=pathlib.Path(self.t.name)
         self.m=mod.SimCManager(self.path/"managed",platform="win32")
+        # Existing lifecycle fixtures deliberately use a synthetic PE, not a
+        # genuine SimC executable. Verify the real probe separately below.
+        probe_patch=mock.patch.object(mod,"probe_cli",return_value=True)
+        self.mock_probe=probe_patch.start()
+        self.addCleanup(probe_patch.stop)
+
+    def test_official_plural_host_and_bounded_github_fallback(self):
+        self.assertEqual(mod.BASE,"https://downloads.simulationcraft.org/nightly/")
+        self.assertIn("per_page=4",mod.GITHUB_RUNS)
+        self.assertEqual(mod.candidate_urls(
+            '<a href="simc-1215-01-win64-710c240.7z">x</a>')[0]["url"],
+            mod.BASE+NAME)
+        for invalid in [
+           'https://download.simulationcraft.org/nightly/'+NAME,
+           'https://evil.example/nightly/'+NAME,
+           'https://downloads.simulationcraft.org/not-nightly/'+NAME]:
+            self.assertEqual(mod.candidate_urls('<a href="'+invalid+'">x</a>'),[])
+
+    def test_cli_non_simulation_smoke_exact_command_failure_and_timeout(self):
+        from pathlib import Path
+        real=mod.probe_cli
+        # setUp mocked this global function; this test deliberately executes
+        # the actual implementation captured via original fixture import below.
+        real=getattr(self,"original_probe_cli",None) or ORIGINAL_PROBE_CLI
+        binary=Path(self.path)/"managed"/"versions"/"simc.exe"
+        completed=mock.Mock(returncode=0,stdout=b"SimulationCraft 1215-01\n",
+                            stderr=b"")
+        with mock.patch.object(mod.subprocess,"run",return_value=completed) as run:
+            self.assertTrue(real(binary))
+        self.assertEqual(run.call_args.args[0],[str(binary),"display_build=2"])
+        self.assertEqual(run.call_args.kwargs["cwd"],str(binary.parent))
+        self.assertLessEqual(run.call_args.kwargs["timeout"],20)
+        for failure,code in [
+            (mock.Mock(returncode=4,stdout=b"Error",stderr=b""),"SIMC_CLI_SMOKE_FAILED"),
+            (mock.Mock(returncode=0,stdout=b"other tool",stderr=b""),"SIMC_CLI_SMOKE_OUTPUT_INVALID")]:
+            with self.subTest(code=code),mock.patch.object(mod.subprocess,"run",return_value=failure):
+                with self.assertRaisesRegex(mod.UpdateBlocked,code):
+                    real(binary)
+        with mock.patch.object(mod.subprocess,"run",
+               side_effect=subprocess.TimeoutExpired("simc",20)):
+            with self.assertRaisesRegex(mod.UpdateBlocked,"SIMC_CLI_SMOKE_TIMEOUT"):
+                real(binary)
+        with mock.patch.object(mod.subprocess,"run",side_effect=OSError("dll missing")):
+            with self.assertRaisesRegex(mod.UpdateBlocked,"SIMC_CLI_LAUNCH_FAILED"):
+                real(binary)
+
+    def test_duplicate_official_revision_skips_network_extract_and_probe(self):
+        self.m.check(INDEX)
+        def download(_url,path):
+            path.write_bytes(mod.MAGIC+b"good"*32000)
+            return {"sha256":mod.sha256(path),"bytes":path.stat().st_size}
+        def extract(_archive,folder,_tool):
+            exe=folder/"simc.exe"
+            exe.write_bytes(b"MZ"+b"real_probe_mock_fixture"*11000)
+            return exe
+        first=self.m.install(NAME,downloader=download,extractor=extract,sevenzip="mock7z")
+        self.assertEqual(first["status"],"NEW_MANAGED_SIMC_ACTIVATED")
+        self.assertEqual(self.mock_probe.call_count,1)
+        before=(self.path/"managed"/"installed.json").read_bytes()
+        self.m.check(INDEX)
+        def must_not_download(*_):
+            raise AssertionError("OFFICIAL_DOWNLOAD_SHOULD_BE_SKIPPED")
+        second=self.m.install(NAME,downloader=must_not_download,
+                              extractor=extract,sevenzip="mock7z")
+        self.assertEqual(second["status"],"MANAGED_SIMC_ALREADY_CURRENT")
+        self.assertEqual(second["active_binary"],first["active_binary"])
+        self.assertEqual((self.path/"managed"/"installed.json").read_bytes(),before)
+        self.assertEqual(self.mock_probe.call_count,1)
+
+    def test_smoke_failure_does_not_replace_active_managed_version(self):
+        first="simc-1215-01-win64-710c240.7z"
+        next_name="simc-1215-02-win64-710c241.7z"
+        def download(_url,path):
+            path.write_bytes(mod.MAGIC+b"new"*45000)
+            return {"sha256":mod.sha256(path),"bytes":path.stat().st_size}
+        def extract(_archive,folder,_tool):
+            exe=folder/"simc.exe"
+            exe.write_bytes(b"MZ"+self.m.offer["filename"].encode()*12000)
+            return exe
+        self.m.check(INDEX)
+        before=self.m.install(first,downloader=download,extractor=extract,sevenzip="mock7z")
+        old_pointer=(self.path/"managed"/"installed.json").read_bytes()
+        self.m.check(INDEX.replace(first,next_name))
+        with mock.patch.object(mod,"probe_cli",
+                               side_effect=mod.UpdateBlocked("SIMC_CLI_LAUNCH_FAILED")):
+            with self.assertRaisesRegex(mod.UpdateBlocked,"SIMC_CLI_LAUNCH_FAILED"):
+                self.m.install(next_name,downloader=download,extractor=extract,
+                               sevenzip="mock7z")
+        self.assertEqual((self.path/"managed"/"installed.json").read_bytes(),old_pointer)
+        self.assertEqual(self.m.status()["active_binary"],before["active_binary"])
 
     def test_only_official_windows_nightly_and_no_arbitrary_url(self):
         selected=mod.candidate_urls(INDEX)

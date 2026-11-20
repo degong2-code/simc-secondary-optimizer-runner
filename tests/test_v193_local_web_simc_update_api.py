@@ -82,10 +82,17 @@ class SimCUpdateWeb(unittest.TestCase):
     def test_native_worker_running_blocks_manage_actions(self):
         fake=mock.Mock();fake.poll.return_value=None
         self.app.state.jobs.children["a"*20]=fake
-        for route in ("status","check"):
-            method="get" if route=="status" else "post"
-            response=getattr(self.client,method)("/api/v1/simc-updates/"+route,
-                     headers=self.h,**({} if method=="get" else {"json":{}}))
+        # Status only reads local managed metadata: no binary switch or HTTP.
+        with mock.patch.object(update,"fetch_index",
+                               side_effect=AssertionError("STATUS_CANNOT_FETCH")):
+            status=self.client.get("/api/v1/simc-updates/status",headers=self.h)
+        self.assertEqual(status.status_code,200,status.text)
+        self.assertIsNone(status.json()["active_binary"])
+        for route,payload in (("check",{}),("install",{"filename":"x"}),
+                              ("install-local",{"archive_path":"x"}),
+                              ("rollback",{})):
+            response=self.client.post("/api/v1/simc-updates/"+route,
+                                      json=payload,headers=self.h)
             self.assertEqual(response.status_code,409,response.text)
             self.assertEqual(response.json()["detail"]["code"],
                              "ACTIVE_SIMC_JOB_UPDATE_BLOCKED")
