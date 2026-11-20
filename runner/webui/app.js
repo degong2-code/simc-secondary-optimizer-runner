@@ -2235,9 +2235,20 @@ function diagnoseSeasonBuildEvidence(data) {
     rawProducer:null;
   const requires=Array.isArray(step.requires)?
     step.requires.filter(v=>!(sourceSealed&&v==="SOURCE_SEASON_JOIN_PENDING")):[];
+  const sourceNames={
+    TIER_V168:"대표 티어 원본",
+    V189:"SimC 소모품 효과 원본",
+    V190:"소모품 ItemID·효과 관계",
+    GENERATED_PERMANENT:"영구 마부 원본",
+    GENERATED_TEMPORARY:"기름 등 기존 SimC 임시 마부 분류 원본",
+    GENERATED_GEM:"보석 원본",
+    SIMC_V211_SIX_SOURCE_FILES_AND_MANIFEST:"SimC 효과 분류 원본 파일·SHA 묶음",
+    PINNED_SIMC_REVISION:"원본 SimC Git revision",
+    GEAR_V167:"대표 일반 장비 목록 원본"
+  };
   const firstMissing=(missing.length?
-    "소스 컴파일 입력: "+String(missing[0])+
-      (firstProducer?" · 기존 원본 생산자: "+firstProducer:""):
+    "원본 컴파일에 필요한 파일 "+missing.length+"종 미확정"+
+      " · 우선 확인: "+(sourceNames[missing[0]]||String(missing[0])):
     requires.length?"후속 검증: "+String(requires[0]):
     "필수 원본의 상세 미완료 항목 미보고");
   const owners=step.required_core_source_owner_report;
@@ -2316,6 +2327,8 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
       "Blizzard/WCL 단계: "+discovery+" · 시즌 연결: "+joined+
       " · Wago DB2 단계: "+wago+".";
   }
+  if(!ready&&diagnosed.compilerMissingCount>0)
+    headline.textContent+=" 미완료 코드는 연쇄 진단이며, 사용자에게 각각 입력을 요구하는 항목이 아닙니다. 현재 게임 빌드의 원본·SimC 출처 검증이 먼저 필요합니다.";
   if(data?.status==="VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED"&&ready){
     node.textContent="기존 검증 시즌 환경 재사용 완료 · 저장된 원본 빌드 "+
       data.installed_source_game_build+
@@ -3718,6 +3731,11 @@ function displaySimcUpdater(data) {
     "앱 관리 SimC 없음 · 직접 지정한 실행 파일은 변경하지 않습니다.";
   if(supported&&!data.archive_extractor_available)
     $("simc-update-status").textContent+=" · 설치하려면 7-Zip이 필요합니다.";
+  $("simc-local-install-status").textContent=!supported?
+    "SimC 설치 관리는 Windows x64에서만 지원합니다.":
+    !data.archive_extractor_available?
+    "7-Zip 실행파일(7z.exe)을 찾지 못했습니다. .7z 파일 경로와는 별개로 공식 7-Zip을 설치해야 합니다. 아래 설치 안내를 이용하세요.":
+    "7-Zip 실행파일 감지됨 · 직접 다운로드한 공식 Windows x64 .7z 파일을 설치할 수 있습니다.";
 }
 async function refreshSimcUpdater(preferManaged=false) {
   const status=await api("/api/v1/simc-updates/status");
@@ -3811,17 +3829,31 @@ async function installSimcUpdater() {
 }
 async function installLocalSimcUpdater() {
   const path=field("simc-local-archive");
-  if(!path.toLowerCase().endsWith(".7z"))
+  const status=$("simc-local-install-status");
+  if(!path.toLowerCase().endsWith(".7z")){
+    status.textContent="설치할 공식 Windows x64 .7z 파일의 전체 경로를 입력하세요.";
     throw Error("공식 Windows x64 SimC .7z 파일의 로컬 경로를 입력해 주세요.");
+  }
   if(!window.confirm("이 PC의 파일을 SimC 관리 폴더에 설치할까요? 사용자가 직접 내려받은 파일은 공식 서명을 독립 확인할 수 없습니다."))return;
   rememberPreManagedBinary();
-  const result=await api("/api/v1/simc-updates/install-local",
-    {method:"POST",payload:{archive_path:path}});
-  displaySimcUpdater(result);
-  applyManagedSimc(result);
-  simcOffer=null;$("simc-install-btn").disabled=true;
-  $("simc-update-candidate").textContent="로컬 파일 설치 완료. 출처는 독립 인증되지 않았으며 기존 사용자 실행 파일과 세션은 유지됩니다.";
-  setNotice("로컬 SimC 설치 완료 · 신규 계산은 다른 바이너리 SHA의 세션으로 분리됩니다.");
+  status.textContent="로컬 .7z 파일 확인 및 압축 해제·SimC 기동 검증 중…";
+  try{
+    const result=await api("/api/v1/simc-updates/install-local",
+      {method:"POST",payload:{archive_path:path}});
+    displaySimcUpdater(result);
+    applyManagedSimc(result);
+    simcOffer=null;$("simc-install-btn").disabled=true;
+    $("simc-update-candidate").textContent="로컬 파일 설치 완료. 출처는 독립 인증되지 않았으며 기존 사용자 실행 파일과 세션은 유지됩니다.";
+    status.textContent="수동 SimC 설치 및 기동 검증 완료 · 새 실행파일과 revision이 반영됐습니다.";
+    setNotice("로컬 SimC 설치 완료 · 신규 계산은 다른 바이너리 SHA의 세션으로 분리됩니다.");
+  }catch(err){
+    if(err.message==="SEVEN_ZIP_REQUIRED"){
+      status.textContent="7-Zip 실행파일(7z.exe)을 찾지 못해 설치를 시작하지 않았습니다. .7z 파일 경로는 별개입니다. 아래 공식 7-Zip을 설치한 다음 다시 실행해 주세요.";
+      throw Error("SEVEN_ZIP_REQUIRED · .7z 파일이 아니라 7-Zip(7z.exe) 압축 해제 프로그램이 필요합니다.");
+    }
+    status.textContent="수동 SimC 설치 실패 ("+err.message+"). 파일·압축 해제 도구·기동 조건을 확인하세요.";
+    throw err;
+  }
 }
 async function rollbackSimcUpdater() {
   if(!window.confirm("관리 중인 SimC를 이전 버전으로 되돌릴까요? 기존 사용자 파일은 변경하지 않습니다."))return;
