@@ -3986,7 +3986,7 @@ async function checkSimcUpdater() {
       link.textContent="GitHub Windows nightly 기록(최신/빌드 일치 미검증)";
       line.appendChild(link);
       line.appendChild(document.createTextNode(
-        " · 배포 기록 "+(/^(?:20\\d{2})-\\d{2}-\\d{2}$/.test(String(alt.created_at||"").slice(0,10))?
+        " · 배포 기록 "+(/^(?:20\d{2})-\d{2}-\d{2}$/.test(String(alt.created_at||"").slice(0,10))?
           String(alt.created_at).slice(0,10):"날짜 미확정")+
         " · GitHub 로그인이 필요할 수 있습니다. 이전 빌드일 수 있으므로 다운로드한 파일의 내장 게임 데이터 빌드를 먼저 확인하세요. artifact ZIP에서 .7z를 꺼내 수동 설치할 수 있습니다."));
     }else{
