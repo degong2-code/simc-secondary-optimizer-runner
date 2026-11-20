@@ -90,6 +90,7 @@ class WindowsBetaPackageOffline(unittest.TestCase):
                              paths)
             self.assertEqual(len(paths),len(set(paths)))
             self.assertIn("runner/v113_local_web_api.py",paths)
+            self.assertIn("runner/v645_simc_connection_prefs.py",paths)
             self.assertIn("runner/v216_environment_build_coordinator.py",paths)
             self.assertIn("runner/v155_season_api_probe.py",paths)
             self.assertIn("runner/webui/app.js",paths)
