@@ -1388,25 +1388,44 @@ body{background:#24252B;color:var(--ink)}
 }
 #optimizer-form .conditions-panel .env-input-grid>.env-grid-cell>.field,
 #optimizer-form .conditions-panel .env-input-grid #season-gem-layout>.field{
-  display:grid!important;grid-template-rows:18px 36px;gap:4px;
+  display:grid!important;grid-template-rows:18px 33px;gap:4px;
   min-width:0;margin:0!important;align-content:start
 }
 #optimizer-form .conditions-panel .env-input-grid .field>label{
   font-size:11px;line-height:18px;min-height:18px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
+/* v653 — the class/spec selects are the visual authority: dark fill,
+   transparent outline, compact square-ish 5px radius, no outlined controls.
+   Apply that exact form language to all moved environment inputs. */
 #optimizer-form .conditions-panel .env-input-grid input:not([type=checkbox]),
 #optimizer-form .conditions-panel .env-input-grid select,
-#optimizer-form .conditions-panel .env-input-grid .env-auto-value{
-  width:100%;min-width:0;height:36px!important;min-height:36px!important;
-  padding:6px 9px!important;line-height:20px!important;
-  background:var(--input);border:1px solid #444045!important;
-  border-radius:7px;color:var(--ink);
-  font-size:12px;box-sizing:border-box
+#optimizer-form .env-enchant-grid select{
+  display:block;width:100%!important;min-width:0!important;max-width:100%;
+  height:33px!important;min-height:33px!important;
+  padding:7px 4px 8px!important;line-height:17px!important;
+  background:#2C2B30!important;
+  border:1px solid transparent!important;border-radius:5px!important;
+  box-shadow:none!important;color:#F4F0E8;font-size:11px!important;
+  box-sizing:border-box
 }
 #optimizer-form .conditions-panel .env-input-grid input:not([type=checkbox]):focus,
-#optimizer-form .conditions-panel .env-input-grid select:focus{
-  border-color:var(--accent)!important
+#optimizer-form .conditions-panel .env-input-grid select:focus,
+#optimizer-form .env-enchant-grid select:focus{
+  border-color:#D4A34F!important;
+  outline:2px solid rgba(232,179,75,.25);
+  outline-offset:1px;background:#33302F!important
+}
+/* The socket selector is nested in <details>; give that wrapper and its
+   internal field the same full column width as the three sibling inputs. */
+#optimizer-form .conditions-panel .env-input-grid>.env-grid-cell,
+#optimizer-form .conditions-panel #season-gem-layout,
+#optimizer-form .conditions-panel #season-gem-layout>.field{
+  width:100%;min-width:0;max-width:100%;box-sizing:border-box
+}
+#optimizer-form .conditions-panel #season-target-socket-count{
+  width:100%!important;min-width:0!important;max-width:100%!important;
+  justify-self:stretch;align-self:end
 }
 #optimizer-form #optimizer-oil-enabled[hidden]{display:none!important}
 #optimizer-form .conditions-panel #optimizer-oil-toggle-status{
@@ -1427,39 +1446,36 @@ body{background:#24252B;color:var(--ink)}
   gap:13px 13px;align-items:start;margin:7px 0 10px
 }
 #optimizer-form .env-enchant-grid>.field{
-  display:grid;grid-template-rows:18px 36px;
+  display:grid;grid-template-rows:18px 33px;
   gap:4px;min-width:0;margin:0!important
 }
 #optimizer-form .env-enchant-grid .field>label{
   font-size:11px;line-height:18px;min-height:18px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
-#optimizer-form .env-enchant-grid select{
-  min-width:0;width:100%;height:36px!important;min-height:36px!important;
-  padding:6px 9px!important;line-height:20px!important;
-  font-size:12px;color:var(--ink);
-  background:var(--input);border:1px solid #444045!important;
-  border-radius:7px;box-sizing:border-box
-}
 #optimizer-form .env-enchant-grid select:disabled{
-  opacity:.82;color:#b1a9a5;background:#282830
+  opacity:.73;color:#aaa4a1;background:#2C2B30!important
 }
 #optimizer-form .env-enchant-grid>.env-enchant-wide{grid-column:span 2}
+/* Only the verification control is tinted; don't wrap the entire
+   section in a new bordered card or add a different button visual language. */
 #optimizer-form .env-variant-action{
   display:grid;gap:7px;align-items:start;
-  margin:11px 0 8px;padding:11px 13px;
-  background:#2b2926;border:1px solid #484039;
-  border-left:3px solid #bb9450;border-radius:8px
+  margin:8px 0 8px;padding:8px 0 5px;
+  background:transparent;border:0;
+  border-top:1px solid #554c43;border-radius:0
 }
 #optimizer-form .env-variant-action>.actions{
   display:flex;align-items:center;flex-wrap:wrap;margin:0
 }
 #optimizer-form .env-variant-action #user-variant-prepare-btn{
-  min-height:36px;border:1px solid #685435;
-  border-radius:7px;background:#373126;color:#e9c98a
+  min-height:33px;height:33px;
+  border:1px solid transparent!important;border-radius:5px!important;
+  box-shadow:none!important;background:#493c29!important;color:#f1d5a6!important;
+  padding:7px 12px!important;line-height:17px;font-size:11px;
 }
 #optimizer-form .env-variant-action #user-variant-prepare-btn:disabled{
-  opacity:.73;color:#b9ad9d;background:#302c28
+  opacity:.73;background:#383128!important;color:#cbb998!important
 }
 #optimizer-form .env-variant-action #user-variant-status{
   margin:0;color:#c4bdb1;line-height:1.6
@@ -1481,6 +1497,6 @@ body{background:#24252B;color:var(--ink)}
   }
   #optimizer-form .env-enchant-grid{gap:11px 9px}
   #optimizer-form .conditions-panel .env-input-grid select,
-  #optimizer-form .env-enchant-grid select{font-size:11px;padding:6px!important}
-  #optimizer-form .env-variant-action{padding:10px 11px}
+  #optimizer-form .env-enchant-grid select{font-size:11px!important}
+  #optimizer-form .env-variant-action{padding:8px 0 5px}
 }
