@@ -985,6 +985,19 @@ body{background:#24252B;color:var(--ink)}
   padding:14px 0 4px!important;max-width:1140px;margin-inline:auto
 }
 #view-settings .panel+.panel{margin-top:26px}
+#view-settings .season-remedy{
+  margin:8px 0 14px;padding:9px 0 12px;
+  background:transparent;max-width:850px;
+}
+#view-settings .season-remedy[hidden]{display:none!important}
+#view-settings .season-remedy strong{
+  color:#EED1A0;font-size:13px;line-height:1.5;display:block;
+  margin-bottom:5px
+}
+#view-settings .season-remedy .hint{
+  margin:0 0 10px;font-size:12px;line-height:1.65
+}
+#view-settings .season-remedy .btn{max-width:100%;text-align:left}
 #view-settings .simc-technical-panel>.two{margin:7px 14px 4px}
 #view-settings .simc-update-panel{margin-top:20px}
 #view-settings .simc-update-actions{margin:12px 14px 10px;justify-content:flex-start}
