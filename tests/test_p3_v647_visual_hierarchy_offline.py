@@ -137,7 +137,7 @@ const state={
   longrunCompleted:false,budgetPreviewDirty:false,longrunResultReady:false
 };
 let now=500000,tick=null,calls=0;
-const f=Function('state',','number','showEnvironmentBuild',
+const f=Function('state',String.fromCharCode(36),'number','showEnvironmentBuild',
   'longrunSavedResultDisplayable','buttonState','setInterval','clearInterval',
   'pollOnce','handlePollFailure','Date','refreshResultNavigation',
   'switchView','localStorage',functions+
