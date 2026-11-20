@@ -95,10 +95,13 @@ def parse_set_bonus(raw, build):
     except UnicodeError as exc:
         raise SimCSourceBlocked("V229_SET_SOURCE_NON_UTF8") from exc
     lines=text.splitlines()
+    # Keep malformed source separate from a verified header's wrong game build.
+    # The latter has an actionable, existing UI reason; never bypass either.
     need(len(lines)>=3 and (m:=SET_HEAD.fullmatch(lines[0])) is not None and
-         m.group(1)==build and
          (n:=SET_COUNT.search(lines[1])) is not None,
          "V229_SET_BONUS_BUILD_OR_HEADER_MISMATCH")
+    need(m.group(1)==build,
+         "V229_GENERATED_SIMC_COMPILED_BUILD_MISMATCH")
     declared=int(n.group(1))
     need(0<declared<=20000, "V229_SET_ROWS_UNSAFE")
     rows=[]
