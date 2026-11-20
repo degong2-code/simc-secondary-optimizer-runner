@@ -991,6 +991,10 @@ function syncOilUseToggle(){
   const box=$("optimizer-oil-enabled");
   if(!box)return;
   box.checked=oilUseIntent;
+  // v652: a human-readable dropdown is only a presentation for the existing
+  // boolean/O=0 contract; never invent an oil ID or a verified budget.
+  const selector=$("optimizer-oil-use-mode");
+  if(selector)selector.value=oilUseIntent?"use":"off";
   const verified=oilUseIntent?selectedFullVerifiedOil():null;
   $("optimizer-oil-toggle-status").textContent=!oilUseIntent?"미사용":
     verified?(oilNeedsOffhand()?"양쪽 무기 적용":"주무기 적용"):
@@ -2051,6 +2055,7 @@ function buttonState(active=false,ready=false) {
   const busy=state.busy;
   // Ignore overlapping flask changes while the exact install is rebinding.
   $("season-verified-flask").disabled=busy;
+  $("optimizer-oil-use-mode").disabled=busy||active;
   $("optimizer-oil-apply-btn").disabled=busy||active||!state.token||
     !field("optimizer-oil-loadout");
   $("plan-btn").disabled=busy||active||!state.token;
@@ -4153,7 +4158,7 @@ function registerHandlers() {
     "raid_buffs","food","potion","augmentation","diamond","omnium",
     "season-target-socket-count","season-existing-special-gem-id",
     "season-selected-flask-id","season-verified-flask",
-    "optimizer-oil-enabled","optimizer-oil-loadout",
+    "optimizer-oil-enabled","optimizer-oil-use-mode","optimizer-oil-loadout",
     "optimizer-oil-main-id","optimizer-oil-off-id","oil_main","oil_off",
     "season_enchant_finger1","season_enchant_finger2",
     "season_enchant_other",...["env-enchant-helm","env-enchant-neck","env-enchant-shoulders",
@@ -4182,6 +4187,16 @@ function registerHandlers() {
     ()=>withBusy(confirmSimcConnection));
   $("season-build-remedy-action").addEventListener("click",performSeasonBuildRecovery);
   $("optimizer-oil-enabled").addEventListener("change",()=>withBusy(applyOilUseToggle));
+  $("optimizer-oil-use-mode").addEventListener("change",()=>{
+    if(state.busy||state.running){syncOilUseToggle();return;}
+    const selection=$("optimizer-oil-use-mode").value;
+    if(selection!=="use"&&selection!=="off"){
+      syncOilUseToggle();return;
+    }
+    $("optimizer-oil-enabled").checked=selection==="use";
+    // Existing oil ownership/selection/installation checks remain authoritative.
+    withBusy(applyOilUseToggle);
+  });
   $("equipment-trinket-search").addEventListener("input",drawInlineEquipment);
   $("equipment-special-search").addEventListener("input",drawInlineEquipment);
   for(const launch of document.querySelectorAll("[data-equip-select]"))
