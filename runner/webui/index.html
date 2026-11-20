@@ -229,7 +229,6 @@
         <details class="fold" id="season-credentials-panel">
           <summary>내 Blizzard·Warcraft Logs API 인증정보 설정 (Windows · 선택)</summary>
           <p class="hint">본인에게 발급된 Client ID와 Client Secret을 Windows 자격 증명 관리자에만 보관합니다. 한 번 저장하면 이후 시즌 업데이트에서 재사용합니다. 기존 시즌·캐시 이용에는 인증이 필요하지 않습니다. 현재 시즌·레이드가 검증되지 않으면 키를 저장해도 READY로 처리하지 않습니다.</p>
-          <p class="hint" id="source-credentials-status" role="status" aria-live="polite">로컬 인증정보 상태 확인 중…</p>
           <div class="two">
             <div class="field"><label for="source-blizzard-id">Blizzard Client ID</label><input id="source-blizzard-id" type="password" autocomplete="new-password" spellcheck="false"></div>
             <div class="field"><label for="source-blizzard-secret">Blizzard Client Secret</label><input id="source-blizzard-secret" type="password" autocomplete="new-password" spellcheck="false"></div>
@@ -237,6 +236,8 @@
             <div class="field"><label for="source-wcl-secret">Warcraft Logs Client Secret</label><input id="source-wcl-secret" type="password" autocomplete="new-password" spellcheck="false"></div>
           </div>
           <div class="actions"><button type="button" class="btn secondary" id="source-credentials-save-btn" disabled>내 API 인증정보 저장</button><button type="button" class="btn secondary" id="source-credentials-clear-btn" disabled>저장된 인증정보 삭제</button></div>
+          <p class="hint" id="source-credentials-status" role="status" aria-live="polite">로컬 인증정보 상태 확인 중…</p>
+          <p class="hint">저장은 Windows 보안 저장소에 보관된 상태만 확인합니다. 실제 Blizzard·Warcraft Logs 계정 인증 및 해당 시즌 데이터 접근 권한은 환경 구축 때 별도로 확인됩니다.</p>
           <p class="hint">비밀키는 브라우저에 다시 표시하지 않습니다. 암호화 파일을 ZIP에 넣지 않고 Windows 계정별 보안 저장소를 사용합니다. 동일 Windows 계정의 다른 프로그램은 접근할 수 있으므로 신뢰하는 PC에서만 사용하세요.</p>
         </details>
         <details class="fold season-setup-details" id="season-setup-details"><summary>시즌 변경·원본 검증 상세 설정 (고급)</summary>
@@ -270,7 +271,10 @@
 <section class="panel simc-settings-panel" aria-labelledby="simc-settings-title">
  <div class="section-head"><div><p class="eyebrow">시뮬레이터</p><h2 id="simc-settings-title">SimulationCraft 설정</h2></div></div>
  <details class="fold simc-technical-panel" id="simc-technical-panel"><summary>SimulationCraft 연결 및 업데이트 <small>처음 사용하거나 버전을 바꿀 때</small></summary><div class="field"><label for="binary">simc.exe 경로 <small>실행 파일은 서버로 업로드하지 않습니다</small></label><input id="binary" placeholder="C:\SimC\simc.exe" required spellcheck="false"></div>
-            <div class="two"><div class="field"><label for="revision">SimC Git revision</label><input id="revision" required pattern="[a-fA-F0-9]{7,40}" placeholder="7bc1071" spellcheck="false"></div><div class="field"><label for="static_cache">정적 캐시 JSON 경로 <small>고급 · 선택</small></label><input id="static_cache" spellcheck="false" placeholder="기본 로컬 정적 캐시가 있으면 자동 사용"></div></div>
+            <div class="two"><div class="field"><label for="revision">SimC Git revision</label><input id="revision" required pattern="[a-fA-F0-9]{7,12}|[a-fA-F0-9]{40}" placeholder="예: 9933ffb" spellcheck="false"></div><div class="field"><label for="static_cache">정적 캐시 JSON 경로 <small>고급 · 선택</small></label><input id="static_cache" spellcheck="false" placeholder="기본 로컬 정적 캐시가 있으면 자동 사용"></div></div>
+            <div class="actions simc-connection-actions"><button type="button" id="simc-connection-confirm-btn" class="btn primary">SimC 연결 확인·저장</button></div>
+            <p id="simc-connection-status" class="hint" role="status" aria-live="polite">경로와 Git revision을 입력한 뒤 확인·저장하세요. SimC를 짧게 한 번 실행해 기동을 확인하며 DPS 계산은 하지 않습니다.</p>
+            <p class="hint">수동 입력한 Git revision은 실행파일만으로 자동 인증되지 않을 수 있습니다. 내장 게임 데이터 빌드가 표시되더라도 현재 WoW 빌드와의 호환성은 시즌 구축에서 별도 검증합니다.</p>
             <details class="fold simc-update-panel" id="simc-update-panel"><summary><span>설정 · SimulationCraft 관리</span><small>사용자 승인 후에만 다운로드·설치</small></summary>
               <p class="hint">공식 Windows x64 nightly만 사용합니다. 현재 지정한 simc.exe는 덮어쓰지 않고, 앱 전용 폴더에 새 버전을 보관합니다. 버전 변경은 시즌 DB 재조사를 자동 실행하지 않습니다.</p>
               <p class="hint" id="simc-update-status" role="status" aria-live="polite">관리 중인 SimC 조회 전 · 기존 직접 지정 경로도 계속 사용할 수 있습니다.</p>
