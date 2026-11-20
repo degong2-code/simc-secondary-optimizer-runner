@@ -1372,3 +1372,115 @@ body{background:#24252B;color:var(--ink)}
     grid-column:1/-1!important
   }
 }
+
+/* v652 — Unified four-column input controls and muted verification action.
+   The original v647 visual contract stays above for exact rollback. */
+#optimizer-form .conditions-panel .env-input-grid{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:13px 13px;align-items:start
+}
+#optimizer-form .conditions-panel .env-input-grid>.env-grid-cell,
+#optimizer-form .conditions-panel .env-input-grid>.env-grid-cell:nth-child(n+5):nth-child(-n+7){
+  grid-column:span 1!important;min-width:0
+}
+#optimizer-form .conditions-panel .env-input-grid>.env-omnium{
+  grid-column:1/-1!important
+}
+#optimizer-form .conditions-panel .env-input-grid>.env-grid-cell>.field,
+#optimizer-form .conditions-panel .env-input-grid #season-gem-layout>.field{
+  display:grid!important;grid-template-rows:18px 36px;gap:4px;
+  min-width:0;margin:0!important;align-content:start
+}
+#optimizer-form .conditions-panel .env-input-grid .field>label{
+  font-size:11px;line-height:18px;min-height:18px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+#optimizer-form .conditions-panel .env-input-grid input:not([type=checkbox]),
+#optimizer-form .conditions-panel .env-input-grid select,
+#optimizer-form .conditions-panel .env-input-grid .env-auto-value{
+  width:100%;min-width:0;height:36px!important;min-height:36px!important;
+  padding:6px 9px!important;line-height:20px!important;
+  background:var(--input);border:1px solid #444045!important;
+  border-radius:7px;color:var(--ink);
+  font-size:12px;box-sizing:border-box
+}
+#optimizer-form .conditions-panel .env-input-grid input:not([type=checkbox]):focus,
+#optimizer-form .conditions-panel .env-input-grid select:focus{
+  border-color:var(--accent)!important
+}
+#optimizer-form #optimizer-oil-enabled[hidden]{display:none!important}
+#optimizer-form .conditions-panel #optimizer-oil-toggle-status{
+  display:block;grid-row:3;font-size:10px;line-height:1.4;
+  min-height:0;margin:0;color:var(--muted)
+}
+#optimizer-form .conditions-panel #season-verified-flask-status[hidden],
+#optimizer-form .conditions-panel #env-flask-summary[hidden]{display:none!important}
+#optimizer-form .conditions-panel .env-bottom-row{
+  display:flex;align-items:center;justify-content:flex-start;
+  min-height:39px;margin:0;padding:5px 0 10px;border-top:0
+}
+#optimizer-form .conditions-panel .env-bottom-row>.check-row{
+  min-height:28px;margin:0
+}
+#optimizer-form .env-enchant-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:13px 13px;align-items:start;margin:7px 0 10px
+}
+#optimizer-form .env-enchant-grid>.field{
+  display:grid;grid-template-rows:18px 36px;
+  gap:4px;min-width:0;margin:0!important
+}
+#optimizer-form .env-enchant-grid .field>label{
+  font-size:11px;line-height:18px;min-height:18px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+#optimizer-form .env-enchant-grid select{
+  min-width:0;width:100%;height:36px!important;min-height:36px!important;
+  padding:6px 9px!important;line-height:20px!important;
+  font-size:12px;color:var(--ink);
+  background:var(--input);border:1px solid #444045!important;
+  border-radius:7px;box-sizing:border-box
+}
+#optimizer-form .env-enchant-grid select:disabled{
+  opacity:.82;color:#b1a9a5;background:#282830
+}
+#optimizer-form .env-enchant-grid>.env-enchant-wide{grid-column:span 2}
+#optimizer-form .env-variant-action{
+  display:grid;gap:7px;align-items:start;
+  margin:11px 0 8px;padding:11px 13px;
+  background:#2b2926;border:1px solid #484039;
+  border-left:3px solid #bb9450;border-radius:8px
+}
+#optimizer-form .env-variant-action>.actions{
+  display:flex;align-items:center;flex-wrap:wrap;margin:0
+}
+#optimizer-form .env-variant-action #user-variant-prepare-btn{
+  min-height:36px;border:1px solid #685435;
+  border-radius:7px;background:#373126;color:#e9c98a
+}
+#optimizer-form .env-variant-action #user-variant-prepare-btn:disabled{
+  opacity:.73;color:#b9ad9d;background:#302c28
+}
+#optimizer-form .env-variant-action #user-variant-status{
+  margin:0;color:#c4bdb1;line-height:1.6
+}
+@media(max-width:880px){
+  #optimizer-form .conditions-panel .env-input-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))
+  }
+  #optimizer-form .env-enchant-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))
+  }
+  #optimizer-form .env-enchant-grid>.env-enchant-wide{
+    grid-column:span 1
+  }
+}
+@media(max-width:480px){
+  #optimizer-form .conditions-panel .env-input-grid{
+    gap:11px 9px;grid-template-columns:repeat(2,minmax(0,1fr))
+  }
+  #optimizer-form .env-enchant-grid{gap:11px 9px}
+  #optimizer-form .conditions-panel .env-input-grid select,
+  #optimizer-form .env-enchant-grid select{font-size:11px;padding:6px!important}
+  #optimizer-form .env-variant-action{padding:10px 11px}
+}
