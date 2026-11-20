@@ -2270,13 +2270,24 @@ function seasonBuildRecoveryPlan(data,errorCode=null) {
     action:"simc",button:"SimC 경로·revision 확인하기"
   };
   if(resolution.status==="SIMC_SOURCE_COMMIT_RESOLUTION_PENDING"||
-     source.status==="SIMC_FIRST_PARTY_SOURCE_COLLECTION_PENDING")return {
-    kind:"simc-source",title:"SimC 공식 원본 조회·검증 단계에서 중단됐습니다.",
-    detail:"요청한 SimC Git revision의 공식 원본을 읽지 못했습니다"+
-      (safe(first)?" ("+safe(first)+")":"")+". GitHub 접속·revision 및 내장 게임 데이터 빌드를 확인하세요. "+
-      "실제 불일치 코드가 없으면 버전 불일치라고 단정하지 않습니다.",
-    action:"simc",button:"SimC 연결 상태 확인하기"
-  };
+     source.status==="SIMC_FIRST_PARTY_SOURCE_COLLECTION_PENDING"){
+    const setBonusHeaderIssue=codes.includes("V229_SET_BONUS_BUILD_OR_HEADER_MISMATCH");
+    return {
+      kind:"simc-source",
+      title:setBonusHeaderIssue?
+        "SimC 세트 효과 원본의 빌드 정보를 확인하지 못했습니다.":
+        "SimC 공식 원본 일부를 확인하지 못했습니다.",
+      detail:(setBonusHeaderIssue?
+        "세트 효과 데이터의 빌드 정보 또는 원본 헤더 검증이 중단됐습니다. "+
+        "게임 빌드 불일치가 확정된 것은 아닙니다. ":
+        "요청한 SimC Git revision의 공식 원본을 확인하는 중 문제가 발생했습니다. ")+
+        "먼저 SimC 연결 상태와 Git revision을 확인하세요. "+
+        "원본 접근이나 헤더 문제라면 올바른 버전을 설치해도 해결되지 않을 수 있습니다. "+
+        "그 경우 아래 진단 영수증으로 원본 수집 단계를 확인해야 합니다."+
+        (safe(first)?" · 기술 진단: "+safe(first):""),
+      action:"simc",button:"SimC 연결 상태 확인하기"
+    };
+  }
   if(codes.includes("V216_FRESH_WAGO_SOURCE_FETCH_UNAVAILABLE")||
      codes.includes("V216_FRESH_WAGO_SOURCE_TIMEOUT"))return {
     kind:"network",title:"시즌 DB2 원본 수집 중 네트워크 오류가 발생했습니다.",
