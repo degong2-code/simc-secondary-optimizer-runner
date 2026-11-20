@@ -3726,12 +3726,19 @@ async function refreshSimcUpdater(preferManaged=false) {
   return status;
 }
 async function checkSimcUpdater() {
+  const button=$("simc-check-btn");
+  const line=$("simc-update-candidate");
   simcOffer=null;
   $("simc-install-btn").disabled=true;
-  const result=await api("/api/v1/simc-updates/check",
-     {method:"POST",payload:{}});
-  simcOffer=result.candidate?.filename||null;
-  const line=$("simc-update-candidate");
+  // Upstream nightly and fallback metadata can take time. Show feedback
+  // next to the control *before* awaiting HTTP, not only in the page notice.
+  button.disabled=true;
+  button.textContent="공식 업데이트 조회 중…";
+  line.textContent="SimC 공식 배포 목록 확인 중입니다. 서버 연결 상태에 따라 시간이 걸릴 수 있습니다.";
+  try {
+    const result=await api("/api/v1/simc-updates/check",
+      {method:"POST",payload:{}});
+    simcOffer=result.candidate?.filename||null;
   if(simcOffer) {
     line.textContent="공식 Windows x64 후보: "+simcOffer+
       " · revision "+result.candidate.revision_short+
@@ -3768,7 +3775,15 @@ async function checkSimcUpdater() {
         " · Windows x64 artifact에서 .7z를 찾아 아래에서 설치하세요."));
     }
   }
-  $("simc-install-btn").disabled=!simcOffer||!result.archive_extractor_available;
+    $("simc-install-btn").disabled=!simcOffer||!result.archive_extractor_available;
+  }catch(err){
+    line.textContent="공식 업데이트 조회 실패 ("+err.message+
+      "). 인터넷·로컬 서버를 확인하거나 아래 공식 .7z 수동 설치 경로를 이용하세요.";
+    throw err;
+  }finally{
+    button.disabled=false;
+    button.textContent="공식 업데이트 확인";
+  }
 }
 async function installSimcUpdater() {
   if(!simcOffer)throw Error("먼저 공식 업데이트를 확인해 주세요.");
@@ -3931,7 +3946,15 @@ function registerHandlers() {
   for(const group of ["special-rows","crafted-rows"])
     $(group).addEventListener("change",updateBudgetPreview);
 
-  $("simc-check-btn").addEventListener("click",()=>withBusy(checkSimcUpdater));
+  $("simc-check-btn").addEventListener("click",()=>{
+    // withBusy otherwise silently drops a click while another operation runs.
+    if(state.busy){
+      $("simc-update-candidate").textContent=
+        "다른 요청을 처리 중입니다. 완료된 뒤 공식 업데이트 확인을 다시 눌러주세요.";
+      return;
+    }
+    return withBusy(checkSimcUpdater);
+  });
   $("simc-install-btn").addEventListener("click",()=>withBusy(installSimcUpdater));
   $("simc-install-local-btn").addEventListener("click",()=>withBusy(installLocalSimcUpdater));
   $("simc-rollback-btn").addEventListener("click",()=>withBusy(rollbackSimcUpdater));
