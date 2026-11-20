@@ -501,7 +501,10 @@ const apply=Function("state","$","field","valueInt",
         self.assertIn('selector.disabled=true;',js)
         self.assertIn('selector.disabled=false;',js)
         self.assertIn('--bg:#24252B',css)
-        self.assertIn('border:0!important;border-bottom:1px solid #504A44!important',css)
+        # v647 user-approved editorial style: preserve main section rules,
+        # remove repeated fold/gear-row underlines, not their DOM controls.
+        self.assertIn('#optimizer-form .section-head{border:0;border-bottom:1px solid #5D554D;',css)
+        self.assertIn('#optimizer-form .condition-group,#optimizer-form .gear-row{\\n border:0!important',css)
         self.assertIn('gear-section gear-trinkets',gear)
         self.assertIn('gear-section gear-special',gear)
         self.assertIn('gear-section gear-embellishments',gear)
