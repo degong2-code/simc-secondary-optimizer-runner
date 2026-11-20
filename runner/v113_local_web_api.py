@@ -2780,9 +2780,13 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
     async def redact_source_credential_validation(request: Request, exc):
         # FastAPI's normal validation body includes a copy of the submitted
         # input. Never echo any part of Client ID/Secret on this one route.
-        if request.url.path=="/api/v1/source-credentials/save":
+        if request.url.path in ("/api/v1/source-credentials/save",
+                                "/api/v1/simc-connection/confirm"):
+            code=("SOURCE_API_CREDENTIAL_FIELDS_INVALID"
+                  if request.url.path.endswith("source-credentials/save")
+                  else "SIMC_CONNECTION_INPUTS_INVALID")
             return JSONResponse(
-                {"detail":{"code":"SOURCE_API_CREDENTIAL_FIELDS_INVALID"}},
+                {"detail":{"code":code}},
                 status_code=422)
         return await request_validation_exception_handler(request,exc)
 

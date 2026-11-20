@@ -119,8 +119,13 @@ class LocalSimCConnectionPrefs:
                  "SIMC_CONNECTION_REVISION_MISMATCH")
         builds=BUILD.findall(output)
         observed=builds[0] if builds else None
-        identity=("MANAGED_SHA_AND_REVISION_VERIFIED" if controlled else
-                  "SIMC_CLI_PRINTED_REVISION_VERIFIED" if embedded else
+        identity=("SIMC_CLI_PRINTED_REVISION_VERIFIED" if embedded else
+                  "MANAGED_OFFICIAL_FILENAME_SHA_ONLY"
+                  if controlled and isinstance(managed,dict)
+                  and (managed.get("installed") or {}).get("archive_source")==
+                      "OFFICIAL_HTTPS_NIGHTLY" else
+                  "MANAGED_LOCAL_ARCHIVE_REVISION_NOT_ATTESTED"
+                  if controlled else
                   "USER_ENTERED_REVISION_NOT_ATTESTED")
         doc={"schema":SCHEMA,"binary":str(p),"revision":revision,
              "static_cache":static_cache,"binary_sha256":actual_sha,

@@ -83,7 +83,7 @@ class SimCConnectionPrefs(unittest.TestCase):
         okay=self.store.confirm(binary=str(self.exe),revision="9933ffb",
                                 managed=managed,run=lambda *a,**kw:self._run())
         self.assertEqual(okay["saved"]["revision_identity"],
-                         "MANAGED_SHA_AND_REVISION_VERIFIED")
+                         "MANAGED_LOCAL_ARCHIVE_REVISION_NOT_ATTESTED")
         with self.assertRaisesRegex(prefs.SimCConnectionBlocked,
                                     "SIMC_CONNECTION_MANAGED_REVISION_MISMATCH"):
             self.store.confirm(binary=str(self.exe),revision="7bc1071",
@@ -105,6 +105,11 @@ class SimCConnectionPrefs(unittest.TestCase):
         self.assertEqual(client.post(route,json=payload,
                         headers=h|{"origin":"http://evil.local"}).status_code,403)
         self.assertFalse((self.root/"simc-user-connection.json").exists())
+        malformed=client.post(route,json={"binary":str(self.exe),
+                    "revision":"secret-value-should-not-echo",
+                    "static_cache":""},headers=h)
+        self.assertEqual(malformed.status_code,422)
+        self.assertNotIn("secret-value-should-not-echo",malformed.text)
         self.assertIsNone(client.get("/api/v1/simc-connection/status",
                                     headers=h).json()["saved"])
         job=mock.Mock();job.poll.return_value=None

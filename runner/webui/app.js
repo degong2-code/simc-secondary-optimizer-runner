@@ -3711,9 +3711,9 @@ function displaySimcConnectionReceipt(result,restored=false) {
   const game=saved.observed_game_build?
     " · SimC 출력 게임 데이터 빌드 "+saved.observed_game_build:
     " · 내장 게임 빌드는 출력에서 판독되지 않음";
-  const revisionVerified=saved.revision_identity==="USER_ENTERED_REVISION_NOT_ATTESTED"?
-    " · Git revision은 사용자 입력값(자동 인증 불가)":
-    " · Git revision 출처 확인";
+  const revisionVerified=saved.revision_identity==="SIMC_CLI_PRINTED_REVISION_VERIFIED"?
+    " · CLI가 출력한 Git revision과 입력값 일치":
+    " · Git revision은 입력값·파일명 확인 수준(독립 인증 아님)";
   line.textContent=(restored?
     "저장된 SimC 설정을 불러왔습니다. 현재 실행파일의 재검증은 아직 수행하지 않았습니다.":
     "SimC CLI 기동 확인 및 설정 저장 완료 (DPS 계산 0회).")+
