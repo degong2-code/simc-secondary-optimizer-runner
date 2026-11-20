@@ -117,6 +117,8 @@ class EnvironmentGridV652(unittest.TestCase):
         self.assertIn('grid-template-columns:repeat(4,minmax(0,1fr))',css)
         self.assertIn('#optimizer-form .conditions-panel #season-gem-layout,',css)
         self.assertIn('#optimizer-form .conditions-panel #season-gem-layout>.field{',css)
+        self.assertIn('grid-template-columns:minmax(0,1fr)!important',css)
+        self.assertIn('justify-content:stretch!important;justify-items:stretch!important',css)
         self.assertIn('justify-self:stretch;align-self:end',css)
         self.assertIn('background:transparent;border:0;',css)
         self.assertNotIn('background:var(--input);border:1px solid #444045!important',css)
