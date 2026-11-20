@@ -2174,6 +2174,15 @@ function compactSeasonBuildReceipt(data,forUserVariant=false) {
     season_join_status:cleanCode(data?.season_join?.status),
     source_stage_status:cleanCode(progress.source_stage_status||
       data?.source_stage?.status),
+    simc_source_status:cleanCode(data?.fresh_pinned_first_party_simc_source?.status),
+    simc_source_reason:cleanCode(data?.fresh_pinned_first_party_simc_source?.reason),
+    simc_revision_resolution_status:cleanCode(
+      data?.fresh_pinned_simc_commit_resolution?.status),
+    simc_revision_resolution_reason:cleanCode(
+      data?.fresh_pinned_simc_commit_resolution?.reason),
+    simc_classification_status:cleanCode(data?.fresh_pinned_v211_source?.status),
+    simc_classification_reason:cleanCode(data?.fresh_pinned_v211_source?.reason),
+    recovery_kind:seasonBuildRecoveryPlan(data)?.kind||null,
     compiler_status:cleanCode(source.status||progress.source_compilation_status),
     compiler_missing:codes(source.missing??progress.source_compilation_missing),
     compiler_missing_existing_producers:compilerMissingOwners,
@@ -2208,6 +2217,127 @@ async function copySeasonBuildDiagnostic() {
   }
 }
 
+// Only existing v216/v229 source evidence decides the root cause.
+// A dependent compiler PENDING row is not an instruction to install 8 files.
+function seasonBuildRecoveryPlan(data,errorCode=null) {
+  const safe=x=>typeof x==="string"&&/^[A-Z][A-Z0-9_]{0,119}$/.test(x)?x:null;
+  const scope=data?.web_environment_scope||{};
+  const expected=/^\d+(?:\.\d+){3}$/.test(scope.game_build||"")?
+    scope.game_build:null;
+  const source=data?.fresh_pinned_first_party_simc_source||{};
+  const resolution=data?.fresh_pinned_simc_commit_resolution||{};
+  const compiler=data?.source_compilation||{};
+  const discovery=data?.season_discovery||{};
+  const joined=data?.season_join||{};
+  const first=source.reason||resolution.reason||
+    data?.fresh_pinned_v211_source?.reason;
+  const codes=[safe(errorCode),safe(source.reason),safe(resolution.reason),
+    safe(data?.fresh_pinned_v211_source?.reason)].filter(Boolean);
+  const mismatches=new Set([
+    "V229_GENERATED_SIMC_COMPILED_BUILD_MISMATCH",
+    "V229_SET_BONUS_BUILD_OR_HEADER_MISMATCH",
+    "V229_ITEM_DATA_BUILT_FOR_DIFFERENT_GAME_BUILD"
+  ]);
+  if(codes.some(x=>mismatches.has(x)))return {
+    kind:"simc",title:"SimC 원본의 게임 빌드가 요청 빌드와 다릅니다.",
+    detail:"대상 "+(expected||"현재 KR Retail")+" 빌드에 맞지 않는 SimC 생성 원본이 발견됐습니다. "+
+      "SimC Git revision과 실제 내장 데이터 빌드를 확인하세요. "+
+      "GitHub 대체 Nightly는 최신/호환 버전임이 검증되지 않았습니다. "+
+      "올바른 공식 실행파일·revision을 확인하고 저장한 다음 시즌 환경을 다시 구축하세요.",
+    action:"simc",button:"SimC 경로·revision 확인하기"
+  };
+  if(codes.includes("RETAIL_VERSION_LIVE_SOURCE_UNAVAILABLE")||
+     codes.some(x=>x.startsWith("RETAIL_VERSION_")))return {
+    kind:"network",title:"현재 KR Retail 빌드를 공식 서버에서 확인하지 못했습니다.",
+    detail:"Blizzard 공개 버전 조회가 실패했습니다. 네트워크·HTTPS 인증서를 점검하고 다시 시도하세요. "+
+      "임의의 과거 빌드를 현재 빌드로 대체하지 않습니다.",
+    action:"retry",button:"공식 빌드 다시 확인"
+  };
+  if(discovery.status==="AUTHENTICATED_SEASON_CREDENTIALS_MISSING"||
+     codes.includes("MYTH_TARGET_AUTHENTICATED_SOURCE_CREDENTIALS_UNAVAILABLE")||
+     (joined.status==="AUTHENTICATED_SEASON_JOIN_NOT_READY"&&
+      discovery.status==="AUTHENTICATED_SEASON_CREDENTIALS_MISSING"))return {
+    kind:"credentials",title:"활성 시즌·레이드 정보를 조회할 인증정보가 없습니다.",
+    detail:"Blizzard 및 Warcraft Logs API 키를 Windows 보안 저장소에 저장한 뒤 재시도하세요. "+
+      "저장 성공은 API 접근 권한 검증과 다르며, 최신 시즌 원본이 아직 준비되지 않았을 수도 있습니다.",
+    action:"credentials",button:"API 인증정보 설정 열기"
+  };
+  if(source.status==="SIMC_PINNED_REVISION_NOT_AVAILABLE_PENDING"||
+     resolution.status==="SIMC_SOURCE_COMMIT_NOT_YET_RESOLVABLE_PENDING"||
+     codes.includes("V216_SOURCE_REVISION_HINT_INVALID"))return {
+    kind:"simc",title:"SimC 원본을 고정할 Git revision이 확인되지 않았습니다.",
+    detail:"실행파일 경로와 정확한 Git revision을 입력하고 ‘SimC 연결 확인·저장’을 누르세요. "+
+      "저장된 revision은 자동으로 게임 빌드와 일치한다고 인증되는 값이 아닙니다.",
+    action:"simc",button:"SimC 경로·revision 확인하기"
+  };
+  if(resolution.status==="SIMC_SOURCE_COMMIT_RESOLUTION_PENDING"||
+     source.status==="SIMC_FIRST_PARTY_SOURCE_COLLECTION_PENDING")return {
+    kind:"simc-source",title:"SimC 공식 원본 조회·검증 단계에서 중단됐습니다.",
+    detail:"요청한 SimC Git revision의 공식 원본을 읽지 못했습니다"+
+      (safe(first)?" ("+safe(first)+")":"")+". GitHub 접속·revision 및 내장 게임 데이터 빌드를 확인하세요. "+
+      "실제 불일치 코드가 없으면 버전 불일치라고 단정하지 않습니다.",
+    action:"simc",button:"SimC 연결 상태 확인하기"
+  };
+  if(codes.includes("V216_FRESH_WAGO_SOURCE_FETCH_UNAVAILABLE")||
+     codes.includes("V216_FRESH_WAGO_SOURCE_TIMEOUT"))return {
+    kind:"network",title:"시즌 DB2 원본 수집 중 네트워크 오류가 발생했습니다.",
+    detail:"Wago 원본 조회가 실패했습니다. 연결 상태와 응답을 확인한 뒤 재시도하세요. "+
+      "이미 검증된 같은 시즌 원본은 그대로 유지됩니다.",
+    action:"retry",button:"시즌 원본 다시 확인"
+  };
+  if(errorCode==="V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA")
+    return {kind:"selection",title:"선택해야 할 검증 영약·보석 예산이 여러 개입니다.",
+    detail:"자동으로 하나를 고르지 않았습니다. 최적화 화면에서 영약 구성을 선택하고 "+
+      "‘선택 환경 검증·준비’를 실행하세요.",
+    action:"optimizer",button:"영약 선택 화면 열기"};
+  const absent=Array.isArray(compiler.missing)?compiler.missing:[];
+  if(absent.length)return {
+    kind:"source",title:"시즌 원본 입력 "+absent.length+"종이 아직 확보되지 않았습니다.",
+    detail:"후속 PENDING은 연쇄 진단이며 각각의 사용자 입력 오류가 아닙니다. "+
+      "현재 보고서만으로 최초 실패가 버전·권한·원본 공개 지연 중 무엇인지는 확정되지 않았습니다. "+
+      "진단 영수증에서 최초 원본 상태를 확인해 주세요.",
+    action:"diagnostic",button:"첫 원인 진단 영수증 복사"
+  };
+  if(errorCode||data)return {
+    kind:"unknown",title:"환경 구축을 완료하지 못했습니다. 원인 확인이 필요합니다.",
+    detail:"확인된 첫 실패 코드가 없으므로 특정 버전 변경이나 재설치를 지시하지 않습니다. "+
+      "진단 영수증에 포함된 상태를 확인하고 필요한 원본만 보완해야 합니다.",
+    action:"diagnostic",button:"진단 영수증 복사"
+  };
+  return null;
+}
+let seasonBuildRemedyAction="diagnostic";
+function displaySeasonBuildRecovery(plan) {
+  const node=$("season-build-remedy");
+  node.hidden=!plan;
+  seasonBuildRemedyAction=plan?.action||"diagnostic";
+  if(!plan)return;
+  $("season-build-remedy-title").textContent=plan.title;
+  $("season-build-remedy-detail").textContent=plan.detail;
+  $("season-build-remedy-action").textContent=plan.button;
+}
+function performSeasonBuildRecovery() {
+  if(seasonBuildRemedyAction==="simc"){
+    switchView("settings");
+    $("simc-technical-panel").open=true;
+    $("simc-update-panel").open=true;
+    $("revision").focus();
+  }else if(seasonBuildRemedyAction==="credentials"){
+    switchView("settings");
+    $("season-credentials-panel").open=true;
+    $("source-credentials-status").scrollIntoView({block:"center"});
+    $("source-blizzard-id").focus();
+  }else if(seasonBuildRemedyAction==="optimizer"){
+    switchView("optimizer");
+    $("season-verified-flask").focus();
+  }else if(seasonBuildRemedyAction==="retry"){
+    $("season-build-btn").focus();
+    // User explicitly clicks the original build button to retry; no
+    // duplicate source/API/Native work is silently started by the hint.
+  }else{
+    copySeasonBuildDiagnostic();
+  }
+}
 function diagnoseSeasonBuildEvidence(data) {
   // UI-only, read-only classification. v212/v216 own ALL real admission.
   // A sealed DB2/WCL content-candidate join is NOT evidence that every loot
@@ -2329,6 +2459,7 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
   }
   if(!ready&&diagnosed.compilerMissingCount>0)
     headline.textContent+=" 미완료 코드는 연쇄 진단이며, 사용자에게 각각 입력을 요구하는 항목이 아닙니다. 현재 게임 빌드의 원본·SimC 출처 검증이 먼저 필요합니다.";
+  displaySeasonBuildRecovery(ready?null:seasonBuildRecoveryPlan(data));
   if(data?.status==="VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED"&&ready){
     node.textContent="기존 검증 시즌 환경 재사용 완료 · 저장된 원본 빌드 "+
       data.installed_source_game_build+
@@ -2715,6 +2846,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   if(forUserVariant) $("user-variant-status").textContent=
     "선택한 개별 구성의 시즌 원본·J/F/O 예산 재검증 요청 중…";
   lastSeasonDiagnosticReceipt=null;
+  displaySeasonBuildRecovery(null);
   $("season-diagnostic-copy-btn").disabled=true;
   $("season-build-pending").hidden=true;
   $("season-build-summary").textContent="검증 진행 중 · 결과 미확정 (READY 아님)";
@@ -2748,6 +2880,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       installSeasonGearHints(null);
       renderSeasonOptionCatalog(null);
       updateBudgetPreview();
+      displaySeasonBuildRecovery(null);
       $("season-build-summary").textContent=
         "요청 중 시즌·레벨·보석·영약·기름 설정이 변경되었습니다. "+
         "이전 조건의 구축 응답은 진단 영수증으로만 보존하며 현재 구성의 준비 완료로 인정하지 않습니다.";
@@ -2893,6 +3026,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       "요청 차단 또는 오류 · 실행 완료가 아닙니다. 오류 코드를 확인하세요.";
     $("season-build-stage").textContent="시즌 환경 구축 단계 차단/오류 · "+err.message+
       " · 기존 영수증은 보존됩니다.";
+    displaySeasonBuildRecovery(seasonBuildRecoveryPlan(null,safeError));
     throw err;
   } finally {
     stopSeasonActivity();
@@ -3829,6 +3963,7 @@ async function checkSimcUpdater() {
   if(simcOffer) {
     line.textContent="공식 Windows x64 후보: "+simcOffer+
       " · revision "+result.candidate.revision_short+
+      " · 현재 KR Retail 게임 데이터 빌드와의 일치는 별도 확인이 필요합니다."+
       (result.archive_extractor_available?"":" · 설치에는 7-Zip 필요");
   }else{
     const reasons={
@@ -3848,10 +3983,12 @@ async function checkSimcUpdater() {
       const link=document.createElement("a");
       link.href=alt.artifact_zip_url;
       link.target="_blank";link.rel="noopener noreferrer";
-      link.textContent="SimC 공식 GitHub Windows nightly 받기";
+      link.textContent="GitHub Windows nightly 기록(최신/빌드 일치 미검증)";
       line.appendChild(link);
       line.appendChild(document.createTextNode(
-        " · GitHub 로그인이 필요할 수 있습니다. 받은 artifact ZIP에서 .7z를 꺼낸 뒤 아래 '내 PC의 .7z 파일 설치'를 사용하세요."));
+        " · 배포 기록 "+(/^(?:20\\d{2})-\\d{2}-\\d{2}$/.test(String(alt.created_at||"").slice(0,10))?
+          String(alt.created_at).slice(0,10):"날짜 미확정")+
+        " · GitHub 로그인이 필요할 수 있습니다. 이전 빌드일 수 있으므로 다운로드한 파일의 내장 게임 데이터 빌드를 먼저 확인하세요. artifact ZIP에서 .7z를 꺼내 수동 설치할 수 있습니다."));
     }else{
       const link=document.createElement("a");
       link.href="https://github.com/simulationcraft/simc-publish/actions";
@@ -4007,6 +4144,7 @@ function registerHandlers() {
     });
   $("simc-connection-confirm-btn").addEventListener("click",
     ()=>withBusy(confirmSimcConnection));
+  $("season-build-remedy-action").addEventListener("click",performSeasonBuildRecovery);
   $("optimizer-oil-enabled").addEventListener("change",()=>withBusy(applyOilUseToggle));
   $("equipment-trinket-search").addEventListener("input",drawInlineEquipment);
   $("equipment-special-search").addEventListener("input",drawInlineEquipment);
