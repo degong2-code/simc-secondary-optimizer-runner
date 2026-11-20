@@ -107,5 +107,92 @@ assert.equal(element.textContent,'조회 정상');
         self.assertEqual(result.returncode,0,result.stderr)
 
 
+    def test_v649_passive_polling_cadence_keeps_native_and_restore_live(self):
+        """Execute actual JS: idle GETs are throttled, active work is not."""
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node not installed")
+        script=r"""
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const source=fs.readFileSync(process.argv[1],'utf8');
+function cut(a,b){
+  const i=source.indexOf(a),j=source.indexOf(b,i);
+  assert(i>=0&&j>i,'source function missing '+a);
+  return source.slice(i,j);
+}
+const functions=
+  cut('function renderProgress(data) {','\nfunction renderResult(payload) {')+
+  '\n'+cut('function beginPolling() {','\nasync function loadRecentSessions() {')+
+  '\n'+cut('function markSession(id) {','\nfunction buttonState(');
+const nodes=new Map();
+function $(id){
+  if(!nodes.has(id))nodes.set(id,{
+    value:'',hidden:false,textContent:'',style:{},options:[{value:''}]
+  });
+  return nodes.get(id);
+}
+const state={
+  session:'a'.repeat(20),running:false,busy:false,pollBusy:false,
+  pollTimer:null,pollFailures:0,nextPollAt:0,nextPassivePollAt:0,
+  longrunCompleted:false,budgetPreviewDirty:false,longrunResultReady:false
+};
+let now=500000,tick=null,calls=0;
+const f=Function('state',','number','showEnvironmentBuild',
+  'longrunSavedResultDisplayable','buttonState','setInterval','clearInterval',
+  'pollOnce','handlePollFailure','Date','refreshResultNavigation',
+  'switchView','localStorage',functions+
+  '\nreturn {renderProgress,beginPolling,markSession};');
+const x=f(state,$,v=>String(v),()=>{},()=>false,
+  active=>{state.running=active},
+  callback=>{tick=callback;return 1},()=>{},
+  ()=>{calls++;return Promise.resolve()},()=>{},
+  {now:()=>now},()=>{},()=>{},{setItem(){}});
+const report=(active,status)=>({
+  enabled:true,active,result_ready:false,
+  progress:{completed_jobs:3,planned_jobs:64,
+            progress_percent:4.6875,worker:{status}}
+});
+const flush=()=>new Promise(done=>setImmediate(done));
+(async()=>{
+  x.renderProgress(report(false,'PAUSED_USER_CANCEL'));
+  assert.equal(state.nextPassivePollAt,now+15000);
+  x.beginPolling();
+  tick();assert.equal(calls,0);
+  now+=14999;tick();assert.equal(calls,0);
+  now++;tick();assert.equal(calls,1);
+  await flush();
+  x.renderProgress(report(true,'RUNNING'));
+  assert.equal(state.nextPassivePollAt,0);
+  now+=1400;tick();assert.equal(calls,2);
+  await flush();
+  x.renderProgress(report(false,'QUEUED'));
+  assert.equal(state.nextPassivePollAt,now+5000);
+  now+=4999;tick();assert.equal(calls,2);
+  now++;tick();assert.equal(calls,3);
+  await flush();
+  x.renderProgress(report(false,'PAUSED_ELAPSED_BUDGET'));
+  assert(state.nextPassivePollAt>now);
+  x.markSession('b'.repeat(20));
+  assert.equal(state.nextPassivePollAt,0);
+  now+=1400;tick();assert.equal(calls,4);
+  await flush();
+  state.nextPollAt=now+30000;
+  x.renderProgress(report(true,'RUNNING'));
+  now+=1400;tick();assert.equal(calls,4);
+  now+=30000;tick();assert.equal(calls,5);
+  await flush();
+  console.log('V649_PASSIVE_POLL_ACTIVE_IDLE_RESTORE_AND_BACKOFF_PASS');
+})().catch(err=>{console.error(err);process.exitCode=1});
+"""
+        result=subprocess.run(
+            [node,"-e",script,str(ROOT/"runner/webui/app.js")],
+            capture_output=True,text=True,encoding="utf8",errors="replace",
+            timeout=20,cwd=ROOT)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn(
+            "V649_PASSIVE_POLL_ACTIVE_IDLE_RESTORE_AND_BACKOFF_PASS",
+            result.stdout)
+
+
 if __name__=="__main__":
     unittest.main()
