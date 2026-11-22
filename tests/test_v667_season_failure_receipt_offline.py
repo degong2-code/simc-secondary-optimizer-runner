@@ -72,6 +72,24 @@ class SeasonFailureReceipt(unittest.TestCase):
         self.assertIn("기존 자료를 보존",js)
         self.assertNotIn('console.log(error)',js)
 
+    def test_exact_verified_fj_dropdown_is_read_only_and_never_guesses(self):
+        ui=(ROOT/"runner/webui/app.js").read_text("utf8")
+        html=(ROOT/"runner/webui/index.html").read_text("utf8")
+        self.assertEqual(html.count('id="season-verified-budget"'),1)
+        self.assertIn('id="season-verified-budget-group"',html)
+        self.assertIn('const budgetSelector=typeof document',ui)
+        self.assertIn('labels.get(key(item))!==1',ui)
+        self.assertIn('candidate.disabled=duplicate',ui)
+        self.assertIn('state.verifiedBaseFlaskInstalls.filter(x=>',ui)
+        self.assertIn('x.installed_manifest_sha256===selectedBudget',ui)
+        self.assertIn('field("season-verified-budget")!==selectedBudget',ui)
+        self.assertIn('const exact=state.verifiedBaseFlaskInstalls.find(item=>',ui)
+        self.assertIn('await chooseInstalledFlask();',ui)
+        self.assertIn('if(exact.length!==1) {',ui)
+        # The browser receives only read-only v212 receipts, not a fabricated
+        # budget and never calls season-build on choosing one.
+        self.assertNotIn('sessionStorage.setItem("v212_',ui)
+
     def test_actual_browser_api_rejects_no_raw_exception_body(self):
         node=shutil.which("node")
         if node is None:self.skipTest("Node not installed")
