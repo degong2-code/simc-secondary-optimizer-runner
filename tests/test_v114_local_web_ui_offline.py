@@ -511,9 +511,11 @@ const apply=Function("state","$","field","valueInt",
         self.assertIn('#optimizer-form .condition-group,#optimizer-form .gear-row{\n border:0!important',css)
         self.assertIn('gear-section gear-trinkets',gear)
         self.assertIn('gear-section gear-special',gear)
-        self.assertIn('gear-section gear-embellishments',gear)
+        profile=form.split('<section class="panel profile-panel"',1)[1].split('</section>',1)[0]
+        self.assertIn('gear-section gear-embellishments profile-embellishments',profile)
         self.assertIn('id="special-rows"',gear)
-        self.assertIn('id="crafted-rows"',gear)
+        self.assertIn('id="crafted-rows"',profile)
+        self.assertNotIn('id="crafted-rows"',gear)
         self.assertIn('class="equipment-source-controls"',gear)
         self.assertNotIn('https://fonts.googleapis.com',css)
         self.assertEqual(form.count('id="season-verified-flask"'),1)
