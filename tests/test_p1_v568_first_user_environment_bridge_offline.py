@@ -12,7 +12,8 @@ class FirstUserBridge(unittest.TestCase):
                         js.index('api("/api/v1/longrun/start"',event))
         self.assertIn('if(report===null)return true;',js)
         self.assertIn('return report;',js)
-        self.assertIn('(!needsEnvironment&&!hasRequiredSelections())',js)
+        self.assertIn('(!hasRequiredSelections()||oilPending)',js)
+        self.assertIn('!needsEnvironment&&',js)
         self.assertNotIn("prepareSeasonBeforeOptimizerStart()",js[
             js.index("async function initialize()"):])
     def test_actual_js_helper_ready_reuse_pending_cancel_no_dps(self):
