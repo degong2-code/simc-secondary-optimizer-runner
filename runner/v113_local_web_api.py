@@ -2845,7 +2845,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Content-Security-Policy"] = (
             "default-src 'none'; script-src 'self'; style-src 'self'; "
-            "connect-src 'self'; img-src 'self' data:; "
+            "connect-src 'self'; img-src 'self' data: https://render.worldofwarcraft.com; "
             "base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
         return response
 
