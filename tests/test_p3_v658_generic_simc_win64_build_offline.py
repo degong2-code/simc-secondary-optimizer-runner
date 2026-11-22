@@ -63,9 +63,9 @@ class GenericWindowsBuilder(unittest.TestCase):
     def test_windows_checkout_crlf_does_not_change_generated_version(self):
         generated=self.src/"engine/dbc/generated"
         (generated/"client_data_version.inc").write_bytes(
-            ('#define CLIENT_DATA_WOW_VERSION "'+GAME+'"\\r\\n').encode("utf8"))
+            ('#define CLIENT_DATA_WOW_VERSION "'+GAME+'"\r\n').encode("utf8"))
         for name,prefix in build.SOURCE_HEADERS:
-            (generated/name).write_bytes((prefix+GAME+"\\r\\n").encode("utf8"))
+            (generated/name).write_bytes((prefix+GAME+"\r\n").encode("utf8"))
         self.assertEqual(build.source_identity(self.src,REQUEST,REV)["source_headers_checked"],4)
 
     def test_package_nonofficial_provenance_and_windows_x64(self):
