@@ -285,7 +285,7 @@
             <p id="simc-connection-status" class="hint" role="status" aria-live="polite">경로와 Git revision을 입력한 뒤 확인·저장하세요. SimC를 짧게 한 번 실행해 기동을 확인하며 DPS 계산은 하지 않습니다.</p>
             <p class="hint">수동 입력한 Git revision은 실행파일만으로 자동 인증되지 않을 수 있습니다. 내장 게임 데이터 빌드가 표시되더라도 현재 WoW 빌드와의 호환성은 시즌 구축에서 별도 검증합니다.</p>
             <details class="fold simc-update-panel" id="simc-update-panel"><summary><span>설정 · SimulationCraft 관리</span><small>사용자 승인 후에만 다운로드·설치</small></summary>
-              <p class="hint">공식 Windows x64 nightly만 사용합니다. 현재 지정한 simc.exe는 덮어쓰지 않고, 앱 전용 폴더에 새 버전을 보관합니다. 버전 변경은 시즌 DB 재조사를 자동 실행하지 않습니다.</p>
+              <p class="hint">공식 Windows x64 nightly를 우선 사용합니다. 공식 배포가 없다면 정확한 소스 SHA에서 별도로 빌드한 CLI ZIP을 직접 선택할 수 있습니다. 현재 지정한 simc.exe는 덮어쓰지 않으며 버전 변경으로 시즌 DB를 자동 갱신하지 않습니다.</p>
               <p class="hint" id="simc-update-status" role="status" aria-live="polite">관리 중인 SimC 조회 전 · 기존 직접 지정 경로도 계속 사용할 수 있습니다.</p>
               <div class="simc-update-actions">
                 <button type="button" class="btn secondary" id="simc-check-btn">공식 업데이트 확인</button>
@@ -296,6 +296,9 @@
               <div class="field"><label for="simc-local-archive">공식 사이트에서 직접 내려받은 .7z 경로 <small>자동 조회가 실패할 때 사용</small></label><input id="simc-local-archive" spellcheck="false" placeholder="C:\\Users\\...\\Downloads\\simc-1215-01-win64-xxxxxxx.7z"></div>
               <button type="button" class="btn secondary" id="simc-install-local-btn">내 PC의 .7z 파일 설치</button>
               <p id="simc-local-install-status" class="hint" role="status" aria-live="polite">.7z 설치에는 7-Zip의 7z.exe가 필요합니다. Windows PATH 또는 기본 설치 폴더(Program Files\\7-Zip, Program Files (x86)\\7-Zip)에서 자동 탐색하며, 설치할 .7z 파일의 저장 위치에는 제한이 없습니다.</p>
+              <div class="field"><label for="simc-self-built-artifact">자체 빌드 SimC Actions ZIP 경로 <small>공식 배포가 없는 경우에만 · build_receipt.json 포함</small></label><input id="simc-self-built-artifact" spellcheck="false" placeholder="C:\\Users\\...\\Downloads\\simc-win64-cli-xxxxx.zip"></div>
+              <button type="button" class="btn secondary" id="simc-install-self-built-btn">검증된 자체 빌드 ZIP 설치</button>
+              <p id="simc-self-built-status" class="hint" role="status" aria-live="polite">별도 Windows CLI 빌드의 Actions artifact ZIP을 내려받아 경로를 입력하세요. 관리자는 내부 영수증·SHA·실제 내장 빌드를 검사하지만, 사용자가 제공한 ZIP 자체의 GitHub 출처 서명까지 인증하지는 않습니다. <a href="https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/workflows/p3_v658_generic_simc_windows_cli.yml" target="_blank" rel="noopener noreferrer">Windows CLI 빌드 기록</a></p>
               <p class="hint">로컬 파일 설치는 파일명·형식·압축 경로·SHA를 검사하지만, 공식 출처나 배포 서명을 독립 확인하지 못합니다. 반드시 공식 페이지에서 직접 다운로드한 파일만 선택하세요. 자동 설치가 실패해도 7-Zip으로 직접 안전하게 압축 해제한 다음, 위의 ‘SimC 실행파일 경로’에 simc.exe와 Git revision을 지정하고 ‘SimC 연결 확인·저장’을 눌러 수동 연결할 수 있습니다. 최신 Windows 배포본과 최신 SimC 소스·한국 Live 게임 빌드는 서로 다를 수 있습니다.</p>
               <p class="hint">공식 배포가 .7z이므로 PC에 7-Zip이 설치되어 있어야 합니다. 아카이브 서명 검증은 제공되지 않으며, HTTPS 공식 배포 출처·형식·다운로드 SHA 및 실행 파일 SHA를 검사합니다. <a href="https://www.7-zip.org/download.html" target="_blank" rel="noopener noreferrer">7-Zip 공식 설치 안내</a> · <a href="https://www.simulationcraft.org/download.html" target="_blank" rel="noopener noreferrer">SimC 공식 다운로드 안내</a> · <a href="https://github.com/simulationcraft/simc-publish/actions" target="_blank" rel="noopener noreferrer">공식 nightly 배포 기록</a></p>
             </details>
