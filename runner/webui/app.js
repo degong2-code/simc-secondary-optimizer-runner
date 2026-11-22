@@ -2179,24 +2179,26 @@ function buttonState(active=false,ready=false) {
     oilPending?
       "무기 기름 사용을 선택했지만 이 전문화의 검증된 손별 기름 조합이 없습니다. 환경 구성을 검증하거나 ‘미사용’으로 변경하세요.":
     "";
-  $("start-btn").disabled=Boolean(reason)&&!needsEnvironment;
+  $("start-btn").disabled=busy||active||!state.token||
+    !validTargetIlevel()||(!needsEnvironment&&
+      (!hasRequiredSelections()||oilPending));
   // Store the reason beside the button where a disabled button can be read
   // by keyboard, touch and screen-reader users alike; tooltip alone is not.
   const submitNote=$("optimizer-submit-note");
   if(submitNote){
-    const specialSelected=["special-rows","crafted-rows"].some(
-      id=>$(id)?.querySelector('[data-field="item_id"]:not([type="hidden"])')?.value ||
-        [...($(id)?.querySelectorAll(".gear-row")||[])].some(row=>
-          row.querySelector('[data-field="embellishment"]')?.value ||
-          (row.querySelector('[data-field="item_id"]')?.value&&
-           id==="special-rows")));
+    const specialSelected=typeof document!=="undefined"&&
+      ["special-rows","crafted-rows"].some(id=>
+        [...($(id)?.querySelectorAll?.(".gear-row")||[])].some(row=>
+          id==="crafted-rows"?
+            Boolean(row.querySelector('[data-field="embellishment"]')?.value):
+            Boolean(row.querySelector('[data-field="item_id"]')?.value)));
     submitNote.textContent=reason||(
       specialSelected?
        "선택한 특수효과 장비·장식은 최종 프로필과 정확한 정적 스탯 검증이 추가로 필요합니다. 검증 실패 시 해당 항목을 안내합니다.":
        "실행 조건이 준비됐습니다. 최적 스탯 찾기를 누르면 이 PC에서 SimC 계산이 시작됩니다.");
   }
   $("start-btn").title=reason||"선택한 조건으로 SimC 최적화 시작";
-  $("start-btn").setAttribute("aria-describedby","optimizer-submit-note");
+  $("start-btn").setAttribute?.("aria-describedby","optimizer-submit-note");
   $("resume-btn").disabled=busy||active||!state.session||state.longrunCompleted;
   $("cache-btn").disabled=busy||active||!state.session||!ready;
   $("cancel-btn").disabled=busy||!active;
