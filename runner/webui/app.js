@@ -4030,12 +4030,14 @@ async function checkSimcUpdater() {
       NO_OFFICIAL_WIN64_NIGHTLY_FOUND:"공식 nightly 목록에서 Windows x64 패키지를 찾지 못했습니다."
     };
     const buildReason=match.status==="SIMC_SOURCE_BUILD_MISMATCH"?
-      "최신 제공 후보의 SimC 소스 데이터 빌드 "+match.simc_generated_build+
-      "는 현재 KR Live "+live+"와 다릅니다. 해당 버전 자동 설치는 차단했습니다. ":
+      "공식 후보 "+(match.official_candidates_checked||0)+"개를 검사했으나 KR Live "+live+
+      "와 소스 빌드가 일치하지 않았습니다. 자동 설치는 차단했습니다. ":
       match.status==="SIMC_SOURCE_BUILD_UNVERIFIED"?
-      "SimC 후보의 생성 데이터 빌드를 검증할 수 없어 일치 다운로드라고 안내하지 않습니다. ":
+      "공식 배포 후보 일부의 원본 데이터 빌드를 검증할 수 없어 자동 설치를 차단했습니다. ":
       match.status==="LIVE_BUILD_UNKNOWN"?
       "현재 KR Live 게임 빌드를 공인 원본에서 확인할 수 없어 일치 다운로드를 판정하지 않습니다. ":
+      match.status==="MATCHING_SOURCE_REQUIRES_BUILD"?
+      "KR Live "+live+"에 맞는 공식 SimC 소스는 발견했으나, 해당 실행파일의 배포본은 확인되지 않았습니다. 별도 빌드가 필요하며 현재 자동 생성은 지원하지 않습니다. ":
       "현재 KR Live "+live+"에 맞는 Windows 배포본은 아직 확인되지 않았습니다. ";
     line.replaceChildren(document.createTextNode(
       buildReason+observed+" · "+
@@ -4043,6 +4045,17 @@ async function checkSimcUpdater() {
        (result.official_index_problem?
         "공식 nightly 조회: "+result.official_index_problem+". ":""))+
       " 인증서 검증은 우회하지 않습니다. "));
+    const sourceOnly=match.source_only_candidate;
+    if(sourceOnly?.requires_separate_build&&
+       /^[a-f0-9]{40}$/.test(sourceOnly.revision_full||"")) {
+      const sourceLink=document.createElement("a");
+      sourceLink.href="https://github.com/simulationcraft/simc/commit/"+
+        sourceOnly.revision_full;
+      sourceLink.target="_blank";sourceLink.rel="noopener noreferrer";
+      sourceLink.textContent="공식 SimC 소스 커밋 확인 (실행파일 아님)";
+      line.appendChild(sourceLink);
+      line.appendChild(document.createTextNode(" · "));
+    }
     const alt=result.github_alternative;
     if(alt?.source==="OFFICIAL_SIMC_GITHUB_ACTIONS"&&
        /^https:\/\/github\.com\/simulationcraft\/simc-publish\/actions\/runs\/\d+$/.test(alt.run_url)){

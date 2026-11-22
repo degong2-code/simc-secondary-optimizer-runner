@@ -127,7 +127,10 @@ GENERATED_SOURCE_FILES=(
     ("temporary_enchant.inc","// Temporary item enchants, wow build "),
 )
 SOURCE_BASE="https://raw.githubusercontent.com/simulationcraft/simc/"
+SOURCE_HEAD_REF="https://api.github.com/repos/simulationcraft/simc/git/ref/heads/midnight"
 EXACT_BUILD=re.compile(r"\d+(?:\.\d+){3}\Z")
+MAX_COMPATIBILITY_CANDIDATES=12
+MAX_SOURCE_CACHE_ENTRIES=32
 
 
 def generated_source_build(revision, *, open_url=None):
@@ -168,6 +171,62 @@ def generated_source_build(revision, *, open_url=None):
             "binary_embedded_build_verified":False}
 
 
+
+def quick_source_build(revision, *, open_url=None):
+    """Cheap pinned official Live data prefilter, never binary attestation.
+
+    Positive matches MUST also pass all three generated_source_build headers.
+    A negative answer saves three remote header requests per old archive.
+    """
+    need(type(revision) is str and re.fullmatch(r"[0-9a-f]{7,40}",revision),
+         "SIMC_SOURCE_REVISION_INVALID")
+    url=SOURCE_BASE+revision+"/engine/dbc/generated/client_data_version.inc"
+    req=urllib.request.Request(url,headers={
+        "User-Agent":"SIMC-Secondary-Source-Discovery/1.0",
+        "Accept":"text/plain"})
+    with (open_url or urllib.request.urlopen)(req,timeout=8) as response:
+        need(response.status==200 and response.geturl()==url,
+             "SIMC_SOURCE_REDIRECT_OR_HOST_INVALID")
+        raw=response.read(4097)
+    need(0<len(raw)<=4096,"SIMC_SOURCE_VERSION_BYTES_INVALID")
+    try:
+        value=raw.decode("utf8")
+    except UnicodeError as exc:
+        raise UpdateBlocked("SIMC_SOURCE_VERSION_INVALID") from exc
+    matches=re.findall(
+        r'^#define CLIENT_DATA_WOW_VERSION "(\d+(?:\.\d+){3})"$',
+        value,re.M)
+    need(len(matches)==1 and EXACT_BUILD.fullmatch(matches[0]) is not None,
+         "SIMC_SOURCE_VERSION_INVALID")
+    return matches[0]
+
+
+def official_source_head_revision(*, open_url=None):
+    """Resolve the official branch HEAD to an immutable full Git SHA.
+
+    Source-only discovery never constructs or claims a downloadable binary.
+    """
+    req=urllib.request.Request(SOURCE_HEAD_REF,headers={
+        "User-Agent":"SIMC-Secondary-Source-Discovery/1.0",
+        "Accept":"application/vnd.github+json"})
+    with (open_url or urllib.request.urlopen)(req,timeout=12) as response:
+        need(response.status==200 and response.geturl()==SOURCE_HEAD_REF,
+             "SIMC_HEAD_SOURCE_UNVERIFIED")
+        raw=response.read(65537)
+    need(0<len(raw)<=65536,"SIMC_HEAD_SOURCE_SIZE_INVALID")
+    try:
+        record=json.loads(raw)
+        full=record["object"]["sha"]
+        need(record["ref"]=="refs/heads/midnight"
+             and record["object"]["type"]=="commit"
+             and type(full) is str
+             and re.fullmatch(r"[0-9a-f]{40}",full) is not None,
+             "SIMC_HEAD_SOURCE_UNVERIFIED")
+    except (ValueError,TypeError,KeyError) as exc:
+        raise UpdateBlocked("SIMC_HEAD_SOURCE_UNVERIFIED") from exc
+    return full
+
+
 def candidate_urls(html):
     """Accept only official same-host Windows 64bit .7z entries."""
     p=Links();p.feed(html)
@@ -184,8 +243,10 @@ def candidate_urls(html):
         identity=nightly_identity(name)
         if identity and urllib.parse.unquote(parts.path).endswith("/"+name):
             choices[name]={**identity,"url":url}
+    # Sort version *series* only; Git short SHA alphabetical order is not
+    # chronological. Preserve the official listing order within a series.
     return sorted(choices.values(),key=lambda x:
-        (tuple(int(p) for p in re.split(r"[.\-]",x["series"])),x["filename"]),reverse=True)
+        tuple(int(p) for p in re.split(r"[.\-]",x["series"])),reverse=True)
 
 def verify_inventory(listing):
     """Parse 7z -slt records, fail closed before any extraction."""
@@ -331,6 +392,10 @@ class SimCManager:
         self.lock=threading.RLock()
         self.offer=None
         self.offered_at=0.0
+        self.discovery_generation=0
+        # Git sources are immutable by revision; bounded process-local cache
+        # avoids redundant GETs without writing new season/cache files.
+        self.source_cache={}
 
     def _read(self):
         file=self.root/"installed.json"
@@ -367,7 +432,7 @@ class SimCManager:
                     "manual_binary_never_modified":True,
                     "native_calls_now":0,"season_database_unchanged":True}
 
-    def check(self,index=None,*,retain_offer=True):
+    def check(self,index=None,*,retain_offer=True,include_candidates=False):
         need(self.platform=="win32","SIMC_UPDATER_WINDOWS_ONLY")
         # Prefer the publisher's own HTTPS index. If TLS fails, use the
         # upstream-owned GitHub Actions *metadata* as a safe manual fallback.
@@ -396,7 +461,7 @@ class SimCManager:
             selected=candidates[0]
             if retain_offer:
                 self.offer=selected;self.offered_at=time.monotonic()
-            return {"schema":SCHEMA,"candidate":{"filename":selected["filename"],
+            result={"schema":SCHEMA,"candidate":{"filename":selected["filename"],
                     "revision_short":selected["revision_short"],
                     "official_download_url":selected["url"]},
                     "direct_install_available":True,
@@ -405,18 +470,57 @@ class SimCManager:
                     "installation_requires_confirmation":True,
                     "archive_extractor_available":bool(find_sevenzip()),
                     "native_calls_now":0}
+            if include_candidates:
+                result["_official_candidates"]=candidates[:MAX_COMPATIBILITY_CANDIDATES]
+                result["official_candidate_total"]=len(candidates)
+            return result
 
-    def check_for_retail_compatibility(self,*,live_loader=None,source_loader=None):
-        """One user-initiated check. Offer an official download as matching
-        only after the KR BPSV version and pinned SimC source headers agree.
+    def _candidate_source_proof(self,revision,target_build,source_loader=None):
+        """Use 1 cheap read for mismatches and 3 extra reads only for matches."""
+        if source_loader is not None:
+            # Injectable offline tests do not write into the real provenance cache.
+            proof=source_loader(revision)
+        else:
+            with self.lock:
+                proof=self.source_cache.get(revision)
+            if proof is None or (proof.get("source_build")==target_build and
+                                 proof.get("source_headers_checked")!=3):
+                quick=quick_source_build(revision)
+                if quick==target_build:
+                    proof=generated_source_build(revision)
+                    need(proof.get("source_build")==quick,
+                         "SIMC_SOURCE_VERSION_CONFLICT")
+                else:
+                    proof={"source_revision":revision,"source_build":quick,
+                           "source_headers_checked":0,
+                           "binary_embedded_build_verified":False}
+                with self.lock:
+                    if len(self.source_cache)>=MAX_SOURCE_CACHE_ENTRIES:
+                        self.source_cache.pop(next(iter(self.source_cache)))
+                    self.source_cache[revision]=proof
+        need(type(proof) is dict
+             and proof.get("source_revision")==revision
+             and type(proof.get("source_headers_checked")) is int
+             and proof["source_headers_checked"] in (0,3)
+             and EXACT_BUILD.fullmatch(str(proof.get("source_build",""))) is not None,
+             "SIMC_SOURCE_HEADER_UNVERIFIED")
+        if proof["source_build"]==target_build:
+            need(proof["source_headers_checked"]==3,
+                 "SIMC_SOURCE_HEADER_UNVERIFIED")
+        return proof
 
-        GitHub Actions ZIPs without a version-qualified binary remain manual
-        and unverified; no download, install or session mutation is performed.
+    def check_for_retail_compatibility(self,*,live_loader=None,
+                                       source_loader=None,head_loader=None):
+        """Generic official binary discovery, then *source-only* fallback.
+
+        Never infer Git commit chronology from filename. A Live match needs
+        all three generated headers; a HEAD source is never an install offer.
+        No update may change a user-provided binary, season cache, or session.
         """
         from v289_retail_live_build_source import discover
-        # An older manual offer must not remain valid while an asynchronous
-        # build/source check is still pending.
         with self.lock:
+            self.discovery_generation+=1
+            generation=self.discovery_generation
             self.offer=None
             self.offered_at=0.0
         live=None
@@ -432,7 +536,10 @@ class SimCManager:
             live_problem=(str(exc) if isinstance(exc,UpdateBlocked)
                           else "RETAIL_BUILD_SOURCE_UNAVAILABLE")
             live=None
-        result=self.check(retain_offer=False)
+
+        result=self.check(retain_offer=False,include_candidates=True)
+        candidates=result.pop("_official_candidates",[])
+        result["official_candidate_total"]=result.get("official_candidate_total",0)
         compatibility={
             "status":"LIVE_BUILD_UNKNOWN" if live is None else
                      "NO_VERIFIED_MATCHING_DOWNLOAD",
@@ -446,46 +553,94 @@ class SimCManager:
             "binary_embedded_build_verified":False,
             "season_ready":False,
             "dps_native_calls_now":0,
+            "official_candidates_checked":0,
+            "official_candidates_total":result["official_candidate_total"],
+            "official_candidate_check_limit":MAX_COMPATIBILITY_CANDIDATES,
+            "selection_rule":"OFFICIAL_LIST_SERIES_THEN_LISTING_ORDER_NO_GIT_SHA_AGE",
+            "source_only_candidate":None,
         }
-        candidate=result.get("candidate")
-        if candidate and live:
-            compatibility["simc_revision"]=candidate["revision_short"]
-            try:
-                proof=(source_loader or generated_source_build)(
-                    candidate["revision_short"])
-                need(type(proof) is dict and
-                     proof.get("source_headers_checked")==3 and
-                     proof.get("source_revision")==candidate["revision_short"]
-                     and EXACT_BUILD.fullmatch(str(proof.get("source_build",""))) is not None,
-                     "SIMC_SOURCE_HEADER_UNVERIFIED")
-                compatibility["simc_generated_build"]=proof["source_build"]
-                compatibility["source_headers_checked"]=3
-                if proof["source_build"]==live["game_build"]:
-                    compatibility["status"]="SOURCE_BUILD_MATCHED_BINARY_UNVERIFIED"
-                    # Exactly the validated same-host URL from the HTML index,
-                    # not a guessed GitHub artifact or a source-only commit link.
-                    result["matching_download_url"]=candidate["official_download_url"]
-                else:
-                    compatibility["status"]="SIMC_SOURCE_BUILD_MISMATCH"
-            except (OSError,TimeoutError,ValueError,TypeError,KeyError):
-                compatibility["status"]="SIMC_SOURCE_BUILD_UNVERIFIED"
-        # Never activate the ordinary auto-install button just because a
-        # Nightly is the most recent available, even on a failed check.
-        if compatibility["status"]=="SOURCE_BUILD_MATCHED_BINARY_UNVERIFIED":
-            # Keep the validated offer unavailable until *all* checks have
-            # completed; no other local tab can install an in-flight candidate.
-            with self.lock:
-                self.offer={
-                    **nightly_identity(candidate["filename"]),
-                    "url":candidate["official_download_url"]}
-                self.offered_at=time.monotonic()
+        if candidates:
+            compatibility["simc_revision"]=candidates[0]["revision_short"]
+        matched=None
+        mismatches=0
+        failures=0
+        if live:
+            for candidate in candidates:
+                compatibility["official_candidates_checked"]+=1
+                revision=candidate["revision_short"]
+                try:
+                    proof=self._candidate_source_proof(
+                        revision,live["game_build"],source_loader=source_loader)
+                    if compatibility["simc_generated_build"] is None:
+                        compatibility["simc_generated_build"]=proof["source_build"]
+                        compatibility["source_headers_checked"]=proof["source_headers_checked"]
+                    if proof["source_build"]==live["game_build"]:
+                        matched=candidate
+                        compatibility["simc_revision"]=revision
+                        compatibility["simc_generated_build"]=proof["source_build"]
+                        compatibility["source_headers_checked"]=3
+                        compatibility["status"]="SOURCE_BUILD_MATCHED_BINARY_UNVERIFIED"
+                        break
+                    mismatches+=1
+                except (OSError,TimeoutError,ValueError,TypeError,KeyError):
+                    failures+=1
+            if not matched and candidates:
+                compatibility["status"]=(
+                    "SIMC_SOURCE_BUILD_UNVERIFIED" if failures else
+                    "SIMC_SOURCE_BUILD_MISMATCH")
+
+        if matched:
+            result["candidate"]={
+                "filename":matched["filename"],
+                "revision_short":matched["revision_short"],
+                "official_download_url":matched["url"]}
+            result["matching_download_url"]=matched["url"]
+            result["direct_install_available"]=True
         else:
-            if candidate:
-                result["unverified_candidate"]=candidate
+            if result.get("candidate"):
+                result["unverified_candidate"]=result["candidate"]
             result["candidate"]=None
+            result["matching_download_url"]=None
             result["direct_install_available"]=False
+
+        # Last resort discovery: a pinned official source *may* be buildable,
+        # but it is never treated as a published .7z or an installed binary.
+        # Offline injected loaders never trigger incidental live GitHub calls.
+        if live and not matched and (
+                head_loader is not None or (
+                    live_loader is None and source_loader is None)):
+            try:
+                head=(head_loader or official_source_head_revision)()
+                need(type(head) is str and
+                     re.fullmatch(r"[a-f0-9]{40}",head) is not None,
+                     "SIMC_HEAD_SOURCE_UNVERIFIED")
+                proof=self._candidate_source_proof(
+                    head,live["game_build"],source_loader=source_loader)
+                if proof["source_build"]==live["game_build"]:
+                    compatibility["source_only_candidate"]={
+                        "revision_full":head,"source_build":proof["source_build"],
+                        "source_headers_checked":3,
+                        "downloadable_binary_verified":False,
+                        "requires_separate_build":True}
+                    compatibility["status"]="MATCHING_SOURCE_REQUIRES_BUILD"
+            except (OSError,TimeoutError,ValueError,TypeError,KeyError):
+                pass
+
+        with self.lock:
+            if generation!=self.discovery_generation:
+                # Another newer check superseded this one: no stale offer.
+                compatibility["status"]="SIMC_UPDATE_CHECK_SUPERSEDED"
+                result["candidate"]=None
+                result["matching_download_url"]=None
+                result["direct_install_available"]=False
+            elif matched:
+                self.offer={**nightly_identity(matched["filename"]),
+                            "url":matched["url"]}
+                self.offered_at=time.monotonic()
+            else:
+                self.offer=None
+                self.offered_at=0.0
         result["retail_compatibility"]=compatibility
-        result["matching_download_url"]=result.get("matching_download_url")
         return result
 
     def _write_state(self,data):
