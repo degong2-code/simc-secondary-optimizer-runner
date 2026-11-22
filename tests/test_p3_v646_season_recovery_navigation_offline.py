@@ -44,7 +44,8 @@ class SeasonRecovery(unittest.TestCase):
         self.assertIn("simc_source_reason:cleanCode",js)
         self.assertIn("simc_revision_resolution_reason:cleanCode",js)
         self.assertIn('#view-settings .season-remedy[hidden]{display:none!important}',css)
-        self.assertIn('GitHub Windows nightly 기록(최신/빌드 일치 미검증)',js)
+        self.assertIn('공식 GitHub Windows x64 배포 실행 기록',js)
+        self.assertIn('최신 소스/현재 KR Live 빌드와 일치한다는 뜻은 아닙니다',js)
         self.assertNotIn('link.textContent="SimC 공식 GitHub Windows nightly 받기";',js)
 
     def test_actual_production_js_first_cause_priority_and_buttons(self):
