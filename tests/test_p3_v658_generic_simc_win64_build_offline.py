@@ -7,6 +7,7 @@ import unittest
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"integration_probes"))
 import v658_generic_simc_win64_build as build
+import v661_public_simc_cache as cache
 
 REV="6924096820c0b5c9d7bfa9848ea48fe0cd15c7d7"
 GAME="12.1.5.70961"
@@ -103,6 +104,70 @@ class GenericWindowsBuilder(unittest.TestCase):
         self.assertNotIn("70961",wf)
         self.assertNotIn("SC_DEFAULT_APIKEY",wf)
         self.assertIn("retention-days: 14",wf)
+        self.assertIn("v661_public_simc_cache.py status",wf)
+        self.assertIn("v661_public_simc_cache.py package",wf)
+        self.assertIn("gh release create",wf)
+        self.assertIn("contents: write",wf)
+        self.assertIn("if: steps.cache.outputs.hit != 'true'",wf)
+
+
+    def test_v661_public_cache_miss_hit_and_malformed_existing_release(self):
+        tag = "simc-cli-source-" + REV
+        asset_name = "simc-win64-cli-" + REV[:7] + "-" + GAME + ".zip"
+        release = {
+            "tag_name": tag, "draft": False, "prerelease": True,
+            "assets": [{
+                "name": asset_name, "size": 120000, "state": "uploaded",
+                "digest": "sha256:" + "f" * 64,
+                "browser_download_url": (
+                    "https://github.com/" + cache.REPO + "/releases/download/" +
+                    tag + "/" + asset_name),
+            }],
+        }
+        self.assertEqual(cache.cache_status(
+            self.request_file, loader=lambda sha: None), "CACHE_MISS")
+        self.assertEqual(cache.cache_status(
+            self.request_file, loader=lambda sha: release), "CACHE_HIT")
+        malformed = json.loads(json.dumps(release))
+        malformed["assets"][0]["digest"] = "sha256:invalid"
+        with self.assertRaisesRegex(cache.CacheBlocked, "ASSET_INVALID"):
+            cache.cache_status(self.request_file, loader=lambda sha: malformed)
+        malformed = json.loads(json.dumps(release))
+        malformed["prerelease"] = False
+        with self.assertRaisesRegex(cache.CacheBlocked, "UNTRUSTED"):
+            cache.cache_status(self.request_file, loader=lambda sha: malformed)
+
+    def test_v661_exact_four_member_packaging_and_no_silent_extra_input(self):
+        proof = build.source_identity(self.src, REQUEST, REV)
+        folder = self.folder / "build-out"
+        folder.mkdir()
+        archive = folder / ("simc-1210.01." + REV[:7] + "-win64.7z")
+        archive.write_bytes(build.MAGIC + b"abcde" * 25000)
+        exe = self.folder / "simc.exe"
+        raw = bytearray(b"MZ" + b"x" * 120000)
+        raw[0x3c:0x40] = (128).to_bytes(4, "little")
+        raw[128:134] = b"PE\x00\x00\x64\x86"
+        exe.write_bytes(raw)
+        smoke = folder / "display_build.txt"
+        smoke.write_text("SimulationCraft 12.1.5.70961 Live\n", "utf8")
+        receipt = build.package_receipt(REQUEST, proof, archive, exe, smoke)
+        (folder / "build_receipt.json").write_text(json.dumps(receipt), "utf8")
+        (folder / "source_proof.json").write_text(json.dumps(proof), "utf8")
+        target = self.folder / (
+            "simc-win64-cli-" + REV[:7] + "-" + GAME + ".zip")
+        cache_sha = cache.make_release_zip(self.request_file, folder, target)
+        self.assertEqual(len(cache_sha), 64)
+        from v659_simc_self_built_artifact import inspect_artifact
+        info = inspect_artifact(target)
+        self.assertEqual(info["source_sha"], REV)
+        self.assertEqual(info["game_build"], GAME)
+        self.assertEqual(info["artifact_sha256"], cache_sha)
+        with self.assertRaisesRegex(cache.CacheBlocked, "COLLISION"):
+            cache.make_release_zip(self.request_file, folder, target)
+        (folder / "unexpected.txt").write_text("do not publish")
+        second = self.folder / "other" / target.name
+        with self.assertRaisesRegex(cache.CacheBlocked, "EXTRA_OR_MISSING"):
+            cache.make_release_zip(self.request_file, folder, second)
 
 if __name__=="__main__":
     unittest.main()
