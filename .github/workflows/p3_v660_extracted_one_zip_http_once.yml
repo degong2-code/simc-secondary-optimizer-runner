@@ -1,0 +1,76 @@
+name: P3 v660 One-Shot Extracted Product ZIP Real One-Click HTTP
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_v660_extracted_one_zip_http_once.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  packaged-windows-http:
+    runs-on: windows-2022
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: v181-windows-source-beta-45012956028
+          run-id: 45012956028
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: downloaded
+      - name: Install bundled web and Python 7z runtime requirements
+        shell: pwsh
+        run: |
+          python -c "import zipfile,pathlib;z=zipfile.ZipFile('downloaded/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip');z.extractall('program');print('PRODUCT_FILES',len(z.namelist()))"
+          if ($LASTEXITCODE -ne 0) { throw "EXTRACTED_PRODUCT_INVALID" }
+          python -m pip install -r program/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/requirements-web.txt -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw "PRODUCT_DEPENDENCY_SETUP_FAILED" }
+      - name: Actual local API user-click route from extracted product, no external 7z or preinstalled SimC
+        shell: pwsh
+        run: |
+          @'
+          import os,pathlib,sys,tempfile
+          from unittest import mock
+          from fastapi.testclient import TestClient
+          root=pathlib.Path("program/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA").resolve()
+          assert (root/"runner/v660_simc_one_click_provision.py").is_file()
+          assert (root/"runner/webui/index.html").is_file()
+          assert 'id="simc-auto-prepare-btn"' in (root/"runner/webui/index.html").read_text("utf8")
+          os.chdir(root);sys.path.insert(0,str(root/"runner"))
+          import v193_simc_local_updater as upd
+          import v113_local_web_api as web
+          with tempfile.TemporaryDirectory() as td:
+              storage=pathlib.Path(td)
+              app=web.create_app(root=storage/"runs",update_root=storage/"managed",
+                                token="v660-one-zip-test",update_platform="win32")
+              client=TestClient(app,base_url="http://127.0.0.1:8765")
+              headers={"x-simc-local-token":"v660-one-zip-test","origin":"http://127.0.0.1:8765"}
+              assert not (storage/"managed").exists()
+              with mock.patch.object(upd,"find_sevenzip",return_value=None):
+                  assert upd.find_extractor()==upd.PY7ZR_TOOL
+                  unauthorized=client.post("/api/v1/simc-updates/prepare-auto",json={})
+                  assert unauthorized.status_code==403,unauthorized.text
+                  first=client.post("/api/v1/simc-updates/prepare-auto",headers=headers,json={})
+                  assert first.status_code==200,first.text
+                  data=first.json()
+                  print("PACKAGED_ONE_CLICK",data["status"],data["game_build"],flush=True)
+                  assert data["status"] in ("PUBLIC_SELF_BUILT_BINARY_INSTALLED",
+                                             "OFFICIAL_BINARY_INSTALLED")
+                  binary=pathlib.Path(data["active_binary"])
+                  assert binary.is_file()
+                  assert upd.probe_cli(binary,expected_build=data["game_build"])
+                  second=client.post("/api/v1/simc-updates/prepare-auto",headers=headers,json={})
+                  assert second.status_code==200,second.text
+                  assert second.json()["active_binary"]==str(binary)
+                  rollback=client.post("/api/v1/simc-updates/rollback",headers=headers,json={})
+                  assert rollback.status_code==200,rollback.text
+                  assert rollback.json()["active_binary"] is None
+                  print("P3_V660_PACKAGED_PRODUCT_ONE_ZIP_HTTP_PASS",data["installed"]["sha256"],flush=True)
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw "PACKAGED_PRODUCT_ONE_CLICK_FAILED" }
