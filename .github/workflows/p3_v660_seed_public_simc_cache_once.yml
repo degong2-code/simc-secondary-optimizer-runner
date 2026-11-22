@@ -1,0 +1,64 @@
+name: P3 v660 One-Time Experimental Public SimC Cache Seed (No Compile)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_v660_seed_public_simc_cache_once.yml
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish-experimental-selfbuilt:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: simc-win64-cli-6924096-12.1.5.70961
+          run-id: 45007868837
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: actual
+      - name: Verify exact original evidence and package only the 4 source-proven files
+        shell: bash
+        run: |
+          python - <<'PY'
+          import pathlib,sys,zipfile
+          sys.path.insert(0,"runner")
+          import v659_simc_self_built_artifact as v
+          root=pathlib.Path("actual");dist=pathlib.Path("dist");dist.mkdir()
+          name="simc-win64-cli-6924096-12.1.5.70961.zip"
+          files={"simc-1210.01.6924096-win64.7z",
+                 "build_receipt.json","source_proof.json","display_build.txt"}
+          assert {p.name for p in root.iterdir()}==files
+          with zipfile.ZipFile(dist/name,"w",compression=zipfile.ZIP_STORED) as archive:
+              for filename in sorted(files):
+                  archive.write(root/filename,arcname=filename)
+          proof=v.inspect_artifact(dist/name)
+          assert proof["source_sha"]=="6924096820c0b5c9d7bfa9848ea48fe0cd15c7d7"
+          assert proof["game_build"]=="12.1.5.70961"
+          assert proof["archive_sha256"]=="670ec659a44d8867f46ac267ed1e52db0d02eac8460472bf78aafa286b797c98"
+          assert proof["origin_authenticated"] is False
+          print("PUBLIC_SELF_BUILT_CACHE_PROOF_PASS",proof["artifact_sha256"])
+          PY
+      - name: Publish clearly labeled experimental *self-built* prerelease asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="simc-cli-source-6924096820c0b5c9d7bfa9848ea48fe0cd15c7d7"
+          asset="dist/simc-win64-cli-6924096-12.1.5.70961.zip"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Existing immutable source cache retained; no duplicate publish."
+            exit 0
+          fi
+          gh release create "$tag" "$asset" --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease \
+            --title "EXPERIMENTAL self-built SimC CLI cache - 12.1.5.70961" \
+            --notes "Development-only self-built Windows x64 SimulationCraft CLI from official source commit 6924096820c0b5c9d7bfa9848ea48fe0cd15c7d7 (https://github.com/simulationcraft/simc/commit/6924096820c0b5c9d7bfa9848ea48fe0cd15c7d7). Not an official SimulationCraft release, not an approved optimizer production release. Windows 2022 MSVC CMake/Ninja Release, CLI only, no GUI, IPO enabled; CPack 7z. Full source, data-build, archive and binary receipts are inside ZIP. SimulationCraft GPL-3.0 terms apply; no season database READY or DPS performance certification is implied."
