@@ -1,3 +1,5 @@
 # Local user web server runtime. TestClient/httpx is test-only (requirements-web-test.txt).
 fastapi>=0.115,<1.0
 uvicorn>=0.30,<1.0
+# Python-managed 7z extraction avoids separate 7-Zip installation.
+py7zr>=1.1.4,<1.2
