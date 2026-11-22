@@ -1,0 +1,87 @@
+name: P3 v658 Generic Source-Pinned SimC Windows CLI Builder
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - build_requests/simc_win64_cli.json
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: simc-source-pinned-cli-build-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  windows-x64-cli:
+    if: github.ref == 'refs/heads/probe/chat-cache-v035-20261024'
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate request schema, official repo and immutable source SHA
+        id: request
+        shell: pwsh
+        run: |
+          $output = python integration_probes/v658_generic_simc_win64_build.py request --request build_requests/simc_win64_cli.json
+          if ($LASTEXITCODE -ne 0) { throw "SIMC_BUILD_REQUEST_INVALID" }
+          $r = $output | ConvertFrom-Json
+          if (!$r.full_sha -or !$r.game_build) { throw "SIMC_BUILD_REQUEST_MISSING" }
+          "source_sha=$($r.full_sha)" >> $env:GITHUB_OUTPUT
+          "short_sha=$($r.short_sha)" >> $env:GITHUB_OUTPUT
+          "game_build=$($r.game_build)" >> $env:GITHUB_OUTPUT
+      - uses: actions/checkout@v4
+        with:
+          repository: simulationcraft/simc
+          ref: ${{ steps.request.outputs.source_sha }}
+          path: upstream-simc
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Verify upstream checkout and pinned Live generated sources
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          $head = (git -C upstream-simc rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0) { throw "SIMC_CHECKOUT_FAILED" }
+          python integration_probes/v658_generic_simc_win64_build.py source --request build_requests/simc_win64_cli.json --source upstream-simc --head $head --out out/source_proof.json
+          if ($LASTEXITCODE -ne 0) { throw "SIMC_SOURCE_PROOF_FAILED" }
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Configure upstream CMake/Ninja Release CLI without Qt
+        shell: pwsh
+        run: |
+          cmake -S upstream-simc -B simc-build -G Ninja -DBUILD_GUI=OFF -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DCPACK_SYSTEM_NAME=win64
+          if ($LASTEXITCODE -ne 0) { throw "SIMC_CMAKE_CONFIG_FAILED" }
+      - name: Build CLI once and package with upstream CPack
+        shell: pwsh
+        run: |
+          cmake --build simc-build --target simc --parallel 2
+          if ($LASTEXITCODE -ne 0) { throw "SIMC_CLI_BUILD_FAILED" }
+          cmake --build simc-build --target package --parallel 2
+          if ($LASTEXITCODE -ne 0) { throw "SIMC_CPACK_FAILED" }
+      - name: Non-DPS CLI execution and exact SHA receipt
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path simc-build/simc.exe).Path
+          & $exe display_build=2 *>&1 | Out-File out/display_build.txt -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw "SIMC_CLI_START_FAILED" }
+          $archives = @(Get-ChildItem simc-build/*.7z -File)
+          if ($archives.Count -ne 1) { throw "SIMC_CPACK_COUNT_INVALID" }
+          python integration_probes/v658_generic_simc_win64_build.py package --request build_requests/simc_win64_cli.json --proof out/source_proof.json --archive $archives[0].FullName --exe $exe --smoke out/display_build.txt --out out/build_receipt.json
+          if ($LASTEXITCODE -ne 0) { throw "SIMC_BUILD_RECEIPT_FAILED" }
+          Copy-Item $archives[0].FullName out/
+      - name: Retain self-built Windows CLI package and provenance (not official release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: simc-win64-cli-${{ steps.request.outputs.short_sha }}-${{ steps.request.outputs.game_build }}
+          path: |
+            out/*.7z
+            out/source_proof.json
+            out/build_receipt.json
+            out/display_build.txt
+          retention-days: 14
+          if-no-files-found: error
