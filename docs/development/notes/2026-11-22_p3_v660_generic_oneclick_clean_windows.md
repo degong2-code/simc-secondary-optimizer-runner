@@ -20,3 +20,9 @@ v657 공식 Nightly 다중 후보·소스 원본 검증, v658 원본 SHA 고정 
 
 ## 남은 설계·권한 경계
 사용자 PC에 공개 배포·캐시조차 없을 때 **신규 원격 컴파일을 자동 요청하는 중앙 신뢰 브로커는 미구현**. GitHub Actions의 default-branch schedule 또는 인증된 중앙 broker 등 사용자 별도 권한/배포 구성이 필요하며 main 병합/Project UI/공식 Work OS나 제품 승격으로 간주하지 않는다. CI 오프라인 통과는 시즌 GJFO 준비나 26 전문화 DPS 보증이 아니다. 업데이트 조회 시 불필요한 신규 Native 호출·전 전문화 컴파일 없음.
+
+## 최종 단일 제품 ZIP 및 API 통합 증거 (2026-11-22)
+- [Windows 베타 패키징 #45012956028](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45012956028): Python3.12/3.14 Windows 두 job 모두 **SUCCESS**, 각각 기존·신규 **323/323 regression PASS**, 제품 패키징 5 PASS, 실제 CMD 시작 및 localhost HTTP 3 계획 PASS, 신규 DPS Native0.
+- 실행파일이 포함되지 않은 **단일 최적화 프로그램 ZIP** `SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA_v660_SINGLE_ZIP.zip`: **1,517,555 bytes**, SHA-256 `a22ee056b6de4ab3287c5fa2bd5fdda878804ccdc8da0edaaba5a1e6781e2c93`, 285 소스 파일+manifest = **286 ZIP entries**, CRC 전부 PASS. 프로그램 런처가 venv에서 `py7zr`를 설치하므로 사용자는 별도 SimC ZIP이나 7z.exe 설치가 필요하지 않다(최초 Python 확보/관리 환경 설정은 기존 안내대로).
+- [실제 패키지 압축 해제 후 Windows 로컬 API #45013234606](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45013234606): **SUCCESS**. 실제 위 v181 제품 ZIP을 다운·압축 해제, Python 의존성 설치, 관리 SimC 폴더 없음, external 7-Zip 감지 모킹 OFF, token 없는 POST 403, 인증한 `POST /api/v1/simc-updates/prepare-auto`로 실제 KR Live 70961/공개 실 release 다운로드→Python 7z 추출→`simc.exe` PE/SHA 및 `display_build=2` 확인. `PACKAGED_ONE_CLICK PUBLIC_SELF_BUILT_BINARY_INSTALLED 12.1.5.70961`; 재요청 바이너리 재사용, 안전 롤백 통과. 실제 Win64 exe SHA `1195a3401a716c9f28b4de113d228cc3a669aebf83c0c47e5989db521d87c3c9`. **신규 컴파일·DPS Native=0**.
+- 이것은 **현재 공개 시험용 자체 빌드가 존재할 때**의 제로베이스 설치·연결 경로 PASS다. 공개 캐시/공식 release가 모두 없는 새 패치에 대한 원격 무인 컴파일 broker, 정식 제품 배포, 시즌 GJFO 전체 READY, 26개 DPS 정확성은 **미구현·미검증**. 브라우저 GUI 실제 사용자 클릭은 별도 사용자 PC 체험 대상(같은 인증된 POST API는 실측 성공).
