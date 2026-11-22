@@ -25,12 +25,16 @@ function fixture(){
   const nodes={
     'simc-check-btn':{textContent:'공식 업데이트 확인',disabled:false},
     'simc-install-btn':{disabled:false},
-    'simc-update-candidate':{textContent:'준비'}
+    'simc-update-candidate':{
+      textContent:'준비',
+      replaceChildren(...children){this.textContent=children.map(x=>x.textContent||'').join('')},
+      appendChild(child){this.textContent+=child.textContent||''}
+    }
   };
   let resolve,reject;
   const request=new Promise((yes,no)=>{resolve=yes;reject=no});
   const mockApi=(path,opts)=>{
-    assert.equal(path,'/api/v1/simc-updates/check');
+    assert.equal(path,'/api/v1/simc-updates/check-compatible');
     assert.equal(opts.method,'POST');
     return request;
   };
@@ -51,13 +55,18 @@ function fixture(){
   assert(f.nodes['simc-update-candidate'].textContent.includes('확인 중'));
   assert.equal(f.nodes['simc-install-btn'].disabled,true);
   f.resolve({candidate:{filename:'simc-1215-01-win64-710c240.7z',
-     revision_short:'710c240'},archive_extractor_available:true});
+     revision_short:'710c240'},
+     retail_compatibility:{status:'SOURCE_BUILD_MATCHED_BINARY_UNVERIFIED',
+       kr_game_build:'12.1.5.70961',simc_generated_build:'12.1.5.70961'},
+     matching_download_url:'https://downloads.simulationcraft.org/nightly/simc-1215-01-win64-710c240.7z',
+     archive_extractor_available:true});
   await task;
   assert.equal(f.getOffer(),'simc-1215-01-win64-710c240.7z');
   assert.equal(f.nodes['simc-check-btn'].disabled,false);
   assert.equal(f.nodes['simc-check-btn'].textContent,'공식 업데이트 확인');
   assert.equal(f.nodes['simc-install-btn'].disabled,false);
-  assert(f.nodes['simc-update-candidate'].textContent.includes('공식 Windows x64 후보'));
+  assert(f.nodes['simc-update-candidate'].textContent.includes('KR Live 12.1.5.70961'));
+  assert(f.nodes['simc-update-candidate'].textContent.includes('실제 실행파일 내장 빌드'));
 
   f=fixture();task=f.checkSimcUpdater();
   f.reject(Error('HTTP_409'));
