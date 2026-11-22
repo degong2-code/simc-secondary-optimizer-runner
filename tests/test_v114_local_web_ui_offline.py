@@ -754,7 +754,7 @@ const apply=Function("state","$","field","valueInt",
             "gear.installed_manifest_sha256!==sha",
             "restoreInstalledSeasonOptionCatalog({",
             "G/F 재측정은 하지 않았습니다.",
-            "withBusy(chooseInstalledFlask)",
+            'await chooseInstalledFlask();',
             '$("season-verified-flask").disabled=busy'):
             self.assertIn(needle,js)
         self.assertNotIn("request.G=",js)
@@ -775,6 +775,7 @@ const A="a".repeat(64),B="b".repeat(64),C="c".repeat(64);
 const el={
   "season-verified-flask":{value:"241327"},
   "season-selected-flask-id":{value:""},
+  "season-verified-budget":{value:""},
   "season-verified-flask-status":{textContent:""},
   "season-game-build":{value:"12.1.5.70783"},
   "ilevel":{value:"334"},
@@ -849,7 +850,7 @@ const make=(oilUseIntent=false)=>Function(
  assert.strictEqual(state.seasonGearTargetIlevel,null,
     "AMBIGUOUS_CANNOT_REUSE_OLD_GEAR_SHA");
  assert($("season-verified-flask-status").textContent.includes(
-    "임의 선택하지 않습니다"));
+    "임의로 적용하지 않습니다"));
  // A socket edit while the exact SHA source is in flight must not publish
  // yesterday's O=0/four-gem gear, even though the server would reject it.
  state.verifiedBaseFlaskInstalls=[
