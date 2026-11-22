@@ -3998,14 +3998,30 @@ async function checkSimcUpdater() {
   button.textContent="공식 업데이트 조회 중…";
   line.textContent="SimC 공식 배포 목록 확인 중입니다. 서버 연결 상태에 따라 시간이 걸릴 수 있습니다.";
   try {
-    const result=await api("/api/v1/simc-updates/check",
+    const result=await api("/api/v1/simc-updates/check-compatible",
       {method:"POST",payload:{}});
+    const match=result.retail_compatibility||{};
     simcOffer=result.candidate?.filename||null;
-  if(simcOffer) {
-    line.textContent="공식 Windows x64 후보: "+simcOffer+
-      " · revision "+result.candidate.revision_short+
-      " · 현재 KR Retail 게임 데이터 빌드와의 일치는 별도 확인이 필요합니다."+
-      (result.archive_extractor_available?"":" · 설치에는 7-Zip 필요");
+    const live=match.kr_game_build||"확인 불가";
+    const installed=match.saved_simc_observed_build;
+    const observed=installed?
+      " · 이전 저장 SimC 관측 빌드 "+installed+
+      (match.saved_simc_matches_kr_build===false?" (불일치)":
+       match.saved_simc_matches_kr_build===true?" (일치)":" (비교 불가)")+
+      " · 현재 재검증은 별도":"";
+  if(simcOffer && match.status==="SOURCE_BUILD_MATCHED_BINARY_UNVERIFIED") {
+    line.replaceChildren(document.createTextNode(
+      "KR Live "+live+" · SimC 후보 원본 데이터 "+
+      match.simc_generated_build+" (3종 헤더 일치) · revision "+
+      result.candidate.revision_short+" · 실제 실행파일 내장 빌드 및 사용 가능 여부는 설치 후 검증 필요"+
+      observed+(result.archive_extractor_available?"":" · 설치에는 7-Zip 필요")+". "));
+    if(/^https:\/\/downloads\.simulationcraft\.org\/nightly\/simc-[a-z0-9.\-]+-win64(?:-[a-f0-9]{7,12})?\.7z$/i.test(result.matching_download_url||"")){
+      const link=document.createElement("a");
+      link.href=result.matching_download_url;
+      link.target="_blank";link.rel="noopener noreferrer";
+      link.textContent="같은 소스 빌드 후보 .7z 다운로드";
+      line.appendChild(link);
+    }
   }else{
     const reasons={
       OFFICIAL_NIGHTLY_TLS_CERTIFICATE_INVALID:"공식 nightly 다운로드 서버의 HTTPS 인증서를 검증할 수 없습니다.",
@@ -4013,11 +4029,20 @@ async function checkSimcUpdater() {
       OFFICIAL_NIGHTLY_CONNECTION_UNAVAILABLE:"공식 nightly 다운로드 서버에 연결할 수 없습니다.",
       NO_OFFICIAL_WIN64_NIGHTLY_FOUND:"공식 nightly 목록에서 Windows x64 패키지를 찾지 못했습니다."
     };
+    const buildReason=match.status==="SIMC_SOURCE_BUILD_MISMATCH"?
+      "최신 제공 후보의 SimC 소스 데이터 빌드 "+match.simc_generated_build+
+      "는 현재 KR Live "+live+"와 다릅니다. 해당 버전 자동 설치는 차단했습니다. ":
+      match.status==="SIMC_SOURCE_BUILD_UNVERIFIED"?
+      "SimC 후보의 생성 데이터 빌드를 검증할 수 없어 일치 다운로드라고 안내하지 않습니다. ":
+      match.status==="LIVE_BUILD_UNKNOWN"?
+      "현재 KR Live 게임 빌드를 공인 원본에서 확인할 수 없어 일치 다운로드를 판정하지 않습니다. ":
+      "현재 KR Live "+live+"에 맞는 Windows 배포본은 아직 확인되지 않았습니다. ";
     line.replaceChildren(document.createTextNode(
+      buildReason+observed+" · "+
       (reasons[result.official_index_problem]||
-        "공식 nightly 직접 조회에 실패했습니다 ("+
-        (result.official_index_problem||"원인 미상")+").")+
-      " 인증서 검증을 우회하지 않습니다. "));
+       (result.official_index_problem?
+        "공식 nightly 조회: "+result.official_index_problem+". ":""))+
+      " 인증서 검증은 우회하지 않습니다. "));
     const alt=result.github_alternative;
     if(alt?.source==="OFFICIAL_SIMC_GITHUB_ACTIONS"&&
        /^https:\/\/github\.com\/simulationcraft\/simc-publish\/actions\/runs\/\d+$/.test(alt.run_url)){
