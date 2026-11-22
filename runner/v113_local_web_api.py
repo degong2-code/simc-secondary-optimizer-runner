@@ -2067,8 +2067,17 @@ class LocalJobs:
                     selected_static_cache_path=resolved_static)
                 if preview.get("status")!=(
                         "B8_SELECTED_V096_COMPLETE_PROFILE_BUDGET_NOT_ADMITTED"):
-                    raise environment_manifest.EnvironmentBlocked(
-                        "WEB_SELECTED_B8_PROFILE_OR_STATIC_VARIANTS_PENDING")
+                    # Oil-off and selected physical variants are independent.
+                    # Expose only source-approved bounded reason codes; never
+                    # echo original profile, cache paths or exact user inputs.
+                    observed=preview.get("status")
+                    reason=(
+                        "WEB_SELECTED_B8_EXACT_STATIC_VARIANTS_PENDING"
+                        if observed=="B8_SELECTED_PROFILE_STATIC_VARIANTS_PENDING_NO_NATIVE"
+                        else "WEB_SELECTED_B8_PROFILE_SOURCE_PENDING"
+                        if observed=="V216_TO_V098_SOURCE_PROFILE_PENDING"
+                        else "WEB_SELECTED_B8_PROFILE_OR_STATIC_VARIANTS_PENDING")
+                    raise environment_manifest.EnvironmentBlocked(reason)
                 selected_v435=preview.get(
                     "v435_future_v106_session_key_unadmitted")
                 if type(selected_v435) is not dict:
