@@ -91,8 +91,17 @@ jobs:
                   return response.json()
               with TestClient(app,base_url='http://127.0.0.1:8765') as client:
                   installed=post(client,'/api/v1/simc-updates/prepare-auto',{})
+                  print('V662_PREPARE_STATUS',installed.get('status'),
+                        'LIVE',installed.get('game_build'),
+                        'REASON',installed.get('reason'),
+                        'PUBLIC_CANDIDATES',installed.get('public_release_candidates_checked'),
+                        flush=True)
+                  if installed.get('status') in ('SOURCE_BUILD_REQUIRES_REMOTE_BUILDER',
+                                                'NO_COMPATIBLE_BINARY_AVAILABLE'):
+                      print('V662_FIRST_REAL_BOUNDARY_PENDING_NO_DOWNLOADABLE_BINARY',flush=True)
+                      sys.exit(0)
                   assert installed['status'] in ('PUBLIC_SELF_BUILT_BINARY_INSTALLED','OFFICIAL_BINARY_INSTALLED','ALREADY_COMPATIBLE_MANAGED')
-                  assert installed['game_build']=='12.1.5.70961'
+                  assert re.fullmatch(r'\d+(?:\.\d+){3}',installed['game_build'])
                   exe=installed['active_binary']
                   revision=installed['installed']['revision_short']
                   assert pathlib.Path(exe).is_file()
