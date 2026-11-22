@@ -4020,16 +4020,17 @@ async function checkSimcUpdater() {
       " 인증서 검증을 우회하지 않습니다. "));
     const alt=result.github_alternative;
     if(alt?.source==="OFFICIAL_SIMC_GITHUB_ACTIONS"&&
-       /^https:\/\/github\.com\/simulationcraft\/simc-publish\/actions\/runs\/\d+\/artifacts\/\d+$/.test(alt.artifact_zip_url)){
+       /^https:\/\/github\.com\/simulationcraft\/simc-publish\/actions\/runs\/\d+$/.test(alt.run_url)){
       const link=document.createElement("a");
-      link.href=alt.artifact_zip_url;
+      link.href=alt.run_url;
       link.target="_blank";link.rel="noopener noreferrer";
-      link.textContent="GitHub Windows nightly 기록(최신/빌드 일치 미검증)";
+      link.textContent="공식 GitHub Windows x64 배포 실행 기록";
       line.appendChild(link);
       line.appendChild(document.createTextNode(
         " · 배포 기록 "+(/^(?:20\d{2})-\d{2}-\d{2}$/.test(String(alt.created_at||"").slice(0,10))?
           String(alt.created_at).slice(0,10):"날짜 미확정")+
-        " · GitHub 로그인이 필요할 수 있습니다. 이전 빌드일 수 있으므로 다운로드한 파일의 내장 게임 데이터 빌드를 먼저 확인하세요. artifact ZIP에서 .7z를 꺼내 수동 설치할 수 있습니다."));
+        " · GitHub에 로그인한 뒤 해당 실행의 Artifacts에서 "+alt.name+
+        "을 다운로드하세요. 전체 workflow 실패여도 x64 artifact는 존재할 수 있습니다. 최신 소스/현재 KR Live 빌드와 일치한다는 뜻은 아닙니다. ZIP에서 .7z를 꺼내 아래 수동 설치를 사용하세요."));
     }else{
       const link=document.createElement("a");
       link.href="https://github.com/simulationcraft/simc-publish/actions";
@@ -4095,10 +4096,20 @@ async function installLocalSimcUpdater() {
     setNotice("로컬 SimC 설치 완료 · 신규 계산은 다른 바이너리 SHA의 세션으로 분리됩니다.");
   }catch(err){
     if(err.message==="SEVEN_ZIP_REQUIRED"){
-      status.textContent="7-Zip 실행파일(7z.exe)을 찾지 못해 설치를 시작하지 않았습니다. .7z 파일 경로는 별개입니다. 아래 공식 7-Zip을 설치한 다음 다시 실행해 주세요.";
-      throw Error("SEVEN_ZIP_REQUIRED · .7z 파일이 아니라 7-Zip(7z.exe) 압축 해제 프로그램이 필요합니다.");
+      status.textContent="7-Zip 실행파일(7z.exe)을 찾지 못했습니다. Windows의 일반 설치 폴더(Program Files\\7-Zip) 또는 PATH에 7z.exe가 있어야 합니다. 아래 공식 설치 안내를 확인하세요.";
+      throw Error("SEVEN_ZIP_REQUIRED · 압축파일 .7z가 아니라 실행 도구 7z.exe가 필요합니다.");
     }
-    status.textContent="수동 SimC 설치 실패 ("+err.message+"). 파일·압축 해제 도구·기동 조건을 확인하세요.";
+    const archiveReasons={
+      ARCHIVE_LINK_OR_ENCRYPTION_REFUSED:
+        "압축 내부에 링크·재분석 지점 또는 특수 파일이 감지되어 설치를 중단했습니다. 파일이나 검증 규칙을 우회하지 마세요.",
+      ARCHIVE_ENCRYPTION_REFUSED:
+        "암호화된 항목이 감지되어 설치하지 않았습니다. 공식 배포 파일을 다시 확인하세요.",
+      ARCHIVE_ATTRIBUTES_UNRECOGNIZED:
+        "압축 내부 파일 속성을 안전하게 판별할 수 없어 설치하지 않았습니다. 정확한 오류 코드를 전달해 주세요."
+    };
+    status.textContent=archiveReasons[err.message]?
+      err.message+" · "+archiveReasons[err.message]:
+      "수동 SimC 설치 실패 ("+err.message+"). 파일·압축 해제 도구·기동 조건을 확인하세요.";
     throw err;
   }
 }
