@@ -367,7 +367,7 @@ class SimCManager:
                     "manual_binary_never_modified":True,
                     "native_calls_now":0,"season_database_unchanged":True}
 
-    def check(self,index=None):
+    def check(self,index=None,*,retain_offer=True):
         need(self.platform=="win32","SIMC_UPDATER_WINDOWS_ONLY")
         # Prefer the publisher's own HTTPS index. If TLS fails, use the
         # upstream-owned GitHub Actions *metadata* as a safe manual fallback.
@@ -393,10 +393,12 @@ class SimCManager:
                     "archive_extractor_available":bool(find_sevenzip()),
                     "native_calls_now":0}
         with self.lock:
-            self.offer=candidates[0];self.offered_at=time.monotonic()
-            return {"schema":SCHEMA,"candidate":{"filename":self.offer["filename"],
-                    "revision_short":self.offer["revision_short"],
-                    "official_download_url":self.offer["url"]},
+            selected=candidates[0]
+            if retain_offer:
+                self.offer=selected;self.offered_at=time.monotonic()
+            return {"schema":SCHEMA,"candidate":{"filename":selected["filename"],
+                    "revision_short":selected["revision_short"],
+                    "official_download_url":selected["url"]},
                     "direct_install_available":True,
                     "github_alternative":None,
                     "official_index_problem":None,
@@ -412,6 +414,11 @@ class SimCManager:
         and unverified; no download, install or session mutation is performed.
         """
         from v289_retail_live_build_source import discover
+        # An older manual offer must not remain valid while an asynchronous
+        # build/source check is still pending.
+        with self.lock:
+            self.offer=None
+            self.offered_at=0.0
         live=None
         live_problem=None
         try:
@@ -425,7 +432,7 @@ class SimCManager:
             live_problem=(str(exc) if isinstance(exc,UpdateBlocked)
                           else "RETAIL_BUILD_SOURCE_UNAVAILABLE")
             live=None
-        result=self.check()
+        result=self.check(retain_offer=False)
         compatibility={
             "status":"LIVE_BUILD_UNKNOWN" if live is None else
                      "NO_VERIFIED_MATCHING_DOWNLOAD",
@@ -464,9 +471,15 @@ class SimCManager:
                 compatibility["status"]="SIMC_SOURCE_BUILD_UNVERIFIED"
         # Never activate the ordinary auto-install button just because a
         # Nightly is the most recent available, even on a failed check.
-        if compatibility["status"]!="SOURCE_BUILD_MATCHED_BINARY_UNVERIFIED":
+        if compatibility["status"]=="SOURCE_BUILD_MATCHED_BINARY_UNVERIFIED":
+            # Keep the validated offer unavailable until *all* checks have
+            # completed; no other local tab can install an in-flight candidate.
             with self.lock:
-                self.offer=None
+                self.offer={
+                    **nightly_identity(candidate["filename"]),
+                    "url":candidate["official_download_url"]}
+                self.offered_at=time.monotonic()
+        else:
             if candidate:
                 result["unverified_candidate"]=candidate
             result["candidate"]=None
