@@ -121,6 +121,53 @@ def fetch_github_nightly():
                     "direct_install_available":False}
     return None
 
+GENERATED_SOURCE_FILES=(
+    ("item_set_bonus.inc","// Set bonus data, wow build "),
+    ("gem_data.inc","// Gem properties, wow build "),
+    ("temporary_enchant.inc","// Temporary item enchants, wow build "),
+)
+SOURCE_BASE="https://raw.githubusercontent.com/simulationcraft/simc/"
+EXACT_BUILD=re.compile(r"\\d+(?:\\.\\d+){3}\\Z")
+
+
+def generated_source_build(revision, *, open_url=None):
+    """Confirm one pinned SimC *source* revision's three generated data builds.
+
+    This proves source-header agreement, NOT that a downloadable binary was
+    produced from the revision or that its current built-in data matches.
+    No generic web crawling, no unverified redirect or unauthenticated TLS.
+    """
+    need(type(revision) is str and re.fullmatch(r"[0-9a-f]{7,12}",revision),
+         "SIMC_SOURCE_REVISION_INVALID")
+    getter=open_url or urllib.request.urlopen
+    observed=[]
+    for filename,prefix in GENERATED_SOURCE_FILES:
+        url=SOURCE_BASE+revision+"/engine/dbc/generated/"+filename
+        req=urllib.request.Request(url,headers={
+            "User-Agent":"SIMC-Secondary-Official-Source-Check/1.0",
+            "Accept":"text/plain"})
+        with getter(req,timeout=8) as response:
+            endpoint=urllib.parse.urlsplit(response.geturl())
+            need(response.status==200 and endpoint.scheme=="https"
+                 and endpoint.hostname=="raw.githubusercontent.com"
+                 and response.geturl()==url,
+                 "SIMC_SOURCE_REDIRECT_OR_HOST_INVALID")
+            line=response.read(512).split(b"\\n",1)[0]
+        try:
+            header=line.decode("utf8")
+        except UnicodeError as exc:
+            raise UpdateBlocked("SIMC_SOURCE_HEADER_UNVERIFIED") from exc
+        need(header.startswith(prefix) and
+             EXACT_BUILD.fullmatch(header[len(prefix):]) is not None,
+             "SIMC_SOURCE_HEADER_UNVERIFIED")
+        observed.append(header[len(prefix):])
+    need(len(set(observed))==1,"SIMC_SOURCE_GENERATED_BUILDS_CONFLICT")
+    return {"source_build":observed[0],"source_headers_checked":len(observed),
+            "source_revision":revision,
+            "source_identity":"GITHUB_REVISION_GENERATED_HEADERS_ONLY",
+            "binary_embedded_build_verified":False}
+
+
 def candidate_urls(html):
     """Accept only official same-host Windows 64bit .7z entries."""
     p=Links();p.feed(html)
@@ -356,6 +403,77 @@ class SimCManager:
                     "installation_requires_confirmation":True,
                     "archive_extractor_available":bool(find_sevenzip()),
                     "native_calls_now":0}
+
+    def check_for_retail_compatibility(self,*,live_loader=None,source_loader=None):
+        """One user-initiated check. Offer an official download as matching
+        only after the KR BPSV version and pinned SimC source headers agree.
+
+        GitHub Actions ZIPs without a version-qualified binary remain manual
+        and unverified; no download, install or session mutation is performed.
+        """
+        from v289_retail_live_build_source import discover
+        live=None
+        live_problem=None
+        try:
+            live=(live_loader or discover)(region="KR")
+            need(type(live) is dict and
+                 live.get("status")=="LIVE_RETAIL_BUILD_SOURCE_OBSERVED"
+                 and live.get("region")=="KR"
+                 and EXACT_BUILD.fullmatch(str(live.get("game_build",""))) is not None,
+                 "RETAIL_BUILD_SOURCE_UNVERIFIED")
+        except (OSError,TimeoutError,ValueError,KeyError,TypeError) as exc:
+            live_problem=(str(exc) if isinstance(exc,UpdateBlocked)
+                          else "RETAIL_BUILD_SOURCE_UNAVAILABLE")
+            live=None
+        result=self.check()
+        compatibility={
+            "status":"LIVE_BUILD_UNKNOWN" if live is None else
+                     "NO_VERIFIED_MATCHING_DOWNLOAD",
+            "kr_game_build":live["game_build"] if live else None,
+            "game_build_source":live.get("source_url") if live else None,
+            "game_build_source_sha256":live.get("source_sha256") if live else None,
+            "game_build_problem":live_problem,
+            "simc_generated_build":None,
+            "simc_revision":None,
+            "source_headers_checked":0,
+            "binary_embedded_build_verified":False,
+            "season_ready":False,
+            "dps_native_calls_now":0,
+        }
+        candidate=result.get("candidate")
+        if candidate and live:
+            compatibility["simc_revision"]=candidate["revision_short"]
+            try:
+                proof=(source_loader or generated_source_build)(
+                    candidate["revision_short"])
+                need(type(proof) is dict and
+                     proof.get("source_headers_checked")==3 and
+                     proof.get("source_revision")==candidate["revision_short"]
+                     and EXACT_BUILD.fullmatch(str(proof.get("source_build",""))) is not None,
+                     "SIMC_SOURCE_HEADER_UNVERIFIED")
+                compatibility["simc_generated_build"]=proof["source_build"]
+                compatibility["source_headers_checked"]=3
+                if proof["source_build"]==live["game_build"]:
+                    compatibility["status"]="SOURCE_BUILD_MATCHED_BINARY_UNVERIFIED"
+                    # Exactly the validated same-host URL from the HTML index,
+                    # not a guessed GitHub artifact or a source-only commit link.
+                    result["matching_download_url"]=candidate["official_download_url"]
+                else:
+                    compatibility["status"]="SIMC_SOURCE_BUILD_MISMATCH"
+            except (OSError,TimeoutError,ValueError,TypeError,KeyError):
+                compatibility["status"]="SIMC_SOURCE_BUILD_UNVERIFIED"
+        # Never activate the ordinary auto-install button just because a
+        # Nightly is the most recent available, even on a failed check.
+        if compatibility["status"]!="SOURCE_BUILD_MATCHED_BINARY_UNVERIFIED":
+            with self.lock:
+                self.offer=None
+            if candidate:
+                result["unverified_candidate"]=candidate
+            result["candidate"]=None
+            result["direct_install_available"]=False
+        result["retail_compatibility"]=compatibility
+        result["matching_download_url"]=result.get("matching_download_url")
+        return result
 
     def _write_state(self,data):
         self.root.mkdir(parents=True,exist_ok=True)
