@@ -109,7 +109,8 @@ class SimpleUserInputs(unittest.TestCase):
         self.assertIn('input.type="number";input.min="1";input.max="999999999";',js)
         self.assertIn('class="gear-section gear-trinkets"',html)
         self.assertIn('class="gear-section gear-special"',html)
-        self.assertIn('class="gear-section gear-embellishments"',html)
+        self.assertIn('class="gear-section gear-embellishments profile-embellishments"',html)
+        self.assertLess(html.index('id="crafted-rows"'),html.index('id="conditions-title"'))
         self.assertIn("Omnium Folio · 4열 스탯",html)
 
 
