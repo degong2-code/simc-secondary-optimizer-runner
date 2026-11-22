@@ -140,7 +140,7 @@ def generated_source_build(revision, *, open_url=None):
     produced from the revision or that its current built-in data matches.
     No generic web crawling, no unverified redirect or unauthenticated TLS.
     """
-    need(type(revision) is str and re.fullmatch(r"[0-9a-f]{7,12}",revision),
+    need(type(revision) is str and re.fullmatch(r"[0-9a-f]{7,40}",revision),
          "SIMC_SOURCE_REVISION_INVALID")
     getter=open_url or urllib.request.urlopen
     observed=[]

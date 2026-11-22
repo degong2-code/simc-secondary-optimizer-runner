@@ -68,7 +68,8 @@ class GenericDiscovery(unittest.TestCase):
 
     def test_source_head_without_binary_is_never_installable(self):
         sha="9933ffb946fb55b1fa66657b848f519ac19006e1"
-        with mock.patch.object(mod,"fetch_index",return_value=""):
+        with mock.patch.object(mod,"fetch_index",return_value=""), \
+             mock.patch.object(mod,"fetch_github_nightly",return_value=None):
             r=self.manager.check_for_retail_compatibility(
                 live_loader=lambda region: LIVE,
                 source_loader=lambda rev: {"source_revision":rev,
@@ -132,7 +133,8 @@ class GenericDiscovery(unittest.TestCase):
             nonlocal calls
             calls+=1
             if calls==1:
-                with mock.patch.object(mod,"fetch_index",return_value=""):
+                with mock.patch.object(mod,"fetch_index",return_value=""), \
+                     mock.patch.object(mod,"fetch_github_nightly",return_value=None):
                     newer=self.manager.check_for_retail_compatibility(
                         live_loader=lambda region: LIVE,
                         source_loader=lambda r: {"source_revision":r,
