@@ -33,6 +33,7 @@ class FakeManager:
         self.installed=None
         self.checks=0
         self.installs=0
+        self.selected_sevenzip=None
     def status(self):
         return {"active_binary":self.active,"installed":self.installed}
     def check_for_retail_compatibility(self,**kwargs):
@@ -49,6 +50,7 @@ class FakeManager:
                 "source_headers_checked":3}
     def install_self_built(self,path,sevenzip=None,probe=None):
         self.installs+=1
+        self.selected_sevenzip=sevenzip
         from v659_simc_self_built_artifact import inspect_artifact
         info=inspect_artifact(path)
         assert info["source_sha"]==REV and info["game_build"]==LIVE
@@ -189,6 +191,29 @@ class AutoProvision(unittest.TestCase):
         self.assertFalse(result["new_compilation"])
         self.assertEqual(result["native_dps_calls_now"],0)
 
+    def test_auto_install_prefers_bounded_python_extractor_over_detected_external_7z(self):
+        def downloaded(candidate,output):
+            shutil.copy2(self.example,output)
+            return str(output)
+        # Reproduce a Windows machine with 7z.exe available, without using it.
+        with mock.patch.object(updater,'find_sevenzip',return_value='C:/7-Zip/7z.exe'), \
+             mock.patch.object(provision.importlib.util,'find_spec',return_value=object()):
+            result=provision.prepare_one_click(self.manager,live_loader=self.live,
+                release_loader=lambda url:[self.release],archive_loader=downloaded)
+        self.assertEqual(result['status'],'PUBLIC_SELF_BUILT_BINARY_INSTALLED')
+        self.assertEqual(self.manager.selected_sevenzip,updater.PY7ZR_TOOL)
+        self.assertEqual(self.manager.installs,1)
+
+    def test_auto_install_preserves_explicit_extractor_override(self):
+        def downloaded(candidate,output):
+            shutil.copy2(self.example,output)
+            return str(output)
+        with mock.patch.object(provision.importlib.util,'find_spec',return_value=object()):
+            result=provision.prepare_one_click(self.manager,live_loader=self.live,
+                release_loader=lambda url:[self.release],archive_loader=downloaded,
+                sevenzip='C:/7-Zip/7z.exe')
+        self.assertEqual(result['status'],'PUBLIC_SELF_BUILT_BINARY_INSTALLED')
+        self.assertEqual(self.manager.selected_sevenzip,'C:/7-Zip/7z.exe')
     def test_release_unavailable_report_remote_service_missing_without_key(self):
         result=provision.prepare_one_click(self.manager,live_loader=self.live,
                 release_loader=lambda url:[])
