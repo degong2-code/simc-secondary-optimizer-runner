@@ -3987,6 +3987,42 @@ async function refreshSimcUpdater(preferManaged=false) {
   if(status.active_binary&&(preferManaged||!field("binary")))applyManagedSimc(status);
   return status;
 }
+async function autoPrepareSimc() {
+  const status=$("simc-auto-prepare-status");
+  const button=$("simc-auto-prepare-btn");
+  if(!window.confirm("현재 한국 Live 빌드에 맞는 SimC를 공식 배포, 기존 관리 설치본, 검증된 공개 자체 빌드 순으로 확인하고 앱 전용 폴더에 설치할까요? 공식 배포가 없는 경우 자동 원격 빌드는 아직 지원하지 않습니다."))return;
+  button.disabled=true;
+  status.textContent="현재 게임 빌드 및 호환 SimC 확보 경로 확인 중…";
+  try{
+    const result=await api("/api/v1/simc-updates/prepare-auto",
+      {method:"POST",payload:{}});
+    if(result.active_binary&&result.installed){
+      displaySimcUpdater(await api("/api/v1/simc-updates/status"));
+      applyManagedSimc(result);
+      simcOffer=null;$("simc-install-btn").disabled=true;
+      const selected=result.installed;
+      const label=result.status==="OFFICIAL_BINARY_INSTALLED"?"공식 SimC":
+        result.status==="PUBLIC_SELF_BUILT_BINARY_INSTALLED"?"검증된 공개 자체 빌드 SimC":
+        "기존 호환 SimC";
+      status.textContent=label+" 적용 · 게임 빌드 "+result.game_build+
+        " · revision "+selected.revision_short+
+        " · 신규 컴파일 0회. 필요하면 ‘SimC 연결 확인·저장’을 눌러주세요.";
+      setNotice("SimC 확보·설치 및 연결 성공 · 기존 사용자 파일·세션은 유지됩니다.");
+    }else{
+      const problem=result.status==="SOURCE_BUILD_REQUIRES_REMOTE_BUILDER"?
+        "일치하는 공식 소스는 확인했지만 현재 자동 빌드를 요청할 신뢰된 배포 서버가 등록되지 않았습니다.":
+        "현재 Live 빌드에 일치하는 다운로드 가능한 실행파일을 확보하지 못했습니다.";
+      status.textContent=problem+
+        " GitHub 토큰이나 컴파일러를 사용자에게 요청하지 않습니다. 기존 SimC 경로도 변경하지 않았습니다.";
+    }
+  }catch(err){
+    status.textContent="SimC 자동 확보 실패 ("+err.message+
+      ") · 기존 설치·세션 유지. 서버·7-Zip 또는 공개 배포 상태를 확인해 주세요.";
+    throw err;
+  }finally{
+    button.disabled=false;
+  }
+}
 async function checkSimcUpdater() {
   const button=$("simc-check-btn");
   const line=$("simc-update-candidate");
@@ -4318,6 +4354,7 @@ function registerHandlers() {
   for(const group of ["special-rows","crafted-rows"])
     $(group).addEventListener("change",updateBudgetPreview);
 
+  $("simc-auto-prepare-btn").addEventListener("click",()=>withBusy(autoPrepareSimc));
   $("simc-check-btn").addEventListener("click",()=>{
     // withBusy otherwise silently drops a click while another operation runs.
     if(state.busy){
