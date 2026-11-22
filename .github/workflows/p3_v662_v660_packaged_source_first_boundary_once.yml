@@ -1,0 +1,133 @@
+name: P3 v662 One-Shot Packaged v660 SimC to Season First Source Boundary
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p3_v662_v660_packaged_source_first_boundary_once.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  packaged-first-source-only:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    env:
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/download-artifact@v4
+        with:
+          name: v181-windows-source-beta-45012956028
+          run-id: 45012956028
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: downloaded
+      - name: Verify original single ZIP, unpack only to throwaway workspace, install dependencies
+        shell: pwsh
+        run: |
+          @'
+          import hashlib,json,pathlib,zipfile
+          src=pathlib.Path('downloaded/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip')
+          assert hashlib.sha256(src.read_bytes()).hexdigest()=='a22ee056b6de4ab3287c5fa2bd5fdda878804ccdc8da0edaaba5a1e6781e2c93'
+          with zipfile.ZipFile(src) as archive:
+              assert len(archive.infolist())==286 and archive.testzip() is None
+              archive.extractall('program')
+          root=pathlib.Path('program/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA')
+          manifest=json.loads((root/'V181_PACKAGE_MANIFEST.json').read_text('utf8'))
+          assert manifest['file_count']==285 and len(manifest['files'])==285
+          assert all(hashlib.sha256((root/x['path']).read_bytes()).hexdigest()==x['sha256'] for x in manifest['files'])
+          assert (root/'runner/v660_simc_one_click_provision.py').is_file()
+          # Previously bundled static historical files must not be treated as fresh source.
+          quarantine=pathlib.Path('historical-source-quarantine');quarantine.mkdir()
+          old=list((root/'data').glob('current_season_*.json'))
+          old+=list((root/'data').glob('v202_*.json'))
+          old+=list((root/'data').glob('v206_*.json'))
+          old+=list((root/'data/season_ordinary_gem_nominal').glob('*.json'))
+          for n,file in enumerate(old):file.rename(quarantine/(str(n)+'-'+file.name))
+          print('V662_UNMODIFIED_V660_ZIP_MANIFEST_PASS',len(manifest['files']),'HISTORY_ISOLATED',len(old),flush=True)
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'V662_ORIGINAL_PRODUCT_ZIP_INVALID' }
+          python -m pip install -r program/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/requirements-web.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V662_WEB_DEPENDENCIES_FAILED' }
+      - name: One real cached SimC install, explicit connection save, FIRST season source diagnostic (DPS Native zero)
+        shell: pwsh
+        timeout-minutes: 27
+        run: |
+          @'
+          import json,os,pathlib,re,sys,tempfile
+          from fastapi.testclient import TestClient
+          root=pathlib.Path('program/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA').resolve()
+          os.chdir(root);sys.path.insert(0,str(root/'runner'))
+          import v113_local_web_api as web
+          class SourceCredentials:
+              def load(self):
+                  keys=('BLIZZARD_CLIENT_ID','BLIZZARD_CLIENT_SECRET','WCL_CLIENT_ID','WCL_CLIENT_SECRET')
+                  d={key:os.getenv(key,'') for key in keys}
+                  return d if all(d.values()) else None
+              def status(self):
+                  return {'supported':True,'configured':self.load() is not None}
+          creds=SourceCredentials()
+          print('V662_SEASON_SOURCE_CREDENTIALS_CONFIGURED',creds.status()['configured'],flush=True)
+          if not creds.load():
+              raise RuntimeError('V662_SEASON_SOURCE_CREDENTIALS_NOT_AVAILABLE_STOP')
+          with tempfile.TemporaryDirectory(prefix='v662-packaged-source-') as td:
+              work=pathlib.Path(td)
+              app=web.create_app(root=work/'runs',update_root=work/'managed',
+                         token='v662-single-zip-local',update_platform='win32',
+                         source_credential_store=creds)
+              headers={'x-simc-local-token':'v662-single-zip-local',
+                       'origin':'http://127.0.0.1:8765'}
+              def post(client,path,body):
+                  response=client.post(path,headers=headers,json=body)
+                  if response.status_code!=200:
+                      detail=response.json().get('detail',{})
+                      code=detail.get('code') if isinstance(detail,dict) else 'UNKNOWN'
+                      print('V662_FIRST_HTTP_BLOCKER',path,response.status_code,code,flush=True)
+                      raise RuntimeError('V662_HTTP_FIRST_BLOCKER_'+str(code))
+                  return response.json()
+              with TestClient(app,base_url='http://127.0.0.1:8765') as client:
+                  installed=post(client,'/api/v1/simc-updates/prepare-auto',{})
+                  assert installed['status'] in ('PUBLIC_SELF_BUILT_BINARY_INSTALLED','OFFICIAL_BINARY_INSTALLED','ALREADY_COMPATIBLE_MANAGED')
+                  assert installed['game_build']=='12.1.5.70961'
+                  exe=installed['active_binary']
+                  revision=installed['installed']['revision_short']
+                  assert pathlib.Path(exe).is_file()
+                  print('V662_INSTALLED',installed['status'],installed['game_build'],revision,flush=True)
+                  connected=post(client,'/api/v1/simc-connection/confirm',{
+                    'binary':exe,'revision':revision,'static_cache':''})
+                  assert connected['verified_now'] and connected['saved']['binary']==exe
+                  assert connected['saved']['observed_game_build']==installed['game_build']
+                  restored=client.get('/api/v1/simc-connection/status',headers=headers).json()
+                  assert restored['saved']['binary']==exe and not restored['verified_now']
+                  print('V662_CONNECTION_SAVE_REOPEN_PASS',restored['saved']['observed_game_build'],flush=True)
+                  # Do not request G/F/O Native in this FIRST SOURCE diagnostic.
+                  report=post(client,'/api/v1/environment/season-build',{
+                    'game_build':installed['game_build'],'target_ilevel':334,
+                    'auto_initial_core_build':False,'auto_initial_core_simc_binary':None,
+                    'native_G_binary':None,'consumable_native_binary':None,
+                    'auto_native_F_requested':False,'auto_native_O_requested':False,
+                    'selected_oil_item_ids_by_hand':{},'source_target_socket_count':4,
+                    'simc_revision_hint':revision})
+                  assert report.get('native_calls') in (0,None), 'V662_UNEXPECTED_SEASON_NATIVE_STOP'
+                  scoped=report.get('source_compilation') or {}
+                  print('V662_SOURCE_COMPILATION_STATUS',scoped.get('status'),flush=True)
+                  for label,obj in [('fresh_pinned',scoped.get('fresh_pinned_first_party_simc_source')),
+                                    ('source_resolution',scoped.get('fresh_simc_revision_resolution')),
+                                    ('zero_history',report.get('zero_history_build'))]:
+                      if isinstance(obj,dict):
+                          reason=obj.get('reason')
+                          reason=reason if isinstance(reason,str) and re.fullmatch(r'[A-Z0-9_]{3,120}',reason) else None
+                          requires=obj.get('requires')
+                          requires=[x for x in requires[:8] if isinstance(x,str) and re.fullmatch(r'[A-Z0-9_]{3,120}',x)] if isinstance(requires,list) else None
+                          print('V662_SOURCE_STAGE',label,obj.get('status'),reason,requires,flush=True)
+                  if report.get('environment_ready') is True:
+                      print('V662_EXISTING_ENVIRONMENT_REUSED_NO_NATIVE',flush=True)
+                  else:
+                      print('V662_SOURCE_FIRST_STOP_NO_GJFO_READY_CLAIM',flush=True)
+                  print('V662_NO_DPS_NATIVE_PASS',flush=True)
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'V662_PACKAGED_FIRST_SOURCE_BLOCKER_SEE_LOG' }
