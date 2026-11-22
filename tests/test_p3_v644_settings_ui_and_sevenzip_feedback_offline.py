@@ -98,7 +98,7 @@ function fixture(apiResult,path='C:\\\\Downloads\\\\simc-1210.01.0d19401-win64.7
  assert.equal(f.calls[0].route,'/api/v1/simc-updates/install-local');
  assert.equal(f.calls[0].args.payload.archive_path,'C:\\\\Downloads\\\\simc-1210.01.0d19401-win64.7z');
  assert(f.nodes['simc-local-install-status'].textContent.includes('7z.exe'));
- assert(f.nodes['simc-local-install-status'].textContent.includes('.7z 파일 경로는 별개'));
+ assert(f.nodes['simc-local-install-status'].textContent.includes('PATH에 7z.exe'));
  f=fixture(Promise.resolve({active_binary:'C:/managed/simc.exe',installed:{revision_short:'abc1234'}}));
  await f.fn();
  assert(f.nodes['simc-local-install-status'].textContent.includes('설치 및 기동 검증 완료'));
