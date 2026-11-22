@@ -4573,7 +4573,10 @@ function registerHandlers() {
     "season_enchant_finger2","season_enchant_other","diamond","omnium"])
     $(id).addEventListener("change",updateBudgetPreview);
   for(const group of ["special-rows","crafted-rows"])
-    $(group).addEventListener("change",updateBudgetPreview);
+    $(group).addEventListener("change",()=>{
+      updateBudgetPreview();
+      buttonState(state.running,state.longrunResultReady);
+    });
 
   $("simc-auto-prepare-btn").addEventListener("click",()=>withBusy(autoPrepareSimc));
   $("simc-check-btn").addEventListener("click",()=>{
