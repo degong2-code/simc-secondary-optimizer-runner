@@ -255,7 +255,7 @@ class SimCUpdateUnit(unittest.TestCase):
                       "Hard Link = ../other"):
             with self.subTest(extra=extra):
                 listing=LIST.replace("Encrypted = -",
-                      extra+"\\nEncrypted = -",1)
+                      extra+"\nEncrypted = -",1)
                 with self.assertRaisesRegex(mod.UpdateBlocked,
                                              "ARCHIVE_LINK_OR_ENCRYPTION_REFUSED"):
                     mod.verify_inventory(listing)
