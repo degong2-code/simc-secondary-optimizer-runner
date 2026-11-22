@@ -4151,6 +4151,34 @@ async function installLocalSimcUpdater() {
     throw err;
   }
 }
+async function installSelfBuiltSimcUpdater() {
+  const path=field("simc-self-built-artifact");
+  const status=$("simc-self-built-status");
+  if(!path.toLowerCase().endsWith(".zip")){
+    status.textContent="빌드 영수증이 포함된 Windows CLI GitHub Actions ZIP 경로를 입력하세요.";
+    throw Error("SELF_BUILT_ARTIFACT_ZIP_PATH_REQUIRED");
+  }
+  if(!window.confirm("이 ZIP은 공식 SimulationCraft 배포본이 아닌 자체 빌드 파일입니다. 원본 SHA, 내부 .7z, 실행파일 SHA와 게임 빌드를 검사한 뒤 앱 전용 폴더에 설치할까요? ZIP 영수증 자체는 공식 서명이 아닙니다."))return;
+  rememberPreManagedBinary();
+  status.textContent="자체 빌드 ZIP 영수증·.7z·실행파일 SHA 및 SimC 기동 검증 중…";
+  try{
+    const result=await api("/api/v1/simc-updates/install-self-built",
+      {method:"POST",payload:{artifact_path:path}});
+    displaySimcUpdater(result);
+    applyManagedSimc(result);
+    simcOffer=null;$("simc-install-btn").disabled=true;
+    const current=result.installed||{};
+    const build=current.source_game_build||"확인 불가";
+    status.textContent="자체 빌드 SimC 설치 완료 · 실행파일 내장 게임 빌드 "+build+
+      " 확인 · 소스 revision "+(current.source_revision_full||"확인 불가")+
+      " · 원본의 공식 배포 서명은 별도로 인증되지 않았습니다.";
+    $("simc-update-candidate").textContent="자체 빌드 SimC를 앱 전용 관리 폴더에 설치했습니다. 기존 사용자 파일·시즌 DB·세션은 변경하지 않았습니다.";
+    setNotice("자체 빌드 SimC 설치 완료 · 기존 세션과 다른 바이너리 SHA로 분리됩니다.");
+  }catch(err){
+    status.textContent="자체 빌드 ZIP 설치 실패 ("+err.message+"). ZIP 영수증, 7-Zip, 실행파일을 확인하세요. 기존 관리 버전은 유지됩니다.";
+    throw err;
+  }
+}
 async function rollbackSimcUpdater() {
   if(!window.confirm("관리 중인 SimC를 이전 버전으로 되돌릴까요? 기존 사용자 파일은 변경하지 않습니다."))return;
   const result=await api("/api/v1/simc-updates/rollback",
@@ -4301,6 +4329,7 @@ function registerHandlers() {
   });
   $("simc-install-btn").addEventListener("click",()=>withBusy(installSimcUpdater));
   $("simc-install-local-btn").addEventListener("click",()=>withBusy(installLocalSimcUpdater));
+  $("simc-install-self-built-btn").addEventListener("click",()=>withBusy(installSelfBuiltSimcUpdater));
   $("simc-rollback-btn").addEventListener("click",()=>withBusy(rollbackSimcUpdater));
   $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
   $("season-build-btn").addEventListener("click",()=>withBusy(()=>buildSeasonEnvironment(false)));
