@@ -1,0 +1,33 @@
+name: P3 v660 SimC One-Click Provisioning (Offline No Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v660_simc_one_click_provision.py
+      - runner/v193_simc_local_updater.py
+      - runner/v659_simc_self_built_artifact.py
+      - runner/v113_local_web_api.py
+      - runner/webui/app.js
+      - runner/webui/index.html
+      - tests/test_p3_v660_one_click_simc_offline.py
+      - .github/workflows/p3_v660_one_click_simc_offline.yml
+permissions:
+  contents: read
+jobs:
+  one-click-contract:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python: ['3.12','3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: One-click updater and previous offline archive regressions
+        run: |
+          python -m unittest -v tests.test_p3_v660_one_click_simc_offline tests.test_p3_v659_simc_self_built_artifact_offline tests.test_v193_simc_local_updater
+          python -m py_compile runner/v660_simc_one_click_provision.py
+      - name: Browser JS parse (no browser/network)
+        run: |
+          node --check runner/webui/app.js
