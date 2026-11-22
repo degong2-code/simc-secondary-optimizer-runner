@@ -17,7 +17,7 @@ SCHEMA="v665_official_blizzard_item_media_icons_v1"
 MEDIA="https://kr.api.blizzard.com/data/wow/media/item/"
 SUFFIX="?namespace=static-kr"
 MAX_ITEMS=80
-ICON_PATH=re.compile(r"/[a-z]{2}/icons/(?:18|36|56|64|128)/[a-z0-9_/-]+\\.(?:jpg|png|webp)\Z")
+ICON_PATH=re.compile(r"/[a-z]{2}/icons/(?:18|36|56|64|128)/[a-z0-9_/-]+\.(?:jpg|png|webp)\Z")
 
 class IconBlocked(ValueError):pass
 
