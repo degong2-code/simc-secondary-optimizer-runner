@@ -98,6 +98,10 @@ class UpdateLocalArchiveRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     archive_path: str = Field(min_length=8,max_length=4096)
 
+class UpdateSelfBuiltZipRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    artifact_path: str = Field(min_length=8,max_length=4096)
+
 class SimCConnectionConfirmRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     binary: str = Field(min_length=1,max_length=4096)
@@ -2903,6 +2907,13 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
     @app.post("/api/v1/simc-updates/install-local")
     def simc_update_install_local(request:UpdateLocalArchiveRequest):
         return updates_action(lambda:updater.install_local(request.archive_path))
+
+    @app.post("/api/v1/simc-updates/install-self-built")
+    def simc_update_install_self_built(request:UpdateSelfBuiltZipRequest):
+        # User-picked local artifact only. No GitHub token, remote URL,
+        # automatic compilation, official-distribution claim or DPS Native.
+        return updates_action(
+            lambda:updater.install_self_built(request.artifact_path))
 
     @app.post("/api/v1/simc-updates/rollback")
     def simc_update_rollback():
