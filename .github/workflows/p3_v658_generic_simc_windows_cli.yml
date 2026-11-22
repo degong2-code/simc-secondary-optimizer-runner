@@ -6,7 +6,7 @@ on:
       - build_requests/simc_win64_cli.json
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: simc-source-pinned-cli-build-${{ github.ref }}
   cancel-in-progress: false
@@ -33,7 +33,20 @@ jobs:
           "source_sha=$($r.full_sha)" >> $env:GITHUB_OUTPUT
           "short_sha=$($r.short_sha)" >> $env:GITHUB_OUTPUT
           "game_build=$($r.game_build)" >> $env:GITHUB_OUTPUT
-      - uses: actions/checkout@v4
+      - name: Reuse only a verified public experimental cache (skip expensive rebuild)
+        id: cache
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $status = python integration_probes/v661_public_simc_cache.py status --request build_requests/simc_win64_cli.json
+          if ($LASTEXITCODE -ne 0) { throw "SIMC_CACHE_PREFLIGHT_FAILED" }
+          if ($status -notin @("CACHE_HIT","CACHE_MISS")) { throw "SIMC_CACHE_PREFLIGHT_INVALID" }
+          $hit = if ($status -eq "CACHE_HIT") { "true" } else { "false" }
+          "hit=$hit" >> $env:GITHUB_OUTPUT
+          Write-Output "SIMC_EXPERIMENTAL_CACHE_$status"
+      - if: steps.cache.outputs.hit != 'true'
+        uses: actions/checkout@v4
         with:
           repository: simulationcraft/simc
           ref: ${{ steps.request.outputs.source_sha }}
@@ -41,6 +54,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
       - name: Verify upstream checkout and pinned Live generated sources
+        if: steps.cache.outputs.hit != 'true'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path out | Out-Null
@@ -48,15 +62,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "SIMC_CHECKOUT_FAILED" }
           python integration_probes/v658_generic_simc_win64_build.py source --request build_requests/simc_win64_cli.json --source upstream-simc --head $head --out out/source_proof.json
           if ($LASTEXITCODE -ne 0) { throw "SIMC_SOURCE_PROOF_FAILED" }
-      - uses: ilammy/msvc-dev-cmd@v1
+      - if: steps.cache.outputs.hit != 'true'
+        uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
       - name: Configure upstream CMake/Ninja Release CLI without Qt
+        if: steps.cache.outputs.hit != 'true'
         shell: pwsh
         run: |
           cmake -S upstream-simc -B simc-build -G Ninja -DBUILD_GUI=OFF -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DCPACK_SYSTEM_NAME=win64
           if ($LASTEXITCODE -ne 0) { throw "SIMC_CMAKE_CONFIG_FAILED" }
       - name: Build CLI once and package with upstream CPack
+        if: steps.cache.outputs.hit != 'true'
         shell: pwsh
         run: |
           cmake --build simc-build --target simc --parallel 2
@@ -64,6 +81,7 @@ jobs:
           cmake --build simc-build --target package --parallel 2
           if ($LASTEXITCODE -ne 0) { throw "SIMC_CPACK_FAILED" }
       - name: Non-DPS CLI execution and exact SHA receipt
+        if: steps.cache.outputs.hit != 'true'
         shell: pwsh
         run: |
           $exe = (Resolve-Path simc-build/simc.exe).Path
@@ -75,6 +93,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "SIMC_BUILD_RECEIPT_FAILED" }
           Copy-Item $archives[0].FullName out/
       - name: Retain self-built Windows CLI package and provenance (not official release)
+        if: steps.cache.outputs.hit != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: simc-win64-cli-${{ steps.request.outputs.short_sha }}-${{ steps.request.outputs.game_build }}
@@ -85,3 +104,20 @@ jobs:
             out/display_build.txt
           retention-days: 14
           if-no-files-found: error
+      - name: Pack exactly four source-proven members for long-lived experimental cache
+        if: steps.cache.outputs.hit != 'true'
+        shell: pwsh
+        run: |
+          $asset = "dist/simc-win64-cli-${{ steps.request.outputs.short_sha }}-${{ steps.request.outputs.game_build }}.zip"
+          python integration_probes/v661_public_simc_cache.py package --request build_requests/simc_win64_cli.json --source-dir out --output $asset
+          if ($LASTEXITCODE -ne 0) { throw "SIMC_CACHE_PACKAGE_VERIFICATION_FAILED" }
+      - name: Publish immutable source-keyed EXPERIMENTAL self-built cache (not official SimC)
+        if: steps.cache.outputs.hit != 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "simc-cli-source-${{ steps.request.outputs.source_sha }}"
+          $asset = "dist/simc-win64-cli-${{ steps.request.outputs.short_sha }}-${{ steps.request.outputs.game_build }}.zip"
+          gh release create $tag $asset --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --prerelease --title "EXPERIMENTAL self-built SimC CLI cache - ${{ steps.request.outputs.game_build }}" --notes "Source-pinned SimulationCraft Windows x64 CLI from official upstream source commit ${{ steps.request.outputs.source_sha }}. Self-built by isolated repository CI; not an official SimulationCraft binary or production approval. 4 receipt-checked ZIP members; GitHub Release asset digest is checked again by the Windows client. GPL-3.0 source terms apply. No season G/J/F/O READY, DPS Native or 26-spec certification implied."
+          if ($LASTEXITCODE -ne 0) { throw "SIMC_EXPERIMENTAL_CACHE_PUBLISH_FAILED" }
