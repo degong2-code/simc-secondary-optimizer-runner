@@ -52,14 +52,14 @@ def source_identity(root,doc,git_head):
     need(root.is_dir() and not root.is_symlink()
          and git_head==doc["source_sha"],"BUILD_SOURCE_GIT_SHA_MISMATCH")
     generated=root/"engine/dbc/generated"
-    version=(generated/"client_data_version.inc").open("rb").read(4096).decode("utf8")
+    version=(generated/"client_data_version.inc").open("rb").read(4096).decode("utf8").replace("\r\n","\n")
     match=re.findall(
       r'^#define CLIENT_DATA_WOW_VERSION "(\d+(?:\.\d+){3})"$',
       version,re.M)
     need(len(match)==1 and match[0]==doc["game_build"],
          "BUILD_SOURCE_CLIENT_DATA_MISMATCH")
     for name,prefix in SOURCE_HEADERS:
-        first=(generated/name).open("rb").read(256).split(b"\n",1)[0].decode("utf8")
+        first=(generated/name).open("rb").read(256).split(b"\n",1)[0].decode("utf8").rstrip("\r")
         need(first==prefix+doc["game_build"],
              "BUILD_SOURCE_GENERATED_HEADER_MISMATCH")
     config=(root/"engine/config.hpp").open("rb").read(20000).decode("utf8")
