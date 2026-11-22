@@ -1,0 +1,55 @@
+name: P3 v659 One-Shot Real 70961 SimC Actions Artifact Import (No Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_v659_real_actions_artifact_once.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  real-artifact-import:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download exact completed self-built Windows 70961 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-win64-cli-6924096-12.1.5.70961
+          run-id: 45007868837
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: actual
+      - name: Verify real v658 4 files, all SHA, ZIP importer, without running SimC
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, pathlib,sys,tempfile,zipfile
+          sys.path.insert(0,"runner")
+          import v659_simc_self_built_artifact as importer
+          folder=pathlib.Path("actual")
+          names={p.name for p in folder.iterdir()}
+          required={"build_receipt.json","source_proof.json","display_build.txt",
+                    "simc-1210.01.6924096-win64.7z"}
+          assert names==required,(names,required)
+          with tempfile.TemporaryDirectory() as td:
+              td=pathlib.Path(td)
+              archive=td/"selfbuilt-actions-download.zip"
+              with zipfile.ZipFile(archive,"w",zipfile.ZIP_DEFLATED) as z:
+                  for name in sorted(required):
+                      z.write(folder/name,arcname=name)
+              info=importer.inspect_artifact(archive)
+              assert info["source_sha"]=="6924096820c0b5c9d7bfa9848ea48fe0cd15c7d7"
+              assert info["game_build"]=="12.1.5.70961"
+              assert info["archive_sha256"]=="670ec659a44d8867f46ac267ed1e52db0d02eac8460472bf78aafa286b797c98"
+              assert info["origin_authenticated"] is False
+              output=td/"archive.7z"
+              proof=importer.copy_inner_archive(archive,output,info)
+              assert proof["sha256"]==info["archive_sha256"]
+              print("P3_V659_ACTUAL_70961_ARTIFACT_IMPORT_PASS",info["archive_sha256"],flush=True)
+          PY
