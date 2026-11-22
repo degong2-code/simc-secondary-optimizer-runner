@@ -3526,6 +3526,73 @@ function refreshExactEnchantAvailability() {
      !state.installedE0Ids?.has(Number(selector.value)))
     selector.value="";
 }
+
+/* v665: use source-identified enchant names, never the raw technical ID as
+   the only visible name. Stronger ring stats require independently recorded
+   same-effect family AND signed E vectors for both variants. */
+function enchantSourceName(row){
+  const token=row?.simc_token;
+  if(typeof row?.official_name_ko==="string"&&row.official_name_ko.trim())
+    return row.official_name_ko.trim();
+  if(typeof token!=="string"||!/^enchant_[a-z0-9_]+__[a-z0-9_]+$/.test(token))
+    return "이름 미확인";
+  const words=token.split("__")[1].split("_");
+  return words.map(w=>w[0].toUpperCase()+w.slice(1)).join(" ");
+}
+function verifiedEnchantStats(row){
+  const E=row?.verified_fixed_E;
+  const stats=["crit_rating","haste_rating","mastery_rating","versatility_rating"];
+  if(!E||typeof E!=="object"||
+    !stats.every(k=>Number.isSafeInteger(E[k])&&E[k]>=0&&E[k]<=100000))
+    return null;
+  return E;
+}
+function enchantRatingLabel(row){
+  const E=verifiedEnchantStats(row),names={
+    crit_rating:"치명",haste_rating:"가속",mastery_rating:"특화",
+    versatility_rating:"유연"};
+  return E?Object.entries(E).filter(([,amount])=>amount>0)
+    .map(([name,amount])=>names[name]+" +"+amount).join(" · "):"";
+}
+function enchantVisibleLabel(row,candidate=null){
+  const name=enchantSourceName(row), stat=enchantRatingLabel(row);
+  if(stat)return name+" · "+stat;
+  const desc=candidate?.effect_description;
+  // Non-CHMV E=0 is NOT equivalent to "no combat effect".
+  return name+(typeof desc==="string"&&desc.length<=55&&
+    !desc.includes("추가 원본")?" · "+desc:"");
+}
+function sourceSupportedStrongRingEnchants(rows,catalog){
+  const raw=catalog?.enchant_candidates?.items||[];
+  const sources=new Map(raw.filter(x=>Number.isSafeInteger(x.enchant_id))
+    .map(x=>[x.enchant_id,x]));
+  const single=(row)=>{
+    if(row.slot!=="finger1/finger2")return null;
+    const src=sources.get(row.enchant_id),E=verifiedEnchantStats(row);
+    if(!src||src.token!==row.simc_token||!E||
+       !["STRONGER_VARIANT_REPORTED","WEAKER_VARIANT_REPORTED"]
+         .includes(src.preferred_if_same_effect_source))return null;
+    const stat=src.effect_family;
+    if(!["crit_rating","haste_rating","mastery_rating",
+          "versatility_rating"].includes(stat)||E[stat]===0||
+       Object.entries(E).some(([k,v])=>k!==stat&&v!==0))
+      return null;
+    // A family source is advisory; only a signed positive scalar E can
+    // participate, and the stronger candidate must have strictly more.
+    return {family:stat,value:E[stat],kind:src.preferred_if_same_effect_source};
+  };
+  return rows.filter(row=>{
+    const info=single(row);
+    if(!info||info.kind!=="WEAKER_VARIANT_REPORTED")return true;
+    return !rows.some(other=>{
+      const strong=single(other);
+      return strong&&strong.kind==="STRONGER_VARIANT_REPORTED"&&
+        strong.family===info.family&&strong.value>info.value&&
+        other.slot===row.slot;
+    });
+  });
+}
+
 function renderSeasonOptionCatalog(catalog) {
   const runeSource=catalog?.verified_weapon_enhancements?.dk_runeforges;
   const runes=(runeSource?.status==="PINNED_DK_RUNES_INSTALLED" &&
@@ -3602,9 +3669,14 @@ function renderSeasonOptionCatalog(catalog) {
     // ready. v098/v096 independently check final representative ring,
     // SimC enchant_id, actual item and cache identity before execution.
     // Prior exact v528 IDs retain their historical scoped entry instead.
-    const e0Candidates=Array.isArray(
+    const sourceNamed=new Map((catalog.enchant_candidates?.items||[])
+      .filter(x=>Number.isSafeInteger(x.enchant_id)).map(x=>[x.enchant_id,x]));
+    const approvedVisible=sourceSupportedStrongRingEnchants(rows,catalog);
+    const visibleIds=new Set(approvedVisible.map(x=>x.enchant_id));
+    const e0Candidates=(Array.isArray(
       registration?.installed_E0_final_finger_candidates)?
-      registration.installed_E0_final_finger_candidates:[];
+      registration.installed_E0_final_finger_candidates:[]).filter(
+        item=>visibleIds.has(item.enchant_id));
     for(const item of e0Candidates) {
       if(!Number.isSafeInteger(item.enchant_id)||
          item.enchant_id<=0 || item.slot!=="finger1/finger2" ||
@@ -3620,17 +3692,9 @@ function renderSeasonOptionCatalog(catalog) {
         continue;
       state.installedE0Ids.add(item.enchant_id);
       const certified=rows.find(row=>row.enchant_id===item.enchant_id);
-      const E=certified?.verified_fixed_E||{};
-      const label=Object.entries(E).filter(([,n])=>n>0)
-        .map(([stat,n])=>({"crit_rating":"치명","haste_rating":"가속",
-          "mastery_rating":"특화","versatility_rating":"유연"}[stat]+" +"+n))
-        .join(" · ")||"정적 E=0";
-      selector.appendChild(option(String(item.enchant_id),
-        label+" 검증 · 마부 #"+item.enchant_id+
-        " · 실행 시 실제 반지/SimC 입력 재확인"));
-      second.appendChild(option(String(item.enchant_id),
-        label+" 검증 · 마부 #"+item.enchant_id+
-        " · 반지 2 실제 아이템/SimC 입력 재확인"));
+      const label=enchantVisibleLabel(certified,sourceNamed.get(item.enchant_id));
+      selector.appendChild(option(String(item.enchant_id),label));
+      second.appendChild(option(String(item.enchant_id),label));
     }
     // Only signed installed v212 E0. v098 must still match actual
     // representative item and SimC input before running.
@@ -3639,7 +3703,7 @@ function renderSeasonOptionCatalog(catalog) {
     const names={head:"머리",neck:"목",shoulders:"어깨",back:"등",
       chest:"가슴",wrists:"손목",hands:"손",waist:"허리",legs:"다리",
       feet:"발",main_hand:"주무기",off_hand:"보조무기"};
-    for(const item of rows) {
+    for(const item of approvedVisible) {
       if(!Number.isSafeInteger(item.enchant_id)||item.enchant_id<=0 ||
         typeof item.verified_fixed_E!=="object"||
         item.verified_fixed_E===null ||
@@ -3656,21 +3720,15 @@ function renderSeasonOptionCatalog(catalog) {
       const slots=ordinarySlots.has(item.slot)?[item.slot]:
         item.slot==="WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED"?
           ["main_hand","off_hand"]:[];
-      const Elabel=Object.entries(item.verified_fixed_E)
-        .filter(([,n])=>n>0).map(([stat,n])=>
-          ({"crit_rating":"치명","haste_rating":"가속",
-            "mastery_rating":"특화","versatility_rating":"유연"}[stat]||stat)+
-          " +"+n).join(" · ")||"정적 E=0";
+      const Elabel=enchantVisibleLabel(item,sourceNamed.get(item.enchant_id));
       for(const slot of slots) {
         const key=slot+":"+item.enchant_id;
         state.installedOtherE0Choices.add(key);
-        other.appendChild(option(key,names[slot]+" · 마부 #"+
-          item.enchant_id+" · "+Elabel+" (실제 아이템/손 검증)"));
+        other.appendChild(option(key,names[slot]+" · "+Elabel));
         const directId=directSlotSelectors[slot];
         if(directId) {
           const widget=$(directId);
-          widget.appendChild(option(key,
-            "마부 #"+item.enchant_id+" · "+Elabel+" 검증"));
+          widget.appendChild(option(key,Elabel));
           widget.disabled=false;
         }
       }
