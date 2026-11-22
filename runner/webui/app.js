@@ -153,6 +153,8 @@ const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, s
                 budgetPreviewDirty:false, seasonOptionRequestEpoch:0,
                 seasonBuildTargetManualOverride:false,
                 userTargetIlevelManualOverride:false,
+                equipmentIconUrls:new Map(),equipmentIconScope:"",
+                equipmentIconEpoch:0,
                 autoSeasonTargetEnabled:true, lastVerifiedSeasonTarget:null,
                 pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0, nextPassivePollAt:0 };
@@ -247,8 +249,18 @@ function inlineEquipmentCard(item,{type,selected,disabled,reason="",onSelect}){
   b.setAttribute("aria-pressed",String(selected));
   const icon=document.createElement("span");
   icon.className="inline-item-icon";icon.setAttribute("aria-hidden","true");
-  // No fetched icon can be inferred from a numeric ItemID.
-  icon.textContent="◆";
+  const imageUrl=state.equipmentIconUrls.get(item.item_id);
+  if(typeof imageUrl==="string"&&
+     /^https:\/\/render\.worldofwarcraft\.com\/[a-z]{2}\/icons\/(?:18|36|56|64|128)\/[a-z0-9_/-]+\.(?:jpg|png|webp)$/.test(imageUrl)) {
+    const image=document.createElement("img");
+    image.src=imageUrl;image.alt="";image.loading="lazy";
+    image.referrerPolicy="no-referrer";
+    image.addEventListener("error",()=>icon.replaceChildren("◆"),{once:true});
+    icon.appendChild(image);
+  } else {
+    // The exact ItemID alone is not an image ID; never draw a wrong icon.
+    icon.textContent="◆";
+  }
   const text=document.createElement("span");text.className="inline-item-label";
   text.textContent=item.name_ko||item.name||"아이템 #"+item.item_id;
   const mark=document.createElement("span");mark.className="inline-item-mark";
@@ -746,11 +758,57 @@ function setTrinketSelection(fieldId,itemId,restored=false) {
   node.value="";
   refreshEquipmentSelectionUI();
 }
+
+async function refreshOfficialEquipmentIcons(gear){
+  const scope=gear?.source_scope==="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"&&
+    /^[0-9]+(?:\.[0-9]+){3}$/.test(gear.season_build||"")&&
+    /^[a-f0-9]{64}$/.test(gear.installed_manifest_sha256||"")?
+    gear.season_build+":"+gear.installed_manifest_sha256+":"+field("ilevel"):"";
+  if(!scope) {
+    state.equipmentIconEpoch++;
+    state.equipmentIconScope="";
+    state.equipmentIconUrls.clear();
+    return;
+  }
+  if(scope===state.equipmentIconScope)return;
+  const epoch=++state.equipmentIconEpoch;
+  state.equipmentIconScope=scope;
+  state.equipmentIconUrls.clear();
+  const params=new URLSearchParams({
+    game_build:gear.season_build,
+    target_ilevel:String(field("ilevel")),
+    installed_manifest_sha256:gear.installed_manifest_sha256
+  });
+  try{
+    const data=await api("/api/v1/season-item-icons?"+params.toString());
+    if(state.equipmentIconEpoch!==epoch||state.equipmentIconScope!==scope||
+       state.seasonGear?.installed_manifest_sha256!==
+         gear.installed_manifest_sha256)return;
+    if(data?.schema!=="v665_official_blizzard_item_media_icons_v1"||
+       !["COMPLETE","PARTIAL"].includes(data.status)||
+       !data.icons||typeof data.icons!=="object")return;
+    const legalIds=new Set([
+      ...(gear.choices?.trinket||[]),
+      ...(gear.choices?.special_effect_gear_candidate||[])
+    ].map(x=>x.item_id));
+    for(const [raw,src] of Object.entries(data.icons)){
+      const id=Number(raw);
+      if(Number.isSafeInteger(id)&&legalIds.has(id)&&typeof src==="string"&&
+         /^https:\/\/render\.worldofwarcraft\.com\/[a-z]{2}\/icons\/(?:18|36|56|64|128)\/[a-z0-9_/-]+\.(?:jpg|png|webp)$/.test(src))
+        state.equipmentIconUrls.set(id,src);
+    }
+    drawInlineEquipment();
+  }catch{
+    // Optional images never block item selection or query the game DB again.
+  }
+}
+
 function installSeasonGearHints(catalog) {
   state.seasonGear=catalog?.status==="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY"
     ? catalog : null;
   // Only an exact v212/SHA gear lookup below can set this run-level seal.
   state.seasonGearTargetIlevel=null;
+  void refreshOfficialEquipmentIcons(state.seasonGear);
   const node=$("season-gear-note");
   const current=state.seasonGear?.choices||{};
   const sortedKorean=items=>[...(items||[])].sort((a,b)=>
