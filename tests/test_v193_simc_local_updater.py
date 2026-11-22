@@ -165,8 +165,11 @@ class SimCUpdateUnit(unittest.TestCase):
         with mock.patch.object(mod,"fetch_github_json",side_effect=fake):
             result=mod.fetch_github_nightly()
         self.assertEqual(result["artifact_id"],12953786078)
-        self.assertIn("/40999844143/artifacts/12953786078",
-                      result["artifact_zip_url"])
+        self.assertEqual(result["run_url"],
+                         "https://github.com/simulationcraft/simc-publish/actions/runs/40999844143")
+        self.assertNotIn("artifact_zip_url",result,
+                         "Direct artifact detail URLs can 404 without GitHub login")
+        self.assertEqual(result["name"],"simc-nightly-win64-midnight")
         self.assertFalse(result["direct_install_available"])
         self.assertEqual(len(calls),2)
 
@@ -231,6 +234,50 @@ class SimCUpdateUnit(unittest.TestCase):
             with self.subTest(bad=bad[:55]):
                 with self.assertRaises(mod.UpdateBlocked):
                     mod.verify_inventory(bad)
+
+    def test_read_only_attributes_and_unix_permissions_are_not_links(self):
+        # Real 7z -slt Windows R is read-only; POSIX 'r' is permission.
+        # Neither can authorize symlink/reparse nor skip path checks.
+        for attrs in ("R","RA",".R..A","....A","A",
+                      "-rw-r--r--","-rwxr-xr-x","drwxr-xr-x"):
+            with self.subTest(attrs=attrs):
+                listing=LIST.replace("Attributes = A","Attributes = "+attrs)
+                self.assertEqual(mod.verify_inventory(listing),
+                                 ["simc.exe","profiles"])
+        for attrs in ("LA","L",".L..A","lrwxrwxrwx",
+                      "brw-------","crw-------","prw-------"):
+            with self.subTest(attrs=attrs):
+                listing=LIST.replace("Attributes = A","Attributes = "+attrs)
+                with self.assertRaisesRegex(mod.UpdateBlocked,
+                                             "ARCHIVE_LINK_OR_ENCRYPTION_REFUSED"):
+                    mod.verify_inventory(listing)
+        for extra in ("Symbolic Link = ../other",
+                      "Hard Link = ../other"):
+            with self.subTest(extra=extra):
+                listing=LIST.replace("Encrypted = -",
+                      extra+"\\nEncrypted = -",1)
+                with self.assertRaisesRegex(mod.UpdateBlocked,
+                                             "ARCHIVE_LINK_OR_ENCRYPTION_REFUSED"):
+                    mod.verify_inventory(listing)
+        encrypted=LIST.replace("Encrypted = -","Encrypted = +",1)
+        with self.assertRaisesRegex(mod.UpdateBlocked,
+                                     "ARCHIVE_ENCRYPTION_REFUSED"):
+            mod.verify_inventory(encrypted)
+        unknown=LIST.replace("Attributes = A","Attributes = J",1)
+        with self.assertRaisesRegex(mod.UpdateBlocked,
+                                     "ARCHIVE_ATTRIBUTES_UNRECOGNIZED"):
+            mod.verify_inventory(unknown)
+
+    def test_github_run_page_and_manual_installer_warnings_are_connected(self):
+        ui=(ROOT/"runner"/"webui"/"app.js").read_text(encoding="utf8")
+        page=(ROOT/"runner"/"webui"/"index.html").read_text(encoding="utf8")
+        self.assertIn('link.href=alt.run_url;',ui)
+        self.assertNotIn('link.href=alt.artifact_zip_url;',ui)
+        self.assertIn('Artifacts',ui)
+        self.assertIn('ARCHIVE_ATTRIBUTES_UNRECOGNIZED',ui)
+        self.assertIn('ARCHIVE_ENCRYPTION_REFUSED',ui)
+        self.assertIn('7z.exe',page)
+        self.assertIn('SimC 연결 확인·저장',page)
 
     def test_status_read_only_offer_user_consent_install_and_first_rollback(self):
         self.assertFalse((self.path/"managed").exists())
