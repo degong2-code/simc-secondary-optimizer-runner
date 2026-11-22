@@ -19,3 +19,8 @@
 ## 남은 첫 접합부와 STOP
 **새 패치에서 일반 사용자 PC가 인증 없이 원격 빌드 요청을 내는 브로커는 여전히 미구현.** v661은 이미 운영자가 적법하게 발행한 request push → 성공 산출물 자동 게시만 연결했다. GitHub default branch에서만 동작하는 schedule 또는 인증된 중앙 서비스/브로커를 실제 운영하려면 main/workflow·운영 권한을 별도 사용자 승인받아야 한다. 익명 workflow_dispatch, 사용자 PAT/컴파일러, 무제한 공개 빌드를 도입하지 않는다.
 개인 PC v229 첫 장애, 신규 시즌 G/J/F/O READY, 26전문화 E2E는 미확인. 기존 v660 단일 제품 ZIP SHA 및 사용자 UI 변경 0. 공식 `15/78 COMPLETE`는 원장에만 유지, `full_product_e2e=PENDING`. main/v003/Project UI/Work OS/공식 승격·기존 주 제품 개발 소유권 불변.
+
+## 추가 실측: 기존 70961 공개 캐시의 Windows 빌더 HIT
+- 기존 `build_requests/simc_win64_cli.json`은 **키 순서만 변경**하여 동일한 full SHA·게임빌드·범위를 유지한 채 격리 브랜치 push 1회만 수행. 다른 새 빌드 요청이나 SimC 소스 갱신 없음.
+- [실제 Windows 2022 builder #45018366795](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45018366795) **SUCCESS**, 로그에 `SIMC_EXPERIMENTAL_CACHE_CACHE_HIT`. Source checkout, generated header 재조회, MSVC 설정, CMake/Ninja, 컴파일/CPack, CLI smoke, Actions artifact, Release ZIP pack/publish는 모두 **SKIPPED**. 신규 컴파일 0, Native DPS 0, 중복 게시 0.
+- 이 결과로 캐시 HIT 시 무비용에 가까운 조기 종료는 실제 Windows 워크플로에서 확인됨. **아직 신규 패치 cache MISS→Windows 컴파일→신규 공개 Release 게시 end-to-end는 미실측**이며 이 경로의 시험을 위해 기존 70961을 불필요하게 재컴파일하지 않는다.
