@@ -1203,6 +1203,47 @@ function renderInstalledFlaskChoices(data) {
       Number.isSafeInteger(item.J)&&item.J>=0 &&
       Number.isSafeInteger(item.F)&&item.F>=0 &&
       item.socket_total===4):[];
+  const budgetSelector=typeof document==="object"&&
+    typeof document.getElementById==="function"?
+    document.getElementById("season-verified-budget"):null;
+  const group=typeof document==="object"&&
+    typeof document.getElementById==="function"?
+    document.getElementById("season-verified-budget-group"):null;
+  if(budgetSelector&&group){
+    const previous=budgetSelector.value;
+    budgetSelector.replaceChildren(option("","검증된 F/J 구성 선택"));
+    const rows=state.verifiedBaseFlaskInstalls;
+    const labels=new Map();
+    const key=item=>[
+      item.flask_item_id,item.F,item.J,item.socket_total
+    ].join("/");
+    for(const item of rows)
+      labels.set(key(item),(labels.get(key(item))||0)+1);
+    // A same-label collision may hide different source or gem effects;
+    // even the same F/J numeric totals never authorize choosing at random.
+    let selectable=0;
+    for(const item of rows){
+      const duplicate=labels.get(key(item))!==1;
+      const text="영약 F "+item.F+" · 보석 J "+item.J+
+        " · 소켓 "+item.socket_total+" · 기름 없음"+
+        (duplicate?" · 원본 구성 추가 확인 필요":"");
+      const candidate=option(item.installed_manifest_sha256,text);
+      candidate.disabled=duplicate;
+      budgetSelector.appendChild(candidate);
+      if(!duplicate)selectable++;
+    }
+    budgetSelector.value=Array.from(budgetSelector.options).some(opt=>
+      opt.value===previous&&!opt.disabled)?previous:"";
+    group.hidden=rows.length<2;
+    const status=document.getElementById("season-verified-budget-status");
+    if(status)status.textContent=rows.length<2?
+      "기본 구성은 하나만 검증돼 있습니다.":
+      selectable?
+        "검증된 설치 환경 "+rows.length+"건 중 구분 가능한 "+selectable+
+        "건을 표시합니다. 서로 다른 출처를 임의로 합치지 않습니다.":
+        "검증된 설치본이 여러 개지만 표시된 F/J 조건만으로 구별할 수 없습니다. "+
+        "진단 영수증을 이용해 원본 구성을 확인해야 합니다.";
+  }
   const selector=$("season-verified-flask");
   const prior=field("season-selected-flask-id");
   const baseInstalled=state.verifiedBaseFlaskInstalls.some(item=>
@@ -1256,13 +1297,16 @@ async function chooseInstalledFlask() {
   const eligible=installedConsumableScopeMatches(state.oilCatalog) &&
     !oilUseIntent && sockets===4 &&
     !field("season-existing-special-gem-id");
+  const selectedBudget=field("season-verified-budget");
   const exact=eligible?state.verifiedBaseFlaskInstalls.filter(x=>
-    x.flask_item_id===Number(flask) && x.socket_total===sockets):[];
+    x.flask_item_id===Number(flask) && x.socket_total===sockets &&
+    (!selectedBudget || x.installed_manifest_sha256===selectedBudget)):[];
   if(exact.length!==1) {
     state.seasonGearTargetIlevel=null; // never plan with an old F/J SHA
     $("season-verified-flask-status").textContent=
-      "선택한 영약의 기본 4보석·기름 미사용 설치 구성을 하나로 특정할 수 없습니다. "+
-      "검증된 다른 예산을 임의 선택하지 않습니다. ‘선택 환경 검증·준비’에서 해당 구성을 확인하세요.";
+      "현재 영약의 검증된 F/J 환경이 여러 개이거나 선택 조건과 다릅니다. "+
+      "‘검증된 환경 구성’에서 F/J를 구분해 선택하세요. 동일 수치로 구별할 수 없는 "+
+      "설치본은 임의로 적용하지 않습니다.";
     return;
   }
   const sha=exact[0].installed_manifest_sha256;
@@ -1283,6 +1327,7 @@ async function chooseInstalledFlask() {
   // Never publish the earlier O=0/four-gem SHA for a changed user choice.
   if(field("season-verified-flask")!==flask ||
      field("season-selected-flask-id")!==flask ||
+     field("season-verified-budget")!==selectedBudget ||
      oilUseIntent || valueInt("season-target-socket-count")!==sockets ||
      field("season-existing-special-gem-id") ||
      Number(field("ilevel"))!==level ||
@@ -2823,7 +2868,7 @@ function seasonBuildInputScope(forUserVariant=false) {
   const names=forUserVariant?
     ["season-game-build","ilevel","season-target-socket-count",
      "season-existing-special-gem-id","season-selected-flask-id",
-     "season-oil-main-id","season-oil-off-id",
+     "season-verified-budget","season-oil-main-id","season-oil-off-id",
      "optimizer-oil-main-id","optimizer-oil-off-id",
      "oil_main","oil_off","optimizer-oil-enabled"]:
     ["season-game-build","season-target-ilevel","season-refresh-reason",
@@ -4631,8 +4676,18 @@ function registerHandlers() {
   updateSeasonSocketBreakdown();
   $("source-credentials-save-btn").addEventListener("click",()=>withBusy(saveSourceCredentials));
   $("source-credentials-clear-btn").addEventListener("click",()=>withBusy(clearSourceCredentials));
-  $("season-verified-flask").addEventListener("change",()=>
-    withBusy(chooseInstalledFlask));
+  $("season-verified-flask").addEventListener("change",()=>withBusy(async()=>{
+    $("season-verified-budget").value="";
+    await chooseInstalledFlask();
+  }));
+  $("season-verified-budget").addEventListener("change",()=>withBusy(async()=>{
+    const sha=field("season-verified-budget");
+    const exact=state.verifiedBaseFlaskInstalls.find(item=>
+      item.installed_manifest_sha256===sha);
+    if(!exact)return;
+    $("season-verified-flask").value=String(exact.flask_item_id);
+    await chooseInstalledFlask();
+  }));
   $("potion").addEventListener("change",refreshDefaultConsumableSummaries);
   $("season-selected-flask-id").addEventListener("input",()=>{
     $("season-verified-flask").value="";
