@@ -1,4 +1,4 @@
-name: P3 v662 One-Shot Packaged v660 SimC to Season First Source Boundary
+name: P3 v663 One-Shot Fixed Packaged SimC to Season First Source Boundary
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
@@ -22,8 +22,8 @@ jobs:
         with: {python-version: '3.12'}
       - uses: actions/download-artifact@v4
         with:
-          name: v181-windows-source-beta-45012956028
-          run-id: 45012956028
+          name: v181-windows-source-beta-45019216083
+          run-id: 45019216083
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: downloaded
       - name: Verify original single ZIP, unpack only to throwaway workspace, install dependencies
@@ -32,7 +32,9 @@ jobs:
           @'
           import hashlib,json,pathlib,zipfile
           src=pathlib.Path('downloaded/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip')
-          assert hashlib.sha256(src.read_bytes()).hexdigest()=='a22ee056b6de4ab3287c5fa2bd5fdda878804ccdc8da0edaaba5a1e6781e2c93'
+          product_digest=hashlib.sha256(src.read_bytes()).hexdigest()
+          assert 1400000<src.stat().st_size<1700000
+          print('V663_NEW_PRODUCT_ZIP_SHA256',product_digest,flush=True)
           with zipfile.ZipFile(src) as archive:
               assert len(archive.infolist())==286 and archive.testzip() is None
               archive.extractall('program')
@@ -40,7 +42,11 @@ jobs:
           manifest=json.loads((root/'V181_PACKAGE_MANIFEST.json').read_text('utf8'))
           assert manifest['file_count']==285 and len(manifest['files'])==285
           assert all(hashlib.sha256((root/x['path']).read_bytes()).hexdigest()==x['sha256'] for x in manifest['files'])
-          assert (root/'runner/v660_simc_one_click_provision.py').is_file()
+          provision=(root/'runner/v660_simc_one_click_provision.py')
+          assert provision.is_file()
+          raw=provision.read_text('utf8')
+          assert 'importlib.util.find_spec("py7zr")' in raw
+          assert 'sevenzip=updater.PY7ZR_TOOL' in raw
           # Previously bundled static historical files must not be treated as fresh source.
           quarantine=pathlib.Path('historical-source-quarantine');quarantine.mkdir()
           old=list((root/'data').glob('current_season_*.json'))
@@ -63,6 +69,8 @@ jobs:
           root=pathlib.Path('program/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA').resolve()
           os.chdir(root);sys.path.insert(0,str(root/'runner'))
           import v113_local_web_api as web
+          import v193_simc_local_updater as updater
+          print('V663_EXTERNAL_7ZIP_PRESENT',bool(updater.find_sevenzip()),flush=True)
           class SourceCredentials:
               def load(self):
                   keys=('BLIZZARD_CLIENT_ID','BLIZZARD_CLIENT_SECRET','WCL_CLIENT_ID','WCL_CLIENT_SECRET')
