@@ -481,9 +481,13 @@ const apply=Function("state","$","field","valueInt",
         self.assertLess(env.index('id="duration"'),env.index('id="season-target-socket-count"'))
         self.assertLess(env.index('id="season-target-socket-count"'),env.index('id="optimizer-oil-enabled"'))
         self.assertLess(env.index('id="optimizer-oil-enabled"'),env.index('id="food"'))
-        self.assertLess(env.index('id="food"'),env.index('id="omnium"'))
-        self.assertLess(env.index('id="omnium"'),env.index('id="augmentation"'))
-        self.assertLess(env.index('id="augmentation"'),env.index('id="raid_buffs"'))
+        # v652 approved row two: food / flask / potion / augmentation.
+        # Season-specific Omnium is a separate full-width optional row.
+        self.assertLess(env.index('id="food"'),env.index('id="season-verified-flask"'))
+        self.assertLess(env.index('id="season-verified-flask"'),env.index('id="potion"'))
+        self.assertLess(env.index('id="potion"'),env.index('id="augmentation"'))
+        self.assertLess(env.index('id="augmentation"'),env.index('id="omnium"'))
+        self.assertLess(env.index('id="omnium"'),env.index('id="raid_buffs"'))
         self.assertIn('id="env-enchant-panel" open',env)
         self.assertIn('id="season_enchant_finger1" disabled',env)
         self.assertIn('id="season_enchant_finger2" disabled',env)
@@ -2128,7 +2132,8 @@ console.log("V459_STALE_SESSION_BUDGET_PREVIEW_PASS");
     def test_new_plan_does_not_display_previous_specialization_dps(self):
         js=self.client.get("/assets/app.js").text
         self.assertIn("const changed=id!==state.session;",js)
-        self.assertIn('if(changed) {\n    // A new plan is not the result',js)
+        self.assertIn('if(changed) {\n    // A different session must not inherit the previous idle poll cooldown.',js)
+        self.assertIn('state.nextPassivePollAt=0;\n    // A new plan is not the result',js)
         self.assertIn('if(data?.active || !data?.result_ready || previousResultOnly) {\n    $("filled-result").hidden=true;',js)
         self.assertIn('markSession(p.session_id);showPlan(p);await pollOnce();',js)
         self.assertIn('if(snapshot.result)renderResult(snapshot.result);',js)
