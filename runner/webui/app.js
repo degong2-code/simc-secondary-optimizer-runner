@@ -475,7 +475,16 @@ function renderEquipmentGallery(query){
     card.setAttribute("aria-pressed",String(id===select.value));
     const placeholder=document.createElement("span");
     placeholder.className="equipment-placeholder";
-    placeholder.textContent="◆";placeholder.setAttribute("aria-hidden","true");
+    placeholder.setAttribute("aria-hidden","true");
+    const imageUrl=state.equipmentIconUrls.get(item.item_id);
+    if(typeof imageUrl==="string"&&
+       /^https:\/\/render\.worldofwarcraft\.com\/[a-z]{2}\/icons\/(?:18|36|56|64|128)\/[a-z0-9_/-]+\.(?:jpg|png|webp)$/.test(imageUrl)){
+      const image=document.createElement("img");
+      image.src=imageUrl;image.alt="";image.loading="lazy";
+      image.referrerPolicy="no-referrer";
+      image.addEventListener("error",()=>placeholder.replaceChildren("◆"),{once:true});
+      placeholder.appendChild(image);
+    }else placeholder.textContent="◆";
     const label=document.createElement("span");label.className="equipment-card-name";
     label.textContent=item.name_ko||item.name||"아이템 #"+id;
     const meta=document.createElement("span");meta.className="equipment-card-meta";
