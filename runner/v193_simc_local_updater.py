@@ -127,7 +127,7 @@ GENERATED_SOURCE_FILES=(
     ("temporary_enchant.inc","// Temporary item enchants, wow build "),
 )
 SOURCE_BASE="https://raw.githubusercontent.com/simulationcraft/simc/"
-EXACT_BUILD=re.compile(r"\\d+(?:\\.\\d+){3}\\Z")
+EXACT_BUILD=re.compile(r"\d+(?:\.\d+){3}\Z")
 
 
 def generated_source_build(revision, *, open_url=None):
@@ -152,7 +152,7 @@ def generated_source_build(revision, *, open_url=None):
                  and endpoint.hostname=="raw.githubusercontent.com"
                  and response.geturl()==url,
                  "SIMC_SOURCE_REDIRECT_OR_HOST_INVALID")
-            line=response.read(512).split(b"\\n",1)[0]
+            line=response.read(512).split(b"\n",1)[0]
         try:
             header=line.decode("utf8")
         except UnicodeError as exc:
