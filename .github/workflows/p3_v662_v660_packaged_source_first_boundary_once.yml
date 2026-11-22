@@ -51,7 +51,7 @@ jobs:
           print('V662_UNMODIFIED_V660_ZIP_MANIFEST_PASS',len(manifest['files']),'HISTORY_ISOLATED',len(old),flush=True)
           '@ | python -
           if ($LASTEXITCODE -ne 0) { throw 'V662_ORIGINAL_PRODUCT_ZIP_INVALID' }
-          python -m pip install -r program/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/requirements-web.txt
+          python -m pip install -r program/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/requirements-web.txt -r requirements-web-test.txt
           if ($LASTEXITCODE -ne 0) { throw 'V662_WEB_DEPENDENCIES_FAILED' }
       - name: One real cached SimC install, explicit connection save, FIRST season source diagnostic (DPS Native zero)
         shell: pwsh
