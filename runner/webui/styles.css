@@ -1541,3 +1541,12 @@ body{background:#24252B;color:var(--ink)}
 #optimizer-form .fixed-gear-panel .inline-item-icon img{
   display:block;width:100%;height:100%;object-fit:cover;border-radius:3px;
 }
+
+/* v666: disabled optimizer reason is always readable, not hover-only. */
+#optimizer-form #optimizer-submit-note{
+  display:block!important;font-size:12px;line-height:1.55;
+  color:#E5C89F;max-width:860px;overflow-wrap:anywhere;
+}
+#optimizer-form .submit-panel #start-btn:disabled{
+  opacity:.53;cursor:not-allowed;
+}
