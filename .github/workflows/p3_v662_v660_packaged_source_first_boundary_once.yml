@@ -90,11 +90,60 @@ jobs:
                       raise RuntimeError('V662_HTTP_FIRST_BLOCKER_'+str(code))
                   return response.json()
               with TestClient(app,base_url='http://127.0.0.1:8765') as client:
-                  installed=post(client,'/api/v1/simc-updates/prepare-auto',{})
+                  # Trace only this failed package boundary, never credentials, URLs or local paths.
+                  from unittest import mock
+                  import v660_simc_one_click_provision as provision
+                  manager=app.state.simc_updates
+                  original_proof=manager._candidate_source_proof
+                  original_download=provision.download_release_zip
+                  original_inspect=provision.inspect_artifact
+                  original_install=manager.install_self_built
+                  def safe_reason(exc):
+                      value=str(exc)
+                      return value if re.fullmatch(r'[A-Z][A-Z0-9_]{3,100}',value) else type(exc).__name__
+                  def source_trace(*args,**kwargs):
+                      try:
+                          proof=original_proof(*args,**kwargs)
+                          print('V662_SOURCE_PROOF',proof.get('source_build'),
+                                proof.get('source_headers_checked'),flush=True)
+                          return proof
+                      except Exception as exc:
+                          print('V662_SOURCE_PROOF_ERROR',safe_reason(exc),flush=True)
+                          raise
+                  def download_trace(*args,**kwargs):
+                      try:
+                          result=original_download(*args,**kwargs)
+                          print('V662_PUBLIC_DOWNLOAD_VERIFIED',flush=True)
+                          return result
+                      except Exception as exc:
+                          print('V662_PUBLIC_DOWNLOAD_ERROR',safe_reason(exc),flush=True)
+                          raise
+                  def inspect_trace(*args,**kwargs):
+                      try:
+                          result=original_inspect(*args,**kwargs)
+                          print('V662_ZIP_RECEIPT_VALID',flush=True)
+                          return result
+                      except Exception as exc:
+                          print('V662_ZIP_RECEIPT_ERROR',safe_reason(exc),flush=True)
+                          raise
+                  def install_trace(*args,**kwargs):
+                      try:
+                          result=original_install(*args,**kwargs)
+                          print('V662_MANAGED_INSTALL_PASS',flush=True)
+                          return result
+                      except Exception as exc:
+                          print('V662_MANAGED_INSTALL_ERROR',safe_reason(exc),flush=True)
+                          raise
+                  with mock.patch.object(manager,'_candidate_source_proof',side_effect=source_trace), \
+                       mock.patch.object(provision,'download_release_zip',side_effect=download_trace), \
+                       mock.patch.object(provision,'inspect_artifact',side_effect=inspect_trace), \
+                       mock.patch.object(manager,'install_self_built',side_effect=install_trace):
+                      installed=post(client,'/api/v1/simc-updates/prepare-auto',{})
                   print('V662_PREPARE_STATUS',installed.get('status'),
                         'LIVE',installed.get('game_build'),
                         'REASON',installed.get('reason'),
                         'PUBLIC_CANDIDATES',installed.get('public_release_candidates_checked'),
+                        'PUBLIC_ERRORS',installed.get('public_release_errors'),
                         flush=True)
                   if installed.get('status') in ('SOURCE_BUILD_REQUIRES_REMOTE_BUILDER',
                                                 'NO_COMPATIBLE_BINARY_AVAILABLE'):
