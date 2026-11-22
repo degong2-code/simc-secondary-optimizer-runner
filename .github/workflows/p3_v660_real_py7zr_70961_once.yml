@@ -1,0 +1,42 @@
+name: P3 v660 One-Shot Real 70961 Python-Only 7z Extraction
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_v660_real_py7zr_70961_once.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  actual-archive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'py7zr>=1.1.4,<1.2'
+      - uses: actions/download-artifact@v4
+        with:
+          name: simc-win64-cli-6924096-12.1.5.70961
+          run-id: 45007868837
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: actual
+      - name: Validate actual CPack 7z extraction with Python only (no Native)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, pathlib, sys, tempfile
+          sys.path.insert(0,"runner")
+          import v193_simc_local_updater as u
+          archive=pathlib.Path("actual/simc-1210.01.6924096-win64.7z")
+          assert u.sha256(archive)=="670ec659a44d8867f46ac267ed1e52db0d02eac8460472bf78aafa286b797c98"
+          with tempfile.TemporaryDirectory() as td:
+              exe=u.extract_safe(archive,pathlib.Path(td),u.PY7ZR_TOOL)
+              expected="1195a3401a716c9f28b4de113d228cc3a669aebf83c0c47e5989db521d87c3c9"
+              assert u.sha256(exe)==expected
+              print("P3_V660_ACTUAL_PY7ZR_NO_EXTERNAL_BINARY_PASS",exe.stat().st_size,expected)
+          PY
