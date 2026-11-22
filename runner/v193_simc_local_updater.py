@@ -9,6 +9,7 @@ The upstream nightly supplies a git short hash, NOT a separately signed hash.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 from html.parser import HTMLParser
 import json
 import os
@@ -297,7 +298,61 @@ def verify_inventory(listing):
              for x in entries),"SIMC_CLI_MISSING_FROM_ARCHIVE")
     return entries
 
+PY7ZR_TOOL="PY7ZR_BUILTIN"
+
+def find_extractor():
+    # Retain the original fast 7z.exe path when present. The managed Python
+    # runtime includes py7zr to avoid requiring a separate manual install.
+    return find_sevenzip() or (
+        PY7ZR_TOOL if importlib.util.find_spec("py7zr") is not None else None)
+
+def extract_py7zr_safe(archive,folder):
+    """Safely extract only simc.exe from an officially shaped 7z package."""
+    try:
+        import py7zr
+    except ImportError:
+        raise UpdateBlocked("PY7ZR_PACKAGE_NOT_AVAILABLE") from None
+    try:
+        with py7zr.SevenZipFile(
+                archive,mode="r",max_extract_size=MAX_EXPANDED) as z:
+            need(not z.needs_password(),"ARCHIVE_ENCRYPTION_REFUSED")
+            infos=z.list()
+            need(0<len(infos)<=MAX_ENTRIES,"ARCHIVE_TOO_MANY_ENTRIES")
+            names=set();total=0;targets=[]
+            for info in infos:
+                raw=info.filename
+                need(type(raw) is str and 0<len(raw)<=4096
+                     and not raw.startswith(("/","\\"))
+                     and ":" not in raw and "\x00" not in raw,
+                     "UNSAFE_ARCHIVE_ENTRY")
+                norm=raw.replace("\\","/").rstrip("/")
+                parts=norm.split("/")
+                need(all(part not in ("",".","..") for part in parts),
+                     "UNSAFE_ARCHIVE_ENTRY")
+                folded=norm.casefold()
+                need(folded not in names,"DUPLICATE_ARCHIVE_ENTRY")
+                names.add(folded)
+                need((info.is_file or info.is_directory) and
+                     not info.is_symlink,"ARCHIVE_LINK_OR_ENCRYPTION_REFUSED")
+                size=info.uncompressed
+                need(type(size) is int and 0<=size<=MAX_EXPANDED,
+                     "ARCHIVE_ENTRY_SIZE_INVALID")
+                total+=size
+                need(total<=MAX_EXPANDED,"ARCHIVE_EXPANDED_SIZE_EXCESS")
+                if info.is_file and pathlib.PurePosixPath(norm).name.casefold()=="simc.exe":
+                    targets.append(raw)
+            need(len(targets)==1,"EXACTLY_ONE_SIMC_CLI_REQUIRED")
+            z.extract(path=folder,targets=targets)
+    except UpdateBlocked:
+        raise
+    except Exception:
+        # Do not expose third-party decompressor tracebacks or local paths.
+        raise UpdateBlocked("PY7ZR_EXTRACT_FAILED") from None
+    return _checked_cli(folder)
+
 def extract_safe(archive,folder,sevenzip):
+    if sevenzip==PY7ZR_TOOL:
+        return extract_py7zr_safe(archive,folder)
     args=[sevenzip,"l","-slt",str(archive)]
     p=subprocess.run(args,capture_output=True,text=True,timeout=35,
                      errors="replace",creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0))
@@ -308,6 +363,9 @@ def extract_safe(archive,folder,sevenzip):
                      timeout=180,errors="replace",
                      creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0))
     need(p.returncode==0,"SEVEN_ZIP_EXTRACT_FAILED")
+    return _checked_cli(folder)
+
+def _checked_cli(folder):
     files=[]
     for sub in folder.rglob("*"):
         need(not sub.is_symlink(),"ARCHIVE_EXTRACTED_SYMLINK_REFUSED")
@@ -433,7 +491,7 @@ class SimCManager:
             active=self._binary(data["active"])
             previous=self._binary(data["previous"])
             return {"schema":SCHEMA,"windows_supported":self.platform=="win32",
-                    "archive_extractor_available":bool(find_sevenzip()) if
+                    "archive_extractor_available":bool(find_extractor()) if
                        self.platform=="win32" else False,
                     "installed":data["active"],"active_binary":active,
                     "previous":data["previous"],"can_rollback":bool(active),
@@ -463,7 +521,7 @@ class SimCManager:
                     "github_actions_url":GITHUB_HOME,
                     "manual_archive_required":True,
                     "installation_requires_confirmation":True,
-                    "archive_extractor_available":bool(find_sevenzip()),
+                    "archive_extractor_available":bool(find_extractor()),
                     "native_calls_now":0}
         with self.lock:
             selected=candidates[0]
@@ -476,7 +534,7 @@ class SimCManager:
                     "github_alternative":None,
                     "official_index_problem":None,
                     "installation_requires_confirmation":True,
-                    "archive_extractor_available":bool(find_sevenzip()),
+                    "archive_extractor_available":bool(find_extractor()),
                     "native_calls_now":0}
             if include_candidates:
                 result["_official_candidates"]=candidates[:MAX_COMPATIBILITY_CANDIDATES]
@@ -684,8 +742,8 @@ class SimCManager:
                 result["status"]="MANAGED_SIMC_ALREADY_CURRENT"
                 result["non_dps_cli_smoke_calls"]=0
                 return result
-            tool=sevenzip or find_sevenzip()
-            need(tool,"SEVEN_ZIP_REQUIRED")
+            tool=sevenzip or find_extractor()
+            need(tool,"ARCHIVE_EXTRACTOR_REQUIRED")
             self.root.mkdir(parents=True,exist_ok=True)
             with tempfile.TemporaryDirectory(prefix=".install-",dir=self.root) as td:
                 scratch=pathlib.Path(td);archive=scratch/"nightly.7z"
