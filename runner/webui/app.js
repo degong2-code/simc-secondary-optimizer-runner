@@ -356,9 +356,13 @@ function drawInlineEquipment(){
       }});
     specialGrid.appendChild(b);
   }
+  const complete=state.seasonGear?.full_season_completeness_confirmed===true;
   $("equipment-special-status").textContent=state.seasonGear?
-    "특수효과 장비 "+selectedIds.size+"개 선택"+(sFiltered.length>80?
-    " · 나머지는 검색":""):"선택 사항";
+    "특수효과 장비 "+selectedIds.size+"개 선택 · 확인된 후보 "+
+    specials.length+"종"+(sQuery?" 중 검색 결과 "+sFiltered.length+"종":"")+
+    (sFiltered.length>80?" · 목록은 80개씩 표시, 검색으로 나머지 확인":"")+
+    (complete?" · 시즌 목록 확인됨":" · 시즌 전체 목록 완성 확인 전"):
+    "시즌 특수효과 장비 후보 검증·설치 필요";
   // Native slot controls are maintained only for the original API,
   // not used as an extra, redundant user-facing selection bar.
 
@@ -841,9 +845,12 @@ function installSeasonGearHints(catalog) {
     node.textContent="시즌 선택 목록이 없습니다. 새 장신구·특수효과 선택은 보류됩니다. 기존 세션 조회는 가능합니다.";
     return;
   }
+  const specialCount=(current.special_effect_gear_candidate||[]).length;
   node.textContent=state.seasonGear.source_scope===
     "VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"?
-    "설치 원본에서 확인한 장신구·특수효과 후보입니다. 선택한 실행 조건에서 재검증합니다.":
+    "이번 설치 원본의 특수효과 장비 후보 "+specialCount+
+    "종 · 시즌 전체 목록의 완전성은 아직 확인되지 않았습니다. "+
+    "선택한 장비의 실제 SimC 실행 가능 여부는 별도로 검증합니다.":
     "참고용 시즌 후보 목록 · 새 최적화 전에 시즌 환경을 검증·설치하세요.";
 }
 // Item.InventoryType determines special equipment slot. Ring and dual
@@ -1115,7 +1122,17 @@ function applyOilUseToggle(){
         return chooseInstalledFlask();
       }
       state.seasonGearTargetIlevel=null;
-      setNotice("기름 미사용(O=0)으로 변경했습니다. 기존 기름 포함 설치 SHA는 재사용할 수 없습니다. 동일 F/J의 검증된 O=0 환경을 선택하거나 ‘선택 환경 검증·준비’를 실행하세요.");
+      setNotice("무기 기름을 미사용(O=0)으로 변경했습니다. 이전에 연결된 기름 설치본은 실행 근거가 아닙니다. 현재 F/J의 O=0 구성 검증·준비가 필요합니다.");
+    }else if(state.seasonGear?.source_scope===
+        "VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES" &&
+        !state.verifiedBaseFlaskInstalls.some(x=>
+          x.installed_manifest_sha256===state.seasonGear.installed_manifest_sha256)){
+      // A previously installed positive-O source must not be reused as O=0
+      // merely because its loadout is not present in the current read list.
+      state.seasonGearTargetIlevel=null;
+      setNotice("무기 기름을 미사용(O=0)으로 변경했습니다. 현재 장비 설치 SHA에 O=0 근거가 없어 해당 환경을 재검증해야 합니다.");
+    }else{
+      setNotice("무기 기름 미사용(O=0) · 기름 고정 스탯을 추가하지 않습니다.");
     }
     return;
   }
@@ -2141,8 +2158,45 @@ function buttonState(active=false,ready=false) {
   const needsEnvironment=Boolean(state.token)&&optimizerNeedsSeasonPreparation();
   $("start-btn").textContent=needsEnvironment?
     "시즌 환경 준비 · 장신구 목록 불러오기":"최적 스탯 찾기";
-  $("start-btn").disabled=busy||active||!state.token||
-    !validTargetIlevel()||(!needsEnvironment&&!hasRequiredSelections());
+  // An unavailable oil is a real executable-profile blocker, not a button
+  // condition the user should discover only after a failed click. The
+  // environment-preparation button still works before an install exists.
+  const oilPending=!needsEnvironment &&
+    typeof oilUseIntent==="boolean"&&oilUseIntent &&
+    typeof selectedFullVerifiedOil==="function"&&!selectedFullVerifiedOil();
+  const reason=busy?"다른 요청 처리 중입니다.":
+    active?"최적화가 실행 중입니다. 중단하거나 완료한 뒤 다시 시작하세요.":
+    !state.token?"로컬 서버 연결을 확인하고 다시 시작하세요.":
+    !validTargetIlevel()?"목표 아이템레벨을 1~1000의 정수로 입력하세요.":
+    needsEnvironment?
+      "현재 빌드·아이템레벨의 시즌 환경이 아직 연결되지 않았습니다. 위 버튼을 누르면 환경 구축을 먼저 진행합니다.":
+    !field("spec")?"직업과 전문화를 선택하세요.":
+    !field("race")?"종족을 선택하세요.":
+    !field("trinket1")||!field("trinket2")?
+      "장신구 2개가 필요합니다. 고정 장비 선택에서 각각 지정하세요.":
+    field("trinket1")===field("trinket2")?
+      "같은 장신구를 두 칸에 중복 선택할 수 없습니다.":
+    oilPending?
+      "무기 기름 사용을 선택했지만 이 전문화의 검증된 손별 기름 조합이 없습니다. 환경 구성을 검증하거나 ‘미사용’으로 변경하세요.":
+    "";
+  $("start-btn").disabled=Boolean(reason)&&!needsEnvironment;
+  // Store the reason beside the button where a disabled button can be read
+  // by keyboard, touch and screen-reader users alike; tooltip alone is not.
+  const submitNote=$("optimizer-submit-note");
+  if(submitNote){
+    const specialSelected=["special-rows","crafted-rows"].some(
+      id=>$(id)?.querySelector('[data-field="item_id"]:not([type="hidden"])')?.value ||
+        [...($(id)?.querySelectorAll(".gear-row")||[])].some(row=>
+          row.querySelector('[data-field="embellishment"]')?.value ||
+          (row.querySelector('[data-field="item_id"]')?.value&&
+           id==="special-rows")));
+    submitNote.textContent=reason||(
+      specialSelected?
+       "선택한 특수효과 장비·장식은 최종 프로필과 정확한 정적 스탯 검증이 추가로 필요합니다. 검증 실패 시 해당 항목을 안내합니다.":
+       "실행 조건이 준비됐습니다. 최적 스탯 찾기를 누르면 이 PC에서 SimC 계산이 시작됩니다.");
+  }
+  $("start-btn").title=reason||"선택한 조건으로 SimC 최적화 시작";
+  $("start-btn").setAttribute("aria-describedby","optimizer-submit-note");
   $("resume-btn").disabled=busy||active||!state.session||state.longrunCompleted;
   $("cache-btn").disabled=busy||active||!state.session||!ready;
   $("cancel-btn").disabled=busy||!active;
@@ -2200,7 +2254,13 @@ async function withBusy(fn) {
         "V216_REUSE_OIL_HANDS_MULTIPLE_VERIFIED_ITEMS_SELECT_ID":
           "같은 손에 서로 다른 검증 기름이 있습니다. 고급 기름 ItemID 항목에 정확한 물리 ID를 지정하세요.",
         "FIVE_TIER_LAYOUT_OUTSIDE_FOUR_ROW_CONTRACT":
-          "기본 티어 4세트에 다섯 번째 티어 아이템이 추가되었습니다. 이미 포함된 티어 부위로 선택하거나 다른 특수장비 슬롯을 사용하세요."
+          "기본 티어 4세트에 다섯 번째 티어 아이템이 추가되었습니다. 이미 포함된 티어 부위로 선택하거나 다른 특수장비 슬롯을 사용하세요.",
+        "WEB_SELECTED_B8_EXACT_STATIC_VARIANTS_PENDING":
+          "기름 설정과 별개로, 선택한 특수효과 장비 또는 장식의 정확한 정적 스탯 변형이 아직 확인되지 않았습니다. 이 구성은 지금 실행할 수 없습니다. 검증된 별도 장비 변형을 준비해야 하며, 일반 장비 구성으로 먼저 실행하려면 선택한 특수효과 장비·장식을 해제하세요. 미확정 스탯을 0으로 처리하지 않습니다.",
+        "WEB_SELECTED_B8_PROFILE_SOURCE_PENDING":
+          "기름과 무관하게 선택한 특수효과 장비·장식의 최종 SimC 프로필 원본 입력이 아직 준비되지 않았습니다. 해당 선택 구성의 프로필 생성 경로를 검증해야 합니다. 다른 장비 선택을 임의로 대입하지 않습니다.",
+        "WEB_SELECTED_B8_PROFILE_OR_STATIC_VARIANTS_PENDING":
+          "기름과 무관하게 선택한 특수효과 장비·장식에 대한 최종 프로필 또는 정적 스탯 근거가 부족합니다. 검증되지 않은 구성을 실행할 수 없습니다. 해당 장비를 제외한 기본 구성은 별도로 실행할 수 있습니다."
       };
       setNotice("요청 차단 또는 오류: "+(guidance[err.message]||err.message),true);
     }
