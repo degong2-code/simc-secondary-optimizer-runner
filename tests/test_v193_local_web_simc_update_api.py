@@ -79,6 +79,16 @@ class SimCUpdateWeb(unittest.TestCase):
                          "LOCAL_GITHUB_ARTIFACT_ZIP_EXTRACT_7Z_FIRST")
         self.assertFalse((self.root/"managed").exists())
 
+    def test_self_built_actions_zip_import_route_is_token_gated(self):
+        url="/api/v1/simc-updates/install-self-built"
+        path=str(self.root/"missing-self-built.zip")
+        self.assertEqual(self.client.post(url,json={"artifact_path":path}).status_code,403)
+        self.assertEqual(self.client.post(url,headers=self.h,json={}).status_code,422)
+        result=self.client.post(url,headers=self.h,json={"artifact_path":path})
+        self.assertEqual(result.status_code,422,result.text)
+        self.assertEqual(result.json()["detail"]["code"],"SIMC_ARTIFACT_ZIP_INVALID")
+        self.assertFalse((self.root/"managed"/"installed.json").exists())
+
     def test_native_worker_running_blocks_manage_actions(self):
         fake=mock.Mock();fake.poll.return_value=None
         self.app.state.jobs.children["a"*20]=fake
@@ -91,6 +101,7 @@ class SimCUpdateWeb(unittest.TestCase):
         for route,payload in (("check",{}),
                               ("install",{"filename":"simc-1215-01-win64-710c240.7z"}),
                               ("install-local",{"archive_path":"C:\\\\SimC\\\\simc-1215-01-win64-710c240.7z"}),
+                              ("install-self-built",{"artifact_path":"C:\\\\SimC\\\\simc-win64-cli.zip"}),
                               ("rollback",{})):
             response=self.client.post("/api/v1/simc-updates/"+route,
                                       json=payload,headers=self.h)
