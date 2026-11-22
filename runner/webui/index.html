@@ -69,6 +69,10 @@
         
     <div class="field"><label for="talents">특성 코드 <small>선택 · 비우면 기본 대표 특성</small></label><textarea id="talents" rows="2" placeholder="직접 입력하지 않으면 기본 대표 특성 사용" spellcheck="false"></textarea><p class="hint" id="talents-default-note">특성 미입력 시 선택한 전문화의 검증된 기본 대표 특성을 사용합니다.</p></div>
             
+  <div class="gear-section gear-embellishments profile-embellishments">
+  <div class="gear-section-heading"><h3>장식</h3><span>최대 2개</span></div>
+  <p id="craft-compatibility-note" class="hint" role="note">장식별 장착 가능한 부위만 표시됩니다. 장신구·무기 장식은 검증된 선택지가 아직 없습니다.</p><div id="crafted-rows"></div>
+</div>
   </section>
   <section class="panel conditions-panel" aria-labelledby="conditions-title">
  <div class="section-head"><div><p class="eyebrow">02</p><h2 id="conditions-title">환경 구성</h2></div></div>
@@ -176,7 +180,7 @@
 
 </section>
 <section class="panel fixed-gear-panel" aria-labelledby="equipment-title">
-    <div class="section-head"><div><p class="eyebrow">03</p><h2 id="equipment-title">고정 장비 선택</h2></div><span class="micro">장신구 2개 필수 · 특수효과/장식은 선택</span></div>
+    <div class="section-head"><div><p class="eyebrow">03</p><h2 id="equipment-title">고정 장비 선택</h2></div><span class="micro">장신구 2개 필수 · 특수효과는 선택</span></div>
     
 <div class="gear-section gear-trinkets">
   <div class="gear-section-heading"><h3>장신구</h3><span>2개 필수</span></div>
@@ -204,10 +208,6 @@
 <details class="fold gear-special-details"><summary>부위별 상세 설정</summary>
 <p class="hint" hidden>일반 장비·티어4세트와 선택한 장식 제작장비의 정확한 ID는 내부에서 구성합니다. 특수장비의 보너스·촉매 원본 ID도 일반 사용자에게 입력받지 않습니다. 이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용하며, 정확한 L이 있는 경우 그대로 재사용합니다. 누락된 경우 '예산 미리 확인'(Native 0회)은 차단될 수 있으나, 사용자가 'SimC 최적화 실행'을 승인하면 내부 생성한 대표 프로필에서 정적 SimC Native 최대 1회로 선택 장비의 정확한 L을 확보·캐시합니다. 이후 최적화 계산을 진행하며, 미확정 L을 0으로 간주하지 않습니다. 현재 검증된 장식은 일반 방어구용 안감 2종입니다. 목걸이·반지·무기용 장식은 별도의 실제 호환 토큰이 검증되기 전까지 선택할 수 없습니다.</p><div id="special-rows"></div>
 </details>
-</div>
-<div class="gear-section gear-embellishments">
-  <div class="gear-section-heading"><h3>장식</h3><span>최대 2개</span></div>
-  <p id="craft-compatibility-note" class="hint" role="note">장식별 장착 가능한 부위만 표시됩니다. 장신구·무기 장식은 검증된 선택지가 아직 없습니다.</p><div id="crafted-rows"></div>
 </div>
 </section>
 <section class="panel submit-panel" aria-label="최적화 실행">
