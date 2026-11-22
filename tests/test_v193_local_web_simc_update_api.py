@@ -89,6 +89,21 @@ class SimCUpdateWeb(unittest.TestCase):
         self.assertEqual(result.json()["detail"]["code"],"SIMC_ARTIFACT_ZIP_INVALID")
         self.assertFalse((self.root/"managed"/"installed.json").exists())
 
+    def test_one_click_updater_route_token_gate_and_user_click_contract(self):
+        path="/api/v1/simc-updates/prepare-auto"
+        self.assertEqual(self.client.post(path,json={}).status_code,403)
+        shown={"schema":"v660_simc_one_click_provision_v1",
+               "status":"SOURCE_BUILD_REQUIRES_REMOTE_BUILDER",
+               "server_build_trigger_available":False,
+               "native_dps_calls_now":0}
+        with mock.patch.object(web.simc_one_click,"prepare_one_click",
+                               return_value=shown) as used:
+            response=self.client.post(path,json={},headers=self.h)
+            self.assertEqual(response.status_code,200,response.text)
+            self.assertEqual(response.json()["status"],shown["status"])
+            used.assert_called_once_with(self.app.state.simc_updates)
+        self.assertFalse((self.root/"managed").exists())
+
     def test_native_worker_running_blocks_manage_actions(self):
         fake=mock.Mock();fake.poll.return_value=None
         self.app.state.jobs.children["a"*20]=fake
@@ -98,7 +113,8 @@ class SimCUpdateWeb(unittest.TestCase):
             status=self.client.get("/api/v1/simc-updates/status",headers=self.h)
         self.assertEqual(status.status_code,200,status.text)
         self.assertIsNone(status.json()["active_binary"])
-        for route,payload in (("check",{}),
+        for route,payload in (("prepare-auto",{}),
+                              ("check",{}),
                               ("install",{"filename":"simc-1215-01-win64-710c240.7z"}),
                               ("install-local",{"archive_path":"C:\\\\SimC\\\\simc-1215-01-win64-710c240.7z"}),
                               ("install-self-built",{"artifact_path":"C:\\\\SimC\\\\simc-win64-cli.zip"}),
