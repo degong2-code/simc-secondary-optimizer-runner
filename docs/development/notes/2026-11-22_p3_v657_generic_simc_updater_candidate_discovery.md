@@ -22,3 +22,5 @@ v657은 **범용**으로 공식 Windows x64 .7z 후보를 최대 12개까지 순
 - `af2ce5ce3a4a29d9d9e711c97c71e488e71ed6da` 기준 [v657 전용 run #45006800115](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45006800115): Python 3.12·3.14 양쪽 SUCCESS, **각 35/35 오프라인 단위 테스트 PASS**(신규 9건 + 기존 updater 회귀); Native0.
 - 병행 v182 UI run #45006800048은 과거 테스트가 v652 이후 변경된 `diagnoseSeasonBuildEvidence().firstMissing` 표시와 별도로 추출한 `seasonBuildRecoveryPlan`을 오래된 방식으로 고정하여 실패. **제품 JS·CSS 수정 없이 테스트에만 navigation stub·현재 확정 문구 기준을 반영**, 새 확인 CI는 후속 커밋 기준 별도 판정.
 - 실제 70961 Windows Native 실행/공식 서버 실 다운로드/원본 시즌 구축은 이 변경으로 검증되지 않음. 외부 원본 검사도 unit fixture이며 Live 시험으로 표시하지 않음.
+
+- `9fc1beec8b931f87c0ffaca54e2b1d8faf53b08d` 기준 [v182 UI offline #45006946049](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45006946049): Windows/Ubuntu 양쪽 **SUCCESS**, 각각 110+206+5 테스트 PASS. 과거 테스트만 갱신, 제품 동작 및 UI 바이트는 v657 탐색 변경 외 불변.
