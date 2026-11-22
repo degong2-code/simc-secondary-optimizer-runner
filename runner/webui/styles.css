@@ -1535,3 +1535,9 @@ body{background:#24252B;color:var(--ink)}
     grid-template-columns:1fr;
   }
 }
+
+/* v665: optional exact official media icon; source-missing stays a neutral marker. */
+#optimizer-form .fixed-gear-panel .inline-item-icon{overflow:hidden}
+#optimizer-form .fixed-gear-panel .inline-item-icon img{
+  display:block;width:100%;height:100%;object-fit:cover;border-radius:3px;
+}
