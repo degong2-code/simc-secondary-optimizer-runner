@@ -156,7 +156,8 @@ assert.deepStrictEqual(Array.from(report.default_G_native_skipped_missing_compil
   ["GENERATED_PERMANENT"]);
 assert.strictEqual(report.environment_ready,false);
 assert.strictEqual(report.verified_budget,null);
-assert(diagnose(pending).firstMissing.includes("기존 원본 생산자: v275"));
+assert(diagnose(pending).firstMissing.includes("영구 마부 원본"));
+assert.strictEqual(diagnose(pending).compilerMissingCount,1);
 const cached=JSON.parse(receipt({
   web_environment_scope:{game_build:"12.1.5.70783",target_ilevel:334,
     environment_ready:true,environment_installed:true}
