@@ -330,7 +330,7 @@ def extract_safe(archive,folder,sevenzip):
              "SIMC_WINDOWS_BINARY_NOT_AMD64")
     return exe
 
-def probe_cli(exe):
+def probe_cli(exe,*,expected_build=None):
     """Bounded non-DPS SimC start check. Upstream display_build=2 returns before execute()."""
     try:
         result=subprocess.run([str(exe),"display_build=2"],
@@ -344,6 +344,14 @@ def probe_cli(exe):
     need(result.returncode==0,"SIMC_CLI_SMOKE_FAILED")
     need(0<len(output)<=16384 and b"simulationcraft" in output.lower(),
          "SIMC_CLI_SMOKE_OUTPUT_INVALID")
+    if expected_build is not None:
+        need(type(expected_build) is str and EXACT_BUILD.fullmatch(expected_build),
+             "SIMC_CLI_EXPECTED_BUILD_INVALID")
+        observed=re.findall(
+            r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{5,6}\b",
+            output.decode("utf8","replace"))
+        need(expected_build in observed,
+             "SIMC_CLI_EMBEDDED_BUILD_NOT_MATCHED")
     return True
 
 
@@ -655,7 +663,8 @@ class SimCManager:
         finally:tmp.unlink(missing_ok=True)
 
     def install(self,filename,*,downloader=fetch_archive,extractor=extract_safe,
-                sevenzip=None,archive_source="OFFICIAL_HTTPS_NIGHTLY",probe=None):
+                sevenzip=None,archive_source="OFFICIAL_HTTPS_NIGHTLY",probe=None,
+                expected_cli_sha=None,receipt_record=None):
         need(self.platform=="win32","SIMC_UPDATER_WINDOWS_ONLY")
         with self.lock:
             offered=self.offer
@@ -689,6 +698,11 @@ class SimCManager:
                 need(exe.is_file() and exe.resolve().is_relative_to(stage.resolve()),
                      "SIMC_STAGED_EXE_UNSAFE")
                 bin_sha=sha256(exe)
+                if expected_cli_sha is not None:
+                    need(type(expected_cli_sha) is str
+                         and re.fullmatch(r"[0-9a-f]{64}",expected_cli_sha)
+                         and bin_sha==expected_cli_sha,
+                         "SELF_BUILT_CLI_SHA_MISMATCH")
                 dest=self.root/"versions"/bin_sha[:24]
                 # Atomic managed tree; never overwrite user's manual installation.
                 created=False
@@ -715,6 +729,14 @@ class SimCManager:
                        "archive_bytes":proof["bytes"],
                        "archive_source":archive_source,
                        "upstream_signature_verified":False}
+                if receipt_record is not None:
+                    need(type(receipt_record) is dict and set(receipt_record)=={
+                         "source_revision_full","source_game_build",
+                         "artifact_sha256","receipt_sha256",
+                         "source_origin_authenticated"}
+                         and receipt_record["source_origin_authenticated"] is False,
+                         "SELF_BUILT_RECORD_INVALID")
+                    entry.update(receipt_record)
                 self._write_state({"schema":SCHEMA,"active":entry,
                                    "previous":state["active"]})
                 self.offer=None
@@ -760,6 +782,55 @@ class SimCManager:
             return self.install(resolved.name,downloader=local_copy,
                        extractor=extractor,sevenzip=sevenzip,probe=probe,
                        archive_source="USER_LOCAL_FILE_ORIGIN_NOT_AUTHENTICATED")
+
+    def install_self_built(self,artifact_path,*,extractor=extract_safe,
+                           sevenzip=None,probe=None):
+        """User-approved local Actions ZIP, not an authenticated release.
+
+        The enclosed receipt is self-asserted; validate actual 7z, executable
+        digest and the observed CLI game build before switching the pointer.
+        Never treat this as an official SimC binary or a season READY signal.
+        """
+        from v659_simc_self_built_artifact import (
+            ArtifactBlocked,inspect_artifact,copy_inner_archive)
+        need(self.platform=="win32","SIMC_UPDATER_WINDOWS_ONLY")
+        need(type(artifact_path) is str and 0<len(artifact_path)<=4096,
+             "SELF_BUILT_ARTIFACT_PATH_INVALID")
+        path=pathlib.Path(artifact_path).expanduser()
+        with self.lock:
+            self.offer=None
+            self.offered_at=0.0
+            try:
+                info=inspect_artifact(path)
+                identity=nightly_identity(info["archive_name"])
+                need(identity is not None,"SELF_BUILT_ARCHIVE_NAME_INVALID")
+                self.offer={**identity,"url":"USER_SELECTED_SELF_BUILT_ZIP"}
+                self.offered_at=time.monotonic()
+                def copy_local(_url,dest):
+                    return copy_inner_archive(path,dest,info)
+                def check_cli(exe):
+                    need(sha256(exe)==info["cli_sha256"],
+                         "SELF_BUILT_CLI_SHA_MISMATCH")
+                    if probe is not None:
+                        return probe(exe)  # offline fixture only
+                    return probe_cli(exe,expected_build=info["game_build"])
+                record={
+                    "source_revision_full":info["source_sha"],
+                    "source_game_build":info["game_build"],
+                    "artifact_sha256":info["artifact_sha256"],
+                    "receipt_sha256":info["receipt_sha256"],
+                    "source_origin_authenticated":False}
+                return self.install(info["archive_name"],
+                     downloader=copy_local,extractor=extractor,
+                     sevenzip=sevenzip,probe=check_cli,
+                     archive_source="USER_SELECTED_SELF_BUILT_RECEIPT_UNAUTHENTICATED",
+                     expected_cli_sha=info["cli_sha256"],
+                     receipt_record=record)
+            except ArtifactBlocked as exc:
+                raise UpdateBlocked(str(exc)) from None
+            finally:
+                self.offer=None
+                self.offered_at=0.0
 
     def rollback(self):
         need(self.platform=="win32","SIMC_UPDATER_WINDOWS_ONLY")
