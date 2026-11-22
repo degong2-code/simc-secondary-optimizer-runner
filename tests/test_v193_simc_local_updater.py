@@ -244,6 +244,28 @@ class SimCUpdateUnit(unittest.TestCase):
         self.assertEqual(result["matching_download_url"],mod.BASE+NAME)
         self.assertEqual(self.m.offer["filename"],NAME)
 
+    def test_v655_never_exposes_in_flight_offer_to_other_tabs(self):
+        live=lambda region:{
+            "status":"LIVE_RETAIL_BUILD_SOURCE_OBSERVED",
+            "region":region,"game_build":"12.1.5.70961",
+            "source_url":"https://us.version.battle.net/wow/versions",
+            "source_sha256":"a"*64}
+        self.m.check(INDEX)
+        self.assertIsNotNone(self.m.offer,
+                             "Legacy check still keeps its historical contract")
+        def at_source_validation(revision):
+            self.assertIsNone(self.m.offer,
+                              "Installing while checking source is forbidden")
+            return {"source_revision":revision,
+                    "source_build":"12.1.5.70961",
+                    "source_headers_checked":3}
+        with mock.patch.object(mod,"fetch_index",return_value=INDEX):
+            r=self.m.check_for_retail_compatibility(
+                live_loader=live,source_loader=at_source_validation)
+        self.assertEqual(r["retail_compatibility"]["status"],
+                         "SOURCE_BUILD_MATCHED_BINARY_UNVERIFIED")
+        self.assertEqual(self.m.offer["filename"],NAME)
+
     def test_v655_rejects_stale_70783_and_never_suggests_match(self):
         live=lambda region: {
             "status":"LIVE_RETAIL_BUILD_SOURCE_OBSERVED",
