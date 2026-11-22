@@ -1188,7 +1188,13 @@ function renderInstalledFlaskChoices(data) {
       item.socket_total===4):[];
   const selector=$("season-verified-flask");
   const prior=field("season-selected-flask-id");
-  selector.replaceChildren(option("","검증 설치 영약 선택 (선택 · 없으면 고급 ItemID 유지)"));
+  const baseInstalled=state.verifiedBaseFlaskInstalls.some(item=>
+    item.installed_manifest_sha256===state.seasonGear?.installed_manifest_sha256 &&
+    state.seasonGear?.source_scope===
+      "VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES");
+  selector.replaceChildren(option("",baseInstalled?
+    "기본 검증 영약 사용 (현재 시즌 설치본 F)":
+    "기본 영약 검증 대기 · 검증된 설치본만 적용"));
   if(installedConsumableScopeMatches(data)) {
     for(const item of data.verified_flasks||[]) {
       if(!Number.isSafeInteger(item.physical_item_id)||
