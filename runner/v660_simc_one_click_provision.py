@@ -8,6 +8,7 @@ repository-write credentials and must never ship a token to local clients.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import pathlib
 import re
@@ -151,6 +152,14 @@ def prepare_one_click(manager,*,live_loader=None,
                       sevenzip=None,cli_probe=None):
     """Synchronous, explicit-user-action only. No background build or Native DPS."""
     need(manager.platform=="win32","SIMC_UPDATER_WINDOWS_ONLY")
+    # v663: on real Windows with external 7z.exe, legitimate upstream CPack
+    # metadata can be rejected by the legacy -slt attribute parser. The
+    # bundled Python extractor has its own bounded path/link/encryption checks
+    # and was verified against the same upstream Windows 7z/CLI SHA.
+    # Prefer that checked path for auto-provision only; keep explicit tool
+    # selection and legacy 7-Zip fallback when Python support is absent.
+    if sevenzip is None and importlib.util.find_spec("py7zr") is not None:
+        sevenzip=updater.PY7ZR_TOOL
     from v289_retail_live_build_source import discover
     live=(live_loader or discover)(region="KR")
     current_build=_match_live(live)
