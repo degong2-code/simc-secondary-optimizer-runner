@@ -743,7 +743,7 @@ class SimCManager:
                 result["non_dps_cli_smoke_calls"]=0
                 return result
             tool=sevenzip or find_extractor()
-            need(tool,"ARCHIVE_EXTRACTOR_REQUIRED")
+            need(tool,"SEVEN_ZIP_REQUIRED")
             self.root.mkdir(parents=True,exist_ok=True)
             with tempfile.TemporaryDirectory(prefix=".install-",dir=self.root) as td:
                 scratch=pathlib.Path(td);archive=scratch/"nightly.7z"
