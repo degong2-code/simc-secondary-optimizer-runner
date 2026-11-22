@@ -222,6 +222,121 @@ class SimCUpdateUnit(unittest.TestCase):
         self.assertTrue(result["active_binary"])
         self.assertTrue(result["manual_binary_never_modified"])
 
+    def test_v655_retail_build_match_is_not_binary_attestation(self):
+        live=lambda region: {
+            "status":"LIVE_RETAIL_BUILD_SOURCE_OBSERVED",
+            "region":region,"game_build":"12.1.5.70961",
+            "source_url":"https://us.version.battle.net/wow/versions",
+            "source_sha256":"a"*64}
+        source=lambda revision: {
+            "source_revision":revision,"source_build":"12.1.5.70961",
+            "source_headers_checked":3}
+        with mock.patch.object(mod,"fetch_index",return_value=INDEX):
+            result=self.m.check_for_retail_compatibility(
+                live_loader=live,source_loader=source)
+        compatible=result["retail_compatibility"]
+        self.assertEqual(compatible["status"],
+                         "SOURCE_BUILD_MATCHED_BINARY_UNVERIFIED")
+        self.assertEqual(compatible["kr_game_build"],"12.1.5.70961")
+        self.assertFalse(compatible["binary_embedded_build_verified"])
+        self.assertFalse(compatible["season_ready"])
+        self.assertEqual(result["candidate"]["filename"],NAME)
+        self.assertEqual(result["matching_download_url"],mod.BASE+NAME)
+        self.assertEqual(self.m.offer["filename"],NAME)
+
+    def test_v655_rejects_stale_70783_and_never_suggests_match(self):
+        live=lambda region: {
+            "status":"LIVE_RETAIL_BUILD_SOURCE_OBSERVED",
+            "region":region,"game_build":"12.1.5.70961",
+            "source_url":"https://us.version.battle.net/wow/versions",
+            "source_sha256":"a"*64}
+        stale=lambda revision: {
+            "source_revision":revision,"source_build":"12.1.5.70783",
+            "source_headers_checked":3}
+        with mock.patch.object(mod,"fetch_index",return_value=INDEX):
+            result=self.m.check_for_retail_compatibility(
+                live_loader=live,source_loader=stale)
+        self.assertEqual(result["retail_compatibility"]["status"],
+                         "SIMC_SOURCE_BUILD_MISMATCH")
+        self.assertEqual(result["retail_compatibility"]["simc_generated_build"],
+                         "12.1.5.70783")
+        self.assertIsNone(result["candidate"])
+        self.assertIsNone(result["matching_download_url"])
+        self.assertIsNone(self.m.offer)
+        self.assertFalse(result["direct_install_available"])
+
+    def test_v655_missing_live_or_source_never_auto_offers(self):
+        def unknown_region(*,region):
+            raise TimeoutError("offline")
+        live=lambda region:{
+            "status":"LIVE_RETAIL_BUILD_SOURCE_OBSERVED","region":region,
+            "game_build":"12.1.5.70961","source_url":"https://example.invalid",
+            "source_sha256":"b"*64}
+        def unavailable(revision):
+            raise urllib.error.URLError("certificate validation blocked")
+        for source,loader,expected in [
+            (live,unavailable,"SIMC_SOURCE_BUILD_UNVERIFIED"),
+            (unknown_region,unavailable,"LIVE_BUILD_UNKNOWN")]:
+            with self.subTest(expected=expected),mock.patch.object(
+                    mod,"fetch_index",return_value=INDEX):
+                result=self.m.check_for_retail_compatibility(
+                    live_loader=source,source_loader=loader)
+                self.assertEqual(result["retail_compatibility"]["status"],
+                                 expected)
+                self.assertIsNone(result["candidate"])
+                self.assertIsNone(result["matching_download_url"])
+                self.assertIsNone(self.m.offer)
+
+    def test_v655_actual_source_header_validation_and_redirect_refusal(self):
+        rev="9933ffb"
+        known={"item_set_bonus.inc":"// Set bonus data, wow build ",
+               "gem_data.inc":"// Gem properties, wow build ",
+               "temporary_enchant.inc":"// Temporary item enchants, wow build "}
+        class Fake:
+            status=200
+            def __init__(self,url,first):
+                self.url=url
+                self.buf=(first+"\nmore data").encode("utf8")
+            def __enter__(self):return self
+            def __exit__(self,*args):return False
+            def geturl(self):return self.url
+            def read(self,n):return self.buf[:n]
+        def loader(request,timeout):
+            self.assertEqual(timeout,8)
+            name=request.full_url.rsplit("/",1)[-1]
+            return Fake(request.full_url,known[name]+"12.1.5.70961")
+        proof=mod.generated_source_build(rev,open_url=loader)
+        self.assertEqual(proof["source_headers_checked"],3)
+        self.assertEqual(proof["source_build"],"12.1.5.70961")
+        self.assertFalse(proof["binary_embedded_build_verified"])
+        with self.assertRaisesRegex(mod.UpdateBlocked,
+                                     "SIMC_SOURCE_REVISION_INVALID"):
+            mod.generated_source_build("not-a-revision",open_url=loader)
+        def drift(request,timeout):
+            name=request.full_url.rsplit("/",1)[-1]
+            build="12.1.5.70783" if name=="gem_data.inc" else "12.1.5.70961"
+            return Fake(request.full_url,known[name]+build)
+        with self.assertRaisesRegex(mod.UpdateBlocked,
+                                     "SIMC_SOURCE_GENERATED_BUILDS_CONFLICT"):
+            mod.generated_source_build(rev,open_url=drift)
+        def redirect(request,timeout):
+            return Fake("https://evil.example/not-simc",
+                        "// Set bonus data, wow build 12.1.5.70961")
+        with self.assertRaisesRegex(mod.UpdateBlocked,
+                                     "SIMC_SOURCE_REDIRECT_OR_HOST_INVALID"):
+            mod.generated_source_build(rev,open_url=redirect)
+
+    def test_v655_route_and_ui_display_provenance(self):
+        api=(ROOT/"runner"/"v113_local_web_api.py").read_text("utf8")
+        js=(ROOT/"runner"/"webui"/"app.js").read_text("utf8")
+        self.assertIn('/api/v1/simc-updates/check-compatible',api)
+        self.assertIn('check_for_retail_compatibility()',api)
+        self.assertIn('/api/v1/simc-updates/check-compatible',js)
+        self.assertIn('SOURCE_BUILD_MATCHED_BINARY_UNVERIFIED',js)
+        self.assertIn('SIMC_SOURCE_BUILD_MISMATCH',js)
+        self.assertIn('link.href=result.matching_download_url',js)
+        self.assertIn('실제 실행파일 내장 빌드',js)
+
     def test_inventory_blocks_absolute_traversal_duplicates_links_and_bombs(self):
         self.assertEqual(mod.verify_inventory(LIST),["simc.exe","profiles"])
         for bad in [LIST.replace("simc.exe","../../outside.exe"),
