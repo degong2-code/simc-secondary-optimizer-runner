@@ -50,6 +50,7 @@ import v217_stage_execution_engine as stage_engine
 import v293_local_longrun_session as longrun_sessions
 import v335_environment_official_ko_localization as official_ko_env
 import v336_environment_ko_playable_terms as official_playable_terms
+import v665_official_item_icons as official_item_icons
 
 SCHEMA = "v113_local_web_api_p1_v1"
 KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -273,6 +274,8 @@ class LocalJobs:
         self.profile_stage_lock = threading.Lock()
         self.season_source_lock = threading.Lock()
         self.locale_cache_lock = threading.Lock()
+        self.equipment_icon_lock = threading.Lock()
+        self.equipment_icon_cache = {}
         self._verified_fresh_profile_result = None
         self._current_fresh_game_build = None
 
@@ -3315,6 +3318,56 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     "ordinary_equipment_user_selectable":False,
                     "full_season_completeness_confirmed":False,
                     "native_calls_now":0}
+
+    @app.get("/api/v1/season-item-icons")
+    def installed_season_item_icons(game_build: str,
+                                    target_ilevel: int,
+                                    installed_manifest_sha256: str):
+        """Display-only official media for exact installed candidate IDs.
+
+        This endpoint uses an already verified season/gear scope and local
+        Windows credentials. No newly submitted arbitrary item IDs, no Native,
+        no DB mutation, no season admission or source cache invalidation.
+        """
+        if (re.fullmatch(r"\d+(?:\.\d+){3}",game_build) is None or
+                not 1<=target_ilevel<=1000 or
+                re.fullmatch(r"[a-f0-9]{64}",
+                             installed_manifest_sha256) is None):
+            raise HTTPException(422,detail={
+                "code":"ITEM_ICONS_VERIFIED_SEASON_SCOPE_REQUIRED"})
+        gear=current_season_gear(game_build,target_ilevel,
+                                 installed_manifest_sha256)
+        if (gear.get("status")!="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY" or
+            gear.get("source_scope")!=
+                "VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES" or
+            gear.get("installed_manifest_sha256")!=installed_manifest_sha256):
+            return {"schema":official_item_icons.SCHEMA,
+                    "status":"VERIFIED_SEASON_GEAR_UNAVAILABLE",
+                    "icons":{},"requested":0,"network_calls_now":0,
+                    "native_calls":0,"display_only":True}
+        visible=gear.get("choices") or {}
+        ids=sorted({x["item_id"] for kind in
+                    ("trinket","special_effect_gear_candidate")
+                    for x in visible.get(kind,[])
+                    if type(x) is dict and type(x.get("item_id")) is int})
+        if not ids or len(ids)>official_item_icons.MAX_ITEMS:
+            return {"schema":official_item_icons.SCHEMA,
+                    "status":"MEDIA_SOURCE_SIZE_OUT_OF_SCOPE",
+                    "icons":{},"requested":len(ids),"network_calls_now":0,
+                    "native_calls":0,"display_only":True}
+        scope=(game_build,target_ilevel,installed_manifest_sha256)
+        with jobs.equipment_icon_lock:
+            if scope in jobs.equipment_icon_cache:
+                doc=jobs.equipment_icon_cache[scope]
+                return {**doc,"network_calls_now":0,"cached":True}
+            try:
+                credentials=jobs.source_credential_store.load()
+            except (local_source_keys.CredentialBlocked,OSError):
+                credentials=None
+            doc=official_item_icons.collect(ids,credentials)
+            if doc["status"] in ("COMPLETE","PARTIAL"):
+                jobs.equipment_icon_cache[scope]=doc
+            return {**doc,"cached":False}
 
     @app.get("/api/v1/native-batches")
     def native_batches():
