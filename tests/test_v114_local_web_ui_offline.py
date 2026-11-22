@@ -426,7 +426,8 @@ const apply=Function("state","$","field","valueInt",
  await apply();
  assert.strictEqual(calls.length,1,"AMBIGUOUS_MUST_NOT_BIND_OR_GET");
  assert.strictEqual(state.seasonGearTargetIlevel,null);
- assert(notices.at(-1).includes("설치 SHA"));
+ assert(notices.at(-1).includes("O=0 구성 검증"),
+   "AMBIGUOUS_O_ZERO_MUST_REQUIRE_EXACT_VERIFIED_BUDGET");
  // If the user edited F, do not silently restore the old oil-install F.
  state.verifiedBaseFlaskInstalls.pop();
  state.seasonGearTargetIlevel=334;
