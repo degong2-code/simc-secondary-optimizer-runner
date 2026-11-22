@@ -236,8 +236,12 @@ class UserRequest(BaseModel):
     # install, DPS admission or ordinary season Build default.
     measure_fury_G_source_only: bool = False
 
-def blocked(exc):
-    """Return stable codes, not private absolute paths, talent strings, or tracebacks."""
+def blocked(exc, *, stage=None):
+    """Return stable codes, not private absolute paths, talent strings, or tracebacks.
+
+    A fixed stage is diagnostic only. It does not change admission, receipts,
+    or reveal the actual exception message on a generic HTTP 409.
+    """
     if isinstance(exc, (longrun_sessions.LocalLongRunBlocked,
                          sessions.SessionBlocked, bootstrap.UserScenarioBlocked,
                         sessions.nonchmv_enchant.EnchantChoiceBlocked,
@@ -259,8 +263,11 @@ def blocked(exc):
     if isinstance(exc, reference.statics.BudgetBlocked):
         if str(exc) == "SELECTED_SPECIAL_FLOOR_UNFEASIBLE":
             return HTTPException(422, detail={"code": str(exc)})
-    return HTTPException(409, detail={"code": "LOCAL_SESSION_PRECHECK_BLOCKED",
-                                       "kind":type(exc).__name__})
+    detail={"code":"LOCAL_SESSION_PRECHECK_BLOCKED",
+            "kind":type(exc).__name__}
+    if stage in ("SEASON_ENVIRONMENT_BUILD",):
+        detail["stage"]=stage
+    return HTTPException(409, detail=detail)
 
 class LocalJobs:
     def __init__(self, root, source_credential_store=None):
@@ -3557,7 +3564,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                         "auto_myth_target_source_sha_verified":True}}
             return result
         except Exception as exc:
-            raise blocked(exc) from None
+            raise blocked(exc,stage="SEASON_ENVIRONMENT_BUILD") from None
 
     @app.post("/api/v1/environment/build")
     def build_environment(request: UserRequest):
