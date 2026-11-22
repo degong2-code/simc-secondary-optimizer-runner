@@ -33,6 +33,7 @@ import v196_current_season_user_catalog as ui_catalog
 import v529_current_season_eagle_E0_bridge as exact_e0_enchant
 import v531_current_season_positive_E_bridge as exact_positive_enchant
 import v193_simc_local_updater as simc_updates
+import v660_simc_one_click_provision as simc_one_click
 import v645_simc_connection_prefs as simc_connection
 import v148_local_batch_results as batch_view
 import v167_product_season_gear_adapter as season_gear
@@ -2864,7 +2865,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             raise HTTPException(409,detail={"code":"ACTIVE_SIMC_JOB_UPDATE_BLOCKED"})
         try:
             return operation()
-        except simc_updates.UpdateBlocked as exc:
+        except (simc_updates.UpdateBlocked,
+                simc_one_click.ProvisionBlocked) as exc:
             raise HTTPException(422,detail={"code":str(exc)}) from None
         except (OSError,TimeoutError,ValueError,subprocess.SubprocessError) as exc:
             raise HTTPException(409,detail={"code":"OFFICIAL_SIMC_UPDATE_UNAVAILABLE",
@@ -2878,6 +2880,14 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
     def simc_update_check():
         # Preserve the historical raw offer contract for existing callers.
         return updates_action(updater.check)
+
+    @app.post("/api/v1/simc-updates/prepare-auto")
+    def simc_update_prepare_auto():
+        # One explicit user action, zero personal GitHub credentials. Only
+        # authenticated local requests can change the managed binary pointer.
+        # No automatic CI dispatch, no season changes, no DPS Native.
+        return updates_action(
+            lambda:simc_one_click.prepare_one_click(updater))
 
     @app.post("/api/v1/simc-updates/check-compatible")
     def simc_update_check_compatible():
