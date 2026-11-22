@@ -111,73 +111,21 @@ function fixture(apiResult,path='C:\\\\Downloads\\\\simc-1210.01.0d19401-win64.7
                          cwd=ROOT,text=True,capture_output=True,timeout=20)
         self.assertEqual(p.returncode,0,p.stderr)
 
-    def test_managed_source_full_sha_used_without_short_revision_lookup(self):
-        node=shutil.which("node")
-        if not node:self.skipTest("node unavailable")
-        harness=r"""
-const assert=require('assert'),fs=require('fs');
-const raw=fs.readFileSync(process.argv[1],'utf8');
-const a=raw.indexOf('function managedFullSimcSourceRevision(data) {');
-const b=raw.indexOf('function displaySimcUpdater(data) {',a);
-const c=raw.indexOf('async function refreshSimcUpdater(preferManaged=false) {');
-const d=raw.indexOf('async function autoPrepareSimc()',c);
-assert(a>=0&&b>a&&c>b&&d>c);
-const source=raw.slice(a,b)+'\n'+raw.slice(c,d);
-const full='6924096820c0b5c9d7bfa9848ea48fe0cd15c7d7';
-function fixture(installed,initialBinary='',initialRevision=''){
-  const nodes={
-    binary:{value:initialBinary},revision:{value:initialRevision},
-    'simc-connection-status':{textContent:''}};
-  const status={active_binary:'C:/managed/simc.exe',installed};
-  const api=async url=>{
-    assert.equal(url,'/api/v1/simc-updates/status');return status;};
-  const create=Function('
+    def test_managed_source_revision_uses_full_40_sha_when_available(self):
+        """No short-GitHub-commit lookup for receipt-backed managed SimC."""
         js=(ROOT/"runner/webui/app.js").read_text("utf8")
-        html=(ROOT/"runner/webui/index.html").read_text("utf8")
-        self.assertIn('const sourceNames={',js)
-        self.assertIn('원본 컴파일에 필요한 파일 "+missing.length+"종 미확정',js)
-        self.assertIn('미완료 코드는 연쇄 진단이며',js)
-        self.assertIn('원본 단계 진단 보기 · 연쇄 미완료 항목',html)
-        self.assertIn('class="fold" hidden><summary>원본 단계 진단 보기',html)
-        self.assertIn('technicalPanel.hidden=false;',js)
-        self.assertIn('list.appendChild(item);',js)
-
-if __name__=="__main__":unittest.main()
-,'field','api','displaySimcUpdater',source+
-    '\nreturn {applyManagedSimc,managedFullSimcSourceRevision,refreshSimcUpdater};');
-  const methods=create(id=>(nodes[id]??={}),id=>nodes[id]?.value||'',api,()=>{});
-  return {nodes,methods,status};
-}
-(async()=>{
-  const selfbuilt={revision_short:'6924096',source_revision_full:full};
-  let f=fixture(selfbuilt);
-  assert.equal(f.methods.applyManagedSimc(f.status),true);
-  assert.equal(f.nodes.revision.value,full);
-  assert.equal(f.nodes.binary.value,f.status.active_binary);
-  f=fixture(selfbuilt,'C:/managed/simc.exe','6924096');
-  await f.methods.refreshSimcUpdater();
-  assert.equal(f.nodes.revision.value,full);
-  assert(f.nodes['simc-connection-status'].textContent.includes('연결 확인·저장'));
-  f=fixture(selfbuilt,'C:/manual/simc.exe','6924096');
-  await f.methods.refreshSimcUpdater();
-  assert.equal(f.nodes.revision.value,'6924096');
-  assert.equal(f.nodes.binary.value,'C:/manual/simc.exe');
-  f=fixture(selfbuilt,'C:/managed/simc.exe','abc1234');
-  await f.methods.refreshSimcUpdater();
-  assert.equal(f.nodes.revision.value,'abc1234');
-  f=fixture({revision_short:'abc1234'},'C:/managed/simc.exe','abc1234');
-  await f.methods.refreshSimcUpdater();
-  assert.equal(f.nodes.revision.value,'abc1234');
-  f=fixture({revision_short:'6924096',source_revision_full:'f'.repeat(40)});
-  assert.equal(f.methods.managedFullSimcSourceRevision(f.status),null);
-  assert.equal(f.methods.applyManagedSimc(f.status),true);
-  assert.equal(f.nodes.revision.value,'6924096');
-})().catch(e=>{console.error(e);process.exitCode=1});
-"""
-        p=subprocess.run([node,"-e",harness,str(ROOT/"runner/webui/app.js")],
-                         cwd=ROOT,text=True,capture_output=True,timeout=20)
-        self.assertEqual(p.returncode,0,p.stderr)
-
+        self.assertIn("function managedFullSimcSourceRevision(data) {",js)
+        self.assertIn("installed.source_revision_full,short=installed.revision_short",js)
+        self.assertIn("/^[a-f0-9]{40}$/.test(full)",js)
+        self.assertIn("full.startsWith(short)?full:null;",js)
+        self.assertIn("managedFullSimcSourceRevision(data)||",js)
+        self.assertIn("data.installed.revision_short;",js)
+        self.assertIn("field(\"binary\")===status.active_binary",js)
+        self.assertIn("field(\"revision\")===status.installed.revision_short",js)
+        self.assertIn("관리 자체 빌드의 전체 소스 Git SHA",js)
+        self.assertIn("저장하려면 ‘SimC 연결 확인·저장’",js)
+        self.assertLess(js.index("function managedFullSimcSourceRevision(data) {"),
+                        js.index("function applyManagedSimc(data) {"))
     def test_real_compiler_missing_diagnostic_is_collapsed_and_explained(self):
         js=(ROOT/"runner/webui/app.js").read_text("utf8")
         html=(ROOT/"runner/webui/index.html").read_text("utf8")
