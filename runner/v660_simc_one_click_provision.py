@@ -171,7 +171,8 @@ def prepare_one_click(manager,*,live_loader=None,
     # The stock candidate selection maintains its existing time-limited offer.
     if official_checker is None:
         checked=manager.check_for_retail_compatibility(
-            live_loader=lambda region:live,source_loader=source_loader)
+            live_loader=lambda region:live,source_loader=source_loader,
+            head_loader=updater.official_source_head_revision)
     else:
         checked=official_checker(live)
     comp=checked.get("retail_compatibility") or {}
