@@ -1,8 +1,8 @@
 {
-  "target": "windows-x64-cli",
-  "reason": "official_binary_unavailable",
+  "schema": "p3_v658_generic_windows_cli_build_request_v1",
   "source_repo": "simulationcraft/simc",
-  "game_build": "12.1.5.70961",
   "source_sha": "6924096820c0b5c9d7bfa9848ea48fe0cd15c7d7",
-  "schema": "p3_v658_generic_windows_cli_build_request_v1"
+  "game_build": "12.1.5.70961",
+  "target": "windows-x64-cli",
+  "reason": "official_binary_unavailable"
 }
