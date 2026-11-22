@@ -1,0 +1,26 @@
+name: P3 v658 Generic SimC CLI Builder Contract (Offline No Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/v658_generic_simc_win64_build.py
+      - tests/test_p3_v658_generic_simc_win64_build_offline.py
+      - .github/workflows/p3_v658_generic_simc_windows_cli.yml
+      - .github/workflows/p3_v658_generic_simc_builder_offline.yml
+permissions:
+  contents: read
+jobs:
+  offline-contract:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ['3.12','3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verify strict source request and package identity without SimC
+        run: |
+          python -m unittest -v tests.test_p3_v658_generic_simc_win64_build_offline
+          python -m py_compile integration_probes/v658_generic_simc_win64_build.py
