@@ -1130,7 +1130,7 @@ function applyOilUseToggle(){
       // A previously installed positive-O source must not be reused as O=0
       // merely because its loadout is not present in the current read list.
       state.seasonGearTargetIlevel=null;
-      setNotice("무기 기름을 미사용(O=0)으로 변경했습니다. 현재 장비 설치 SHA에 O=0 근거가 없어 해당 환경을 재검증해야 합니다.");
+      setNotice("무기 기름을 미사용(O=0)으로 변경했습니다. 현재 장비 구성에 맞는 기름 미사용 예산 근거가 없어 시즌 환경을 다시 검증해야 합니다.");
     }else{
       setNotice("무기 기름 미사용(O=0) · 기름 고정 스탯을 추가하지 않습니다.");
     }
