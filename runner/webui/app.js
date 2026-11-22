@@ -3955,10 +3955,22 @@ function savedPreManagedBinary() {
   }catch{}
   return null;
 }
+function managedFullSimcSourceRevision(data) {
+  // v664: A source-built managed executable already has a 40-char source
+  // commit in its installed receipt. Reuse that ID rather than performing
+  // GitHub's huge /commits/<short> lookup at season-build time.
+  // This is a receipt-backed identity, not an upstream signature or READY.
+  const installed=data?.installed||{};
+  const full=installed.source_revision_full,short=installed.revision_short;
+  return typeof full==="string"&&/^[a-f0-9]{40}$/.test(full)&&
+    typeof short==="string"&&/^[a-f0-9]{7,12}$/.test(short)&&
+    full.startsWith(short)?full:null;
+}
 function applyManagedSimc(data) {
   if(!data?.active_binary||!data?.installed)return false;
   $("binary").value=data.active_binary;
-  $("revision").value=data.installed.revision_short;
+  $("revision").value=managedFullSimcSourceRevision(data)||
+    data.installed.revision_short;
   $("simc-connection-status").textContent=
     "관리 SimC가 현재 입력칸에 적용됐습니다. 다음 실행에도 유지하려면 ‘SimC 연결 확인·저장’을 눌러주세요.";
   return true;
@@ -3985,6 +3997,22 @@ async function refreshSimcUpdater(preferManaged=false) {
   const status=await api("/api/v1/simc-updates/status");
   displaySimcUpdater(status);
   if(status.active_binary&&(preferManaged||!field("binary")))applyManagedSimc(status);
+  else {
+    // Preserve an independently selected executable. Only upgrade a saved
+    // short revision if this is the SAME managed executable, the short ID is
+    // exactly its saved managed prefix, and a 40-char source receipt exists.
+    // Do not silently rewrite the durable user setting: explicit confirmation
+    // remains necessary to save the newly displayed full revision.
+    const full=managedFullSimcSourceRevision(status);
+    if(full&&field("binary")===status.active_binary&&
+       field("revision")===status.installed.revision_short) {
+      $("revision").value=full;
+      $("simc-connection-status").textContent=
+        "관리 자체 빌드의 전체 소스 Git SHA를 현재 입력칸에 적용했습니다. "+
+        "GitHub 단축 revision 조회 없이 시즌 원본을 확인할 수 있습니다. "+
+        "다음 실행에도 저장하려면 ‘SimC 연결 확인·저장’을 눌러주세요.";
+    }
+  }
   return status;
 }
 async function autoPrepareSimc() {
