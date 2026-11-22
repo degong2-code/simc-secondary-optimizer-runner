@@ -3151,6 +3151,33 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                         environment_manifest.EnvironmentBlocked,
                         KeyError,ValueError,TypeError):
                     pass
+            # v665: display-only same-effect family for an EXACT signed
+            # installed 70961 ring E pair. No effect or budget approval.
+            if exact and game_build=="12.1.5.70961":
+                import v197_enchant_effect_families as ring_families
+                signed={row["enchant_id"]:row for row in
+                        registered.get("items",[])
+                        if row.get("slot")=="finger1/finger2" and
+                        type(row.get("verified_fixed_E")) is dict}
+                for entry in published.get("enchant_candidates",{}).get("items",[]):
+                    row=signed.get(entry.get("enchant_id"))
+                    if (not row or row.get("simc_token")!=entry.get("token")
+                        or not entry["token"].startswith("enchant_ring__")):
+                        continue
+                    family=ring_families.RING_EFFECTS.get(
+                        entry["token"].split("__",1)[1])
+                    if family is None or family[1] not in ("regular","stronger"):
+                        continue
+                    stat,rank=family
+                    E=row["verified_fixed_E"]
+                    if (type(E.get(stat)) is not int or E[stat]<=0 or
+                        any(type(value) is not int or value!=0
+                            for key,value in E.items() if key!=stat)):
+                        continue
+                    entry["effect_family"]=stat
+                    entry["preferred_if_same_effect_source"]=(
+                        "STRONGER_VARIANT_REPORTED" if rank=="stronger"
+                        else "WEAKER_VARIANT_REPORTED")
             return {**published,
                     "verified_exact_user_enchant_runtime":exact_runtime,
                     **({"source_scope":"VERIFIED_INSTALLED_V212_OPTION_CATALOG",
