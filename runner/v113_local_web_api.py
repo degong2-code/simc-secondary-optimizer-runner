@@ -2872,7 +2872,29 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
 
     @app.post("/api/v1/simc-updates/check")
     def simc_update_check():
+        # Preserve the historical raw offer contract for existing callers.
         return updates_action(updater.check)
+
+    @app.post("/api/v1/simc-updates/check-compatible")
+    def simc_update_check_compatible():
+        # Explicit user-click only; no Native DPS or season build. Do not
+        # conflate a saved SimC header observation with a fresh CLI check.
+        def run():
+            result=updater.check_for_retail_compatibility()
+            try:
+                saved=(simc_prefs.status().get("saved") or {})
+                observed=saved.get("observed_game_build")
+                if observed and re.fullmatch(r"\d+(?:\.\d+){3}",observed):
+                    comp=result["retail_compatibility"]
+                    comp["saved_simc_observed_build"]=observed
+                    comp["saved_simc_observation_fresh"]=False
+                    comp["saved_simc_matches_kr_build"]=(
+                        observed==comp.get("kr_game_build")
+                        if comp.get("kr_game_build") else None)
+            except (ValueError,OSError,TypeError,KeyError):
+                pass
+            return result
+        return updates_action(run)
 
     @app.post("/api/v1/simc-updates/install")
     def simc_update_install(request:UpdateInstallRequest):
