@@ -24,3 +24,9 @@
 - 이번 변경은 Native DPS 호출·G/J/F/O 신규 수집·전수 장비 DB 구축을 요구하지 않는다. 기존 시즌 정적 캐시와 예산/캐시·취소·재개·95% 통계, 26 DPS 최적화 범위 유지.
 - **미구현**: 모든 특수효과 장비의 현 시즌 누락 없는 원본 등록, 선택 B8에 누락된 실제 정적 변형의 Native/캐시 측정 및 최종 프로필 완성, 미검증 손별 기름 O의 실제 시즌 등록. UI와 오류 안내 개선은 이들 기능의 완료 증거가 아니다.
 - 메인 채팅의 개발 소유권, GitHub 격리 원칙, main/v003/Project UI/Work OS M0/공식 15/78 조건 변경 없음.
+
+## 최종 검증·배포 영수증
+- [Windows Beta v181 Actions **#45029795299 SUCCESS**](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45029795299): Win2022 Python 3.12·3.14 **각 336 tests PASS/0 FAIL**, packaging 5 PASS, 실제 Windows CMD 압축 해제/로컬 HTTP 보안/3계획 복원 PASS. Native DPS 신규 호출 0회. Windows ZIP 원본은 286개 소스 파일 + 정확한 manifest 1개이며 포함된 286개 SHA256과 ZIP CRC 모두 검증 PASS.
+- [v113 Local Web API Windows+Ubuntu **#45029795353 SUCCESS**](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45029795353), [v182 UI Windows+Ubuntu **#45029795294 SUCCESS**](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45029795294), [v180 130 오프라인 source-first **#45029795301 SUCCESS**](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45029795301), 실제 Native 6-case SKIPPED.
+- 배포: [GitHub Actions ZIP artifact #14756992592](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45029795299/artifacts/14756992592)의 중첩 wrapper를 제거한 **`SIMC_SECONDARY_OPTIMIZER_v666_WINDOWS_BETA.zip`**, **1,525,280 bytes**, SHA256 **`099acb940b1afc4022c549f5743d9724542c116891d859ff5987c818dbafe04a`**. 실행 파일(simc.exe)·사용자 캐시 미포함. 실제 사용자의 Windows 기름/장비 조합을 새 Native로 실행했다는 증거는 아님.
+- 초기 테스트의 오래된 `설치 SHA` 정확 문구 요구 및 이전 `start-btn` 조건 문자열 검사로 인한 FAIL은 유효한 source/예산 차단 자체가 아닌 **테스트의 UI 표현 계약 드리프트**였음. 기존 O=0 중복·불일치 원본 차단 정책은 유지한 채 검사를 새 사용자 안내·차단 조건으로 보완했으며 최종 PASS를 확인.
