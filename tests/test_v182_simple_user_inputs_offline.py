@@ -125,7 +125,10 @@ const src=fs.readFileSync("runner/webui/app.js","utf8");
 function section(start,end,name){
   const a=src.indexOf(start),b=src.indexOf(end,a);
   assert(a>=0&&b>a,"source function boundary "+name);
-  return vm.runInNewContext(src.slice(a,b)+"\n"+name,{});
+  // This pure projection now calls a separate UI navigation helper.
+  // Keep the diagnostic regression isolated from DOM and navigation logic.
+  return vm.runInNewContext(src.slice(a,b)+"\n"+name,
+    {seasonBuildRecoveryPlan:()=>null});
 }
 const receipt=section("function compactSeasonBuildReceipt(",
   "async function copySeasonBuildDiagnostic", "compactSeasonBuildReceipt");

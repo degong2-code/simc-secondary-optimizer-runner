@@ -1,0 +1,29 @@
+name: P3 v657 Generic SimC Updater Offline (No Native)
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - 'runner/v193_simc_local_updater.py'
+      - 'tests/test_p3_v657_generic_simc_discovery_offline.py'
+      - 'tests/test_v193_simc_local_updater.py'
+      - '.github/workflows/p3_v657_generic_simc_updater_offline.yml'
+  workflow_dispatch:
+
+jobs:
+  generic-update-source:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ['3.12', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Generic SimC discovery and previous updater regressions (offline)
+        run: |
+          python -m unittest -v tests.test_p3_v657_generic_simc_discovery_offline tests.test_v193_simc_local_updater
+      - name: Python syntax (no Native or network)
+        run: |
+          python -m py_compile runner/v193_simc_local_updater.py
