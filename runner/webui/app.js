@@ -3974,12 +3974,12 @@ function displaySimcUpdater(data) {
       " · SHA256 "+current.sha256.slice(0,16)+"…":
     "앱 관리 SimC 없음 · 직접 지정한 실행 파일은 변경하지 않습니다.";
   if(supported&&!data.archive_extractor_available)
-    $("simc-update-status").textContent+=" · 설치하려면 7-Zip이 필요합니다.";
+    $("simc-update-status").textContent+=" · 7z 압축 해제 기능이 필요합니다.";
   $("simc-local-install-status").textContent=!supported?
     "SimC 설치 관리는 Windows x64에서만 지원합니다.":
     !data.archive_extractor_available?
-    "7-Zip 실행파일(7z.exe)을 찾지 못했습니다. .7z 파일 경로와는 별개로 공식 7-Zip을 설치해야 합니다. 아래 설치 안내를 이용하세요.":
-    "7-Zip 실행파일 감지됨 · 직접 다운로드한 공식 Windows x64 .7z 파일을 설치할 수 있습니다.";
+    "7-Zip 실행파일과 Python 7z 해제 기능을 모두 찾지 못했습니다. 프로그램 설치 환경을 복구하거나 아래 7-Zip 안내를 이용하세요.":
+    "7z 압축 해제 기능 준비됨 (설치된 7-Zip 또는 프로그램 Python) · 공식 Windows x64 .7z 설치가 가능합니다.";
 }
 async function refreshSimcUpdater(preferManaged=false) {
   const status=await api("/api/v1/simc-updates/status");
@@ -4017,7 +4017,7 @@ async function autoPrepareSimc() {
     }
   }catch(err){
     status.textContent="SimC 자동 확보 실패 ("+err.message+
-      ") · 기존 설치·세션 유지. 서버·7-Zip 또는 공개 배포 상태를 확인해 주세요.";
+      ") · 기존 설치·세션 유지. 서버·7z 해제 기능 또는 공개 배포 상태를 확인해 주세요.";
     throw err;
   }finally{
     button.disabled=false;
@@ -4050,7 +4050,7 @@ async function checkSimcUpdater() {
       "KR Live "+live+" · SimC 후보 원본 데이터 "+
       match.simc_generated_build+" (3종 헤더 일치) · revision "+
       result.candidate.revision_short+" · 실제 실행파일 내장 빌드 및 사용 가능 여부는 설치 후 검증 필요"+
-      observed+(result.archive_extractor_available?"":" · 설치에는 7-Zip 필요")+". "));
+      observed+(result.archive_extractor_available?"":" · 설치에는 7z 해제 기능 필요")+". "));
     if(/^https:\/\/downloads\.simulationcraft\.org\/nightly\/simc-[a-z0-9.\-]+-win64(?:-[a-f0-9]{7,12})?\.7z$/i.test(result.matching_download_url||"")){
       const link=document.createElement("a");
       link.href=result.matching_download_url;
@@ -4211,7 +4211,7 @@ async function installSelfBuiltSimcUpdater() {
     $("simc-update-candidate").textContent="자체 빌드 SimC를 앱 전용 관리 폴더에 설치했습니다. 기존 사용자 파일·시즌 DB·세션은 변경하지 않았습니다.";
     setNotice("자체 빌드 SimC 설치 완료 · 기존 세션과 다른 바이너리 SHA로 분리됩니다.");
   }catch(err){
-    status.textContent="자체 빌드 ZIP 설치 실패 ("+err.message+"). ZIP 영수증, 7-Zip, 실행파일을 확인하세요. 기존 관리 버전은 유지됩니다.";
+    status.textContent="자체 빌드 ZIP 설치 실패 ("+err.message+"). ZIP 영수증, 7z 해제 기능, 실행파일을 확인하세요. 기존 관리 버전은 유지됩니다.";
     throw err;
   }
 }
