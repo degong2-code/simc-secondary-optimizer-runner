@@ -73,7 +73,7 @@ class AutoProvision(unittest.TestCase):
           "cli_smoke":"PASS","binary_embedded_build_verified":True,
           "observed_game_build":LIVE,"official_release":False,
           "season_environment_ready":False,"native_dps_calls":0}
-        inner=updater.MAGIC+bytes(150000)
+        inner=updater.MAGIC+hashlib.shake_256(b"v660-release-archive").digest(140000)
         payload["archive_sha256"]=sha(inner)
         payload["archive_bytes"]=len(inner)
         proof={"schema":"p3_v658_source_proof_v1","source_sha":REV,
