@@ -2109,7 +2109,14 @@ async function api(path,{method="GET",payload=null,publicRoute=false}={}) {
     // Never echo arbitrary user-controlled request body or raw backend traceback.
     const code=typeof data?.detail?.code==="string" ?
       data.detail.code : "HTTP_"+response.status;
-    throw Error(code);
+    const error=new Error(code);
+    // Only the server's allowlisted class/stage, never a traceback or path.
+    const kind=data?.detail?.kind,stage=data?.detail?.stage;
+    if(typeof kind==="string"&&/^[A-Za-z][A-Za-z0-9_]{1,90}$/.test(kind))
+      error.safeKind=kind;
+    if(stage==="SEASON_ENVIRONMENT_BUILD")error.safeStage=stage;
+    error.httpStatus=response.status;
+    throw error;
   }
   return data;
 }
@@ -3180,6 +3187,10 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       for_user_variant:forUserVariant,
       outcome:"REQUEST_FAILED_NO_SOURCE_REPORT",
       game_build,target_ilevel,error_code:safeError,
+      error_kind:typeof err.safeKind==="string"?err.safeKind:null,
+      failure_stage:err.safeStage==="SEASON_ENVIRONMENT_BUILD"?
+        err.safeStage:null,
+      http_status:Number.isInteger(err.httpStatus)?err.httpStatus:null,
       compiler_missing:null,core_numeric_owner_present:null,
       environment_ready:false,
       note:"Request failed before usable source evidence; missing is not zero."
@@ -3193,9 +3204,28 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       "‘선택 환경 검증·준비’로 원하는 구성을 검증하세요. "+
       "구성이 구분되지 않으면 원본 확인이 추가로 필요합니다.":
       "요청 차단 또는 오류 · 실행 완료가 아닙니다. 오류 코드를 확인하세요.";
-    $("season-build-stage").textContent="시즌 환경 구축 단계 차단/오류 · "+err.message+
-      " · 기존 영수증은 보존됩니다.";
-    displaySeasonBuildRecovery(seasonBuildRecoveryPlan(null,safeError));
+    $("season-build-stage").textContent=
+      "시즌 환경 요청 종료 · 실패 · "+safeError+
+      (err.safeStage?" · 단계: 시즌 환경 구축":"")+
+      (err.safeKind?" · 유형: "+err.safeKind:"")+
+      " · 진단 영수증 복사 가능";
+    if(forUserVariant)$("user-variant-status").textContent=
+      "선택 환경 검증이 실패했습니다. 준비 완료가 아닙니다. "+
+      "‘진단 영수증 복사’에서 실패 코드·안전한 오류 유형을 확인하세요.";
+    $("season-build-pending").hidden=true;
+    displaySeasonBuildRecovery(multipleInstalledBudgets?{
+      kind:"selection",
+      title:"검증된 F/J 설치본이 여러 개이며 구성 선택이 필요합니다.",
+      detail:"기존 자료를 보존하고, 정확한 영약·보석·기름 조건을 구분해야 합니다. "+
+        "하나를 임의로 선택하거나 G/J/F/O를 재측정하지 않습니다.",
+      action:"optimizer",button:"영약 선택 화면 열기"
+    }:{
+      kind:"diagnostic",
+      title:"시즌 환경 요청이 실패했습니다.",
+      detail:"첫 실패의 오류 종류는 진단 영수증에 있습니다. 이 기록만으로 "+
+        "근본 원인을 확정하거나 시즌 원본을 수정하지 않습니다.",
+      action:"diagnostic",button:"진단 영수증 복사"
+    });
     throw err;
   } finally {
     stopSeasonActivity();
