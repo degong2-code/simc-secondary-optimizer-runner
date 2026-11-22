@@ -22,3 +22,9 @@
 ## 다음 검증 필요
 - 이번 신규 Windows Python3.12/3.14 패키징·기존 API·UI 회귀 최종 결과와 exact signed same-family projection을 확인한 후 제한된 사용자가 ZIP 1개만 설치하여 실제 아이콘 출력·UI 장식 위치와 마부 가독성을 확인.
 - 음식·물약/영약 검색은 아직 미구현. 실제 개인 PC에서 다음 최적화 Native DPS·SEM/95% 결과는 별도의 최초 E2E 시험으로 확인할 필요가 있다. 무조건 26전문화 전수 Native 반복 금지.
+
+## 최신 검증과 실사용 ZIP (2026-11-22)
+- **최종 Windows 제품 ZIP [Actions #45028652387](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45028652387) SUCCESS**: Win2022 Python 3.12와 3.14 각각 **333 tests PASS / 0 FAIL**, 패키징 5 PASS, 실제 압축 해제 → Windows CMD 실행 → localhost HTTP 3개 기존 계획 + 보안 PASS. 패키지 원본 286 파일(기존 285 + v665 모듈), 신규 Native DPS 0회.
+- 배포 ZIP [artifact #14757116064](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45028652387/artifacts/14757116064) 에서 중첩 GitHub Actions wrapper를 제거하고, 실제 `SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip` 1개를 사용. SHA256 **`476bb9dbbf68b23df68e33b98531fdd9c0552f30eed7f781cbf1155324490fbe`** · 크기 **1,523,483 bytes**, 원본 286개 각각 SHA-256과 ZIP CRC 전부 PASS, EXE 포함되지 않으며 설치 후 기존 공개 SimC 이용.
+- **실제 API/가독성 회귀**: [v113 Linux+Windows #45028652352](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45028652352) SUCCESS, [v182 Windows+Linux #45028652470](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45028652470) SUCCESS, [공통 focused #45028652344](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45028652344) SUCCESS. 선택지 source-only/CHMV 상태·26 spec 기본 범위, 장식 이동에 따른 원래 v114/v182 예상 위치 테스트를 새 승인 UI에 맞춰 교정.
+- **정확한 한계**: Blizzard 미디어 CDN이 개인 PC에서 응답하는지, 실제 사용자에게 아이콘이 표시되는지 아직 현장 확인이 없음. 기본 음식/전문화별 물약의 nondefault admission과 DPS 기반 영약 결정은 **미구현**. 이번 Windows 333 PASS를 이들 기능 완성이나 일반 DPS 최적화 E2E로 오해하지 않는다.
