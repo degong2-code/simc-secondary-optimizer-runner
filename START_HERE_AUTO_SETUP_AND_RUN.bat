@@ -58,7 +58,7 @@ if not defined SYS_PY if not defined SYS_PY_EXE goto :python_missing
 set "VENV_DIR=%LOCALAPPDATA%\SIMC_Secondary_Optimizer\web-python"
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 if not exist "%VENV_PY%" goto :setup_venv
-"%VENV_PY%" -c "import sys,fastapi,uvicorn; sys.exit(0 if sys.version_info.major == 3 and sys.version_info.minor >= 12 else 1)" >nul 2>&1
+"%VENV_PY%" -c "import sys,fastapi,uvicorn,py7zr; sys.exit(0 if sys.version_info.major == 3 and sys.version_info.minor >= 12 else 1)" >nul 2>&1
 if errorlevel 1 goto :setup_venv
 goto :start_app
 
@@ -81,7 +81,7 @@ if not exist "%VENV_PY%" (
 )
 "%VENV_PY%" -m pip install --disable-pip-version-check --no-input -r "requirements-web.txt"
 if errorlevel 1 goto :pip_failed
-"%VENV_PY%" -c "import sys,fastapi,uvicorn; sys.exit(0 if sys.version_info.major == 3 and sys.version_info.minor >= 12 else 1)" >nul 2>&1
+"%VENV_PY%" -c "import sys,fastapi,uvicorn,py7zr; sys.exit(0 if sys.version_info.major == 3 and sys.version_info.minor >= 12 else 1)" >nul 2>&1
 if errorlevel 1 goto :pip_failed
 echo [READY] Web libraries installed.
 echo.
