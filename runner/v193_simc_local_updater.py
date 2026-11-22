@@ -112,8 +112,11 @@ def fetch_github_nightly():
                 return {"source":"OFFICIAL_SIMC_GITHUB_ACTIONS",
                     "run_id":rid,"artifact_id":aid,
                     "name":"simc-nightly-win64-midnight",
-                    "artifact_zip_url":f"https://github.com/simulationcraft/simc-publish/actions/runs/{rid}/artifacts/{aid}",
+                    # Link to the workflow run's Artifacts section, not the
+                    # /runs/{id}/artifacts/{id} page which can show a 404 when
+                    # unauthenticated even while the API reports unexpired.
                     "run_url":f"https://github.com/simulationcraft/simc-publish/actions/runs/{rid}",
+                    "artifact_expired":False,
                     "created_at":run.get("created_at",""),
                     "direct_install_available":False}
     return None
@@ -157,9 +160,24 @@ def verify_inventory(listing):
         need(folded not in keys,"DUPLICATE_ARCHIVE_ENTRY")
         keys.add(folded)
         attrs=fields.get("Attributes","")
-        need("l" not in attrs.lower() and "r" not in attrs.lower()
-             and fields.get("Encrypted","-")=="-",
+        # 7-Zip -slt uses 'R' for a normal Windows read-only file and
+        # '-rw-r--r--' for a normal POSIX file. Checking for any 'r'
+        # incorrectly rejected both. Recognize the entire mode instead:
+        # deny reparse/link entries, devices and unfamiliar modes closed.
+        unix_mode=re.fullmatch(r"[-dlbcps][rwxstST-]{9}[.+@]?",attrs)
+        win_mode=re.fullmatch(r"[A-Z.]{1,16}",attrs)
+        if unix_mode:
+            need(attrs[0] in ("-","d"),"ARCHIVE_LINK_OR_ENCRYPTION_REFUSED")
+        elif win_mode:
+            need("L" not in attrs,"ARCHIVE_LINK_OR_ENCRYPTION_REFUSED")
+            need(set(attrs)<=set("DARHSI."),"ARCHIVE_ATTRIBUTES_UNRECOGNIZED")
+        else:
+            need(False,"ARCHIVE_ATTRIBUTES_UNRECOGNIZED")
+        need(fields.get("Symbolic Link","") in ("","-") and
+             fields.get("Hard Link","") in ("","-"),
              "ARCHIVE_LINK_OR_ENCRYPTION_REFUSED")
+        need(fields.get("Encrypted","-")=="-",
+             "ARCHIVE_ENCRYPTION_REFUSED")
         size=fields.get("Size","0")
         need(size.isdecimal() and int(size)<=MAX_EXPANDED,
              "ARCHIVE_ENTRY_SIZE_INVALID")
