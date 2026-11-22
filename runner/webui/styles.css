@@ -1506,3 +1506,32 @@ body{background:#24252B;color:var(--ink)}
   #optimizer-form .env-enchant-grid select{font-size:11px!important}
   #optimizer-form .env-variant-action{padding:8px 0 5px}
 }
+
+
+/* v665: crafted embellishments are character/profile choices, not looted gear. */
+#optimizer-form .profile-embellishments{
+  margin-top:13px;padding-top:12px;border-top:1px solid #50483f;
+}
+#optimizer-form .profile-embellishments .gear-section-heading{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  margin:0 0 6px;
+}
+#optimizer-form .profile-embellishments .gear-section-heading h3{
+  font-size:12px;color:#e9c78b;
+}
+#optimizer-form .profile-embellishments .gear-section-heading span{
+  font-size:10px;color:#b6afa5;
+}
+#optimizer-form .profile-embellishments .gear-group{margin-top:9px}
+#optimizer-form .profile-embellishments .gear-row{
+  margin:6px 0;padding:8px 0;border-top:1px solid #3c3b3c;
+}
+#optimizer-form .profile-embellishments .gear-fields{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;
+}
+#optimizer-form .profile-embellishments .gear-fields label{min-width:0}
+@media(max-width:600px){
+  #optimizer-form .profile-embellishments .gear-fields{
+    grid-template-columns:1fr;
+  }
+}
