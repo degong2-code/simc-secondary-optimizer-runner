@@ -2131,7 +2131,8 @@ function optimizerNeedsSeasonPreparation() {
 async function prepareSeasonBeforeOptimizerStart() {
   if(!optimizerNeedsSeasonPreparation())return false;
   // Exact selected sources must not invoke Native Build from optimizer entry.
-  if(field("season-verified-budget")&&!oilUseIntent){
+  if(/^[a-f0-9]{64}$/.test(field("season-verified-budget")) &&
+     typeof oilUseIntent==="boolean" && !oilUseIntent){
     await prepareSelectedExistingEnvironment();
     setNotice("기존 설치본 연결 완료 · 장신구·특성을 확인한 뒤 최적 스탯 찾기를 다시 눌러 주세요.");
     return true;
