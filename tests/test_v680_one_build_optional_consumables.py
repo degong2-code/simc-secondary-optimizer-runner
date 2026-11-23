@@ -272,10 +272,12 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                       "candidates":{
                         "food":[{"spell_ids":[5001],
                                  "handler":"consumables::food_a",
-                                 "implemented":True}],
+                                 "implemented":True,
+                                 "minimum_game_version":[12,0,0]}],
                         "potion":[{"spell_ids":[6002],
                                    "handler":"consumables::potion_a",
-                                   "implemented":True}]}}
+                                   "implemented":True,
+                                   "minimum_game_version":[12,0,0]}]}}
             h=root/"source"/"simc-handlers.json"
             h.write_text(json.dumps(handlers),encoding="utf8")
             collected={
@@ -290,7 +292,7 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                 "fresh_lazy_full_pinned_simc_item_source":{
                     "source_dir":str(root)}}
             comp={"stage_root":str(root),"simc_revision":REV}
-            meta={"game_build":BUILD,
+            meta={"game_build":BUILD,"simc_revision":REV,
                 "source_receipt_sha256":"2"*64,
                 "selection_mode":"EXACT_REQUESTED_IDS",
                 "items":[
