@@ -172,7 +172,8 @@ def _v670_colliding_fj_diagnostics(proofs):
     return reports
 
 
-def _v672_verified_runtime_inputs_digest(docs, installed, snapshot):
+def _v672_verified_runtime_inputs_digest(docs, installed, snapshot, *,
+                                        return_component_digests=False):
     """Prove saved runtime-input equivalence, NOT preflight or current Live.
 
     Called only after exact original v216/v212 installed receipt verification.
@@ -271,9 +272,15 @@ def _v672_verified_runtime_inputs_digest(docs, installed, snapshot):
                         if k not in ("installed_manifest_sha256",
                                      "environment_result")}
         snapshot_clean["environment_result"]=runtime_clean
-        return stage_engine.digest(stage_engine.canonical({
-            "installed":installed_clean,"source_stage":stage_clean,
-            "runtime_snapshot":snapshot_clean}).encode("utf8"))
+        compared={"installed":installed_clean,"source_stage":stage_clean,
+                  "runtime_snapshot":snapshot_clean}
+        # Separate hashes remain internal; only fixed reason codes may be
+        # exposed to the browser. Never leak receipt hashes/source values.
+        if return_component_digests:
+            return {key:stage_engine.digest(
+                stage_engine.canonical(value).encode("utf8"))
+                for key,value in compared.items()}
+        return stage_engine.digest(stage_engine.canonical(compared).encode("utf8"))
     except (ValueError,TypeError,KeyError,UnicodeError,OSError,
             stage_engine.StageExecutionBlocked,
             environment_manifest.EnvironmentBlocked):
@@ -1655,9 +1662,14 @@ class LocalJobs:
                 bundle=base_fj_documents.get(
                     row["installed_manifest_sha256"])
                 fingerprints.append(_v672_verified_runtime_inputs_digest(
-                    docs,*bundle) if bundle is not None else None)
-            if (all(fp is not None for fp in fingerprints)
-                    and len(set(fingerprints))==1):
+                    docs,*bundle,return_component_digests=True)
+                    if bundle is not None else None)
+            verified=all(fp is not None for fp in fingerprints)
+            different=(sorted(name for name in (
+                "installed","source_stage","runtime_snapshot")
+                if len({fp[name] for fp in fingerprints})>1)
+                if verified else [])
+            if verified and not different:
                 # Canonical SHA only AFTER sealed runtime equivalence proof.
                 # The UI still asks the user to select, and exact SHA is
                 # independently rechecked on session creation.
@@ -1665,6 +1677,15 @@ class LocalJobs:
                 for row in rows:
                     row["verified_runtime_equivalent_representative"]=(
                         row["installed_manifest_sha256"]==canonical)
+            else:
+                # This is a display-only blocked reason, not an alternative
+                # admission mode. Never publish raw component digests or
+                # user-specific paths.
+                blocked_reasons=(["RECEIPT_PROOF_UNAVAILABLE"] if not verified
+                    else ["DIFFERENT_"+name.upper()
+                          for name in different])
+                for row in rows:
+                    row["verified_runtime_equivalence_blocker_codes"]=blocked_reasons
         result["verified_base_flask_installs"].sort(
             key=lambda x:(x["flask_item_id"],x["J"],
                           x["installed_manifest_sha256"]))
