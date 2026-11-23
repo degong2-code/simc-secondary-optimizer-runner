@@ -8614,17 +8614,26 @@ def _fresh_v680_source_owned_food_potion(*,collected,compilation):
         metadata=simc_item_metadata.from_seed(
             directory=seed["source_dir"],item_ids=ids)
         need(metadata.get("game_build")==build and
+             metadata.get("simc_revision")==revision and
              metadata.get("source_receipt_sha256") and
              metadata.get("selection_mode")=="EXACT_REQUESTED_IDS",
              "V680_SIMC_GENERATED_ITEM_BUILD_MISMATCH")
         simc={row["item_id"]:row for row in metadata["items"]}
         needed={kind:{} for kind in ("food","potion")}
+        current_version=tuple(int(x) for x in build.split(".")[:3])
         for kind in needed:
             for row in handlers["candidates"].get(kind,[]):
-                if row.get("implemented") is not True:continue
+                minimum=row.get("minimum_game_version")
+                handler=row.get("handler")
+                if (row.get("implemented") is not True or
+                    type(minimum) is not list or len(minimum)!=3 or
+                    not all(type(x) is int and x>=0 for x in minimum) or
+                    tuple(minimum)>current_version or
+                    type(handler) is not str or
+                    not handler.startswith("consumables::")):
+                    continue
                 for spell in row.get("spell_ids",[]):
-                    needed[kind].setdefault(spell,set()).add(
-                        row.get("handler"))
+                    needed[kind].setdefault(spell,set()).add(handler)
         rows=[]
         classes={"food":5,"potion":1}
         for origin in items:
