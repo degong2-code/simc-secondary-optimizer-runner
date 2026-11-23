@@ -1353,12 +1353,25 @@ class LocalJobs:
                     except (ValueError,UnicodeError,OSError,TypeError):
                         compatible=False
                     if compatible:
-                        result["verified_base_flask_installs"].append({
-                            "installed_manifest_sha256":doc["manifest_sha256"],
-                            "flask_item_id":flask["physical_item_id"],
-                            "J":doc["official_J"],
-                            "F":doc["official_F"],
-                            "socket_total":4})
+                        # v669: distinguish sealed same-F/J installations only
+                        # by their actual saved four physical gem ItemIDs.
+                        # Numeric J/F equality alone never authorizes a SHA
+                        # choice, and these IDs are labels, not new admission.
+                        layout=profile_doc["environment_result"][
+                            "source_compilation"]["physical_gem_layout_unadmitted"]
+                        gem_ids=layout["ordinary_gem_ids"][:4]
+                        quality=flask.get("crafting_quality")
+                        if (all(type(item_id) is int and item_id>0
+                                for item_id in gem_ids) and
+                                type(quality) is int and quality>=0):
+                            result["verified_base_flask_installs"].append({
+                                "installed_manifest_sha256":doc["manifest_sha256"],
+                                "flask_item_id":flask["physical_item_id"],
+                                "flask_quality":quality,
+                                "ordinary_gem_item_ids":list(gem_ids),
+                                "J":doc["official_J"],
+                                "F":doc["official_F"],
+                                "socket_total":4})
                 if type(flask) is dict:
                     physical=flask["physical_item_id"]
                     if physical not in conflicting_flasks:
