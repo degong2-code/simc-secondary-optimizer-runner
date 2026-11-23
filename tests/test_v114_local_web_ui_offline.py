@@ -1133,7 +1133,8 @@ const bind=Function("state","$","field","valueInt",
         self.assertIn("cache-only",js.text)
         self.assertIn("result",js.text)
         self.assertIn('"/api/v1/longrun/start"',js.text)
-        self.assertIn('window.confirm("이 PC에서 최적화를 시작할까요?',js.text)
+        self.assertIn('if(!window.confirm(warning+"이 PC에서 최적화를 시작할까요?',js.text)
+        self.assertIn('이 효과를 제외한 DPS 조건으로 계산합니다.',js.text)
         self.assertEqual(self.client.get("/assets/missing.js").status_code,403)
 
     def test_simple_korean_product_surface_and_race_value_seal(self):
