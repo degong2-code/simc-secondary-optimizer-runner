@@ -230,6 +230,18 @@ def run(binary,output_folder,*,postinstall=None):
                             # A source-bound profile is NOT DPS/Native PASS.
                             doc["status"]=(
                                 "PASS_REAL_INSTALLED_OPTIONAL_USER_PROFILE_NO_NATIVE")
+                        elif follow.get("status")==(
+                                "PASS_ORIGINAL_V113_OPTIONAL_NATIVE_DPS_95_RESULT_REOPEN"):
+                            doc["status"]=(
+                                "PASS_REAL_INSTALLED_OPTIONAL_USER_NATIVE_DPS_95")
+                            doc["actual_optional_user_dps"]={
+                                "native_calls":follow["native_dps_calls"],
+                                "observed_dps":follow["observed_best_dps"],
+                                "sem":follow["observed_best_sem"],
+                                "confidence_level":0.95,
+                                "material_near_alternatives_count":
+                                    follow["material_near_alternatives_count"],
+                                "result_reopened_without_native":True}
                         else:
                             doc["status"]=(
                                 "PENDING_REAL_INSTALLED_ENCHANT_USER_DPS")
@@ -247,7 +259,8 @@ def run(binary,output_folder,*,postinstall=None):
             return (0 if doc["status"] in (
                 "PASS_REAL_SEASON_V212_ENCHANTS_AUTO_REGISTERED",
                 "PASS_REAL_INSTALLED_ENCHANT_USER_DPS",
-                "PASS_REAL_INSTALLED_OPTIONAL_USER_PROFILE_NO_NATIVE") else 2)
+                "PASS_REAL_INSTALLED_OPTIONAL_USER_PROFILE_NO_NATIVE",
+                "PASS_REAL_INSTALLED_OPTIONAL_USER_NATIVE_DPS_95") else 2)
     except Exception as exc:
         # Exceptions are never directly logged with absolute paths/secrets.
         doc["status"]="BLOCKED_"+type(exc).__name__

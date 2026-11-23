@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import pathlib
 import sys
 
@@ -154,6 +155,95 @@ def followup(*,jobs,environment_result,document,installed_path,binary,
             result["simc_food_assignment_once"]=True
             result["real_v113_plan_status"]=plan["status"]
             result["status"]="PASS_ORIGINAL_V113_OPTIONAL_PROFILE_ZERO_NATIVE"
+            save()
+            # P1 v689 opt-in: ORIGINAL v106 worker and existing adaptive
+            # v096/v094 own all native DPS, SEM and 95% calculations.
+            # No new optimizer or independent food/proc certification.
+            if os.getenv("V689_REAL_USER_DPS_ONCE")!="true":
+                return result
+            result["status"]="REAL_OPTIONAL_USER_DPS_IN_PROGRESS"
+            save()
+            exit_code=sessions.worker(folder,binary,revision)
+            result["v106_worker_exit_code"]=exit_code
+            if exit_code!=0:
+                result["status"]="PENDING_REAL_OPTIONAL_NATIVE_OR_DPS"
+                result["first_blocker"]="V106_EXISTING_WORKER_NOT_PASSED"
+                save()
+                return result
+            observed=client.get(
+                "/api/v1/sessions/"+plan["session_id"]+"/result",
+                headers=headers)
+            result["real_v113_result_http"]=observed.status_code
+            if observed.status_code!=200:
+                result["status"]="PENDING_REAL_OPTIONAL_USER_RESULT_API"
+                result["first_blocker"]="RESULT_HTTP_"+str(
+                    observed.status_code)
+                save()
+                return result
+            saved=observed.json()
+            user_result=saved.get("user_result") or {}
+            first=user_result.get("observed_first_choice") or {}
+            stats=first.get("absolute_rating_T") or {}
+            choices=user_result.get("material_near_alternatives")
+            if not (
+                saved.get("status","").startswith("PASS")
+                and saved.get("base_B")==document["official_B"]
+                and saved.get("final_T")==document["official_T"]
+                and type(saved.get("native_calls_cumulative")) is int
+                and 1<=saved["native_calls_cumulative"]<=6
+                and user_result.get("confidence_level")==0.95
+                and user_result.get("global_optimum_proven") is False
+                and user_result.get("final_T")==document["official_T"]
+                and user_result.get("base_B")==document["official_B"]
+                and type(first.get("observed_dps_mean")) in (int,float)
+                and first["observed_dps_mean"]>0
+                and type(first.get("simc_sem")) in (int,float)
+                and first["simc_sem"]>=0
+                and type(stats) is dict
+                and set(stats)=={"crit_rating","haste_rating",
+                                 "mastery_rating","versatility_rating"}
+                and sum(stats.values())==document["official_T"]
+                and type(choices) is list
+                and type(user_result.get(
+                    "confirmation_pair_direction_supported_at_95")) is bool):
+                result["status"]="PENDING_REAL_OPTIONAL_DPS_95_OR_B_T"
+                result["first_blocker"]="V689_EXISTING_USER_RESULT_CONTRACT"
+                save()
+                return result
+            # The public read-only endpoint is also the saved result's
+            # re-open path. A new API instance must not rerun SimC.
+            receipt=sessions.paths(folder)["final"]
+            before=hashlib.sha256(receipt.read_bytes()).hexdigest()
+            with TestClient(web.create_app(
+                    root=jobs.root,token="v688-actual-local-once"),
+                    base_url="http://127.0.0.1:8765") as reopened:
+                restored=reopened.get(
+                    "/api/v1/sessions/"+plan["session_id"]+"/result",
+                    headers=headers)
+            after=hashlib.sha256(receipt.read_bytes()).hexdigest()
+            result["reopen_result_http"]=restored.status_code
+            if (restored.status_code!=200 or
+                    restored.json().get("user_result")!=user_result or
+                    before!=after):
+                result["status"]="PENDING_REAL_OPTIONAL_RESULT_REOPEN"
+                result["first_blocker"]="V689_REOPEN_OR_RESULT_BYTES_DRIFT"
+                save()
+                return result
+            result["native_dps_calls"]=saved["native_calls_cumulative"]
+            result["new_dps_native_calls"]=saved["native_calls_cumulative"]
+            result["verified_cache_hits"]=saved.get("cache_hits_this_run")
+            result["selected_observed_absolute_ratings"]=dict(stats)
+            result["observed_best_dps"]=first["observed_dps_mean"]
+            result["observed_best_sem"]=first["simc_sem"]
+            result["confidence_level"]=0.95
+            result["confirmation_pair_direction_supported_at_95"]=(
+                user_result["confirmation_pair_direction_supported_at_95"])
+            result["material_near_alternatives_count"]=len(choices)
+            result["durable_result_sha256"]=before
+            result["persisted_result_reopened_without_native"]=True
+            result["native_simc_profile_executed_with_food"]=True
+            result["global_optimum_proven"]=False
+            result["status"]="PASS_ORIGINAL_V113_OPTIONAL_NATIVE_DPS_95_RESULT_REOPEN"
             save()
             return result
     except Exception as exc:

@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   one-current-real-source:
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v618-real-enchant-once]') || contains(github.event.head_commit.message, '[v630-fresh-source-enchant-once]') || contains(github.event.head_commit.message, '[v688-real-optional-user-once]') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v618-real-enchant-once]') || contains(github.event.head_commit.message, '[v630-fresh-source-enchant-once]') || contains(github.event.head_commit.message, '[v688-real-optional-user-once]') || contains(github.event.head_commit.message, '[v689-real-optional-native-once]') }}
     runs-on: windows-2022
     timeout-minutes: 45
     env:
@@ -26,7 +26,8 @@ jobs:
       SIMC_PINNED_SOURCE_COMMIT: 9933ffb946fb55b1fa66657b848f519ac19006e1
       SIMC_PINNED_GAME_BUILD: 12.1.5.70961
       SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
-      V688_ORIGINAL_USER_ONCE: ${{ contains(github.event.head_commit.message, '[v688-real-optional-user-once]') }}
+      V688_ORIGINAL_USER_ONCE: ${{ contains(github.event.head_commit.message, '[v688-real-optional-user-once]') || contains(github.event.head_commit.message, '[v689-real-optional-native-once]') }}
+      V689_REAL_USER_DPS_ONCE: ${{ contains(github.event.head_commit.message, '[v689-real-optional-native-once]') }}
       BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
       BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
       WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
@@ -139,7 +140,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: V688 actual same-install UI and user SimC profile verdict only
-        if: always() && env.V688_ORIGINAL_USER_ONCE == 'true'
+        if: always() && env.V688_ORIGINAL_USER_ONCE == 'true' && env.V689_REAL_USER_DPS_ONCE != 'true'
         uses: actions/upload-artifact@v6
         with:
           name: p1-v688-real-installed-70961-optional-user-profile
@@ -149,3 +150,14 @@ jobs:
           retention-days: 12
           if-no-files-found: warn
 
+
+      - name: V689 original adaptive SimC 95 percent and result reopen receipt
+        if: always() && env.V689_REAL_USER_DPS_ONCE == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v689-real-70961-optional-user-native-dps-once
+          path: |
+            out/v611/V688_REAL_70961_OPTIONAL_USER_PROFILE_ONCE.json
+            out/v611/V688_REAL_OPTIONAL_USER_STAGE.json
+          retention-days: 12
+          if-no-files-found: warn
