@@ -5368,7 +5368,7 @@ function registerHandlers() {
       ["food","potion"].filter(name=>field(name)==="source_default"):[];
     const omitted=disabledOptional.map(name=>name==="food"?"음식":"물약").join("·");
     const warning=omitted?
-      omitted+"은 현재 시즌 SimC 미사용입니다. 이 효과를 제외한 DPS 조건으로 계산합니다.\\n\\n":"";
+      omitted+"은 현재 시즌 SimC 미사용입니다. 이 효과를 제외한 DPS 조건으로 계산합니다.\n\n":"";
     if(!window.confirm(warning+"이 PC에서 최적화를 시작할까요? 계산 중에도 중단할 수 있습니다."))return;
     const p=await api("/api/v1/longrun/start",{method:"POST",payload:{...buildRequest(),max_native_calls:64,continuous:true}});
     markSession(p.session_id);$("filled-result").hidden=true;
