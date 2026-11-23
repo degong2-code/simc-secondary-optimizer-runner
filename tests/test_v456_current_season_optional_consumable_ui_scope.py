@@ -256,18 +256,7 @@ const state={options:{
   source_default_simc_token:'disabled',
   food:['source_default'],potion:['source_default']
  }}};
-const f=Function('state','
-        code=(ROOT/"runner"/"v098_target_user_scenario_bootstrap.py").read_text("utf8")
-        self.assertIn("bound[k]==default_choice[k]",code)
-        data=self.get_options()
-        self.assertIn("royal_roast",data["food"])
-        self.assertIn("potion_of_recklessness_2",data["potion"])
-        self.assertIn("void_touched",data["augmentation"])
-
-
-if __name__=="__main__":
-    unittest.main()
-,'field',src.slice(a,b)+
+const f=Function('state','$','field',src.slice(a,b)+
  'return {status:currentSeasonOptionalUseStatus,refresh:refreshDefaultConsumableSummaries};'
 )(state,$,field);
 f.refresh();
