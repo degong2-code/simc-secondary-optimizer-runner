@@ -1572,8 +1572,8 @@ class LocalJobs:
         seen=set()
         flasks_by_id={}
         conflicting_flasks=set()
-        base_fj_proofs=[]
-        base_fj_documents={}
+        # Each receipt is admitted independently, never by comparison
+        # against another installation with the same F/J.
         for _,path in sorted(candidates,key=lambda p:(-p[0],str(p[1]))):
             try:
                 if path.stat().st_size>environment_build.MAX_RECEIPT_BYTES:
@@ -1632,22 +1632,24 @@ class LocalJobs:
                         if (all(type(item_id) is int and item_id>0
                                 for item_id in gem_ids) and
                                 type(quality) is int and quality>=0):
-                            result["verified_base_flask_installs"].append({
-                                "installed_manifest_sha256":doc["manifest_sha256"],
-                                "flask_item_id":flask["physical_item_id"],
-                                "flask_quality":quality,
-                                "ordinary_gem_item_ids":list(gem_ids),
-                                "J":doc["official_J"],
-                                "F":doc["official_F"],
-                                "socket_total":4})
-                            # v670: compare only installed proof differences.
-                            # Never expose SHA/path or authorize a selection.
-                            identity=(flask["physical_item_id"],quality,
-                                      doc["official_F"],doc["official_J"],
-                                      4,tuple(sorted(gem_ids)))
-                            base_fj_proofs.append((identity,
-                                _v670_sealed_fj_difference_proofs(doc,layout)))
-                            base_fj_documents[doc["manifest_sha256"]]=(doc,snapshot)
+                            # v676: the exact-SHA v216/v212 lookup above
+                            # already authenticates the installed source.
+                            # Verify THIS original v212+v113 profile stage,
+                            # not an artificial equivalence with another
+                            # otherwise valid source installation.
+                            independent=_v672_verified_runtime_inputs_digest(
+                                docs,doc,snapshot)
+                            if independent is not None:
+                                result["verified_base_flask_installs"].append({
+                                    "installed_manifest_sha256":doc["manifest_sha256"],
+                                    "flask_item_id":flask["physical_item_id"],
+                                    "flask_quality":quality,
+                                    "ordinary_gem_item_ids":list(gem_ids),
+                                    "J":doc["official_J"],
+                                    "F":doc["official_F"],
+                                    "socket_total":4,
+                                    "simc_revision":doc["simc_revision"],
+                                    "individually_verified":True})
                 if type(flask) is dict:
                     physical=flask["physical_item_id"]
                     if physical not in conflicting_flasks:
@@ -1714,55 +1716,9 @@ class LocalJobs:
                  entry["selected_oil_item_ids_by_hand"].values()}
         official_names=official_ko_env.read_names(
             self.root,build,set(flasks_by_id)|oil_ids)
-        result["verified_base_fj_collision_diagnostics"]=_v670_colliding_fj_diagnostics(base_fj_proofs)
-        # Only exact same-physical-input collisions are eligible. Reverify
-        # original v212 source and v113 runtime profile stage separately.
-        # A single missing or differing owner keeps the entire group blocked.
-        by_physical={}
-        for row in result["verified_base_flask_installs"]:
-            physical=(row["flask_item_id"],row["flask_quality"],
-                      row["F"],row["J"],row["socket_total"],
-                      tuple(sorted(row["ordinary_gem_item_ids"])))
-            by_physical.setdefault(physical,[]).append(row)
-        for rows in by_physical.values():
-            if len(rows)<2:
-                continue
-            fingerprints=[]
-            for row in rows:
-                bundle=base_fj_documents.get(
-                    row["installed_manifest_sha256"])
-                fingerprints.append(_v672_verified_runtime_inputs_digest(
-                    docs,*bundle,return_component_digests=True)
-                    if bundle is not None else None)
-            verified=all(fp is not None for fp in fingerprints)
-            different=(sorted(name for name in (
-                "installed","source_stage","runtime_snapshot")
-                if len({fp[name] for fp in fingerprints})>1)
-                if verified else [])
-            if verified and not different:
-                # Canonical SHA only AFTER sealed runtime equivalence proof.
-                # The UI still asks the user to select, and exact SHA is
-                # independently rechecked on session creation.
-                canonical=min(row["installed_manifest_sha256"] for row in rows)
-                for row in rows:
-                    row["verified_runtime_equivalent_representative"]=(
-                        row["installed_manifest_sha256"]==canonical)
-            else:
-                # This is a display-only blocked reason, not an alternative
-                # admission mode. Never publish raw component digests or
-                # user-specific paths.
-                blocked_reasons=(["RECEIPT_PROOF_UNAVAILABLE"] if not verified
-                    else ["DIFFERENT_"+name.upper()
-                          for name in different])
-                runtime_codes=(sorted(
-                    code for code in fingerprints[0]["runtime_fields"]
-                    if len({fp["runtime_fields"][code]
-                            for fp in fingerprints})>1)
-                    if verified and "runtime_snapshot" in different else [])
-                for row in rows:
-                    row["verified_runtime_equivalence_blocker_codes"]=blocked_reasons
-                    if runtime_codes:
-                        row["verified_runtime_input_difference_codes"]=runtime_codes
+        # v676: multiple independently admitted installations are separate
+        # exact-SHA choices, without cross-SHA equality requirements.
+        # Session creation and cache/resume must reverify the selected SHA.
         result["verified_base_flask_installs"].sort(
             key=lambda x:(x["flask_item_id"],x["J"],
                           x["installed_manifest_sha256"]))
