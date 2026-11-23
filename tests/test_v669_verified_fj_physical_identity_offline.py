@@ -411,8 +411,8 @@ class VerifiedRuntimeInputEquivalence(unittest.TestCase):
                             }},
                         "verified_target_ilevel":334}}
                 snapshot=docs/("v113_profile_"+installed_sha[:20]+".json")
-                snapshot.write_text(web.stage_engine.canonical(profile)+"\n",
-                                    encoding="utf8")
+                snapshot.write_bytes(
+                    (web.stage_engine.canonical(profile)+"\n").encode("utf8"))
                 details.append((installed,stage_path,snapshot))
             def read(path,*unused):
                 return json.loads(path.read_text("utf8")), "trusted-original"
@@ -443,9 +443,8 @@ class VerifiedRuntimeInputEquivalence(unittest.TestCase):
                 altered_profile["environment_result"]["source_compilation"][
                     "v098_source_only_profile_inputs_unadmitted"]["flask"][
                     "simc_input_token"]="different_input"
-                details[1][2].write_text(
-                    web.stage_engine.canonical(altered_profile)+"\n",
-                    encoding="utf8")
+                details[1][2].write_bytes(
+                    (web.stage_engine.canonical(altered_profile)+"\n").encode("utf8"))
                 self.assertNotEqual(first,
                     web._v672_verified_runtime_inputs_digest(
                         docs,details[1][0],details[1][2]))
