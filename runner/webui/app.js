@@ -2132,6 +2132,16 @@ async function prepareSelectedExistingEnvironment() {
     throw Error("EXISTING_INSTALLED_BUDGET_SCOPE_CHANGED");
   }
   updateBudgetPreview();
+  // The already-read exact v212 budget response also contains the SAME
+  // optional season menu. Do not make a second Wago/Native/HTTP request.
+  if(typeof syncInstalledOptionalConsumables==="function"){
+    syncInstalledOptionalConsumables({
+      source_scope:"VERIFIED_INSTALLED_V212_OPTION_CATALOG",
+      installed_manifest_sha256:sha,
+      installed_optional_consumable_choices:
+        result.installed_optional_consumable_choices
+    });
+  }
   state.lastUserBlocker=null;
   const oldDetail=$("user-variant-diagnostic");
   if(oldDetail){oldDetail.hidden=true;oldDetail.open=false;}
