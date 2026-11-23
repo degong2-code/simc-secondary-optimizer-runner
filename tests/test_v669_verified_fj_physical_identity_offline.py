@@ -428,16 +428,25 @@ class VerifiedRuntimeInputEquivalence(unittest.TestCase):
                     docs,details[1][0],details[1][2])
                 self.assertIsNotNone(first)
                 self.assertEqual(first,second)
-                # Different stage output is not the same original source.
+                # v673: original v216 preflight may vary in two
+                # non-executable diagnostic collections. Both original
+                # installed+stage receipts must STILL have been verified.
                 altered=json.loads(details[1][1].read_text("utf8"))
                 altered["pending_core_requirements"].append("OPTIONAL_DIFFERENT")
+                altered["optional_item_missing"]={"999":"OPTIONAL_PROOF_PENDING"}
+                details[1][1].write_text(json.dumps(altered),encoding="utf8")
+                self.assertEqual(first,
+                    web._v672_verified_runtime_inputs_digest(
+                        docs,details[1][0],details[1][2]))
+                # A different numeric/source-owner stage field is material,
+                # even when ItemIDs, F/J and all optional labels match.
+                altered["numeric_budget_preview_unadmitted"]={"J":999}
                 details[1][1].write_text(json.dumps(altered),encoding="utf8")
                 changed=web._v672_verified_runtime_inputs_digest(
                     docs,details[1][0],details[1][2])
                 self.assertNotEqual(first,changed)
-                details[1][1].write_text(json.dumps({
-                    **altered,"pending_core_requirements":["G/J/F/O"]
-                }),encoding="utf8")
+                altered.pop("numeric_budget_preview_unadmitted")
+                details[1][1].write_text(json.dumps(altered),encoding="utf8")
                 # A different saved SimC source input must not be merged.
                 altered_profile=json.loads(details[1][2].read_text("utf8"))
                 altered_profile["environment_result"]["source_compilation"][
@@ -453,6 +462,28 @@ class VerifiedRuntimeInputEquivalence(unittest.TestCase):
                 docs,details[0][0],details[0][2]))
             self.assertIsNone(web._v672_verified_runtime_inputs_digest(
                 docs,details[0][0],docs/"missing_v113_profile.json"))
+
+
+
+class CraftedEmbellishmentTwoColumnLayout(unittest.TestCase):
+    def test_css_grids_real_generated_sibling_rows_not_outer_single_wrapper(self):
+        css=(ROOT/"runner/webui/styles.css").read_text(encoding="utf8")
+        js=(ROOT/"runner/webui/app.js").read_text(encoding="utf8")
+        self.assertIn('parent.appendChild(group);',js)
+        self.assertIn('row.className="gear-row"',js)
+        self.assertIn('row.appendChild(grid);',js)
+        # Both generated .gear-row siblings live under ONE .gear-group.
+        # A grid on #crafted-rows alone cannot put them next to each other.
+        section=css.split("/* v673: the generated crafted rows",1)[1]
+        self.assertIn('#crafted-rows > .gear-group{',section)
+        self.assertIn('display:grid;grid-template-columns:repeat(2,minmax(0,1fr))',section)
+        self.assertIn('#crafted-rows .gear-fields{',section)
+        self.assertIn('#crafted-rows .gear-fields label:has([data-field="item_id"])',section)
+        self.assertIn('grid-column:1/-1',section)
+        self.assertIn('@media(max-width:680px)',section)
+        self.assertIn('grid-template-columns:1fr',section)
+        self.assertIn('box-sizing:border-box',section)
+        self.assertEqual(js.count('const limit=isSpecial?8:2;'),1)
 
 
 
