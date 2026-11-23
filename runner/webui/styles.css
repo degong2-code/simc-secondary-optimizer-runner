@@ -1550,3 +1550,51 @@ body{background:#24252B;color:var(--ink)}
 #optimizer-form .submit-panel #start-btn:disabled{
   opacity:.53;cursor:not-allowed;
 }
+
+
+/* v668: dynamic status has its own type hierarchy; static explanations stay muted.
+   Avoid decorative cards or treating a saved setting as a verified result. */
+#view-settings .settings-status-facts{
+  margin:10px 0 9px;padding:9px 0 8px 12px;
+  border-left:2px solid #B89558;min-width:0;
+}
+#view-settings .settings-status-facts[hidden]{display:none!important}
+#view-settings .settings-status-facts[data-state="ok"]{border-left-color:#92B6A1}
+#view-settings .settings-status-facts[data-state="pending"]{border-left-color:#D0AB66}
+#view-settings .settings-status-facts[data-state="error"]{border-left-color:#D99393}
+#view-settings .settings-status-facts .settings-status-head{
+  margin:0 0 9px;color:#E9D6B8;font-size:14px;
+  font-weight:790;line-height:1.4;
+}
+#view-settings .settings-status-facts[data-state="ok"] .settings-status-head{color:#BDE2C9}
+#view-settings .settings-status-facts[data-state="error"] .settings-status-head{color:#F0BABA}
+#view-settings .settings-status-facts .settings-status-rows{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px 17px;max-width:860px;
+}
+#view-settings .settings-status-facts .settings-status-pair{
+  margin:0;display:flex;flex-direction:column;min-width:0;gap:2px;
+}
+#view-settings .settings-status-facts .settings-status-label{
+  font-size:10px;font-weight:600;color:#AFA69A;line-height:1.4;
+}
+#view-settings .settings-status-facts .settings-status-value{
+  font-size:13px;font-weight:760;color:#F0E5D6;line-height:1.45;
+  font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+}
+#view-settings .settings-status-facts .settings-status-value[data-state="pending"]{color:#EAC98A}
+#view-settings .settings-status-facts .settings-status-value[data-state="error"]{color:#F0BABA}
+#view-settings .settings-status-facts .settings-status-value[data-state="ok"]{color:#C6E2D0}
+#view-settings .settings-status-facts .settings-status-footnote{
+  max-width:860px;color:#ADA69C;font-size:11px;line-height:1.55;
+  margin:8px 0 0;overflow-wrap:anywhere;
+}
+/* Other live results are visibly stronger than nearby static .hint copy. */
+#view-settings .settings-live-status{
+  font-size:12px;font-weight:650;color:#E1CEB2;line-height:1.55;
+}
+@media(max-width:580px){
+  #view-settings .settings-status-facts .settings-status-rows{
+    grid-template-columns:minmax(0,1fr);gap:8px;
+  }
+}
