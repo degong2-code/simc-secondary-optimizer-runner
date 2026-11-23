@@ -171,3 +171,6 @@ jobs:
           path: dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
           retention-days: 7
           if-no-files-found: error
+
+# v668 display-only status facts: latest v114 scope-guard harness is injected here;
+# verify both Windows Python versions before publishing a replacement ZIP.
