@@ -4236,15 +4236,52 @@ function installOptions(options) {
   }
 }
 
+function displaySimcConnectionFacts(result,restored=false){
+  const saved=result?.saved;
+  if(!saved){
+    renderSettingsStatusFacts("simc-connection-status-facts","pending",
+      "SimC 연결 정보 없음",[
+        {label:"실행파일 상태",value:"확인·저장 필요",tone:"pending"},
+        {label:"게임 데이터 빌드",value:"확인 전",tone:"pending"}
+      ],"경로·revision을 입력하고 연결 확인을 실행해야 합니다.");
+    return;
+  }
+  const justVerified=result.verified_now===true&&!restored;
+  const build=typeof saved.observed_game_build==="string"&&
+    /^\d+(?:\.\d+){3}$/.test(saved.observed_game_build)?
+      saved.observed_game_build:"출력에서 확인되지 않음";
+  const revision=typeof saved.revision==="string"&&
+    /^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$/.test(saved.revision)?
+      saved.revision:"확인 필요";
+  const printed=saved.revision_identity==="SIMC_CLI_PRINTED_REVISION_VERIFIED";
+  renderSettingsStatusFacts("simc-connection-status-facts",
+    justVerified?"ok":"pending",
+    justVerified?"SimC CLI 실행 확인 · 설정 저장 완료":
+      "저장된 SimC 설정 불러옴 · 현재 실행 검증 전",[
+      {label:justVerified?"SimC 출력 게임 빌드":"저장 당시 게임 빌드",
+       value:build,tone:build==="출력에서 확인되지 않음"?"pending":"neutral"},
+      {label:"입력된 Git revision",value:revision},
+      {label:"revision 확인 수준",
+       value:printed?"당시 CLI 출력과 일치":
+             "입력값·파일명 확인 수준 (독립 인증 전)",
+       tone:printed?"ok":"pending"},
+      {label:"현재 게임·시즌 일치",value:"별도 원본 검증 필요",
+       tone:"pending"}
+    ],justVerified?
+    "SimC CLI 연결 검사는 DPS 계산이 아닙니다. 이 빌드가 현재 게임 시즌과 호환되는지는 환경 구축에서 별도로 확인합니다.":
+    "이전 연결 설정을 읽었을 뿐 현재 simc.exe를 다시 실행해 검사한 것은 아닙니다. 연결 확인·저장으로 재검증할 수 있습니다.");
+}
 // Confirm a manual SimC link explicitly; the persisted local path is not
 // a season provenance receipt or proof of the user's declared Git revision.
 function displaySimcConnectionReceipt(result,restored=false) {
   const saved=result?.saved;
   const line=$("simc-connection-status");
   if(!saved){
+    displaySimcConnectionFacts(result,restored);
     line.textContent="확인·저장한 SimC 설정이 없습니다. 경로와 Git revision을 입력한 뒤 확인해 주세요.";
     return;
   }
+  displaySimcConnectionFacts(result,restored);
   const game=saved.observed_game_build?
     " · SimC 출력 게임 데이터 빌드 "+saved.observed_game_build:
     " · 내장 게임 빌드는 출력에서 판독되지 않음";
@@ -4275,12 +4312,22 @@ async function confirmSimcConnection() {
   if(!binary||!$( "binary" ).checkValidity()||
      !revision||!/^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$/.test(revision)){
     message.textContent="실행파일 경로와 정확한 Git revision(7~12 또는 40자리)을 확인해 주세요.";
+    renderSettingsStatusFacts("simc-connection-status-facts","error",
+      "SimC 입력값 확인 필요",[
+        {label:"연결 상태",value:"요청 전 차단",tone:"error"},
+        {label:"입력 조건",value:"실행파일 경로·Git revision 확인"}
+      ],"이전에 저장한 SimC 설정은 변경되지 않습니다.");
     $("simc-technical-panel").open=true;
     throw Error("SIMC_CONNECTION_INPUTS_INVALID");
   }
   button.disabled=true;
   button.textContent="SimC 연결 확인 중…";
   message.textContent="선택한 simc.exe를 display_build=2로 기동 확인 중입니다. DPS 계산은 실행하지 않습니다.";
+  renderSettingsStatusFacts("simc-connection-status-facts","pending",
+    "SimC CLI 연결 확인 중",[
+      {label:"실행파일 검사",value:"진행 중",tone:"pending"},
+      {label:"게임 데이터 빌드",value:"CLI 응답 대기",tone:"pending"}
+    ],"현재 연결 검증만 진행합니다. DPS 최적화는 시작하지 않습니다.");
   try{
     const result=await api("/api/v1/simc-connection/confirm",{
       method:"POST",payload:{binary,revision,static_cache}});
@@ -4290,6 +4337,12 @@ async function confirmSimcConnection() {
   }catch(err){
     message.textContent="SimC 설정 확인·저장 실패 ("+err.message+
       "). 실행파일·Git revision·선택 캐시 경로를 확인하세요. 기존 저장 설정은 유지됩니다.";
+    renderSettingsStatusFacts("simc-connection-status-facts","error",
+      "SimC 연결 확인 실패",[
+        {label:"현재 시도",value:"연결·저장 실패",tone:"error"},
+        {label:"오류 코드",value:/^[A-Z][A-Z0-9_]{0,119}$/.test(err.message)?
+          err.message:"상세 확인 필요",tone:"error"}
+      ],"기존 저장 설정은 유지됩니다. 이번 연결 검증을 성공으로 표시하지 않습니다.");
     throw err;
   }finally{
     button.disabled=false;
@@ -4335,6 +4388,11 @@ function applyManagedSimc(data) {
     data.installed.revision_short;
   $("simc-connection-status").textContent=
     "관리 SimC가 현재 입력칸에 적용됐습니다. 다음 실행에도 유지하려면 ‘SimC 연결 확인·저장’을 눌러주세요.";
+  renderSettingsStatusFacts("simc-connection-status-facts","pending",
+    "관리 SimC 경로 선택됨 · 확인·저장 필요",[
+      {label:"게임 데이터 빌드",value:"현재 CLI 검증 전",tone:"pending"},
+      {label:"Git revision 입력값",value:field("revision")}
+    ],"설치 파일 선택과 CLI 연결 검증은 별도입니다. 확인·저장 후에만 현재 실행 확인으로 표시합니다.");
   return true;
 }
 function displaySimcUpdater(data) {
@@ -4369,6 +4427,11 @@ async function refreshSimcUpdater(preferManaged=false) {
     if(full&&field("binary")===status.active_binary&&
        field("revision")===status.installed.revision_short) {
       $("revision").value=full;
+      renderSettingsStatusFacts("simc-connection-status-facts","pending",
+        "관리 SimC 전체 원본 SHA 입력됨 · 다시 저장 필요",[
+          {label:"Git 원본 SHA 입력값",value:full},
+          {label:"CLI 연결 상태",value:"전체 SHA 반영 후 검증 전",tone:"pending"}
+        ],"화면 입력값만 변경했습니다. 기존 저장값과 실행파일 검증 결과는 그대로이며 자동으로 인증되지는 않습니다.");
       $("simc-connection-status").textContent=
         "관리 자체 빌드의 전체 소스 Git SHA를 현재 입력칸에 적용했습니다. "+
         "GitHub 단축 revision 조회 없이 시즌 원본을 확인할 수 있습니다. "+
@@ -4988,6 +5051,12 @@ async function initialize() {
     // validated provenance. Load it before managed-version defaulting.
     try{await refreshSavedSimcConnection();}catch(err){
       $("simc-connection-status").textContent="저장된 SimC 설정 조회 오류: "+err.message;
+      renderSettingsStatusFacts("simc-connection-status-facts","error",
+        "저장된 SimC 설정 조회 실패",[
+          {label:"현재 실행 확인",value:"미확인",tone:"error"},
+          {label:"오류 코드",value:/^[A-Z][A-Z0-9_]{0,119}$/.test(err.message)?
+            err.message:"설정 조회 실패"}
+        ],"이전 저장 파일을 확인하지 못했습니다. 현재 연결 완료로 표시하지 않습니다.");
     }
     // Read-only local status. No remote release lookup on page load.
     try{await refreshSimcUpdater(false);}catch(err){
