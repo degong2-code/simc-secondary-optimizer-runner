@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import copy
 import pathlib
+import shutil
+import subprocess
 import sys
 import unittest
 from unittest import mock
@@ -123,6 +125,66 @@ class OneBuildOptionalChoices(unittest.TestCase):
                     Exception,"FRESH_SEASON_OPTIONAL_CONSUMABLE_NOT_INSTALLED"):
                 profile._verified_fresh_season_consumables(
                     invalid,installed_environment=doc)
+
+    def test_actual_user_ui_consumes_only_the_exact_installed_source(self):
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed")
+        script=r"""
+const fs=require('fs'),assert=require('assert');
+const raw=fs.readFileSync(process.argv[1],'utf8');
+const begin=raw.indexOf('function syncInstalledOptionalConsumables(catalog){');
+const end=raw.indexOf('function renderSeasonOptionCatalog(catalog)',begin);
+assert(begin>=0&&end>begin);
+const nodes={};
+for(const name of ['food','potion','augmentation'])
+ nodes[name]={value:'source_default',options:[],textContent:''};
+const state={options:{current_season_product_choices:null},
+ defaultOptionalChoices:{food:['source_default'],potion:['source_default'],
+  augmentation:['source_default']}};
+const $=name=>nodes[name];
+const field=name=>nodes[name].value;
+const populateSelect=(name,allowed,label)=>{
+ nodes[name].options=allowed.map(token=>({value:token,label:label(token)}));
+ nodes[name].value=allowed[0];
+};
+const refreshDefaultConsumableSummaries=()=>{};
+const f=new Function('state','$','field','populateSelect',
+ 'refreshDefaultConsumableSummaries',
+ raw.slice(begin,end)+'return syncInstalledOptionalConsumables;'
+)(state,$,field,populateSelect,refreshDefaultConsumableSummaries);
+const sha='a'.repeat(64);
+const exact={
+ source_scope:'VERIFIED_INSTALLED_V212_OPTION_CATALOG',
+ installed_manifest_sha256:sha,
+ installed_optional_consumable_choices:{
+  schema:'v113_current_season_optional_consumables_v1',
+  installed_manifest_sha256:sha,
+  source_default_simc_token:'disabled',
+  food:['source_default','food_3'],
+  potion:['source_default','potion_3'],
+  augmentation:['source_default'],
+  items:[
+    {kind:'food',simc_token:'food_3',label:'영웅의 식사'},
+    {kind:'potion',simc_token:'potion_3',label:'특급 전투 물약'}]
+ }
+};
+f(exact);
+assert.deepStrictEqual(nodes.food.options.map(x=>x.value),['source_default','food_3']);
+assert(nodes.food.options[1].label==='영웅의 식사');
+assert.deepStrictEqual(state.options.current_season_product_choices.potion,
+ ['source_default','potion_3']);
+nodes.food.value='food_3';
+f({...exact,installed_manifest_sha256:'b'.repeat(64)});
+assert.deepStrictEqual(nodes.food.options.map(x=>x.value),['source_default']);
+assert(nodes.food.value==='source_default');
+console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
+"""
+        p=subprocess.run([node,"-e",script,
+                          str(ROOT/"runner/webui/app.js")],
+                         cwd=ROOT,capture_output=True,text=True,timeout=15)
+        self.assertEqual(p.returncode,0,p.stderr)
+        self.assertIn("V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS",p.stdout)
 
     def test_no_native_and_no_separate_approval_engine(self):
         with mock.patch("subprocess.Popen",
