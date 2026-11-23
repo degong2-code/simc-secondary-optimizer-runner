@@ -20,3 +20,7 @@
 기존 v212 offline workflow와 기존 테스트 파일만 활용, 새로운 독립 Gate·워크플로·품목 하드코딩·캐시/원본 버전 폐기 없음. 테스트 합성 데이터에서 J/F 수치를 실제 시즌 70961 값처럼 복사하지 않음. 새 70961 실수집/Native/외부 HTTP0. 다음 진짜 수락은 **검증된 같은 시즌 실제 설치 SHA에서 v113 사용자 UI → v098 최종 SimC 프로필/기존 DPS**를 한 번 관측, 소스 재수집이나 고정 L/E/O 새 인증 엔진으로 확장하지 않음.
 
 공식 `15/78 COMPLETE`(완료율 아님), `full_product_e2e=PENDING`, `next_review=B10`; PC v677 개인 시험 보류; 주 개발 채팅/main/immutable v003/v016/Project UI/Work OS 승격 권한 불변.
+
+## 실행 완료 — v212 설치→v218→v098 오프라인 계약
+
+실제 변경 커밋 `18f31089637799dd076cd45bf94cca0bb4e2ddee`의 기존 [v212 Environment Manifest offline contract #45218800610](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45218800610)은 **Windows 2022 / Ubuntu 24.04 각 536 tests, 4 SKIP, 0 FAIL**로 성공. 두 실행 로그 모두 기존 `test_fresh_install_uses_original_v222_v196_and_v217_not_preview`가 **ok**. 따라서 그 내부에 추가한 G/J/F/O 보존·합성 v212 설치 토큰·v218 승인/비등록 차단·v098 `default_consumables.food` 전달은 **오프라인 회귀로 확인**됐다. 이 실험은 아직 v113 UI 실제 접속/최종 SimC `profile.simc` 생성·Native 아이템 수락/DPS 통합 PASS가 아니며 실제 70961 프로젝션 35+1을 별도 설치본으로 신뢰 승격하지 않는다. 새로운 원본/Native/DB2 수집 0. 추가 독립 Gate/워크플로·시즌별 ID 하드코딩 없음.
