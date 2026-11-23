@@ -172,6 +172,71 @@ def _v670_colliding_fj_diagnostics(proofs):
     return reports
 
 
+def _v675_runtime_input_field_digests(snapshot_clean):
+    """Hash *every* sealed runtime field under fixed, non-secret UI codes.
+
+    The original v212/v113 stages have already been independently checked by
+    the caller. No raw fields, paths or hash values are returned to the UI.
+    An unknown/new field is included in OTHER_* so it remains fail-closed.
+    """
+    if type(snapshot_clean) is not dict:
+        return None
+    runtime=snapshot_clean.get("environment_result")
+    if type(runtime) is not dict:
+        return None
+    compilation=runtime.get("source_compilation")
+    if type(compilation) is not dict:
+        return None
+    keys={
+        "snapshot":(
+            ("SNAPSHOT_SCHEMA","schema"),
+            ("SNAPSHOT_CATALOG","source_catalog_artifact_sha256")),
+        "runtime":(
+            ("RUNTIME_ENTRY","normal_build_entry"),
+            ("RUNTIME_READY","zero_history_build"),
+            ("RUNTIME_REPRESENTATIVE","fresh_one_spec_simc_representative"),
+            ("RUNTIME_ORDINARY_GEAR","fresh_ordinary_gear"),
+            ("RUNTIME_TIER_BRIDGE","fresh_tier_simc_candidate_bridge"),
+            ("RUNTIME_PINNED_ITEM_SOURCE","fresh_lazy_full_pinned_simc_item_source"),
+            ("RUNTIME_GAME_BUILD","expected_game_build"),
+            ("RUNTIME_PERMANENT_ENCHANT","fresh_permanent_enchant_item_source"),
+            ("RUNTIME_TARGET_ILEVEL","verified_target_ilevel"),
+            ("RUNTIME_OIL_IDS","verified_oil_item_ids_by_hand")),
+        "compilation":(
+            ("COMPILATION_STATUS","status"),
+            ("COMPILATION_SOURCE_CATALOG_PATH","source_catalog_path"),
+            ("COMPILATION_STAGE_ROOT","stage_root"),
+            ("COMPILATION_SIMC_REVISION","simc_revision"),
+            ("COMPILATION_TIER_SOURCE_PATHS","v191_original_gear_tier_source_paths"),
+            ("COMPILATION_V098_PROFILE","v098_source_only_profile_inputs_unadmitted"),
+            ("COMPILATION_GEM_LAYOUT","physical_gem_layout_unadmitted"),
+            ("COMPILATION_GEM_BUDGET","physical_gem_J_arithmetic_unadmitted"),
+            ("COMPILATION_GEM_ITEM_RELATION","selected_v221_gem_item_relation_unadmitted"))
+    }
+    holders={"snapshot":snapshot_clean,"runtime":runtime,
+             "compilation":compilation}
+    result={}
+    for group,owner in holders.items():
+        fields=keys[group]
+        for code,name in fields:
+            # Missing differs from a present explicit null; missing is
+            # never silently treated as zero or an approved default.
+            present=name in owner
+            comparison={"present":present,
+                        "value":owner[name] if present else None}
+            result[code]=stage_engine.digest(
+                stage_engine.canonical(comparison).encode("utf8"))
+        known={field for _,field in fields}
+        if group=="snapshot":
+            known.add("environment_result")
+        elif group=="runtime":
+            known.add("source_compilation")
+        other={k:v for k,v in owner.items() if k not in known}
+        result["OTHER_"+group.upper()+"_FIELDS"]=stage_engine.digest(
+            stage_engine.canonical(other).encode("utf8"))
+    return result
+
+
 def _v672_verified_runtime_inputs_digest(docs, installed, snapshot, *,
                                         return_component_digests=False):
     """Prove saved runtime-input equivalence, NOT preflight or current Live.
@@ -277,9 +342,14 @@ def _v672_verified_runtime_inputs_digest(docs, installed, snapshot, *,
         # Separate hashes remain internal; only fixed reason codes may be
         # exposed to the browser. Never leak receipt hashes/source values.
         if return_component_digests:
-            return {key:stage_engine.digest(
+            hashes={key:stage_engine.digest(
                 stage_engine.canonical(value).encode("utf8"))
                 for key,value in compared.items()}
+            hashes["runtime_fields"]=_v675_runtime_input_field_digests(
+                snapshot_clean)
+            if hashes["runtime_fields"] is None:
+                return None
+            return hashes
         return stage_engine.digest(stage_engine.canonical(compared).encode("utf8"))
     except (ValueError,TypeError,KeyError,UnicodeError,OSError,
             stage_engine.StageExecutionBlocked,
@@ -1684,8 +1754,15 @@ class LocalJobs:
                 blocked_reasons=(["RECEIPT_PROOF_UNAVAILABLE"] if not verified
                     else ["DIFFERENT_"+name.upper()
                           for name in different])
+                runtime_codes=(sorted(
+                    code for code in fingerprints[0]["runtime_fields"]
+                    if len({fp["runtime_fields"][code]
+                            for fp in fingerprints})>1)
+                    if verified and "runtime_snapshot" in different else [])
                 for row in rows:
                     row["verified_runtime_equivalence_blocker_codes"]=blocked_reasons
+                    if runtime_codes:
+                        row["verified_runtime_input_difference_codes"]=runtime_codes
         result["verified_base_flask_installs"].sort(
             key=lambda x:(x["flask_item_id"],x["J"],
                           x["installed_manifest_sha256"]))
