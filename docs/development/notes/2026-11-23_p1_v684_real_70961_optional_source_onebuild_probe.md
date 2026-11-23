@@ -26,3 +26,7 @@ v681 파서 문자열 정규화, v682 SimC 부분문자열 충돌, v683 Wago ID 
 ## v684.1 — source rows와 실제 사용자 선택지 판정 분리
 
 후속 읽기 점검에서 최초 v684 진단의 성공 조건 `len(source rows)>0`이 잘못됐음을 확인했다. 기존 v212가 같은 효과·품질 동률 또는 SimC 토큰 중복·부분문자열 충돌로 **모든 옵션을 보류해도 성공으로 오인** 가능했다. 신규 기능이나 Native Gate가 아닌, 진단의 최종 보고 분기만 `sum(v212 categories[*].options)>0`으로 수정한다. source rows 0개면 `PENDING_NO_WAGO_SIMC_JOINED_ROWS`, source rows는 있지만 선택지 0개면 `PENDING_ALL_WAGO_SIMC_OPTIONS_WITHHELD_BY_V212`를 별도로 기록한다. `tests/test_v684_real_optional_source_onebuild_probe.py`는 오프라인 mock으로 v216 정확 한 번/Native0/부분일치 결과·전체 보류·부재·누락·예외를 검사한다. **실제 70961 수집 재실행 없음**, 기존 v684 실제 Actions 실행 영수증은 아직 미확인.
+
+## v684.2 — 별도 오프라인 회귀 실행 경로
+
+기존 v684 1회 실수집 트리거는 `[v684-source-once]` 커밋으로만 허용하므로, 회귀 테스트용 후속 push에서 Wago/SimC 본 원본을 반복 수집하지 않는다. 동일 workflow에 `source-only-offline-contract` Ubuntu Python3.12 job을 분리해 `tests.test_v684_real_optional_source_onebuild_probe` 네 가지 조합을 직접 실행한다. 이 job은 자격증명 없이 기존 모듈만 설치, v216 실제 호출은 mock, SimC Native 0, Wago HTTP 0이다. CI 실행·PASS는 **실제 GitHub status 확인 전까지 미확인**. 실원본 Actions artifact와 완전히 구분한다.
