@@ -13,3 +13,7 @@
 ## STOP 및 다음 목표
 
 새 원본 stage를 임의 복제하거나 v684 원본 투영 결과를 기존 70961 v212 설치에 사후 주입하지 않는다. 실제 설치 SHA의 사용자 메뉴/세션 프로필 수락이 가능해지는 경우에 한하여 정확 한 경로를 실측한다. 현재는 최초 독립 증거가 없는 범위까지 PASS로 승격하지 않는다. 개인 PC v677 시험 보류, 공식 `15/78 COMPLETE`(완료율 아님)/`full_product_e2e=PENDING`/`next_review=B10`, 주 개발/main/v003/v016/Project UI/Work OS 권한 그대로.
+
+## v687.1 — 신규 오프라인 비교 문자열 오탈자 교정
+
+최초 v687 commit `2b0c724f861b8544f7d408bd1703b08c514b9da4`의 [v212 CI #45221057497](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45221057497)는 Windows/Ubuntu 각각 536 tests 중 신규 연결 테스트에서 1 FAIL(4 SKIP). Actions의 실제 assertion 출력에는 이미 `food=example_food_3`, `potion=disabled`, `augmentation=disabled`가 SimC profile text에 정상 포함됨. 실패는 테스트 기대 문자열의 `\\\\n`(리터럴 backslash+n) 사용으로 Python 실제 줄바꿈 `\\n`과 불일치했기 때문. 신규 비교문 4개만 `chr(10)`으로 정정하여 escaping 오해를 제거; **제품 코드, 실원본, 설치 SHA, 기존 GJFO 및 Native/DPS 경로는 불변**. 최종 PASS 여부는 수정 커밋의 Actions 결과로 구분해 기록한다.

@@ -960,10 +960,10 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
             selected_simc,selected_meta,_,_=(
                 profile_bootstrap.pure.compose(
                     player,trinkets,season=season_fixture))
-            self.assertIn("\\nfood=example_food_3\\n",selected_simc)
-            self.assertIn("\\npotion=disabled\\n",selected_simc)
-            self.assertIn("\\naugmentation=disabled\\n",selected_simc)
-            self.assertEqual(selected_simc.count("\\nfood="),1)
+            self.assertIn(chr(10)+"food=example_food_3"+chr(10),selected_simc)
+            self.assertIn(chr(10)+"potion=disabled"+chr(10),selected_simc)
+            self.assertIn(chr(10)+"augmentation=disabled"+chr(10),selected_simc)
+            self.assertEqual(selected_simc.count(chr(10)+"food="),1)
             self.assertEqual(selected_meta["status"],"STAGED_NOT_USER_READY")
             self.assertEqual(selected_meta["native_calls"],0)
             base_fixture=copy.deepcopy(season_fixture)
