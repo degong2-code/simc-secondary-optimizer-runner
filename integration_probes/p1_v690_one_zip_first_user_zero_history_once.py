@@ -188,9 +188,30 @@ def stage(args):
             # Navigate like a real user BEFORE attempting keyboard selection.
             navigate(driver,"optimizer")
             record["last_completed_stage"]="VISIBLE_OPTIMIZER_TAB"
+            # User-facing diagnostics only: exact accessible option labels
+            # and widget state. No user secrets, raw HTML, or screenshots.
+            record["actual_choice_widgets"]=driver.execute_script("""return {
+              tab:document.querySelector('.top-nav button.is-active')?.
+                    dataset.view,
+              busy:state.busy,
+              class_input:!!document.getElementById('choice-class-choice'),
+              class_input_disabled:document.getElementById(
+                    'choice-class-choice')?.disabled,
+              class_options:[...document.getElementById('class-choice').
+                    options].map(x=>x.textContent).slice(0,20),
+              spec_input:!!document.getElementById('choice-spec'),
+              spec_input_disabled:document.getElementById(
+                    'choice-spec')?.disabled
+            }""")
+            record["last_completed_stage"]="CLASS_SEARCH"
+            save()
             choose_visible_search(driver,"class-choice",
                                   "흑마법사","흑마법사")
+            record["last_completed_stage"]="CLASS_SELECTED"
+            save()
             choose_visible_search(driver,"spec","파괴","파괴")
+            record["last_completed_stage"]="SPEC_SELECTED"
+            save()
             require(driver.execute_script(
                 "return field('spec')==='warlock/destruction'"),
                 "GENERIC_NON_PRIOR_SPEC_SELECTION_INVALID")
