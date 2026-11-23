@@ -165,6 +165,10 @@ def followup(*,jobs,environment_result,document,installed_path,binary,
             save()
             exit_code=sessions.worker(folder,binary,revision)
             result["v106_worker_exit_code"]=exit_code
+            # The v688 profile-only receipt default remains False. When
+            # the original user worker actually runs, record that execution
+            # explicitly; even an unsuccessful attempt must not look unrun.
+            result["user_optimizer_executed"]=True
             if exit_code!=0:
                 result["status"]="PENDING_REAL_OPTIONAL_NATIVE_OR_DPS"
                 result["first_blocker"]="V106_EXISTING_WORKER_NOT_PASSED"

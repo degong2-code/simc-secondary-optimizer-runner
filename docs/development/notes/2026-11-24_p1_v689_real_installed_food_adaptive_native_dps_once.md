@@ -20,3 +20,24 @@
 - 제품 전체 `full_product_e2e=PASS` 선언은 전체 사용자 UX 수락과 다른 미검증 범위가 있어 하지 않는다. 공식 `15/78 COMPLETE`는 완료율이 아니며 `next_review=B10`, 개인 PC v677 시험 보류 및 기존 main/v003/v016/Project UI/Work OS/주 제품 개발 채팅 권한 그대로.
 
 이 문서는 코드 경로 계획이며 **Windows Actions 완료 영수증 전에는 실제 v689 Native PASS를 주장하지 않음**.
+
+## 실제 v689 Windows Actions 및 자체 생성 원본 ZIP 영수증 — PASS
+
+실행 커밋 `14fb5da51c8bd13ae4fa0a778a903c6aec22acd2`; [Windows Actions #45227006628](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45227006628) 한 번 SUCCESS. 이전 소스 바이트가 아니라 기존 `v610`의 자체 실제 원본 Season Build를 실행하고 같은 실행의 native source-bound Windows SimC CLI cache를 재사용. 미리 만들어진 이전 설치 문서/원본 stage 주입하지 않음.
+
+아티팩트 `p1-v689-real-70961-optional-user-native-dps-once` #14844787176의 실제 JSON 두 파일 `V688_REAL_70961_OPTIONAL_USER_PROFILE_ONCE.json`, `V688_REAL_OPTIONAL_USER_STAGE.json` 및 Windows job 로그 확인:
+
+- 게임/SimC: `12.1.5.70961` / `9933ffb946fb55b1fa66657b848f519ac19006e1`; 실제 새 v212 설치 SHA `dfaf381217c19229b338274a97c4d6a5a4321cf1ab5360ed107fab6d5a23b970`. 이는 v688 당시의 `f96e...` 설치와 **별도의 새 설치**, 한 user Native run 안에서는 동일 SHA를 유지함.
+- 공식 설치 예산: `G=2850`, `J=92`, `F=165`, `O=0`, `B=3107`, `T=3107`. 설치 `food=35` / `potion=1`. Blooming Feast ID `242273`, SimC token `blooming_feast`, source quality rank `0`, 정확 한 번 표기. 증강 미해결은 BASE를 차단하지 않음.
+- 원래 사용자 v113 exact installed catalog GET HTTP200 → plan POST HTTP200 → 원래 `v106.worker` exit=0 → `v094` **PASS_BOUNDED_GENERIC_NATIVE_SEARCH_AND_CACHE**, **6/6 후보 Native**, cache hit0. 이는 소모품 포함 실제 SimC 프로필로 Native가 완료됨을 의미하지만, 개별 효과가 어떤 경로에서 적용됐는지 독립 메커니즘 인증하지 않음(SimC가 담당).
+- 관측 1순위 절대 rating: 치명 `736` / 가속 `736` / 특화 `735` / 유연 `900`, 합계3107. DPS `158317.48307790104`, SEM `247.27365039703332`. **95% 선택 확인 후보 방향 지지: False(미확정)**. 전역 최적 입증 아님.
+- 실질적 다른 근접 대안 **2**: (치명425/가속1047/특화735/유연900) DPS `157460.3`, `OBSERVED_NEAR_UNRESOLVED_AT_95`; (치명1047/가속425/특화735/유연900) DPS `156838.0`, `OBSERVED_NEAR_BUT_LOWER_AT_95`. 대안 수는 검색된 후보 범위이지 글로벌 공간의 전수 목록 아님.
+- 사용자 결과 API HTTP200, 새로운 웹 서버 앱 인스턴스에서 동일 저장 세션 `GET /result` HTTP200으로 같은 결과 확인. 최종 결과 JSON SHA `59a9c9cef88fccb0eae189799640bfbb9595e359b52cc5dae89a2dafb58ce3ea` 변경 없음. 실제 사용자 프로필 SHA `1ffacb73a0010f6399016ed942337ad3005ce0ce88df894b0287dc2fbb772186`; 저장 전체 프로필/비밀키를 artifact에 내보내지 않음.
+- native 비용은 원본 시즌 구축 `15`, 새 사용자 DPS `6` = 합계 **21회**, 신규 수집 단 1 build, 사용자 개인 PC 시험 0, 64후보/26전문화 Native 전수0. 재열람은 추가 Native0.
+- 검증 범위는 **일반 사용자의 정확 설치 → 음식 선택 → 사용자 SimC Native DPS 및 저장 결과 재열람 1개 시나리오**. 통계는 95%만 사용. 새 시즌 품질 효과 전체 숫자 비열등성, 추가 전문화 전체, 모든 옵션의 Native, 실제 PC UI 수작업 수락 등은 여전히 미완료.
+
+**실제 receipt 메타데이터 발견/정정:** v688에서 원래 `user_optimizer_executed=False`로 시작한 플래그를 v689 성공 후 True로 고치지 않아 실제 archive 안에 False가 남음. 단, 같은 archive와 log에 워커 exit0, Native 6/6, user DPS/SEM 및 결과 재열람 증거가 일치하므로 측정 성공 자체는 사실. 해당 과거 receipt는 변경/재서명하지 않고, source code가 실제 worker 호출 후 True로 기록되게 수정. **새 Native 재실행 0**, 변경 후 별도 같은 예산 Native PASS 주장하지 않음.
+
+## STOP
+
+정확한 Blooming Feast의 이번 user Native + 95% 결과는 실증됐으므로 **동일 70961 원본 수집/6 Native를 다시 수행할 필요 없음**. 기존 캐시·결과 UI 유지, 사용자 첫 화면/서버 재시작 및 필수 시즌 설치 갱신 동선의 남은 UX를 중점적으로 검토. 공식 `15/78 COMPLETE`는 전체 제품 완료율이 아니며 `full_product_e2e=PENDING`, `next_review=B10`, PC v677 시험 보류와 main/immutable v003/v016/Project UI/Work OS/주 개발 채팅 authority 불변.
