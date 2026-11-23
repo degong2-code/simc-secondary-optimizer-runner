@@ -150,7 +150,8 @@ const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, s
                 session:"", running:false,
                 longrunEnabled:false, longrunResultReady:false,
                 longrunCompleted:false,
-                busy:false, options:null, verifiedInstalledBuildFromThisPage:null,
+                busy:false, options:null, defaultOptionalChoices:null,
+                verifiedInstalledBuildFromThisPage:null,
                 budgetPreviewDirty:false, seasonOptionRequestEpoch:0,
                 seasonBuildTargetManualOverride:false,
                 userTargetIlevelManualOverride:false,
@@ -1203,16 +1204,18 @@ function currentSeasonOptionalUseStatus(name) {
      approved.source_default_simc_token!=="disabled" ||
      !Array.isArray(approved[name]) ||
      !approved[name].includes("source_default"))
-    return "현재 시즌 적용 상태 미확인 · 미검증 소모품 자동 적용 안 함";
+    return "이번 시즌 "+label+" 정보를 아직 가져오지 못했습니다. "+label+" 효과 없이 계산할 수 있습니다.";
   const selected=$(name).selectedOptions?.[0];
   if(chosen==="source_default")
-    return "SimC 미사용 · 현재 시즌 "+label+" ID·품질 미등록";
+    return approved[name].length>1?
+      label+"을 사용하지 않고 계산합니다.":
+      "이번 시즌 "+label+" 선택을 준비하지 못했습니다. "+label+" 효과 없이 계산합니다.";
   if(selected?.dataset?.historic==="true" ||
      !approved[name].includes(chosen))
-    return "이전 세션 값 · 이번 시즌 신규 최적화에 적용 불가";
+    return "이전 시즌에 사용한 "+label+"입니다. 이번 시즌에서는 다시 선택해 주세요.";
   // A future signed registration must be checked by the server's original
   // v218/v212 profile owner; rendering cannot authorize the SimC token.
-  return "현재 시즌 선택지 · 실제 SimC 적용은 실행 프로필에서 확인";
+  return "선택한 "+label+"으로 계산합니다. SimulationCraft에서 지원하지 않으면 실행 시 안내합니다.";
 }
 function refreshDefaultConsumableSummaries(){
   const fid=field("season-selected-flask-id");
@@ -4257,7 +4260,45 @@ function sourceSupportedStrongRingEnchants(rows,catalog){
   });
 }
 
+// The installed season is the only optional-consumable option owner.
+function syncInstalledOptionalConsumables(catalog){
+  if(!state.options)return;
+  const payload=catalog?.installed_optional_consumable_choices;
+  const exact=catalog?.source_scope===
+       "VERIFIED_INSTALLED_V212_OPTION_CATALOG" &&
+    /^[a-f0-9]{64}$/.test(catalog.installed_manifest_sha256||"") &&
+    payload?.installed_manifest_sha256===
+      catalog.installed_manifest_sha256 &&
+    payload?.schema==="v113_current_season_optional_consumables_v1" &&
+    payload?.source_default_simc_token==="disabled";
+  const original=state.defaultOptionalChoices||
+    {food:["source_default"],potion:["source_default"],
+     augmentation:["source_default"]};
+  const approved=(exact?payload:original);
+  const next={...approved,
+    schema:"v113_current_season_optional_consumables_v1",
+    source_default_simc_token:"disabled",
+    diamond_id:[0],omnium_talents:["source_default"]};
+  const originalTokens=state.options.current_season_product_choices;
+  state.options.current_season_product_choices=next;
+  for(const name of ["food","potion","augmentation"]){
+    const allowed=Array.isArray(next[name])&&
+      next[name].includes("source_default")?
+        next[name]:["source_default"];
+    const names=new Map((exact&&Array.isArray(payload.items)?
+      payload.items:[]).filter(item=>item.kind===name).map(item=>[
+         item.simc_token,item.label]));
+    const previously=field(name);
+    populateSelect(name,allowed,token=>
+       token==="source_default"?"미사용 (이번 시즌 기본)":
+       (names.get(token)||token.replace(/_/g," ")));
+    $(name).value=allowed.includes(previously)?previously:"source_default";
+  }
+  refreshDefaultConsumableSummaries();
+}
 function renderSeasonOptionCatalog(catalog) {
+  if(typeof syncInstalledOptionalConsumables==="function")
+    syncInstalledOptionalConsumables(catalog);
   const runeSource=catalog?.verified_weapon_enhancements?.dk_runeforges;
   const runes=(runeSource?.status==="PINNED_DK_RUNES_INSTALLED" &&
        Array.isArray(runeSource.items))?runeSource.items:[];
@@ -4551,6 +4592,7 @@ function renderSeasonOptionCatalog(catalog) {
 }
 function installOptions(options) {
   state.options=options;
+  state.defaultOptionalChoices=options.current_season_product_choices;
   const label=(key,value)=>options.display_labels?.[key]?.[String(value)]??
     String(value);
   // /options also contains source-known historical v108 tokens for saved
