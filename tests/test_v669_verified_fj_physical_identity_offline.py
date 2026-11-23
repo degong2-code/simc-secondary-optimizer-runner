@@ -322,6 +322,18 @@ state.oilCatalog=payload;
   const sel=$('season-verified-budget');
   assert.equal(sel.options[1].disabled,true);
   assert.equal(sel.options[2].disabled,true);
+  // Two originally verified and *runnable-input-equal* receipts:
+  // only the server-marked representative becomes selectable, never both.
+  payload.verified_base_flask_installs=[
+    {...base,installed_manifest_sha256:A,
+     verified_runtime_equivalent_representative:true},
+    {...base,installed_manifest_sha256:B,
+     verified_runtime_equivalent_representative:false}
+  ];
+  funcs.renderInstalledFlaskChoices(payload);
+  assert.equal(sel.options[1].disabled,false);
+  assert.equal(sel.options[2].disabled,true);
+  assert(sel.options[1].textContent.includes('동일 실행 입력'));
   assert.equal($('season-verified-fj-diagnostic-copy').hidden,false);
   assert($('season-verified-budget-status').textContent.includes('SimC revision'));
   await funcs.copyVerifiedFjCollisionDiagnostic();
@@ -348,6 +360,100 @@ state.oilCatalog=payload;
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertIn("V670_SEALED_FJ_COLLISION_SAFE_DIAGNOSTIC_PASS",
                       result.stdout)
+
+
+
+class VerifiedRuntimeInputEquivalence(unittest.TestCase):
+    """Bounded original v212/v113 source projection; no new admission."""
+
+    def test_only_preflight_link_diff_allows_same_runtime_fingerprint(self):
+        with tempfile.TemporaryDirectory() as td:
+            docs=pathlib.Path(td)/"wago_12.1.5.70961"/"fresh_source"
+            docs.mkdir(parents=True)
+            details=[]
+            for installed_sha,stage_sha,preflight_sha in (
+                    ("a"*64,"c"*64,"1"*64),("b"*64,"d"*64,"2"*64)):
+                installed={
+                    "manifest_sha256":installed_sha,
+                    "staged_source_environment_sha256":stage_sha,
+                    "original_v216_preflight_sha256":preflight_sha,
+                    "original_v217_stage_receipts":{"v191_stage":"3"*64},
+                    "source_catalog_artifact_sha256":"4"*64,
+                    "game_build":"12.1.5.70961","target_ilevel":334,
+                    "official_G":2850,"official_J":92,"official_F":165,
+                    "official_B":3107,"official_T":3107,
+                    "published_verified_options":[]}
+                staged={
+                    "manifest_sha256":stage_sha,
+                    "original_v216_preflight_sha256":preflight_sha,
+                    "original_v217_stage_receipts":{"v191_stage":"3"*64},
+                    "source_catalog_artifact_sha256":"4"*64,
+                    "game_build":"12.1.5.70961","target_ilevel":334,
+                    "pending_core_requirements":["G/J/F/O"]}
+                stage_path=docs/("v212_environment_"+stage_sha[:20]+".json")
+                stage_path.write_text(json.dumps(staged),encoding="utf8")
+                profile={
+                    "schema":"v113_verified_v212_profile_source_snapshot_v1",
+                    "installed_manifest_sha256":installed_sha,
+                    "source_catalog_artifact_sha256":"4"*64,
+                    "environment_result":{
+                        "normal_build_entry":True,
+                        "source_compilation":{
+                            "preflight_sha256":preflight_sha,
+                            "verified_environment_install":{
+                                "manifest_sha256":installed_sha,
+                                "stage_output_path":"different-original-path"},
+                            "v098_source_only_profile_inputs_unadmitted":{
+                                "flask":{"physical_item_id":241320,
+                                         "simc_input_token":"flask_2"}},
+                            "physical_gem_layout_unadmitted":{
+                                "ordinary_gem_ids":[240890,240898,240906,240914]
+                            }},
+                        "verified_target_ilevel":334}}
+                snapshot=docs/("v113_profile_"+installed_sha[:20]+".json")
+                snapshot.write_text(web.stage_engine.canonical(profile)+"\n",
+                                    encoding="utf8")
+                details.append((installed,stage_path,snapshot))
+            def read(path,*unused):
+                return json.loads(path.read_text("utf8")), "trusted-original"
+            with mock.patch.object(web.environment_manifest,"read_json",
+                                   side_effect=read), \
+                 mock.patch.object(web.environment_manifest,
+                                   "verify_fresh_source_environment"), \
+                 mock.patch.object(web.stage_engine,"verify_stage",
+                                   return_value={"status":"REUSED_VERIFIED"}):
+                first=web._v672_verified_runtime_inputs_digest(
+                    docs,details[0][0],details[0][2])
+                second=web._v672_verified_runtime_inputs_digest(
+                    docs,details[1][0],details[1][2])
+                self.assertIsNotNone(first)
+                self.assertEqual(first,second)
+                # Different stage output is not the same original source.
+                altered=json.loads(details[1][1].read_text("utf8"))
+                altered["pending_core_requirements"].append("OPTIONAL_DIFFERENT")
+                details[1][1].write_text(json.dumps(altered),encoding="utf8")
+                changed=web._v672_verified_runtime_inputs_digest(
+                    docs,details[1][0],details[1][2])
+                self.assertNotEqual(first,changed)
+                details[1][1].write_text(json.dumps({
+                    **altered,"pending_core_requirements":["G/J/F/O"]
+                }),encoding="utf8")
+                # A different saved SimC source input must not be merged.
+                altered_profile=json.loads(details[1][2].read_text("utf8"))
+                altered_profile["environment_result"]["source_compilation"][
+                    "v098_source_only_profile_inputs_unadmitted"]["flask"][
+                    "simc_input_token"]="different_input"
+                details[1][2].write_text(
+                    web.stage_engine.canonical(altered_profile)+"\n",
+                    encoding="utf8")
+                self.assertNotEqual(first,
+                    web._v672_verified_runtime_inputs_digest(
+                        docs,details[1][0],details[1][2]))
+            # No receipt check, no runtime-equivalence proof.
+            self.assertIsNone(web._v672_verified_runtime_inputs_digest(
+                docs,details[0][0],details[0][2]))
+            self.assertIsNone(web._v672_verified_runtime_inputs_digest(
+                docs,details[0][0],docs/"missing_v113_profile.json"))
 
 
 
