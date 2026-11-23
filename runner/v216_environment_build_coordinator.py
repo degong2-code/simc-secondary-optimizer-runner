@@ -8621,7 +8621,9 @@ def _install_verified_fresh_environment_only(*, compilation, staged,
         source_ui=ui,
         trusted_policy_A_receipts_by_id=trusted_policy_A_receipts_by_id,
         target_ilevel=target_ilevel,manual_final_T=manual_final_T,
-        verified_DK_runeforge_source=verified_dk)
+        verified_DK_runeforge_source=verified_dk,
+        source_optional_consumables=compilation.get(
+            "source_owned_optional_consumables"))
     key=installed["manifest_sha256"][:20]
     stage_id="fresh-v212-installed-"+key
     output="fresh_source/v212_installed_"+key+".json"
@@ -8986,6 +8988,28 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         try:
             source_compilation=source_wiring.compile_collected(
                 collected,compiler=fresh_stage.compile_fresh_candidate)
+            # v680: the ONE ordinary build carries the exact pinned
+            # Wago/SimC consumable source identity into the installed v212
+            # owner. Source candidates alone are not valid SimC input
+            # strings: no guessed name-to-token conversion and no
+            # independent item-effect Gate. Later exact joined rows must be
+            # produced by this same v216 source owner, not by v113 UI.
+            observed=collected.get("fresh_food_potion_item_sources")
+            if (type(observed) is dict and
+                    observed.get("status")==
+                        "FRESH_FOOD_POTION_FLASK_ENHANCEMENT_DB2_CANDIDATES_NOT_USER_ADMITTED"):
+                stage=observed.get("source_stage") or {}
+                sha=stage.get("receipt_sha256")
+                if (stage.get("status") in (
+                        "EXECUTED_AND_SEALED","REUSED_VERIFIED",
+                        "RECOVERED_VERIFIED") and
+                        type(sha) is str and
+                        re.fullmatch(r"[a-f0-9]{64}",sha) is not None):
+                    source_compilation["source_owned_optional_consumables"]={
+                        "game_build":collected["expected_game_build"],
+                        "simc_revision":source_compilation["simc_revision"],
+                        "source_receipt_sha256":sha,
+                        "rows":[]}
             _fresh_attach_existing_v280_socket_preview(
                 collected=collected,compilation=source_compilation,
                 progress=progress,selected_roles=source_selected_gem_roles,
