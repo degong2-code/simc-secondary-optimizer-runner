@@ -212,7 +212,8 @@ class ExistingBudgetReadOnlyHTTP(unittest.TestCase):
                 with mock.patch.object(web,
                                        "_v672_verified_runtime_inputs_digest",
                                        return_value="original-stage"):
-                    self.matched["T"]=3108
+                    self.installed["official_T"]=3108
+                    self.receipt.write_text(json.dumps(self.installed),encoding="utf8")
                     total=self.get()
                 self.assertEqual(total.json()["detail"]["check"],
                                  "GJFO_TOTAL_CONSISTENCY")
