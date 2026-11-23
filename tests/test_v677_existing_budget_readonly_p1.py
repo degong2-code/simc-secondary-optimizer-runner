@@ -194,12 +194,12 @@ class ExistingBudgetReadOnlyHTTP(unittest.TestCase):
                                    return_value=dict(self.matched)), \
                  mock.patch.object(web.environment_manifest,
                                    "verify_fresh_installed_environment"):
+                original_snapshot=self.snapshot.read_text(encoding="utf8")
                 self.snapshot.unlink()
                 missing_profile=self.get()
                 self.assertEqual(missing_profile.json()["detail"]["check"],
                                  "INSTALL_OR_PROFILE_RECEIPT")
-                self.snapshot.write_text(json.dumps({
-                    "environment_result":{}}),encoding="utf8")
+                self.snapshot.write_text(original_snapshot,encoding="utf8")
                 wrong_flask=self.get(selected_flask_item_id=241321)
                 self.assertEqual(wrong_flask.json()["detail"]["check"],
                                  "FLASK_OR_OIL_PHYSICAL_IDENTITY")
