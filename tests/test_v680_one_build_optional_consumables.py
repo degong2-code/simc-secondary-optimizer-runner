@@ -303,7 +303,8 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                     "simc_effect_source_receipt_path":str(h),
                     "source_stage":{"receipt_sha256":"3"*64}},
                 "fresh_lazy_full_pinned_simc_item_source":{
-                    "source_dir":str(root)}}
+                    "source_dir":str(root),
+                    "receipt_sha256":"4"*64}}
             comp={"stage_root":str(root),"simc_revision":REV}
             meta={"game_build":BUILD,"simc_revision":REV,
                 "source_receipt_sha256":"2"*64,
