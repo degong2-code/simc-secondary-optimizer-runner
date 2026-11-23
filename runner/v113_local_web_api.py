@@ -2352,8 +2352,13 @@ class LocalJobs:
             # Reuse the same current-season approval as /options BEFORE
             # creating sessions or resolving any exact-static-L Native.
             # A historical v108 SimC token is not a registered item.
-            if params.current_season_product:
+            # Carry the ONE verified v212 optional-choice result into the
+            # selected special/embellishment preview. Previously this result
+            # was discarded and the preview revalidated without its registry,
+            # rejecting an option already approved for this same installation.
+            season_optional_controls=(
                 _v680_preflight_optional_consumables(self.root,params,user)
+                if params.current_season_product else None)
             exact_oils=params.selected_oil_item_ids_by_hand
             sockets=params.user_socket_total
             special=params.user_special_gem_id
@@ -2540,7 +2545,7 @@ class LocalJobs:
                 if resolved_static is None:
                     raise environment_manifest.EnvironmentBlocked(
                         "WEB_SELECTED_B8_EXACT_STATIC_CACHE_REQUIRED")
-                controls=profile_stage._verified_fresh_season_consumables(user)
+                controls=season_optional_controls
                 preview=bootstrap.preview_from_environment_build(
                     user,self.root/"_b8_unwritten_preview",
                     binary,params.revision,environment_result=fresh,
