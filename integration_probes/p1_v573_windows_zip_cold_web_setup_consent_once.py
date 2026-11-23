@@ -64,7 +64,7 @@ def check_browser():
     finally:
         browser.quit()
 
-def run(zip_file,out):
+def run(zip_file,out,*,before_first_server=None,continue_after_cold_browser=None):
     need(os.name=="nt","WINDOWS_ONLY")
     zip_file=pathlib.Path(zip_file).resolve(strict=True)
     out=pathlib.Path(out).resolve()
@@ -192,11 +192,27 @@ def run(zip_file,out):
         need(not session_root.exists(),
              "INSTALL_OR_CHECK_CREATED_NATIVE_USER_SESSIONS")
         log=(out/"V573_WINDOWS_EXTRACTED_EASY_START_LOG.txt").open("w",encoding="utf8")
+        # Optional one-shot CURRENT product acceptance hooks. Historical
+        # v573 run() remains byte-for-byte equivalent without these. The
+        # hook never authorizes old source files or disables genuine HTTPS.
+        if before_first_server is not None:
+            before_first_server(root,env,work)
         proc=start_server(root,env,log)
         evidence["real_cold_chrome_no_native"]=True
         evidence["browser"]=check_browser()
         save()
-        evidence["status"]="PASS_REAL_WINDOWS_ZIP_COLD_WEB_DEPENDENCY_CONSENT_AND_FIRST_CHROME_NATIVE_ZERO"
+        if continue_after_cold_browser is not None:
+            extra=continue_after_cold_browser(root,env,work)
+            evidence["one_contiguous_first_user_check"]=extra
+            if extra.get("status")!="PASS_REAL_FIRST_USER_SOURCE_AND_DPS":
+                evidence["status"]="PENDING_FIRST_USER_"+str(
+                    extra.get("first_blocker") or extra.get("status"))
+                save()
+                return 2
+        evidence["status"]=(
+            "PASS_REAL_WINDOWS_ZIP_COLD_SETUP_THROUGH_USER_DPS"
+            if continue_after_cold_browser is not None else
+            "PASS_REAL_WINDOWS_ZIP_COLD_WEB_DEPENDENCY_CONSENT_AND_FIRST_CHROME_NATIVE_ZERO")
         save()
         print("V573_WINDOWS_USER_SETUP "+json.dumps({
              k:evidence[k] for k in (

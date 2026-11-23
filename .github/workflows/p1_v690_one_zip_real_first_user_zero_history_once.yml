@@ -1,0 +1,65 @@
+name: P1 v690 ONE fresh extracted ZIP user browser source SimC adaptive result
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v690_one_zip_real_first_user_zero_history_once.yml
+      - integration_probes/p1_v690_one_zip_first_user_zero_history_once.py
+      - integration_probes/p1_v573_windows_zip_cold_web_setup_consent_once.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v690-first-user-clean-windows-one-shot
+  cancel-in-progress: false
+jobs:
+  one-real-zip-first-user:
+    if: ${{ contains(github.event.head_commit.message, '[v690-cold-first-user-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 58
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve real Git source byte identity
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Prepare exact source ZIP and CI Python Selenium harness
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python -m pip install -r requirements-web-test.txt 'selenium>=4.24,<5'
+          if ($LASTEXITCODE -ne 0) { throw 'V690_CI_HARNESS_REQUIREMENTS' }
+          python -m py_compile integration_probes/p1_v573_windows_zip_cold_web_setup_consent_once.py integration_probes/p1_v690_one_zip_first_user_zero_history_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V690_SYNTAX' }
+          New-Item -ItemType Directory -Force out/v690 | Out-Null
+          python integration_probes/v181_windows_beta_packager.py --out out/v690/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+          if ($LASTEXITCODE -ne 0) { throw 'V690_CURRENT_HEAD_ZIP_PACKAGER' }
+      - name: One contiguous real user new ZIP consent SimC auto install source build browser DPS
+        shell: pwsh
+        timeout-minutes: 51
+        run: |
+          $ErrorActionPreference='Stop'
+          python -u integration_probes/p1_v690_one_zip_first_user_zero_history_once.py --zip out/v690/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip --out out/v690/receipt
+          if ($LASTEXITCODE -ne 0) { throw 'V690_FIRST_REAL_USER_BLOCKER_IN_RECEIPT' }
+      - name: Save bounded non-secret report only
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v690-cold-new-windows-first-user-one-shot
+          path: |
+            out/v690/receipt/V690_FIRST_USER_ONE_ZIP_CONTIGUOUS.json
+            out/v690/receipt/V573_WINDOWS_COLD_SETUP_EXPLICIT_CONSENT_COMPACT.json
+          retention-days: 10
+          if-no-files-found: warn
