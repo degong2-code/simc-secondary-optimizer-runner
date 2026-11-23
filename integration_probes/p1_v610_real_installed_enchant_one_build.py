@@ -225,6 +225,11 @@ def run(binary,output_folder,*,postinstall=None):
                                 "PASS_ORIGINAL_V098_V096_ENCHANT_NATIVE_DPS"):
                             doc["status"]=(
                                 "PASS_REAL_INSTALLED_ENCHANT_USER_DPS")
+                        elif follow.get("status")==(
+                                "PASS_ORIGINAL_V113_OPTIONAL_PROFILE_ZERO_NATIVE"):
+                            # A source-bound profile is NOT DPS/Native PASS.
+                            doc["status"]=(
+                                "PASS_REAL_INSTALLED_OPTIONAL_USER_PROFILE_NO_NATIVE")
                         else:
                             doc["status"]=(
                                 "PENDING_REAL_INSTALLED_ENCHANT_USER_DPS")
@@ -241,7 +246,8 @@ def run(binary,output_folder,*,postinstall=None):
             save()
             return (0 if doc["status"] in (
                 "PASS_REAL_SEASON_V212_ENCHANTS_AUTO_REGISTERED",
-                "PASS_REAL_INSTALLED_ENCHANT_USER_DPS") else 2)
+                "PASS_REAL_INSTALLED_ENCHANT_USER_DPS",
+                "PASS_REAL_INSTALLED_OPTIONAL_USER_PROFILE_NO_NATIVE") else 2)
     except Exception as exc:
         # Exceptions are never directly logged with absolute paths/secrets.
         doc["status"]="BLOCKED_"+type(exc).__name__
