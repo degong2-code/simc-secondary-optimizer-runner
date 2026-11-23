@@ -145,6 +145,7 @@ const names = {
 };
 const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, seasonGearTargetIlevel:null, verifiedExistingBudget:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null,
                 verifiedBaseFlaskInstalls:[], verifiedFjCollisionReport:[], eagleApproved:false,
+                lastUserBlocker:null,userActionContext:null,
                 exactUserEnchantIds:new Set(), exactUserEnchantScope:null,
                 session:"", running:false,
                 longrunEnabled:false, longrunResultReady:false,
@@ -2069,7 +2070,9 @@ async function prepareSelectedExistingEnvironment() {
     "&target_ilevel="+level+
     "&installed_manifest_sha256="+sha+
     "&selected_flask_item_id="+exact.flask_item_id+
-    "&reference_G_track="+referenceTrack);
+    "&reference_G_track="+referenceTrack).catch(err=>{
+      err.preparationStep="BUDGET_READ";throw err;
+    });
   const currentTrack=field("spec")==="warrior/fury"&&
     !$("manual-t-mode").checked?"fury_dual_2h":"general";
   if(seasonBuildInputScope(true)!==scope ||
@@ -2088,7 +2091,9 @@ async function prepareSelectedExistingEnvironment() {
     throw Error("EXISTING_INSTALLED_BUDGET_RECEIPT_MISMATCH");
   if(!verifiedInstalledGearScopeMatchesRun(build,level) ||
      state.seasonGear.installed_manifest_sha256!==sha)
-    await chooseInstalledFlask(); // one exact read-only gear GET
+    await chooseInstalledFlask().catch(err=>{
+      err.preparationStep="GEAR_BIND";throw err;
+    }); // one exact read-only gear GET
   if(seasonBuildInputScope(true)!==scope ||
      !verifiedInstalledGearScopeMatchesRun(build,level) ||
      state.seasonGear.installed_manifest_sha256!==sha)
@@ -2099,6 +2104,9 @@ async function prepareSelectedExistingEnvironment() {
     throw Error("EXISTING_INSTALLED_BUDGET_SCOPE_CHANGED");
   }
   updateBudgetPreview();
+  state.lastUserBlocker=null;
+  const oldDetail=$("user-variant-diagnostic");
+  if(oldDetail){oldDetail.hidden=true;oldDetail.open=false;}
   $("user-variant-status").textContent=
     "기존 설치본 검증 완료 · G "+number(result.G)+
     " / J "+number(result.J)+" / F "+number(result.F)+
@@ -2369,6 +2377,9 @@ async function api(path,{method="GET",payload=null,publicRoute=false}={}) {
     if(typeof kind==="string"&&/^[A-Za-z][A-Za-z0-9_]{1,90}$/.test(kind))
       error.safeKind=kind;
     if(stage==="SEASON_ENVIRONMENT_BUILD")error.safeStage=stage;
+    const check=data?.detail?.check;
+    if(typeof check==="string"&&/^[A-Z][A-Z0-9_]{2,60}$/.test(check))
+      error.safeCheck=check;
     error.httpStatus=response.status;
     throw error;
   }
@@ -2400,6 +2411,98 @@ function markSession(id) {
   $("restore-id").value=id;
   // Only the opaque ID (not talents, paths or other personal details) persists.
   try{localStorage.setItem("simc_secondary_session_id",id);}catch{}
+}
+// A previously failed ORIGINAL check is not a new approval gate. Only
+// exact allowlisted check labels appear, never paths/SHA/profiles/secrets.
+function describeUserBlocker(err,context) {
+  const code=/^[A-Z][A-Z0-9_]{2,120}$/.test(err?.message||"")?
+    err.message:null;
+  const stages={
+    SCOPE_INPUT:["환경 요청 조건","빌드·아이템레벨·설치본·영약·G 기준 중 입력 범위가 맞지 않습니다."],
+    INSTALLED_SOURCE_DIRECTORY:["기존 시즌 원본 폴더","해당 빌드의 검증 원본 디렉터리가 없습니다."],
+    INSTALLED_ENVIRONMENT:["검증 설치본 조회","선택 SHA·빌드·ilvl·G 기준의 설치본 검증이 통과하지 않았습니다."],
+    INSTALL_OR_PROFILE_RECEIPT:["설치·저장 프로필 영수증","v212 설치 영수증 또는 v113 저장 프로필을 확인할 수 없습니다."],
+    INSTALL_MANIFEST_IDENTITY:["설치 원본 정합성","설치 영수증의 봉인·빌드·ilvl·G 기준 검증이 통과하지 않았습니다."],
+    FLASK_OR_OIL_PHYSICAL_IDENTITY:["영약·기름 원본","영약 ItemID·F 또는 기름 미사용 조건이 원본과 맞지 않습니다."],
+    SAVED_PROFILE_INPUTS:["저장된 SimC 프로필","v113 실행 프로필 원본 입력이 검증되지 않았습니다."],
+    FOUR_GEM_LAYOUT:["일반 보석 배치","기본 보석 4개의 원본 배치가 검증되지 않았습니다."],
+    OIL_FIXED_BUDGET:["기름 고정 O","기름 미사용의 O=0 증거를 확인하지 못했습니다."],
+    GJFO_TOTAL_CONSISTENCY:["예산 G/J/F/O·B/T","원본과 재사용 영수증의 예산 또는 B/T 회계가 일치하지 않습니다."],
+    UNCLASSIFIED_ORIGINAL:["내부 검증 단계 미확정","서버 응답만으로 첫 내부 원인을 알 수 없습니다."]
+  };
+  let step,problem,next;
+  if(code==="EXISTING_INSTALLED_BUDGET_SOURCE_NOT_VERIFIED"){
+    [step,problem]=stages[err.safeCheck]||stages.UNCLASSIFIED_ORIGINAL;
+    next="해당 설치본의 원본·입력 조건을 확인하세요. 새 Native나 시즌 재구축은 자동 실행하지 않습니다.";
+  }else if(code==="EXISTING_INSTALLED_BUDGET_SCOPE_INVALID"){
+    [step,problem]=stages.SCOPE_INPUT;
+    next="기존 환경 선택과 빌드·아이템레벨·영약을 확인하세요.";
+  }else if(["EXISTING_INSTALLED_GEAR_SOURCE_NOT_READY",
+             "VERIFIED_FLASK_EXACT_INSTALLED_GEAR_UNAVAILABLE"].includes(code)){
+    step="동일 설치본 장비 목록 연결";
+    problem="예산 조회 이후 같은 SHA의 장비 후보를 연결하지 못했습니다.";
+    next="현재 선택한 검증 환경의 장비 목록을 다시 확인하세요.";
+  }else if(code==="EXISTING_INSTALLED_BUDGET_RECEIPT_MISMATCH"){
+    step="서버 예산 응답 검증";
+    problem="원본 승인·SHA·빌드·ilvl·영약·G 기준의 응답 정합이 맞지 않습니다.";
+    next="응답 근거 확인 전 예산을 사용하지 마세요.";
+  }else if(code==="EXISTING_INSTALLED_BUDGET_SCOPE_CHANGED"||
+    (err?.message||"").includes("검증 요청 중 선택 조건이 변경")){
+    step="조회 중 입력 변경";
+    problem="검증 요청 도중 입력이 바뀌어 이전 응답을 적용하지 않았습니다.";
+    next="현재 조건으로 다시 한 번 검증·준비하세요.";
+  }else if(code==="WEB_SELECTED_B8_EXACT_STATIC_VARIANTS_PENDING"||
+            code==="WEB_SELECTED_B8_PROFILE_SOURCE_PENDING"||
+            code==="WEB_SELECTED_B8_PROFILE_OR_STATIC_VARIANTS_PENDING"){
+    step="선택 특수장비·장식";
+    problem=code==="WEB_SELECTED_B8_EXACT_STATIC_VARIANTS_PENDING"?
+      "정확한 정적 rating 변형 근거가 부족합니다.":
+      code==="WEB_SELECTED_B8_PROFILE_SOURCE_PENDING"?
+      "실행 SimC 프로필 원본이 준비되지 않았습니다.":
+      "정적 변형 또는 프로필 중 누락 항목이 이 응답에서 구분되지 않습니다.";
+    next="선택한 변형만 검증하세요. 기름과는 별개이며 미선택 기본 구성은 유지됩니다.";
+  }else if(code==="WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED"||
+            code==="SEASON_PROFILE_OIL_PHYSICAL_ITEMS_OR_HANDS_DRIFT"){
+    step="무기 기름 적용";
+    problem="검증된 기름 ItemID·무기 손·고정 O의 연결이 일치하지 않습니다.";
+    next="해당 기름 구성을 검증하거나 사용자가 선택한 미사용 구성으로 진행하세요.";
+  }else if(code==="LOCAL_SESSION_PRECHECK_BLOCKED"){
+    step="최적화 사전검사";
+    problem="서버 사전검사가 중단됐지만 실제 내부 원인은 이 응답으로 확정할 수 없습니다.";
+    next="안전한 오류 코드·유형만 확인하세요. 원본 프로필이나 개인 경로는 보내지 마세요.";
+  }else if(context==="environment"&&
+       err?.message==="검증된 기존 환경을 먼저 선택하세요. 새 측정은 시작하지 않았습니다."){
+    step="기존 환경 선택";problem="검증 설치본이 있지만 아직 선택하지 않았습니다.";
+    next="검증된 환경 구성에서 하나를 선택한 후 준비하세요.";
+  }else if(context==="environment"&&
+       err?.message==="영약 선택과 검증 설치본이 일치하지 않습니다. 다시 선택하세요."){
+    step="영약 선택";problem="영약과 선택 설치본의 ItemID가 일치하지 않습니다.";
+    next="해당 검증 환경을 다시 선택하세요.";
+  }else if(context==="environment"&&
+       err?.message==="기름 미사용·보석 4개의 기존 검증 환경을 먼저 선택하세요."){
+    step="기존 환경 사용 조건";
+    problem="선택 SHA·빌드·ilvl 또는 기름 OFF·일반보석4 조건이 일치하지 않습니다.";
+    next="현재 조건을 확인하고 다른 변형은 별도로 검증하세요.";
+  }else{
+    step=context==="environment"?"환경 준비 사전검사":"최적화 사전검사";
+    problem="현재 응답만으로 최초 차단 원인을 확정할 수 없습니다.";
+    next="아래 진단 코드와 최초 실패 단계를 확인하세요.";
+  }
+  if(err?.preparationStep==="BUDGET_READ")step+=" · 기존 예산 조회";
+  if(err?.preparationStep==="GEAR_BIND")step+=" · 장비 후보 조회";
+  const technical=[code,err?.safeCheck,err?.safeKind,
+    Number.isInteger(err?.httpStatus)?"HTTP "+err.httpStatus:null]
+    .filter(Boolean).join(" · ")||"기술 코드 미관측";
+  return {context,technical,
+    message:"차단 단계: "+step+" · 확인된 문제: "+problem+" · 다음 조치: "+next};
+}
+function clearUserBlocker(){
+  if(!state.lastUserBlocker)return;
+  state.lastUserBlocker=null;
+  const detail=$("user-variant-diagnostic");
+  if(detail){detail.hidden=true;detail.open=false;}
+  $("user-variant-status").textContent=
+    "입력 변경 · 이전 차단 진단은 현재 선택에 적용되지 않습니다. 다시 검증하세요.";
 }
 function buttonState(active=false,ready=false) {
   state.running=active;
@@ -2453,12 +2556,14 @@ function buttonState(active=false,ready=false) {
           id==="crafted-rows"?
             Boolean(row.querySelector('[data-field="embellishment"]')?.value):
             Boolean(row.querySelector('[data-field="item_id"]')?.value)));
-    submitNote.textContent=reason||(
+    submitNote.textContent=(!busy&&!active&&state.lastUserBlocker?
+      state.lastUserBlocker.message:null)||reason||(
       specialSelected?
        "선택한 특수효과 장비·장식은 최종 프로필과 정확한 정적 스탯 검증이 추가로 필요합니다. 검증 실패 시 해당 항목을 안내합니다.":
        "실행 조건이 준비됐습니다. 최적 스탯 찾기를 누르면 이 PC에서 SimC 계산이 시작됩니다.");
   }
-  $("start-btn").title=reason||"선택한 조건으로 SimC 최적화 시작";
+  $("start-btn").title=(!busy&&!active&&state.lastUserBlocker?
+    state.lastUserBlocker.message:null)||reason||"선택한 조건으로 SimC 최적화 시작";
   $("start-btn").setAttribute?.("aria-describedby","optimizer-submit-note");
   $("resume-btn").disabled=busy||active||!state.session||state.longrunCompleted;
   $("cache-btn").disabled=busy||active||!state.session||!ready;
@@ -2478,8 +2583,26 @@ function buttonState(active=false,ready=false) {
 async function withBusy(fn) {
   if(state.busy) return;
   state.busy=true;buttonState(state.running,false);
-  try{await fn();}catch(err){
-    if(err.message==="SESSION_NOT_FOUND")
+  try{
+    await fn();
+    if(fn===prepareUserSelectedEnvironment||state.userActionContext==="optimizer")
+      clearUserBlocker();
+  }catch(err){
+    const context=fn===prepareUserSelectedEnvironment?"environment":state.userActionContext;
+    if(context){
+      const issue=describeUserBlocker(err,context);
+      state.lastUserBlocker=issue;
+      if(context==="environment"){
+        $("user-variant-status").textContent=issue.message;
+        const detail=$("user-variant-diagnostic");
+        if(detail){
+          detail.hidden=false;
+          $("user-variant-diagnostic-text").textContent=
+            "기술 진단: "+issue.technical+" · 추가 Native 실행 증거 아님.";
+        }
+      }
+      setNotice("차단: "+issue.message+" · "+issue.technical,true);
+    }else if(err.message==="SESSION_NOT_FOUND")
       setNotice("현재 PC에는 해당 세션이 없습니다. 다른 컴퓨터에서 실행했다면 그 PC에서 조회해야 합니다.",true);
     else {
       // Never treat missing exact L as zero or run Native to guess it.
@@ -2528,7 +2651,10 @@ async function withBusy(fn) {
       setNotice("요청 차단 또는 오류: "+(guidance[err.message]||err.message),true);
     }
   }
-  finally{state.busy=false;buttonState(state.running,$("filled-result").hidden===false);}
+  finally{
+    state.userActionContext=null;
+    state.busy=false;buttonState(state.running,$("filled-result").hidden===false);
+  }
 }
 
  // An explicitly copied diagnosis only; never persist raw source, private paths or API credentials.
@@ -4948,11 +5074,16 @@ function registerHandlers() {
        target?.closest?.(".gear-row"))refreshExactEnchantAvailability();
     if(state.session && (resultBoundInputIds.has(target?.id) ||
        target?.closest?.(".gear-row")))updateBudgetPreview();
+    if(state.lastUserBlocker && (resultBoundInputIds.has(target?.id)||
+       target?.closest?.(".gear-row"))){
+      clearUserBlocker();buttonState(state.running,state.longrunResultReady);
+    }
   };
   for(const name of ["input","change"])
     $("optimizer-form").addEventListener(name,editedUserChoice);
   for(const id of ["binary","revision","static_cache","season-game-build"])
     $(id).addEventListener("input",()=>{
+      if(state.lastUserBlocker){clearUserBlocker();buttonState(state.running,state.longrunResultReady);}
       if(id!=="season-game-build")
         $("simc-connection-status").textContent=
           "SimC 설정이 변경됐습니다. 저장된 기존 설정은 유지되며 새 값은 확인·저장 전입니다.";
@@ -5189,6 +5320,7 @@ function registerHandlers() {
     await pollOnce();
   }));
   $("start-btn").addEventListener("click",()=>withBusy(async()=>{
+    state.userActionContext="optimizer";
     // Validate the SimC link before any costly season-source/API or Native work.
     // Explicit season-only setup in settings remains independently available.
     manualFinalTOrNull();
