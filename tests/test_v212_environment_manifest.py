@@ -848,6 +848,43 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
             self.assertTrue(p.verify_fresh_installed_environment(published))
             self.assertEqual(published["official_G"],2800)
             self.assertNotIn("official_G_reference_track",published)
+            # One NEW zero-base install seals its source-owned optional
+            # choices alongside original G/J/F/O; legacy manifest bytes,
+            # BASE readiness and fixed accounting stay unchanged.
+            optional_source={
+                "game_build":catalog["game_build"],
+                "simc_revision":catalog["simc_revision"],
+                "source_receipt_sha256":"9"*64,
+                "rows":[{
+                    "kind":"food","physical_item_id":246801,
+                    "simc_input_token":"example_food_3",
+                    "crafting_quality":3,
+                    "effect_identity":"simc:food_a:spell:100",
+                    "use_condition_identity":"wago_on_use_0",
+                    "name_enUS":"Example Food"}]}
+            with_optional=p.compile_fresh_installed_environment(
+                source_catalog=catalog,
+                source_artifact_sha256=artifact_sha,
+                staged_source_environment=staged_data,
+                trusted_budget_evidence=trusted_budget,
+                source_ui=ui_catalog.public_options(source_path),
+                trusted_policy_A_receipts_by_id={},
+                target_ilevel=334,
+                source_optional_consumables=optional_source)
+            self.assertTrue(p.verify_fresh_installed_environment(
+                with_optional))
+            self.assertEqual(
+                (with_optional["official_G"],with_optional["official_J"],
+                 with_optional["official_F"],with_optional["official_O"],
+                 with_optional["official_B"],with_optional["official_T"]),
+                (published["official_G"],published["official_J"],
+                 published["official_F"],published["official_O"],
+                 published["official_B"],published["official_T"]))
+            self.assertNotEqual(with_optional["manifest_sha256"],
+                                published["manifest_sha256"])
+            self.assertEqual(with_optional["installed_optional_consumables"][
+                "categories"]["food"]["options"][0]["simc_token"],
+                "example_food_3")
             # Fury's extra off-hand 2H G must be its OWN original v277
             # source-owned component. No new Native, old install unchanged.
             measured=gjfo.standardize_representative_G(
