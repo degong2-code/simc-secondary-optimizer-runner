@@ -143,7 +143,7 @@ const names = {
   redirected_base_stats:"촉매 원본 ID",crafted_stats:"제작 스탯",
   embellishment:"장식 토큰"
 };
-const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, seasonGearTargetIlevel:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null,
+const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, seasonGearTargetIlevel:null, verifiedExistingBudget:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null,
                 verifiedBaseFlaskInstalls:[], verifiedFjCollisionReport:[], eagleApproved:false,
                 exactUserEnchantIds:new Set(), exactUserEnchantScope:null,
                 session:"", running:false,
@@ -228,11 +228,18 @@ function updateBudgetPreview() {
   if(state.session)state.budgetPreviewDirty=true;
   const manual=$("manual-t-mode").checked;
   const t=Number(field("final_T"));
+  const reused=state.verifiedExistingBudget &&
+    verifiedExistingBudgetScopeMatchesRun();
   $("budget-preview-total").textContent=manual?
     (Number.isSafeInteger(t)&&t>0?number(t)+" rating (수동 T)":"수동 T 입력 대기"):
+    reused?number(state.verifiedExistingBudget.T)+" rating (검증된 설치본)":
     "시즌 구성 검증 후 표시";
   $("budget-preview-note").textContent=manual?
     "수동 입력 T가 자동 예산보다 우선합니다. 기름 O 포함, 고정치·분배 가능성은 실행 전 검증합니다.":
+    reused?"기존 설치 원본의 G "+number(state.verifiedExistingBudget.G)+
+      " + J "+number(state.verifiedExistingBudget.J)+
+      " + F "+number(state.verifiedExistingBudget.F)+
+      " + O 0 · 신규 Native 0회. 현재 KR Live 빌드 일치는 별도 확인해야 합니다.":
     "시즌 G/J/F/O와 선택 장비의 근거가 검증되면 T를 확정합니다. 미검증 값은 추정하지 않습니다.";
 }
 
@@ -830,6 +837,8 @@ async function refreshOfficialEquipmentIcons(gear){
 }
 
 function installSeasonGearHints(catalog) {
+  // Any exact-SHA gear rebinding revokes the previous numeric source scope.
+  state.verifiedExistingBudget=null;
   state.seasonGear=catalog?.status==="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY"
     ? catalog : null;
   // Only an exact v212/SHA gear lookup below can set this run-level seal.
