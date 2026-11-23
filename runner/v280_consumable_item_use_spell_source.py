@@ -284,22 +284,25 @@ def collect_optional_food_potion_from_existing(*,stage_root,build,
         paths=(root/gear["output_paths"]["effect"],
                root/original["output_paths"]["item_effect"],
                Path(consumables["candidate_path"]))
-        for item in paths:
-            need(item.is_file() and not item.is_symlink() and
-                 item.resolve().is_relative_to(root) and
-                 0<item.stat().st_size<=MAX_EFFECT_BYTES,
-                 "V680_ORIGINAL_WAGO_STAGE_PATH_INVALID")
-        relation,effect,candidate=(p.read_bytes() for p in paths)
-        physical_source=json.loads(candidate)
-        need(physical_source.get("schema")==physical.SCHEMA and
-             physical_source.get("source",{}).get(
-                "wago_snapshot_build")==build,
-             "V680_ORIGINAL_WAGO_BUILD_DRIFT")
-        outputs={"optional":"source/v680_food_potion_wago_effects.json"}
+        # Existing v217 source receipts own the input byte identities.
+        # On a reused optional stage, avoid another read/hash of two large
+        # Wago CSVs. Verify existing parent stages at their source owner.
+        outputs={"optional":"source/v680_food_potion_wago_effects_v2.json"}
         dest=root/outputs["optional"]
         code=stages.module_dependency_fingerprint(
             [Path(__file__),Path(stages.__file__)])
         def execute():
+            for item in paths:
+                need(item.is_file() and not item.is_symlink() and
+                     item.resolve().is_relative_to(root) and
+                     0<item.stat().st_size<=MAX_EFFECT_BYTES,
+                     "V680_ORIGINAL_WAGO_STAGE_PATH_INVALID")
+            relation,effect,candidate=(p.read_bytes() for p in paths)
+            physical_source=json.loads(candidate)
+            need(physical_source.get("schema")==physical.SCHEMA and
+                 physical_source.get("source",{}).get(
+                     "wago_snapshot_build")==build,
+                 "V680_ORIGINAL_WAGO_BUILD_DRIFT")
             enriched=join(physical_source,relation,effect,build=build,
                 relation_sha256=sha(relation),effect_sha256=sha(effect),
                 include_optional_food_potion=True)
@@ -329,15 +332,13 @@ def collect_optional_food_potion_from_existing(*,stage_root,build,
                             type(row.get("on_use_spell_ids")) is list
                             for row in doc["items"]))
         stage=stages.execute_stage(
-            root=root,stage_id="fresh-v680-optional-food-potion-use-spells",
-            stage_version="v680-reuse-original-v280-csv-v1",
+            root=root,stage_id="fresh-v680-optional-food-potion-use-spells-v2",
+            stage_version="v680-reuse-original-v280-csv-v2",
             inputs={"game_build":build,
                 "v254_source_receipt_sha256":gear.get("receipt_sha256"),
                 "v190_source_receipt_sha256":source.get("receipt_sha256"),
                 "v280_original_receipt_sha256":
                     original.get("receipt_sha256"),
-                "original_v280_item_effect_sha256":sha(effect),
-                "original_relation_sha256":sha(relation),
                 "code_sha256":code["sha256"]},
             outputs=outputs,execute=execute,validate=validate)
         doc=json.loads(dest.read_text("utf8"))
