@@ -22,3 +22,7 @@ v681 파서 문자열 정규화, v682 SimC 부분문자열 충돌, v683 Wago ID 
 최소 성공: 실제 v216 70961 소스 joined rows 및 v212의 소스 projection 확인. No joined rows면 `PENDING_NO_WAGO_SIMC_JOINED_ROWS`로 실제 첫 결손을 기록; 상류 누락 또는 인증 오류면 `BLOCKED_`/`PENDING_` 코드로 기록. 시험 끝나면 관련 그 한 구간만 판단하고 재수집·Native 반복하지 않는다.
 
 미해결: 실 v212 설치 및 정확 설치 SHA→v113 사용자 메뉴→v218/v098 Native 프로필 관통, SimC parser 전체 유일성, 최고 품질 수치 비열등성, 개인 PC v677 시험. 기존 캐시/완료 원장/주 제품 개발 채팅 권한 불변; `15/78 COMPLETE`, `full_product_e2e=PENDING`, `next_review=B10`.
+
+## v684.1 — source rows와 실제 사용자 선택지 판정 분리
+
+후속 읽기 점검에서 최초 v684 진단의 성공 조건 `len(source rows)>0`이 잘못됐음을 확인했다. 기존 v212가 같은 효과·품질 동률 또는 SimC 토큰 중복·부분문자열 충돌로 **모든 옵션을 보류해도 성공으로 오인** 가능했다. 신규 기능이나 Native Gate가 아닌, 진단의 최종 보고 분기만 `sum(v212 categories[*].options)>0`으로 수정한다. source rows 0개면 `PENDING_NO_WAGO_SIMC_JOINED_ROWS`, source rows는 있지만 선택지 0개면 `PENDING_ALL_WAGO_SIMC_OPTIONS_WITHHELD_BY_V212`를 별도로 기록한다. `tests/test_v684_real_optional_source_onebuild_probe.py`는 오프라인 mock으로 v216 정확 한 번/Native0/부분일치 결과·전체 보류·부재·누락·예외를 검사한다. **실제 70961 수집 재실행 없음**, 기존 v684 실제 Actions 실행 영수증은 아직 미확인.

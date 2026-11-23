@@ -136,11 +136,22 @@ def observe(out):
                       "sample_item_ids":[r["item_id"] for r in
                                          entry["options"][:12]]}
                 for name,entry in projected["categories"].items()}
+            # A source-owned row is not necessarily a user-selectable
+            # choice: v212 may withhold every tie, duplicate, or shadowed
+            # parser token. Do not report an empty gamer menu as PASS.
+            selectable=sum(
+                len(entry["options"])
+                for entry in projected["categories"].values())
+            state["v212_selectable_option_count"]=selectable
             state["source_only_not_installed"]=True
-            state["status"]=("PASS_REAL_V216_SOURCE_TO_V212_OPTION_PROJECTION"
-                             if rows else "PENDING_NO_WAGO_SIMC_JOINED_ROWS")
+            if not rows:
+                state["status"]="PENDING_NO_WAGO_SIMC_JOINED_ROWS"
+            elif not selectable:
+                state["status"]="PENDING_ALL_WAGO_SIMC_OPTIONS_WITHHELD_BY_V212"
+            else:
+                state["status"]="PASS_REAL_V216_SOURCE_TO_V212_OPTION_PROJECTION"
             save()
-            return 0 if rows else 2
+            return 0 if rows and selectable else 2
     except Exception as exc:
         state["status"]="BLOCKED_REAL_V216_OPTIONAL_SOURCE"
         state["first_blocker"]=code(exc)
@@ -155,7 +166,7 @@ def observe(out):
                 "simc_full_item_seed_status","physical_food_item_count",
                 "physical_potion_item_count","simc_wago_joined_rows",
                 "joined_by_kind","v212_source_only_projection",
-                "native_calls_reported")
+                "v212_selectable_option_count","native_calls_reported")
         },ensure_ascii=False,sort_keys=True),flush=True)
 
 
