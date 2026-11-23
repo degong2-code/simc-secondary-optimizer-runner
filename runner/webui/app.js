@@ -2130,6 +2130,12 @@ function optimizerNeedsSeasonPreparation() {
 // not automatically run DPS; exact installed SHA gear is required first.
 async function prepareSeasonBeforeOptimizerStart() {
   if(!optimizerNeedsSeasonPreparation())return false;
+  // Exact selected sources must not invoke Native Build from optimizer entry.
+  if(field("season-verified-budget")&&!oilUseIntent){
+    await prepareSelectedExistingEnvironment();
+    setNotice("기존 설치본 연결 완료 · 장신구·특성을 확인한 뒤 최적 스탯 찾기를 다시 눌러 주세요.");
+    return true;
+  }
   const report=await buildSeasonEnvironment(false);
   if(report===null)return true; // cancellation or stale response
   if(report?.web_environment_scope?.environment_ready!==true ||
@@ -5029,7 +5035,7 @@ function registerHandlers() {
   $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
   $("season-build-btn").addEventListener("click",()=>withBusy(()=>buildSeasonEnvironment(false)));
   $("season-diagnostic-copy-btn").addEventListener("click",copySeasonBuildDiagnostic);
-  $("user-variant-prepare-btn").addEventListener("click",()=>withBusy(()=>buildSeasonEnvironment(true)));
+  $("user-variant-prepare-btn").addEventListener("click",()=>withBusy(prepareUserSelectedEnvironment));
   $("season-target-socket-count").addEventListener("input",updateSeasonSocketBreakdown);
   $("season-existing-special-gem-id").addEventListener("input",updateSeasonSocketBreakdown);
   updateSeasonSocketBreakdown();
