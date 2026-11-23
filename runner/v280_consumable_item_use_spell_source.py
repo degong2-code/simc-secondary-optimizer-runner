@@ -60,7 +60,8 @@ def _id(value, label, *, zero=False):
     return int(value)
 
 def join(physical_source, relation_bytes, effect_bytes, *,
-         build, relation_sha256, effect_sha256):
+         build, relation_sha256, effect_sha256,
+         include_optional_food_potion=False):
     """Exact DB2 foreign-key join; only TriggerType=0 is recorded as on-use.
 
     No relation SpellID is itself a SimC token, applied weapon enchant,
@@ -81,7 +82,9 @@ def join(physical_source, relation_bytes, effect_bytes, *,
              row.get("kind") in ("food","potion","flask","item_enhancement") and
              row.get("ui_selectable") is False,
              "V280_PHYSICAL_ROW_INVALID")
-        if row["kind"] in ("flask","item_enhancement"):
+        if row["kind"] in (("flask","item_enhancement","food","potion")
+                               if include_optional_food_potion else
+                               ("flask","item_enhancement")):
             need(row["item_id"] not in watched,"V280_DUPLICATE_PHYSICAL_ID")
             watched[row["item_id"]]=row
     links={item_id:set() for item_id in watched}
