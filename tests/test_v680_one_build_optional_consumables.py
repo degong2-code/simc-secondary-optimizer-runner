@@ -77,6 +77,23 @@ class OneBuildOptionalChoices(unittest.TestCase):
         self.assertEqual(built["source_receipt_sha256"],SHA)
         self.assertTrue(built["optional_items_do_not_block_base"])
 
+    def test_simc_consumable_substring_parser_omits_shadowed_known_item(self):
+        # Actual same-revision consumable.cpp uses str_in_str_ci(full, needle).
+        # A shorter name can match another item of the SAME subclass/quality
+        # even when effect identities and exact tokens differ.
+        built=self.registry([
+            exact_row("food",201,"royal_roast_3",3,"spell:111"),
+            exact_row("food",202,"impossibly_royal_roast_3",3,"spell:222"),
+            exact_row("food",203,"royal_roast_2",2,"spell:333"),
+            exact_row("potion",204,"other_potion_3",3,"spell:444")])
+        options=built["categories"]["food"]["options"]
+        self.assertEqual([r["item_id"] for r in options],[202,203])
+        self.assertEqual([r["item_id"] for r in
+                          built["categories"]["potion"]["options"]],[204])
+        self.assertTrue(built["optional_items_do_not_block_base"])
+        # This guard is deliberately limited to source-known rows.
+        # Do not claim complete SimC DBC uniqueness or Native acceptance.
+
     def test_same_effect_equal_quality_ambiguous_is_not_auto_picked(self):
         # Do not pick either a tie or a guessed text token.
         built=self.registry([

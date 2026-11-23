@@ -634,6 +634,33 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
                 "quality":highest,
                 "effect_identity":key[1],
                 "use_condition_identity":key[2]})
+        # The pinned SimC consumable parser searches substrings, not exact
+        # item names (consumable.cpp::find_consumable). A short token can
+        # match a different known physical item with the same crafting rank.
+        # Reject only that ambiguous choice. This guard covers SOURCE-KNOWN
+        # rows, not every item in SimC's complete DBC; native acceptance and
+        # full parser uniqueness remain outside this offline projection.
+        def parser_name(row):
+            token=row["simc_input_token"]
+            quality=row["crafting_quality"]
+            suffix="_"+str(quality)
+            if 1<=quality<=9 and token.endswith(suffix):
+                return token[:-len(suffix)]
+            return token
+        known_parser_names={}
+        for row in source["rows"]:
+            key=(row["kind"],row["crafting_quality"])
+            known_parser_names.setdefault(key,[]).append(
+                (row["physical_item_id"],parser_name(row)))
+        for name in ("food","potion"):
+            kinds[name]["options"]=[
+                row for row in kinds[name]["options"]
+                if not any(
+                    other_id!=row["item_id"] and
+                    parser_name({"simc_input_token":row["simc_token"],
+                                 "crafting_quality":row["quality"]}) in other_name
+                    for other_id,other_name in known_parser_names.get(
+                        (name,row["quality"]),[]))]
         # Ambiguous parser token or physical ID is an *optional* omission,
         # not an error that prevents core G/J/F/O from installing.
         seen_token={}
