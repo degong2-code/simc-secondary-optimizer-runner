@@ -144,7 +144,7 @@ const names = {
   embellishment:"장식 토큰"
 };
 const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, seasonGearTargetIlevel:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null,
-                verifiedBaseFlaskInstalls:[], eagleApproved:false,
+                verifiedBaseFlaskInstalls:[], verifiedFjCollisionReport:[], eagleApproved:false,
                 exactUserEnchantIds:new Set(), exactUserEnchantScope:null,
                 session:"", running:false,
                 longrunEnabled:false, longrunResultReady:false,
@@ -1194,6 +1194,41 @@ function installedConsumableScopeMatches(data) {
     data.game_build===build;
 }
 function renderInstalledFlaskChoices(data) {
+  const collisionNames={
+    SIMC_REVISION:"SimC revision",
+    G_REFERENCE:"G 대표값·무기 기준",
+    B_T_ACCOUNTING:"B/T 예산·수동 총량",
+    G_SOURCE:"G 원본 증거",J_SOURCE:"보석 J 원본 증거",
+    F_SOURCE:"영약 F 원본 증거",O_SOURCE:"기름 O 원본 증거",
+    F_NATIVE_PROOF:"영약 F Native 원본",
+    O_FIXED_VECTOR:"기름 O 고정 벡터",
+    SOURCE_CATALOG:"시즌 원본 카탈로그",
+    SOURCE_STAGES:"시즌 구축 단계 영수증",
+    TRUSTED_BUDGET_EVIDENCE:"G/J/F/O 예산 증거",
+    V222_BUDGET_OWNER:"v222 예산 회계",
+    POLICY_A_OPTIONS:"검증 옵션·품질 원본",
+    DK_OPTIONAL_MODULE:"죽음의 기사 선택 모듈",
+    GEM_LAYOUT_PROOF:"보석 배치·원본 증거",
+    OTHER_SEALED_IDENTITY:"그 외 봉인된 설치 identity"
+  };
+  const scoped=installedConsumableScopeMatches(data);
+  state.verifiedFjCollisionReport=scoped&&
+    Array.isArray(data.verified_base_fj_collision_diagnostics)?
+    data.verified_base_fj_collision_diagnostics.slice(0,24).filter(item=>
+      Number.isSafeInteger(item.installed_count)&&item.installed_count>=2 &&
+      Number.isSafeInteger(item.flask_item_id)&&item.flask_item_id>0 &&
+      Array.isArray(item.ordinary_gem_item_ids)&&
+      item.ordinary_gem_item_ids.length===4&&
+      item.ordinary_gem_item_ids.every(id=>Number.isSafeInteger(id)&&id>0)&&
+      Array.isArray(item.difference_codes)&&
+      item.difference_codes.length>=1&&item.difference_codes.length<=24&&
+      item.difference_codes.every(code=>
+        Object.prototype.hasOwnProperty.call(collisionNames,code))):[];
+  const diagButton=document.getElementById("season-verified-fj-diagnostic-copy");
+  if(diagButton){
+    diagButton.hidden=state.verifiedFjCollisionReport.length===0;
+    diagButton.disabled=diagButton.hidden;
+  }
   // Exact same-build/ilevel v212 source identities; never derive a budget
   // or installation SHA from the selected flask ItemID in the browser.
   state.verifiedBaseFlaskInstalls=installedConsumableScopeMatches(data)?
@@ -1259,6 +1294,12 @@ function renderInstalledFlaskChoices(data) {
         "건을 표시합니다. 서로 다른 출처를 임의로 합치지 않습니다.":
         "검증된 설치본이 여러 개지만 저장된 영약·보석 물리 구성도 동일합니다. "+
         "임의 설치본을 사용하지 않고 원본 차이를 확인해야 합니다.";
+    if(status&&state.verifiedFjCollisionReport.length){
+      const codes=[...new Set(state.verifiedFjCollisionReport.flatMap(r=>r.difference_codes))];
+      status.textContent+=" · 기존 봉인 영수증의 차이: "+
+        codes.map(code=>collisionNames[code]).join(", ")+
+        " · 중복 원본 진단 복사로 원인 코드만 전달할 수 있습니다.";
+    }
   }
   const selector=$("season-verified-flask");
   const prior=field("season-selected-flask-id");
@@ -1293,6 +1334,39 @@ function renderInstalledFlaskChoices(data) {
     "이 빌드/ilvl에서 검증 설치 영약이 없습니다. 원본 수집·검증 후 표시되며 "+
     "미검증 아이템은 자동 등록하지 않습니다.";
 }
+async function copyVerifiedFjCollisionDiagnostic() {
+  // Diagnostic comparison is not an authenticated current-Retail run.
+  if(!installedConsumableScopeMatches(state.oilCatalog) ||
+     !state.verifiedFjCollisionReport?.length)return;
+  const groups=state.verifiedFjCollisionReport.map(item=>({
+    installed_count:item.installed_count,
+    flask_item_id:item.flask_item_id,
+    flask_quality:item.flask_quality,
+    F:item.F,J:item.J,socket_total:item.socket_total,
+    ordinary_gem_item_ids:item.ordinary_gem_item_ids,
+    difference_codes:item.difference_codes
+  }));
+  const safe=JSON.stringify({
+    schema:"v670_local_verified_fj_collision_diagnostic_v1",
+    outcome:"IDENTITY_DIFFERENCE_NOT_APPROVED",
+    game_build:field("season-game-build")||
+      state.verifiedInstalledBuildFromThisPage,
+    target_ilevel:valueInt("ilevel"),
+    groups,
+    current_retail_build_verified:false,
+    environment_ready:false,
+    native_calls:0,network_calls:0,
+    note:"Source categories only; no raw SHA, profile, keys or paths."
+  },null,2);
+  try{
+    if(!navigator.clipboard?.writeText)throw Error("CLIPBOARD_UNAVAILABLE");
+    await navigator.clipboard.writeText(safe);
+    setNotice("중복 F/J 원본 차이 진단 복사 완료 · SHA·개인 경로·키 제외");
+  }catch{
+    setNotice("브라우저에서 진단 복사가 차단됐습니다. 비교 항목을 캡처해 주세요.",true);
+  }
+}
+
 async function chooseInstalledFlask() {
   const flask=field("season-verified-flask");
   // The blank dropdown means "keep the advanced physical ItemID", NOT
@@ -4849,6 +4923,7 @@ function registerHandlers() {
   updateSeasonSocketBreakdown();
   $("source-credentials-save-btn").addEventListener("click",()=>withBusy(saveSourceCredentials));
   $("source-credentials-clear-btn").addEventListener("click",()=>withBusy(clearSourceCredentials));
+  $("season-verified-fj-diagnostic-copy").addEventListener("click",copyVerifiedFjCollisionDiagnostic);
   $("season-verified-flask").addEventListener("change",()=>withBusy(async()=>{
     $("season-verified-budget").value="";
     await chooseInstalledFlask();
