@@ -942,6 +942,40 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
                 "default_consumables"]["potion"],"disabled")
             self.assertEqual(v098_settings["settings"][
                 "default_consumables"]["augmentation"],"disabled")
+            # Consume the SAME derived v098 season settings using the
+            # existing v139 SimC profile formatter. The replaceable gear
+            # fixture is synthetic and separate from the installed-season
+            # identity: this asserts assignment serialization, NOT a genuine
+            # same-build physical SimC profile or Native acceptance.
+            season_fixture=copy.deepcopy(profile_bootstrap.pure.catalog())
+            season_fixture["default_consumables"]=copy.deepcopy(
+                v098_settings["settings"]["default_consumables"])
+            season_fixture["simc_item_db_source"]="local"
+            season_fixture["character_level"]=None
+            player={"class":"mage","spec":"frost","race":"human",
+                    "talents":"CAAAABBB11122"}
+            trinkets=[
+                {"slot":"trinket1","item_id":270175,"options":{}},
+                {"slot":"trinket2","item_id":270173,"options":{}}]
+            selected_simc,selected_meta,_,_=(
+                profile_bootstrap.pure.compose(
+                    player,trinkets,season=season_fixture))
+            self.assertIn("\\nfood=example_food_3\\n",selected_simc)
+            self.assertIn("\\npotion=disabled\\n",selected_simc)
+            self.assertIn("\\naugmentation=disabled\\n",selected_simc)
+            self.assertEqual(selected_simc.count("\\nfood="),1)
+            self.assertEqual(selected_meta["status"],"STAGED_NOT_USER_READY")
+            self.assertEqual(selected_meta["native_calls"],0)
+            base_fixture=copy.deepcopy(season_fixture)
+            base_fixture["default_consumables"]["food"]="disabled"
+            base_simc,base_meta,_,_=(profile_bootstrap.pure.compose(
+                player,trinkets,season=base_fixture))
+            self.assertEqual(base_meta["native_calls"],0)
+            self.assertEqual(
+                selected_simc.replace("food=example_food_3",
+                                      "food=disabled"),
+                base_simc,
+                "Only the explicitly selected SimC consumable should change")
             wrong=copy.deepcopy(user)
             wrong["consumable_choices"]["food"]="not_installed_3"
             with self.assertRaisesRegex(
