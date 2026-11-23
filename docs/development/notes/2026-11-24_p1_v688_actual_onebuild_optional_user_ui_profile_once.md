@@ -18,3 +18,11 @@
 ## 수락 판정
 
 성공은 **같은 실제 원본 Build가 설치한 v212 SHA에서 사용자 선택 메뉴→v113 계획→선택된 SimC 프로필까지** 일치했을 때만 표시. 실패 시 해당 단계의 첫 결손 코드 기록, 다른 시즌·옛 설치 SHA로 대체 금지. 검증이 SimC parser Native acceptance나 식품 품질 수치 비열등성, 일반 사용자 DPS full E2E를 입증하지 않으므로 이 셋은 계속 PENDING. `15/78 COMPLETE`(완료율 아님)/`full_product_e2e=PENDING`/ `next_review=B10` 및 main·v003·v016·Project UI·Work OS 권한 불변.
+
+## v688 실제 Windows Actions 결과 — 실행 및 ZIP 원문 검증 완료
+
+- 격리 HEAD `f3c5307b88732432a9d81778e4d30ce6204b54c8`에서 [기존 70961 v611/v610 Windows Actions #45223542078](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45223542078)는 **SUCCESS**. 이전 70783 v610 workflow는 조건이 달라 SKIPPED; 한 번의 70961 원본 Build만 실행. 기존 source SHA 확인+Windows SimC cache HIT, ZIP+기존 web requirements 사용, 시즌 전체 원본 주입 없음.
+- 실 artifact #14842556797: 정확 [v216/v217/v212에서 생성한 동일 실행 설치 문서] `V618_REAL_INSTALLED_V212.json`, `manifest_sha256=f96ed468a74f877ef2ceecd0ae57846b01335aebc890cb86cb2e176b04481bf5`, `game_build=12.1.5.70961`, `simc_revision=9933ffb946fb55b1fa66657b848f519ac19006e1`, ilvl334, `G=2850`, `J=92`, `F=165`, `O=0`, `B=T=3107`. **실제 installed_optional_consumables** 음식 35 (`SOURCE_BACKED_OPTIONS_READY`), 물약 1 (`SOURCE_BACKED_OPTIONS_READY`), 증강 0 (`SOURCE_NOT_YET_RESOLVED`). 실제 기존 영구 마부 38개도 등록. 본 설치는 이전 v630 설치 파일과 다른 content-addressed SHA이며 사후 합성·값 복사는 없음.
+- 실 artifact #14841678917의 `V688_REAL_OPTIONAL_USER_STAGE.json`: `PASS_ORIGINAL_V113_OPTIONAL_PROFILE_ZERO_NATIVE`. 같은 설치 SHA를 검증한 실제 `/api/v1/season-option-catalog` HTTP200 및 `/api/v1/sessions/plan` HTTP200, 선택 음식 `Blooming Feast` ItemID 242273 / `blooming_feast`(source quality rank 0) 사용자 징벌 성기사 프로필 `food=blooming_feast` 정확 1회, 미사용 물약·증강 `disabled`, 동일 B/T 3107, 사용자 프로필 SHA `1ffacb73a0010f6399016ed942337ad3005ce0ce88df894b0287dc2fbb772186`, `READY_ZERO_NATIVE`.
+- 실행 비용은 **기존 시즌 원본 G/J/F/E 확인용 Native 15회**, 추가 사용자 최적화 Native/DPS 0회. 기존 소스·SimC 캐시 재사용. 음식·물약 효과 메커니즘 인증/SimC 파서 Native 실제 수락·이 아이템의 모든 효과 수치 비열등성/전체 품질 판정·최종 사용자 DPS/SEM/95%는 **미실증**. 이를 `full_product_e2e=PASS`로 승격하지 않는다.
+- STOP: 동일 70961 원본 수집/소모품 후보 목록 반복 탐색·합성 회계 증명·불필요한 전 전문화 Native 금지. 다음 수락은 기존 **실 설치 SHA로 생성된 프로필 1개**에 대한 SimC 원본 Native 확인과 기존 적응형 DPS·캐시/재열람 가능 여부를 변화 부분만 최소 측정, 이전 v639/v624 일반 Native 성공은 재사용하되 소모품 신규 사용 성공 증거로 과장하지 않음. 26전문화 DPS 전수 및 개인 PC v677 수동 시험 계속 보류.
