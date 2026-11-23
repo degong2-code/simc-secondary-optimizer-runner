@@ -35,6 +35,27 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      # The unchanged v181 legacy packaging contract requires the prior
+      # sealed v213 *metadata source* during ZIP creation. This is historical
+      # packaging data, NOT a new-season install or user runtime authority.
+      # v690 quarantines all current_season_* files after extraction BEFORE
+      # launching the user browser. No season measurement is copied.
+      - uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 41360273361
+          name: v213-source-to-catalog-41360273361
+          path: out/v690/legacy-package-only
+          github-token: ${{ github.token }}
+      - name: Validate legacy package-only source seal, never install as current season
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $raw=Join-Path $PWD 'out/v690/legacy-package-only/v213_current_season_source_to_catalog.json'
+          if (!(Test-Path $raw -PathType Leaf)) { throw 'V690_V181_LEGACY_PACKAGE_CATALOG_MISSING' }
+          Copy-Item $raw 'data/current_season_source_to_catalog.json' -Force
+          python -c "import json,sys;sys.path.insert(0,'runner');import v213_source_to_catalog as v;d=json.load(open('data/current_season_source_to_catalog.json',encoding='utf8'));assert v.verify_catalog(d) and not d['automatic_ui_promotion'] and d['native_calls']==0 and d['network_calls']==0;print('V690_PACKAGE_ONLY_OLD_CATALOG_SEAL_VALID_NOT_LIVE')"
+          if ($LASTEXITCODE -ne 0) { throw 'V690_UNVERIFIED_LEGACY_PACKAGE_SOURCE' }
       - name: Prepare exact source ZIP and CI Python Selenium harness
         shell: pwsh
         run: |

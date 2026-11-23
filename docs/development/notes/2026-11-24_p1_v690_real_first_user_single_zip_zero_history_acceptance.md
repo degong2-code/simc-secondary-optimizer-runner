@@ -13,3 +13,9 @@
 검증 영수증: ZIP 파일 SHA/동의 검증은 v573의 기존 bounded 리포트; v690은 신규 사용자 원본 세션과 실제 UI 상태·선택 전문화·SHA/B/T·최종 화면 DPS/SEM/95%에 한해 기록. 비밀키/세션 개인 정보/소스 원본/프로필 전체 절대 수집하지 않음. 실제 Native 결과는 단 하나의 최초 성공 시나리오이며 새 시즌/26전문화 완전 범용성 증명 아님. `15/78 COMPLETE`와 `full_product_e2e=PENDING`, 개인 PC 시험 보류 및 main/v003/v016/Project UI/Work OS 권한 불변.
 
 **실행 증거가 없으면 어떤 PASS도 주장하지 않는다.**
+
+## 첫 실제 Windows #45230565019 — 패키징 선행 차단, 원본/Native 0
+
+[GitHub Actions #45230565019](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45230565019)는 새 ZIP 빌드 전 `V181_MINIMUM_PRODUCT_RUNTIME_FILES_MISSING`로 실패했다. `v181_windows_beta_packager.py`가 항상 `data/current_season_source_to_catalog.json`을 과거 packaging source metadata로 요구하지만 새 체크아웃에는 해당 바이너리/과거 소스가 없다. 다른 런타임 모듈은 존재함을 repo 파일 목록으로 확인. 이번 실행은 사용자 화면·Native 이전에 종료되어 *사용자 제로베이스 PASS가 아니고* Native0, 소스 수집0.
+
+**최소 원래 계약 재사용:** 기존 정상 `v181_windows_beta_packaging.yml`과 동일하게 과거 **봉인된 v213 read-only source artifact** #13104842881 (Actions #41360273361)를 ZIP **메타데이터 생성 단계에만** 바인딩한다. 압축 해제 직후 사용자 앱이 시작되기 **전에** v690이 해당 역사 소스 파일을 별도 격리 폴더로 이동/삭제하여 최초 시즌 빌드와 세션이 과거 내용을 소비하지 못하게 한다. 사용자 준비물도, 새 시즌 원본·G/J/F/O 인증도 아니며 역사 70783(?) 수치를 새 시즌으로 복제하지 않는다. 현재 `v181` 패키저 자체의 역사 메타데이터 의존성은 범용 패키지 설계 과제로 명시적으로 남긴다(한 번의 시즌 Build 실행 경로와 분리). 신규 원본 Native 호출은 아직 없고 수정 후 실제 1회 Actions 결과가 나와야 통합 성공 여부를 판정한다.
