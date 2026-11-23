@@ -473,6 +473,8 @@ def _v677_verified_existing_budget(jobs, *, game_build, target_ilevel,
             "G":g,"J":j,"F":f,"O":dict(oil),"B":b,"T":t,
             "verified_saved_v113_profile":True,
             "source_scope":"EXACT_V212_V113_INSTALLED_REUSE",
+            "installed_optional_consumable_choices":
+                _v680_public_installed_optional_choices(doc),
             "current_retail_build_verified":False,
             "native_calls_now":0,"network_calls_now":0,
             "dps_optimization_started":False
@@ -647,6 +649,20 @@ def _v680_exact_installed_optional_document(root,params,user):
         raise environment_manifest.EnvironmentBlocked(
             "WEB_SELECTED_SEASON_OPTION_INSTALL_CHANGED")
     return doc
+
+
+def _v680_public_installed_optional_choices(doc):
+    """One verified v212 source projection used by UI and profile selection."""
+    approved=profile_stage.current_season_approved_optional_choices(doc)
+    source=doc.get("installed_optional_consumables")
+    return {"schema":"v113_current_season_optional_consumables_v1",
+            **approved,"source_default_simc_token":"disabled",
+            "diamond_id":[0],"omnium_talents":["source_default"],
+            "installed_manifest_sha256":doc["manifest_sha256"],
+            "items":([{"kind":name,**row}
+                for name in ("food","potion","augmentation")
+                for row in source["categories"][name]["options"]]
+                if type(source) is dict else [])}
 
 
 def _v680_preflight_optional_consumables(root,params,user):
@@ -3652,28 +3668,17 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     entry["preferred_if_same_effect_source"]=(
                         "STRONGER_VARIANT_REPORTED" if rank=="stronger"
                         else "WEAKER_VARIANT_REPORTED")
-            # This is the SAME installed source consumed by v218 at
-            # preflight and profile generation; no second approval tier.
-            optional=(profile_stage.current_season_approved_optional_choices(doc)
+            # Exact installed v212 choices are one owner for web and
+            # profile. The old uninstalled route remains source_default-only.
+            optional=(_v680_public_installed_optional_choices(doc)
                       if option_source_verified else
-                      profile_stage.current_season_approved_optional_choices())
-            optional_doc=(doc.get("installed_optional_consumables")
-                          if option_source_verified else None)
+                      {"schema":"v113_current_season_optional_consumables_v1",
+                       **profile_stage.current_season_approved_optional_choices(),
+                       "source_default_simc_token":"disabled",
+                       "diamond_id":[0],"omnium_talents":["source_default"],
+                       "installed_manifest_sha256":None,"items":[]})
             return {**published,
-                    "installed_optional_consumable_choices":{
-                        "schema":"v113_current_season_optional_consumables_v1",
-                        **optional,
-                        "source_default_simc_token":"disabled",
-                        "diamond_id":[0],
-                        "omnium_talents":["source_default"],
-                        "installed_manifest_sha256":(
-                            doc["manifest_sha256"]
-                            if option_source_verified else None),
-                        "items":([
-                            {"kind":kind,**row}
-                            for kind in ("food","potion","augmentation")
-                            for row in optional_doc["categories"][kind]["options"]]
-                            if type(optional_doc) is dict else [])},
+                    "installed_optional_consumable_choices":optional,
                     "verified_exact_user_enchant_runtime":exact_runtime,
                     **({"source_scope":"VERIFIED_INSTALLED_V212_OPTION_CATALOG",
                         "installed_manifest_sha256":installed_manifest_sha256}
