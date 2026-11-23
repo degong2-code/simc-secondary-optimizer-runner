@@ -102,6 +102,7 @@ def stage(args):
         save()
     def continued(root,env,work):
         driver=None
+        local_token=[None]
         try:
             driver=actual_chrome()
             require(driver.execute_script(
@@ -110,6 +111,14 @@ def stage(args):
                 "FIRST_BROWSER_ALREADY_SEEDED")
             driver.execute_script("window.confirm=()=>true")
             navigate(driver,"settings")
+            record["last_completed_stage"]="COLD_CHROME_AND_SETTINGS"
+            # In the real product the secret fields are intentionally hidden
+            # inside <details>. Click its human-visible summary first.
+            credentials_panel=driver.find_element(
+                By.ID,"season-credentials-panel")
+            if not credentials_panel.get_attribute("open"):
+                clickable(driver,credentials_panel.find_element(
+                    By.TAG_NAME,"summary"))
             # Act like a new owner in the real UI; never record secret values.
             for key,field in zip(SECRETS,FIELDS):
                 value=env.get(key,"")
@@ -126,6 +135,9 @@ def stage(args):
                 "return document.getElementById('source-credentials-status')"
                 ".textContent.includes('저장됨')&&!state.busy"))
             record["source_credentials_saved_via_real_browser"]=True
+            local_token[0]=driver.execute_script(
+                "return state.token")
+            record["last_completed_stage"]="SOURCE_CREDENTIALS_SAVED"
             for field in FIELDS:
                 require(driver.find_element(By.ID,field).get_attribute(
                     "value")=="","SECRET_REMAINED_IN_BROWSER_FIELD")
@@ -153,6 +165,7 @@ def stage(args):
               build:document.getElementById('season-game-build').value
             }""")
             record["one_click_simc_status_summary"]=provision["status"]
+            record["last_completed_stage"]="SIMC_ONE_CLICK_RETURNED"
             record["one_click_simc_binary_configured"]=bool(
                 provision["binary"])
             if not provision["binary"] or not provision["revision"]:
@@ -203,6 +216,7 @@ def stage(args):
                       manifest_sha256,
                 requires:e.zero_history_build?.requires||[],
                 status:e.source_compilation?.status};""")
+            record["last_completed_stage"]="REAL_ENVIRONMENT_RETURNED"
             record["first_real_environment_summary"]=environment
             if not isinstance(environment,dict) or not (
                 environment.get("ready") is True and
@@ -294,6 +308,7 @@ def stage(args):
         except Exception as exc:
             record["status"]="BLOCKED_REAL_FIRST_USER"
             record["first_blocker"]=safe(exc)
+            record["failure_after_stage"]=record.get("last_completed_stage")
             record["error_type"]=type(exc).__name__
             save()
             return record
@@ -304,13 +319,25 @@ def stage(args):
             # Windows CI is ephemeral; explicit remove of source secrets
             # is still required. Never write plaintext secrets to artifact.
             try:
-                import urllib.request
-                from p1_v345_windows_extracted_zip_cmd_browser_restore import (
-                    http_json)
-                # No persistent credentials are left for other tests.
-                # Token is not persisted by the test process; runner itself
-                # is disposed after job.
-            except Exception:pass
+                if driver is not None and record.get(
+                        "source_credentials_saved_via_real_browser"):
+                    from p1_v345_windows_extracted_zip_cmd_browser_restore import (
+                        http_json)
+                    # Obtain only the local ephemeral CSRF token from the
+                    # same UI; never capture, display or serialize secrets.
+                    # http_json uses the original loopback POST endpoint.
+                    # Some driver versions refuse execute_script after quit,
+                    # so capture token earlier if needed.
+                    token=local_token[0]
+                    if token:
+                        status,_=http_json(
+                            "/api/v1/source-credentials/clear",
+                            token=token,body={})
+                        record["test_source_credentials_cleared"]=(
+                            status==200)
+                        save()
+            except Exception:
+                pass
 
     save()
     code=startup.run(

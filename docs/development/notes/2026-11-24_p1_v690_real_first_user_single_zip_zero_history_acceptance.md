@@ -23,3 +23,7 @@
 ## #45231076160 — 현재 ZIP 286개 패키징 PASS, 시험 인자 오류 차단
 
 기존 역사 `v213` 패키징 전용 source artifact를 정상 복원·검증하고, `v181` **286파일 현재 HEAD ZIP 생성 PASS**. 그 다음 첫사용자 실행 시작 전 `p1_v690...stage(args)`가 `argparse.Namespace`를 폴더 경로 객체인 것처럼 `pathlib.Path(out)`에 전달해 `TypeError`. 제품 SimC/환경/native 모두 호출 0. 실제 사용자 실패가 아닌 신설 harness의 범위 한정 오류. `stage(args)`에서 명시 `args.out`을 쓰도록 1곳 수정. 같은 ZIP을 새 사용자 런타임에서 검증하는 목적 유지, Native 중복 0. 다음 run 결과만으로 첫 사용자 제품 성공을 판정.
+
+## #45231378708 — 실제 제로베이스 ZIP·동의·Chrome 첫 화면 PASS, 인증정보 패널 미전개 차단
+
+Windows [Actions #45231378708](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45231378708), artifact #14846088982의 원본 `V573_...` + `V690_...` 확인: **286파일 현재 HEAD ZIP**, 역사 파일13개 런타임 전 격리, 빈 사용자 세션/managed SimC, 사용자 동의 거절 상태 미설치→승인 실제 pip/venv 설치→실제 Chrome 첫 화면/26개 전문화 표시 성공. 이후 인증정보 입력 전에 `ElementNotInteractableException`: UI 인증정보 필드가 `<details id=season-credentials-panel>` 안에 있는데 신규 Selenium 시험이 summary를 열지 않고 키를 입력. 상품이 오류 메시지를 표시하거나 데이터 구축을 거부한 것이 아님. 신규 harness에서 **실제 패널 summary 클릭 후 입력**하도록 교정. 다음 오류 지점은 비밀키/SimC 소스 원문 노출 없이 `last_completed_stage`로 추적. 인증정보는 Windows Credential Manager에 쓰였다면 로컬 안전한 /clear API로 사용자 시험 종료 시 삭제; 토큰 자체는 JSON이나 로그에 기록하지 않는다. 이 시점까지 시즌 Native 0·DPS Native0, 실제 SimC 자동 설치와 새로운 전문화 원본 구축 여전히 미검증.
