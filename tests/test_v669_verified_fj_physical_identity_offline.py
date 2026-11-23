@@ -267,7 +267,7 @@ $('ilevel').value='334';
 const funcs=Function('state','field','valueInt','    unittest.main()
 ,'document','option',
   'refreshDefaultConsumableSummaries','navigator','setNotice',
-  raw.slice(a,b)+'\\nreturn {renderInstalledFlaskChoices,copyVerifiedFjCollisionDiagnostic};')(
+  raw.slice(a,b)+'\nreturn {renderInstalledFlaskChoices,copyVerifiedFjCollisionDiagnostic};')(
   state,field,valueInt,$,document,option,()=>{},navigator,setNotice);
 const A='a'.repeat(64),B='b'.repeat(64);
 const base={flask_item_id:241324,flask_quality:2,J:92,F:165,
