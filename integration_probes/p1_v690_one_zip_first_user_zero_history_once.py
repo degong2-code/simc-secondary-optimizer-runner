@@ -20,6 +20,7 @@ import re
 import sys
 import time
 
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
@@ -220,24 +221,42 @@ def stage(args):
             # inventing success from Selenium's generic TimeoutException.
             record["last_completed_stage"]="SPEC_EXACT_VALUE_VERIFIED"
             save()
-            # The user-facing control is the SELECT '사용/미사용'. The
-            # original hidden checkbox is an internal state mirror and is
-            # not click-targetable by a browser user. Previous v690.6
-            # accidentally tried to click that hidden input.
+            # Let the original asynchronous class/spec oil catalog update
+            # settle before changing the user's visible oil-use selector.
+            # Otherwise a concurrent refresh may restore the prior default.
+            wait_idle(driver,60)
             oil_mode=driver.find_element(By.ID,"optimizer-oil-use-mode")
-            require(oil_mode.is_displayed() and oil_mode.is_enabled(),
-                    "VISIBLE_OIL_MODE_NOT_INTERACTIVE")
+            WebDriverWait(driver,30,poll_frequency=.25).until(
+                lambda d:oil_mode.is_displayed() and oil_mode.is_enabled()
+                and not d.execute_script("return state.busy"))
             record["oil_visible_mode_before"]=oil_mode.get_attribute("value")
             record["last_completed_stage"]="VISIBLE_OIL_MODE_BEFORE_SELECT"
             save()
             if oil_mode.get_attribute("value")!="off":
                 Select(oil_mode).select_by_value("off")
-            wait_idle(driver,45)
-            require(driver.execute_script("""return
-                document.getElementById('optimizer-oil-use-mode').value==='off'
-                && !document.getElementById('optimizer-oil-enabled').checked
-                && !state.busy;"""),
-                "VISIBLE_OIL_OFF_NOT_APPLIED")
+            # The genuine UI handler applies through withBusy and mirrors
+            # the selector to the hidden O-use checkbox. Do not use only
+            # wait_idle(): a transient !busy can precede change dispatch.
+            try:
+                WebDriverWait(driver,40,poll_frequency=.25).until(
+                    lambda d:d.execute_script("""return (
+                      document.getElementById('optimizer-oil-use-mode')
+                        .value==='off' &&
+                      !document.getElementById('optimizer-oil-enabled')
+                        .checked &&
+                      !state.busy);"""))
+            except TimeoutException:
+                record["visible_oil_after_attempt"]=driver.execute_script(
+                    """return {mode:document.getElementById(
+                      'optimizer-oil-use-mode').value,
+                      mirror_checked:document.getElementById(
+                      'optimizer-oil-enabled').checked,
+                      busy:state.busy, running:state.running,
+                      status:document.getElementById(
+                      'optimizer-oil-toggle-status').textContent.slice(0,90)
+                    };""")
+                save()
+                require(False,"VISIBLE_OIL_OFF_NOT_APPLIED")
             record["oil_visible_mode_after"]="off"
             record["last_completed_stage"]="VISIBLE_OIL_OFF_APPLIED"
             save()
@@ -265,8 +284,9 @@ def stage(args):
             wait_idle(driver,1650)
             environment=driver.execute_script("""const e=window.__v690_season;
               if(!e)return null;
-              return {ready:e.environment_ready,
-                installed:e.environment_installed,
+              return {
+                ready:e.web_environment_scope?.environment_ready===true,
+                installed:e.web_environment_scope?.environment_installed===true,
                 build:e.web_environment_scope?.game_build,
                 ilvl:e.web_environment_scope?.target_ilevel,
                 B:e.B,T:e.T,native_calls:e.native_calls,

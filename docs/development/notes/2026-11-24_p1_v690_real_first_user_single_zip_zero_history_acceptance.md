@@ -49,3 +49,13 @@ Windows [Actions #45231378708](https://github.com/degong2-code/simc-secondary-op
 새 harness는 Selenium `Select(oil_mode).select_by_value("off")`로 사용자에게 보이는 '미사용'을 선택, `state.busy`가 끝난 뒤 visible menu=off 및 hidden mirror checked=false를 읽기 전용으로 검증한다. 실제 사용자 키보드/마우스 조작에 부합하며 내부 요소를 직접 click하지 않는다. 원본 시즌 G/J/F/O, Native/SimC 결과 계산, ZIP 및 캐시 알고리즘 변경 없음.
 
 재차 전체 Windows ZIP/SimC 자동 설치를 실행하기 전에 기존 v690 workflow의 **패키징 앞 단계**에서 `tests/test_v690_visible_oil_user_contract.py` focused 3개 검증(HTML visible option, JS change wiring, Selenium visible Select 코딩)을 먼저 실행한다. 정적 계약은 Chrome 실제 UI 조작 PASS의 대체물이 아니며 실제 Windows Actions 영수증 이후에만 제로베이스 단계 성공을 판정. 과거 v690.6 Native0·실시즌 원본0. 개인 PC 시험·26개 전문화/신규 시즌 전수 미검증. 공식 `15/78 COMPLETE`, `full_product_e2e=PENDING`, `next_review=B10`; 기존 권한 변경 없음.
+
+## v690.8 — 실제 사용자 기름 선택 비동기 반영·시즌 설치 scope 판정 교정
+
+[v690.7 Windows #45236131013](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45236131013)의 기존 ZIP/SimC 자동 설치·실제 흑마법사/파괴 선택까지 성공. **새 저비용 UI 3 tests PASS**, 실제 286파일 ZIP 패키징 PASS. 실제 사용자 선택 메뉴 `optimizer-oil-use-mode`에서 `use` 상태를 `off`로 선택했지만 직후 `V690_VISIBLE_OIL_OFF_NOT_APPLIED`가 발생함. 실제 아티팩트 #14850306538은 `VISIBLE_OIL_MODE_BEFORE_SELECT`, `oil_visible_mode_before=use`와 Native0을 확인하며, 변경 후 `mode/checked/state.busy`는 미기록이어서 비동기 기름 카탈로그 반영 경합인지 실제 UI 처리 오류인지는 아직 확정 불가.
+
+**선행 원본 코드 대조:** `runner/webui/app.js`의 class/spec 변경 핸들러가 `void withBusy(refreshInstalledOilLoadouts)`를 실행할 수 있고, visible oil 사용 변경 시 `state.busy`면 메뉴를 원래 intent로 되돌림. v690.7 harness는 전문화 선택 직후 바로 mode 조작·단발 `wait_idle` 검사를 해서 이 상태와 경합 가능. 따라서 제품 로직 변경 없이 (1) 전문화 변경 비동기 처리 완료까지 기다리고, (2) 사용자 visible select의 `off` 선택, (3) mode=off/hidden O mirror checked=false/busy=false를 완료까지 40초 재확인하며, (4) 실패하면 제한된 공개 `mode/mirror_checked/busy/status`만 기록한다. 재현 뒤에도 실패하면 제품 버그와 테스트 비동기 문제를 분리하여 첫 원인만 수정한다.
+
+**다음 설치 단계에 대한 독립 코드 대조:** 기존 harness의 `showSeasonEnvironmentBuild` hook은 `e.environment_ready`/`e.environment_installed`을 참조했으나 실제 제품은 `e.web_environment_scope.environment_ready` 및 `.environment_installed`이 authoritative. 수정된 실 검사도 제품에서 사용하는 *그 동일 필드*로만 READY 판단해 정상 원본 설치를 허위 PENDING으로 만들지 않도록 했다. 원래 v216/v212 예산·원본·Native/캐시·제품 UI 코드는 변경하지 않음.
+
+이 단계는 유효한 하나의 실제 Windows 첫사용자 시나리오 수락을 위한 harness 정확도 개선이며 새 Native/효과 인증 독립 Gate가 아님. 세 번째 재시도 이상 원본 시즌 Native 반복 방지 원칙 유지. 이번 v690.7까지 사용자 원본/Native 0, 전체 E2E PENDING. 공식 15/78, next_review B10, 개인 PC 보류·기존 승인 권한 변경 없음.

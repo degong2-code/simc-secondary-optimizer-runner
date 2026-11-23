@@ -37,6 +37,12 @@ class FirstUserOilVisibleContractTests(unittest.TestCase):
                 "p1_v690_one_zip_first_user_zero_history_once.py").read_text(
                     "utf8")
         self.assertIn('Select(oil_mode).select_by_value("off")',script)
+        self.assertIn('wait_idle(driver,60)',script)
+        self.assertIn('visible_oil_after_attempt',script)
+        self.assertIn(
+            'e.web_environment_scope?.environment_ready===true',script)
+        self.assertIn(
+            'e.web_environment_scope?.environment_installed===true',script)
         self.assertIn('oil_mode.is_displayed() and oil_mode.is_enabled()',script)
         self.assertIn(
             "document.getElementById('optimizer-oil-enabled').checked",script)
