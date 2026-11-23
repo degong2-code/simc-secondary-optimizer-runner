@@ -1308,6 +1308,22 @@ function renderInstalledFlaskChoices(data) {
         "건을 표시합니다. 서로 다른 출처를 임의로 합치지 않습니다.":
         "검증된 설치본이 여러 개지만 저장된 영약·보석 물리 구성도 동일합니다. "+
         "임의 설치본을 사용하지 않고 원본 차이를 확인해야 합니다.";
+    if(status){
+      const reasons={
+        RECEIPT_PROOF_UNAVAILABLE:"원본 단계·프로필 영수증 재검증 미충족",
+        DIFFERENT_INSTALLED:"v212 설치 예산·옵션 원본 차이",
+        DIFFERENT_SOURCE_STAGE:"v212 단계의 숫자·원본 입력 차이",
+        DIFFERENT_RUNTIME_SNAPSHOT:"v113 실행 프로필 입력 차이"
+      };
+      const codes=[...new Set(rows.flatMap(item=>
+        item.verified_runtime_equivalence_blocker_codes||[]))];
+      const safe=codes.filter(code=>
+        Object.prototype.hasOwnProperty.call(reasons,code));
+      if(safe.length)
+        status.textContent+=" · 대표 설치본 선택 보류: "+
+          safe.map(code=>reasons[code]).join(", ")+
+          " · 원본을 임의 병합하지 않습니다.";
+    }
     if(status&&state.verifiedFjCollisionReport.length){
       const codes=[...new Set(state.verifiedFjCollisionReport.flatMap(r=>r.difference_codes))];
       status.textContent+=" · 기존 봉인 영수증의 차이: "+
