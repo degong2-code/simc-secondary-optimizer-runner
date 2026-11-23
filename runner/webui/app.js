@@ -5320,7 +5320,7 @@ function registerHandlers() {
     await pollOnce();
   }));
   $("start-btn").addEventListener("click",()=>withBusy(async()=>{
-    state.userActionContext="optimizer";
+    if(typeof state!=="undefined")state.userActionContext="optimizer";
     // Validate the SimC link before any costly season-source/API or Native work.
     // Explicit season-only setup in settings remains independently available.
     manualFinalTOrNull();
