@@ -34,6 +34,11 @@
 
 ## QA / 비용 / 권한
 
-- 아래 실제 CI 완료·PASS는 별도로 확인한다: `v113_local_web_api_offline`, `v181_windows_beta_packaging`, `v182_simple_user_input_ui`, `v180_multilevel_season_product`. 기존 사용자를 위한 v114/v568 테스트의 고정 UI 문구는 변경 후 사용자 의미대로 국소 갱신했다.
+- **최종 GitHub Actions 검증 (제품 코드 HEAD `d6c69217def3ed7d3f0af2666771d2ef0f7f2a10`):**
+  - [v113 API #45143759352](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45143759352): Ubuntu Python3.12 및 Windows Python3.14 양쪽 `completed/success`, 각각 **531 tests OK / 1 SKIP / 0 FAIL**, 실제 API/JavaScript 회귀 포함.
+  - [v182 UI #45143759114](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45143759114): Windows/Ubuntu `completed/success`, DOM·CSS·Node offline 회귀.
+  - [v180 offline #45143759174](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45143759174): offline 성공, **native-six-cases SKIPPED** (신규 SimC Native 실행 없음).
+  - [v181 Windows ZIP #45143759110](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45143759110): Python3.12/3.14 Windows 양쪽 `completed/success`, 각각 회귀 **380 PASS / 0 FAIL**, 패키저 **5 PASS**, 실제 ZIP 압축 해제→CMD/localhost HTTP 3 계획→세션 복원, **신규 Native 0**. Wrapper artifact [#14802363256](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45143759110/artifacts/14802363256) 존재. 래퍼 `digest=sha256:64453bdfc67e19d25de8fe1c5557aa8f1954de1f8b1cc336b809b6de840bed75`는 **내부 제품 ZIP 해시가 아니다**. 사용자 PC 설치·실제 음식/물약 Native 효과 검증과 혼동 금지.
+  - v401 계약·기존 공통 focused도 PASS. 개발 중 v114 과거 HTML 구조 문자열 검사와 신규 Node 테스트 JS `$'` replacement expansion을 국소 교정하고 최종 공식 새 실행에서 모두 PASS; 역사 실패를 지우거나 그 실행에 PASS라고 주장하지 않는다.
 - 새 user PC 시험 0, 신규 SimC DPS/G/F Native 0, DB2/Wago 실수집 0, 새 외부 API 기능 0, 정적 캐시/세션 삭제 0. P3-HU Native는 역사 재사용.
 - main/v003 불변/v016 원본/Project UI/Work OS/공식 78계약·주 제품 채팅 소유권 불변. `full_product_e2e=PENDING`; v677 PC 자동 T 확인은 사용자가 PC 가능한 때까지 보류.
