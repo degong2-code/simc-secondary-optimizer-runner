@@ -2617,6 +2617,92 @@ function diagnoseSeasonBuildEvidence(data) {
           isEnvironmentReady:scope.environment_ready===true&&
                              scope.environment_installed===true};
 }
+// v668: plain text-only results. Visual emphasis must never increase
+// the proof level: saved != verified-now, source-only != installed READY.
+function renderSettingsStatusFacts(id,stateLabel,headline,items=[],footnote=""){
+  if(typeof document==="undefined"||
+     typeof document.getElementById!=="function"||
+     typeof document.createElement!=="function")return;
+  const root=document.getElementById(id);
+  if(!root)return;
+  const state=["ok","pending","error","neutral"].includes(stateLabel)?
+    stateLabel:"neutral";
+  const head=document.createElement("p");
+  head.className="settings-status-head";
+  head.textContent=String(headline).slice(0,175);
+  const grid=document.createElement("div");
+  grid.className="settings-status-rows";
+  for(const fact of items.slice(0,6)){
+    if(!fact||typeof fact.label!=="string")continue;
+    const item=document.createElement("div");
+    item.className="settings-status-pair";
+    const label=document.createElement("span");
+    label.className="settings-status-label";
+    label.textContent=fact.label.slice(0,65);
+    const value=document.createElement("strong");
+    value.className="settings-status-value";
+    value.textContent=String(fact.value??"확인 전").slice(0,145);
+    if(["ok","pending","error"].includes(fact.tone))
+      value.dataset.state=fact.tone;
+    item.append(label,value);
+    grid.append(item);
+  }
+  const children=[head,grid];
+  if(footnote){
+    const note=document.createElement("p");
+    note.className="settings-status-footnote";
+    note.textContent=String(footnote).slice(0,340);
+    children.push(note);
+  }
+  root.dataset.state=state;
+  root.replaceChildren(...children);
+  root.hidden=false;
+}
+function displaySeasonEnvironmentFacts(data,forUserVariant=false){
+  const scope=data?.web_environment_scope||{};
+  const ready=scope.environment_ready===true&&
+              scope.environment_installed===true;
+  const build=typeof scope.game_build==="string"&&
+    /^\d+(?:\.\d+){3}$/.test(scope.game_build)?
+    scope.game_build:"원본 확인 대기";
+  const level=Number.isSafeInteger(scope.target_ilevel)?
+    String(scope.target_ilevel):"확인 대기";
+  const numeric=ready&&["G","J","F","O","T"].every(k=>
+    Number.isSafeInteger(data?.[k])&&data[k]>=0);
+  const items=[
+    {label:"게임 데이터 빌드",value:build},
+    {label:"목표 아이템레벨",value:level},
+    {label:"G/J/F/O 예산",value:numeric?
+      "G "+data.G+" · J "+data.J+" · F "+data.F+" · O "+data.O:
+      "정식 확인 대기",tone:numeric?"ok":"pending"},
+    {label:"최종 2차 스탯 총량 T",value:numeric?
+      data.T.toLocaleString("ko-KR")+" rating":"정식 확인 대기",
+      tone:numeric?"ok":"pending"}
+  ];
+  const reused=ready&&data?.status==="VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED";
+  renderSettingsStatusFacts("season-environment-status-facts",
+    ready?"ok":"pending",
+    ready?(reused?"기존 검증 시즌 환경 재사용":"시즌 환경 검증·설치 완료"):
+          "시즌 환경 설치 보류",
+    items,ready?
+    "시즌 환경이 확인돼도 선택한 소켓·영약·기름·장비의 최종 실행 구성은 별도 검증합니다.":
+    "수집한 후보·미승인 수치는 최종 예산으로 표시하지 않습니다. 미완료 사유는 아래 진단에서 확인합니다.");
+}
+function displaySeasonEnvironmentAttempt(state,headline,build,level,reason=""){
+  renderSettingsStatusFacts("season-environment-status-facts",state,headline,[
+    {label:"요청한 게임 빌드",value:
+      typeof build==="string"&&/^\d+(?:\.\d+){3}$/.test(build)?build:"확인 필요"},
+    {label:"목표 아이템레벨",value:Number.isSafeInteger(level)?
+      String(level):"확인 필요"},
+    {label:"이번 요청 상태",value:state==="error"?"실패 · READY 아님":
+      "검증 진행 중 · READY 아님",tone:state==="error"?"error":"pending"},
+    {label:"미완료 원인",value:reason||"서버 응답 확인 중",
+     tone:state==="error"?"error":"pending"}
+  ],state==="error"?
+    "이전에 검증된 설치본은 보존되지만 이번 선택 구성의 환경 준비를 입증하지 않습니다.":
+    "기존 검증 설치를 먼저 확인합니다. 이번 요청의 실제 결과가 도착하기 전에는 완료로 표시하지 않습니다.");
+}
+
 function showSeasonEnvironmentBuild(data,forUserVariant=false) {
   const scope=data?.web_environment_scope||{};
   const step=data?.zero_history_build||{};
@@ -2631,6 +2717,7 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
     ...(Array.isArray(source.selected_J_F_source_owner_quality_unadmitted?.missing)?
       source.selected_J_F_source_owner_quality_unadmitted.missing.map(x=>"J/F 품질: "+x):[])];
   const ready=scope.environment_ready===true&&scope.environment_installed===true;
+  displaySeasonEnvironmentFacts(data,forUserVariant);
   $("optimizer-environment-state").textContent=ready?
     "시즌 G/J/F/O 검증 설치 확인 · 선택한 개인 조건은 별도 검증":
     "시즌 환경 설치·검증 미완료 · 환경 설정에서 원인을 확인하세요";
@@ -3071,6 +3158,8 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   $("season-diagnostic-copy-btn").disabled=true;
   $("season-build-pending").hidden=true;
   $("season-build-summary").textContent="검증 진행 중 · 결과 미확정 (READY 아님)";
+  displaySeasonEnvironmentAttempt("pending","시즌 환경 확인 중",
+    game_build,target_ilevel);
   const requestedInputScope=seasonBuildInputScope(forUserVariant);
   const stopSeasonActivity=beginSeasonBuildActivity();
   try {
@@ -3102,6 +3191,9 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       renderSeasonOptionCatalog(null);
       updateBudgetPreview();
       displaySeasonBuildRecovery(null);
+      displaySeasonEnvironmentAttempt("pending",
+        "선택한 구성이 변경됨 · 다시 확인 필요",
+        game_build,target_ilevel,"변경 전 환경을 현재 조건의 완료로 인정하지 않습니다.");
       $("season-build-summary").textContent=
         "요청 중 시즌·레벨·보석·영약·기름 설정이 변경되었습니다. "+
         "이전 조건의 구축 응답은 진단 영수증으로만 보존하며 현재 구성의 준비 완료로 인정하지 않습니다.";
@@ -3249,6 +3341,8 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       "‘선택 환경 검증·준비’로 원하는 구성을 검증하세요. "+
       "구성이 구분되지 않으면 원본 확인이 추가로 필요합니다.":
       "요청 차단 또는 오류 · 실행 완료가 아닙니다. 오류 코드를 확인하세요.";
+    displaySeasonEnvironmentAttempt("error","시즌 환경 요청 실패",
+      game_build,target_ilevel,safeError);
     $("season-build-stage").textContent=
       "시즌 환경 요청 종료 · 실패 · "+safeError+
       (err.safeStage?" · 단계: 시즌 환경 구축":"")+
