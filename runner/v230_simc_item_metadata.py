@@ -75,7 +75,8 @@ def split_cpp_record(line):
 
 
 def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
-                candidate_limit=4000, max_bytes=seed.MAX_ITEM_FILE):
+                candidate_limit=4000, max_bytes=seed.MAX_ITEM_FILE,
+                allow_missing=False):
     """One streaming pass for either exact IDs or bounded candidate selection.
 
     Candidate mode reuses all existing C++ layout, generated-stat pointer and
@@ -85,6 +86,9 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
          type(build) is str and seed.BUILD.fullmatch(build),
          "V230_ITEM_DATA_BYTES_OR_BUILD_INVALID")
     candidate_mode=item_ids is None
+    need(type(allow_missing) is bool and
+         not (candidate_mode and allow_missing),
+         "V230_MISSING_ITEM_SCOPE_INVALID")
     need((candidate_mode and callable(candidate_filter) and
           type(candidate_limit) is int and 1<=candidate_limit<=5000) or
          (not candidate_mode and candidate_filter is None and
@@ -218,7 +222,9 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
     need(built and chunks>0 and not inside_stats and not inside_chunk and
          declared_items==item_count and
          stat_total==len(stats) and
-         (bool(found) if candidate_mode else set(found)==wanted),
+         (bool(found) if candidate_mode else
+          set(found).issubset(wanted) if allow_missing else
+          set(found)==wanted),
          "V230_GENERATED_ITEM_DATA_INCOMPLETE_OR_REQUEST_MISSING")
     return {
         "schema":SCHEMA,"status":"SOURCE_ITEM_METADATA_ONLY_NO_G_PROOF",
@@ -228,13 +234,17 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
         "full_generated_item_rows_scanned":item_count,
         "requested_item_count":len(found) if candidate_mode else len(wanted),
         "selection_mode":"SOURCE_CANDIDATE_UNAPPROVED" if candidate_mode
-                         else "EXACT_REQUESTED_IDS",
+                         else ("EXACT_REQUESTED_IDS_ALLOW_MISSING"
+                               if allow_missing else "EXACT_REQUESTED_IDS"),
+        **({"missing_item_ids":sorted(wanted-set(found)),
+            "source_matched_item_count":len(found)}
+           if allow_missing else {}),
         "items":sorted(found.values(),key=lambda row:row["item_id"]),
         "native_calls":0,"G":None,"environment_ready":False,
     }
 
 
-def from_seed(*, directory, item_ids):
+def from_seed(*, directory, item_ids, allow_missing=False):
     root=pathlib.Path(directory)
     receipt=json.loads(seed.bounded_read(root/seed.RECEIPT,2_000_000))
     need(receipt.get("schema")==seed.SCHEMA and
@@ -253,7 +263,7 @@ def from_seed(*, directory, item_ids):
          seed.git_blob(raw)==meta.get("git_blob_sha1"),
          "V230_ITEM_DATA_BYTES_NOT_IN_PINNED_SEED")
     value=parse_exact(raw,build=receipt["simc_generated_build"],
-                      item_ids=item_ids)
+                      item_ids=item_ids,allow_missing=allow_missing)
     value.update({"source_receipt_sha256":receipt["receipt_sha256"],
                   "simc_revision":receipt["simc_revision"]})
     return value

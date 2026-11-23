@@ -8611,12 +8611,18 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
             return {"game_build":build,"simc_revision":revision,
                     "source_receipt_sha256":original[
                         "source_stage"]["receipt_sha256"],"rows":[]}
+        # Wago may include physical IDs absent from pinned SimC item DBC.
+        # Keep exact matched IDs in one authenticated pass; one unsupported
+        # optional item must not erase the remaining valid choices.
         metadata=simc_item_metadata.from_seed(
-            directory=seed["source_dir"],item_ids=ids)
+            directory=seed["source_dir"],item_ids=ids,allow_missing=True)
         need(metadata.get("game_build")==build and
              metadata.get("simc_revision")==revision and
              metadata.get("source_receipt_sha256") and
-             metadata.get("selection_mode")=="EXACT_REQUESTED_IDS",
+             metadata.get("selection_mode")==
+                 "EXACT_REQUESTED_IDS_ALLOW_MISSING" and
+             set(row["item_id"] for row in metadata.get("items",[]))
+                 .issubset(ids),
              "V680_SIMC_GENERATED_ITEM_BUILD_MISMATCH")
         simc={row["item_id"]:row for row in metadata["items"]}
         needed={kind:{} for kind in ("food","potion")}

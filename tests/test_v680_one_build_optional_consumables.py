@@ -307,6 +307,8 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                     {"item_id":202,"kind":"food","on_use_spell_ids":[5001],
                      "source_status":"EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"},
                     {"item_id":203,"kind":"potion","on_use_spell_ids":[6002],
+                     "source_status":"EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"},
+                    {"item_id":204,"kind":"potion","on_use_spell_ids":[6002],
                      "source_status":"EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"}]}
             src=root/"source"/"wago-optional.json"
             src.write_text(json.dumps(observed),encoding="utf8")
@@ -338,7 +340,9 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
             comp={"stage_root":str(root),"simc_revision":REV}
             meta={"game_build":BUILD,"simc_revision":REV,
                 "source_receipt_sha256":"2"*64,
-                "selection_mode":"EXACT_REQUESTED_IDS",
+                "selection_mode":"EXACT_REQUESTED_IDS_ALLOW_MISSING",
+                "missing_item_ids":[204],
+                "source_matched_item_count":3,
                 "items":[
                     {"item_id":201,"name":"Royal Roast",
                      "class_id":0,"subclass_id":5,"inventory_type":0,
@@ -354,7 +358,8 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                 source=fresh_build._fresh_v680_source_owned_food_potion(
                     collected=collected,compilation=comp)
             lookup.assert_called_once_with(
-                directory=str(root),item_ids=[201,202,203])
+                directory=str(root),item_ids=[201,202,203,204],
+                allow_missing=True)
             # Same sealed Wago/SimC identities: reuse the compact output,
             # never read the large pinned item_data.inc a second time.
             with mock.patch.object(fresh_build.simc_item_metadata,
@@ -363,7 +368,11 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                 again=fresh_build._fresh_v680_source_owned_food_potion(
                     collected=collected,compilation=comp)
             self.assertEqual(source,again)
-            self.assertEqual(len(source["rows"]),3)
+            self.assertEqual(len(source["rows"]),3,
+                             "one missing SimC DBC item must not erase three")
+            self.assertEqual(
+                sorted(r["physical_item_id"] for r in source["rows"]),
+                [201,202,203])
             ready=manifest.project_fresh_optional_consumables(
                 game_build=BUILD,simc_revision=REV,source=source)
             self.assertEqual(

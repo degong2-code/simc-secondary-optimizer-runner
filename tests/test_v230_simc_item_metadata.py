@@ -80,6 +80,35 @@ class SimCExactItemMetadataTests(unittest.TestCase):
             item.parse_exact(synthetic_item_data(),build=BUILD,
                              item_ids=[9001,9001])
 
+    def test_optional_exact_ids_allow_missing_without_weakening_strict_source(self):
+        raw=synthetic_item_data()
+        with self.assertRaisesRegex(item.ItemMetadataBlocked,
+                                    "INCOMPLETE_OR_REQUEST_MISSING"):
+            item.parse_exact(raw,build=BUILD,item_ids=[9001,987654])
+        partial=item.parse_exact(raw,build=BUILD,
+                                 item_ids=[9001,987654],
+                                 allow_missing=True)
+        self.assertEqual(partial["selection_mode"],
+                         "EXACT_REQUESTED_IDS_ALLOW_MISSING")
+        self.assertEqual([r["item_id"] for r in partial["items"]],[9001])
+        self.assertEqual(partial["missing_item_ids"],[987654])
+        self.assertEqual(partial["source_matched_item_count"],1)
+        self.assertEqual(partial["requested_item_count"],2)
+        self.assertEqual(partial["full_generated_item_rows_scanned"],8)
+        empty=item.parse_exact(raw,build=BUILD,item_ids=[987654],
+                               allow_missing=True)
+        self.assertEqual(empty["items"],[])
+        self.assertEqual(empty["missing_item_ids"],[987654])
+        with self.assertRaisesRegex(item.ItemMetadataBlocked,
+                                    "GENERATED_BUILD_MISMATCH"):
+            item.parse_exact(synthetic_item_data(OLD),build=BUILD,
+                             item_ids=[9001,987654],allow_missing=True)
+        with self.assertRaisesRegex(item.ItemMetadataBlocked,
+                                    "MISSING_ITEM_SCOPE_INVALID"):
+            item.parse_exact(raw,build=BUILD,
+                             candidate_filter=lambda fields:True,
+                             allow_missing=True)
+
     def test_item_stat_pointer_and_chunk_count_must_be_exact(self):
         raw=synthetic_item_data().replace(
             b"&__item_stats_data[0]",b"&__item_stats_data[4]",1)
@@ -150,6 +179,15 @@ class SimCExactItemMetadataTests(unittest.TestCase):
             self.assertEqual(ok["requested_item_count"],1)
             self.assertEqual(ok["source_receipt_sha256"],
                              original["receipt_sha256"])
+            # Optional same-season source selection tolerates a missing
+            # physical ID, while the exact authenticated seed remains required.
+            partial=item.from_seed(
+                directory=root,item_ids=[9001,987654],allow_missing=True)
+            self.assertEqual(partial["missing_item_ids"],[987654])
+            self.assertEqual(partial["items"][0]["item_id"],9001)
+            with self.assertRaisesRegex(item.ItemMetadataBlocked,
+                                        "INCOMPLETE_OR_REQUEST_MISSING"):
+                item.from_seed(directory=root,item_ids=[9001,987654])
             # Corrupt exact source even when semantically identical.
             (root/"item_data.inc").write_bytes(
                 synthetic_item_data()+b"\n")
