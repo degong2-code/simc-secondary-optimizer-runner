@@ -1207,60 +1207,26 @@ function installedConsumableScopeMatches(data) {
     data.game_build===build;
 }
 function renderInstalledFlaskChoices(data) {
-  const collisionNames={
-    SIMC_REVISION:"SimC revision",
-    G_REFERENCE:"G 대표값·무기 기준",
-    B_T_ACCOUNTING:"B/T 예산·수동 총량",
-    G_SOURCE:"G 원본 증거",J_SOURCE:"보석 J 원본 증거",
-    F_SOURCE:"영약 F 원본 증거",O_SOURCE:"기름 O 원본 증거",
-    F_NATIVE_PROOF:"영약 F Native 원본",
-    O_FIXED_VECTOR:"기름 O 고정 벡터",
-    SOURCE_CATALOG:"시즌 원본 카탈로그",
-    SOURCE_STAGES:"시즌 구축 단계 영수증 (통합)",
-    STAGED_SOURCE_MANIFEST:"v212 사전 환경 원본 봉인",
-    V216_PREFLIGHT_SEAL:"v216 사전 검증 지문",
-    V217_V191_RECEIPT:"v217 v191 원본 준비 단계 영수증",
-    V217_V211_RECEIPT:"v217 v211 원본 준비 단계 영수증",
-    V217_V213_RECEIPT:"v217 v213 원본 준비 단계 영수증",
-    V217_OTHER_RECEIPTS:"v217 기타 단계 영수증",
-    TRUSTED_BUDGET_EVIDENCE:"G/J/F/O 예산 증거",
-    V222_BUDGET_OWNER:"v222 예산 회계",
-    POLICY_A_OPTIONS:"검증 옵션·품질 원본",
-    DK_OPTIONAL_MODULE:"죽음의 기사 선택 모듈",
-    GEM_LAYOUT_PROOF:"보석 배치·원본 증거",
-    OTHER_SEALED_IDENTITY:"그 외 봉인된 설치 identity"
-  };
+  // v676 P1: an installed environment is admissible on its OWN original
+  // verified build/ilevel/v212/v113 evidence, not because it matches a
+  // second installation's source paths, preflight, or profile hash.
+  // Every user choice is still rechecked by exact installed SHA.
   const scoped=installedConsumableScopeMatches(data);
-  state.verifiedFjCollisionReport=scoped&&
-    Array.isArray(data.verified_base_fj_collision_diagnostics)?
-    data.verified_base_fj_collision_diagnostics.slice(0,24).filter(item=>
-      Number.isSafeInteger(item.installed_count)&&item.installed_count>=2 &&
-      Number.isSafeInteger(item.flask_item_id)&&item.flask_item_id>0 &&
-      Array.isArray(item.ordinary_gem_item_ids)&&
-      item.ordinary_gem_item_ids.length===4&&
-      item.ordinary_gem_item_ids.every(id=>Number.isSafeInteger(id)&&id>0)&&
-      Array.isArray(item.difference_codes)&&
-      item.difference_codes.length>=1&&item.difference_codes.length<=24&&
-      item.difference_codes.every(code=>
-        Object.prototype.hasOwnProperty.call(collisionNames,code))):[];
+  state.verifiedFjCollisionReport=[];
   const diagButton=typeof document==="object"&&
     typeof document.getElementById==="function"?
     document.getElementById("season-verified-fj-diagnostic-copy"):null;
-  if(diagButton){
-    diagButton.hidden=state.verifiedFjCollisionReport.length===0;
-    diagButton.disabled=diagButton.hidden;
-  }
-  // Exact same-build/ilevel v212 source identities; never derive a budget
-  // or installation SHA from the selected flask ItemID in the browser.
-  state.verifiedBaseFlaskInstalls=installedConsumableScopeMatches(data)?
+  if(diagButton){diagButton.hidden=true;diagButton.disabled=true;}
+  state.verifiedBaseFlaskInstalls=scoped?
     (data.verified_base_flask_installs||[]).filter(item=>
+      item.individually_verified===true &&
       /^[a-f0-9]{64}$/.test(item.installed_manifest_sha256||"") &&
       Number.isSafeInteger(item.flask_item_id)&&item.flask_item_id>0 &&
       Number.isSafeInteger(item.J)&&item.J>=0 &&
       Number.isSafeInteger(item.F)&&item.F>=0 &&
       Number.isSafeInteger(item.flask_quality)&&item.flask_quality>=0 &&
       item.socket_total===4 &&
-      Array.isArray(item.ordinary_gem_item_ids) &&
+      Array.isArray(item.ordinary_gem_item_ids)&&
       item.ordinary_gem_item_ids.length===4 &&
       item.ordinary_gem_item_ids.every(id=>Number.isSafeInteger(id)&&id>0) &&
       new Set(item.ordinary_gem_item_ids).size===4):[];
@@ -1274,117 +1240,29 @@ function renderInstalledFlaskChoices(data) {
     const previous=budgetSelector.value;
     budgetSelector.replaceChildren(option("","검증된 F/J 구성 선택"));
     const rows=state.verifiedBaseFlaskInstalls;
-    const labels=new Map(), numericLabels=new Map();
-    const numericKey=item=>[item.F,item.J,item.socket_total].join("/");
-    // v669: only original saved physical ItemIDs and flask quality may
-    // distinguish equal numeric budgets. Never choose by manifest order,
-    // SHA prefix, F/J totals alone, or an unverified UI guess.
-    const physicalIds=item=>[...item.ordinary_gem_item_ids]
-      .sort((a,b)=>a-b);
-    const key=item=>[
-      item.flask_item_id,item.flask_quality,item.F,item.J,
-      item.socket_total,...physicalIds(item)
-    ].join("/");
-    for(const item of rows){
-      labels.set(key(item),(labels.get(key(item))||0)+1);
-      numericLabels.set(numericKey(item),
-        (numericLabels.get(numericKey(item))||0)+1);
-    }
-    let selectable=0;
-    for(const item of rows){
-      const duplicate=labels.get(key(item))!==1;
-      // Server sets this only after independently verifying each v212/v113
-      // receipt and comparing all saved runnable inputs. Exact SHA is still
-      // rechecked by the existing season-gear/session endpoint.
-      const equivalentRepresentative=duplicate &&
-        item.verified_runtime_equivalent_representative===true;
-      // Compact labels prevent native option popovers from spanning the
-      // workspace. Distinct physical sources still retain exact ItemIDs.
-      const detail=numericLabels.get(numericKey(item))>1&&!duplicate?
-        " · 영약 #"+item.flask_item_id+
-        " · 보석 "+physicalIds(item).map(id=>"#"+id).join("/"):"";
-      const text="F "+item.F+" · J "+item.J+" · "+item.socket_total+
-        "소켓 · 기름 없음"+detail+
-        (equivalentRepresentative?" · 검증된 동일 실행 입력 대표 설치본":
-          duplicate?" · 동일 물리 구성 · 개별 선택 보류":"");
-      const candidate=option(item.installed_manifest_sha256,text);
-      candidate.title=text+" · 영약 #"+item.flask_item_id+
+    // An index identifies a choice, never a ranking or proof of superiority.
+    // The original manifest SHA is kept in the option value, not its label.
+    rows.forEach((item,i)=>{
+      const label="검증 환경 "+(i+1)+" · F "+item.F+" · J "+item.J+
+        " · "+item.socket_total+"소켓 · 기름 없음";
+      const candidate=option(item.installed_manifest_sha256,label);
+      candidate.title=label+" · 영약 #"+item.flask_item_id+
         " (품질 "+item.flask_quality+") · 보석 "+
-        physicalIds(item).map(id=>"#"+id).join("/");
-      candidate.disabled=duplicate&&!equivalentRepresentative;
+        item.ordinary_gem_item_ids.map(id=>"#"+id).join("/")+
+        (item.simc_revision?" · 원본 SimC "+item.simc_revision:"");
       budgetSelector.appendChild(candidate);
-      if(!candidate.disabled)selectable++;
-    }
+    });
     budgetSelector.value=Array.from(budgetSelector.options).some(opt=>
       opt.value===previous&&!opt.disabled)?previous:"";
     group.hidden=rows.length<2;
     const status=document.getElementById("season-verified-budget-status");
     const detail=document.getElementById("season-verified-budget-diagnostic-detail");
-    const detailText=document.getElementById("season-verified-budget-diagnostic-detail-text");
-    const blockers={
-      RECEIPT_PROOF_UNAVAILABLE:"기존 원본 영수증 재검증 필요",
-      DIFFERENT_INSTALLED:"v212 설치 예산·옵션 원본",
-      DIFFERENT_SOURCE_STAGE:"v212 단계 원본 입력",
-      DIFFERENT_RUNTIME_SNAPSHOT:"v113 저장 실행 프로필"
-    };
-    const runtimeNames={
-      SNAPSHOT_SCHEMA:"v113 스냅샷 형식",
-      SNAPSHOT_CATALOG:"스냅샷 카탈로그 증거",
-      RUNTIME_ENTRY:"실행 진입 조건",
-      RUNTIME_READY:"환경 READY 원본 상태",
-      RUNTIME_REPRESENTATIVE:"SimC 대표 프로필",
-      RUNTIME_ORDINARY_GEAR:"대표 일반 장비·무기",
-      RUNTIME_TIER_BRIDGE:"티어·SimC 연결",
-      RUNTIME_PINNED_ITEM_SOURCE:"일반 아이템 원본",
-      RUNTIME_GAME_BUILD:"대상 게임 빌드",
-      RUNTIME_PERMANENT_ENCHANT:"영구 마부 원본",
-      RUNTIME_TARGET_ILEVEL:"대표 목표 ilvl",
-      RUNTIME_OIL_IDS:"무기 기름 ItemID",
-      COMPILATION_STATUS:"프로필 구성 단계 상태",
-      COMPILATION_SOURCE_CATALOG_PATH:"원본 카탈로그 참조 위치",
-      COMPILATION_STAGE_ROOT:"시즌 원본 단계 경로",
-      COMPILATION_SIMC_REVISION:"SimC revision",
-      COMPILATION_TIER_SOURCE_PATHS:"티어 원본 파일 참조",
-      COMPILATION_V098_PROFILE:"SimC 입력 프로필",
-      COMPILATION_GEM_LAYOUT:"보석 배치",
-      COMPILATION_GEM_BUDGET:"보석 J 계산",
-      COMPILATION_GEM_ITEM_RELATION:"보석 ItemID 증거",
-      OTHER_SNAPSHOT_FIELDS:"기타 스냅샷 필드",
-      OTHER_RUNTIME_FIELDS:"기타 실행 원본 필드",
-      OTHER_COMPILATION_FIELDS:"기타 프로필 구성 필드"
-    };
-    const reasonCodes=[...new Set(rows.flatMap(item=>
-      Array.isArray(item.verified_runtime_equivalence_blocker_codes)?
-        item.verified_runtime_equivalence_blocker_codes:[]))]
-      .filter(code=>Object.prototype.hasOwnProperty.call(blockers,code));
-    const runtimeCodes=[...new Set(rows.flatMap(item=>
-      Array.isArray(item.verified_runtime_input_difference_codes)?
-        item.verified_runtime_input_difference_codes:[]))]
-      .filter(code=>Object.prototype.hasOwnProperty.call(runtimeNames,code));
-    if(status)status.textContent=rows.length<2?
-      "검증된 기본 구성 1건입니다.":
-      selectable?
-        "검증 설치본 "+rows.length+"건 · 구별 가능한 "+selectable+
-        "건 선택 가능":
-        "동일 F/J 설치본 "+rows.length+"건 · 원본 차이로 선택 보류";
-    if(detail&&detailText){
-      detail.hidden=rows.length<2 ||
-        (!reasonCodes.length&&!runtimeCodes.length&&
-         !state.verifiedFjCollisionReport.length);
-      if(detail.hidden)detail.open=false;
-      const sections=[];
-      if(reasonCodes.length)sections.push("선택 보류: "+
-        reasonCodes.map(code=>blockers[code]).join(", "));
-      if(runtimeCodes.length)sections.push("v113 실행 입력 차이: "+
-        runtimeCodes.map(code=>runtimeNames[code]).join(", "));
-      const evidence=[...new Set(state.verifiedFjCollisionReport.flatMap(
-        item=>item.difference_codes))].filter(code=>
-        Object.prototype.hasOwnProperty.call(collisionNames,code));
-      if(evidence.length)sections.push("시즌 봉인 영수증 차이: "+
-        evidence.map(code=>collisionNames[code]).join(", "));
-      detailText.textContent=sections.join(" · ") ||
-        "원본 검증에 필요한 세부 근거가 아직 없습니다.";
-    }
+    if(detail){detail.hidden=true;detail.open=false;}
+    if(status)status.textContent=rows.length>1?
+      "개별 검증된 환경 "+rows.length+
+      "건 · 사용할 환경을 선택하면 정확한 원본을 다시 확인합니다.":
+      rows.length===1?"검증된 환경 1건 · 정확한 원본 확인 후 적용":
+      "일치하는 검증 환경이 없습니다. 현재 시즌·설치본을 확인하세요.";
   }
   const selector=$("season-verified-flask");
   const prior=field("season-selected-flask-id");
