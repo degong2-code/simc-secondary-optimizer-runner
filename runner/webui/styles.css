@@ -1723,3 +1723,26 @@ body{background:#24252B;color:var(--ink)}
     grid-column:1/-1!important;
   }
 }
+
+
+/* v675: long F/J reasons are opt-in detail, not a wide unbroken status line.
+   Uses existing linear product typography with no new box/card surface. */
+#optimizer-form .conditions-panel #season-verified-budget-status{
+  margin:3px 0 0;line-height:1.45;white-space:normal;
+  overflow-wrap:anywhere;
+}
+#optimizer-form .conditions-panel #season-verified-budget-diagnostic-detail[hidden]{
+  display:none!important;
+}
+#optimizer-form .conditions-panel #season-verified-budget-diagnostic-detail{
+  display:block;min-width:0;margin:0;padding:0;background:transparent;
+  border:0;box-shadow:none;
+}
+#optimizer-form .conditions-panel #season-verified-budget-diagnostic-detail > summary{
+  width:max-content;max-width:100%;padding:3px 0;cursor:pointer;
+  color:#d8b77d;font-size:10px;line-height:1.5;
+}
+#optimizer-form .conditions-panel #season-verified-budget-diagnostic-detail > .hint{
+  margin:4px 0 5px;max-width:100%;font-size:10px;line-height:1.55;
+  color:#bcb3a5;overflow-wrap:anywhere;white-space:normal;
+}
