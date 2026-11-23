@@ -643,6 +643,7 @@ class LocalWebAPIOffline(unittest.TestCase):
                 "manifest_sha256":key,"game_build":build,
                 "target_ilevel":334,"official_G":2850,
                 "official_J":j,"official_F":165,
+                "simc_revision":"fixture-v490",
                 "official_F_physical_source":{
                     "physical_item_id":241326,"simc_input_token":"flask_3",
                     "crafting_quality":3,"F_rating":165},
@@ -665,6 +666,9 @@ class LocalWebAPIOffline(unittest.TestCase):
               mock.patch.object(web.environment_build,
                    "find_verified_installed_season_environment",
                    side_effect=exact),
+              mock.patch.object(web,"_v672_verified_runtime_inputs_digest",
+                   side_effect=lambda docs,document,snapshot:
+                       document["manifest_sha256"]),
               mock.patch.object(web.subprocess,"Popen",
                    side_effect=AssertionError("NO_NATIVE"))):
             res=self.client.get(
@@ -674,10 +678,12 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(res.json()["verified_base_flask_installs"],[
             {"installed_manifest_sha256":"a"*64,"flask_item_id":241326,
              "flask_quality":3,"ordinary_gem_item_ids":[11,12,13,14],
-             "J":92,"F":165,"socket_total":4},
+             "J":92,"F":165,"socket_total":4,
+             "simc_revision":"fixture-v490","individually_verified":True},
             {"installed_manifest_sha256":"b"*64,"flask_item_id":241326,
              "flask_quality":3,"ordinary_gem_item_ids":[11,12,13,14],
-             "J":108,"F":165,"socket_total":4}])
+             "J":108,"F":165,"socket_total":4,
+             "simc_revision":"fixture-v490","individually_verified":True}])
         self.assertEqual(len(res.json()["verified_flasks"]),1)
         self.assertEqual(res.json()["native_calls"],0)
 
