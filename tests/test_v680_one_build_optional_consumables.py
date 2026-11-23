@@ -325,6 +325,14 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                     collected=collected,compilation=comp)
             lookup.assert_called_once_with(
                 directory=str(root),item_ids=[201,202,203])
+            # Same sealed Wago/SimC identities: reuse the compact output,
+            # never read the large pinned item_data.inc a second time.
+            with mock.patch.object(fresh_build.simc_item_metadata,
+                                   "from_seed",
+                                   side_effect=AssertionError("NO_REPARSE")):
+                again=fresh_build._fresh_v680_source_owned_food_potion(
+                    collected=collected,compilation=comp)
+            self.assertEqual(source,again)
             self.assertEqual(len(source["rows"]),3)
             ready=manifest.project_fresh_optional_consumables(
                 game_build=BUILD,simc_revision=REV,source=source)
