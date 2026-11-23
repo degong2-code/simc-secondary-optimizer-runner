@@ -1202,7 +1202,12 @@ function renderInstalledFlaskChoices(data) {
       Number.isSafeInteger(item.flask_item_id)&&item.flask_item_id>0 &&
       Number.isSafeInteger(item.J)&&item.J>=0 &&
       Number.isSafeInteger(item.F)&&item.F>=0 &&
-      item.socket_total===4):[];
+      Number.isSafeInteger(item.flask_quality)&&item.flask_quality>=0 &&
+      item.socket_total===4 &&
+      Array.isArray(item.ordinary_gem_item_ids) &&
+      item.ordinary_gem_item_ids.length===4 &&
+      item.ordinary_gem_item_ids.every(id=>Number.isSafeInteger(id)&&id>0) &&
+      new Set(item.ordinary_gem_item_ids).size===4):[];
   const budgetSelector=typeof document==="object"&&
     typeof document.getElementById==="function"?
     document.getElementById("season-verified-budget"):null;
@@ -1213,20 +1218,29 @@ function renderInstalledFlaskChoices(data) {
     const previous=budgetSelector.value;
     budgetSelector.replaceChildren(option("","검증된 F/J 구성 선택"));
     const rows=state.verifiedBaseFlaskInstalls;
-    const labels=new Map();
+    const labels=new Map(), numericLabels=new Map();
+    const numericKey=item=>[item.F,item.J,item.socket_total].join("/");
+    // v669: only original saved physical ItemIDs and flask quality may
+    // distinguish equal numeric budgets. Never choose by manifest order,
+    // SHA prefix, F/J totals alone, or an unverified UI guess.
     const key=item=>[
-      item.flask_item_id,item.F,item.J,item.socket_total
+      item.flask_item_id,item.flask_quality,item.F,item.J,
+      item.socket_total,...item.ordinary_gem_item_ids
     ].join("/");
-    for(const item of rows)
+    for(const item of rows){
       labels.set(key(item),(labels.get(key(item))||0)+1);
-    // A same-label collision may hide different source or gem effects;
-    // even the same F/J numeric totals never authorize choosing at random.
+      numericLabels.set(numericKey(item),
+        (numericLabels.get(numericKey(item))||0)+1);
+    }
     let selectable=0;
     for(const item of rows){
       const duplicate=labels.get(key(item))!==1;
+      const detail=numericLabels.get(numericKey(item))>1?
+        " · 영약 #"+item.flask_item_id+" (품질 "+item.flask_quality+")"+
+        " · 보석 "+item.ordinary_gem_item_ids.map(id=>"#"+id).join("/"):"";
       const text="영약 F "+item.F+" · 보석 J "+item.J+
-        " · 소켓 "+item.socket_total+" · 기름 없음"+
-        (duplicate?" · 원본 구성 추가 확인 필요":"");
+        " · 소켓 "+item.socket_total+" · 기름 없음"+detail+
+        (duplicate?" · 물리 구성이 같아 원본 구분 보류":"");
       const candidate=option(item.installed_manifest_sha256,text);
       candidate.disabled=duplicate;
       budgetSelector.appendChild(candidate);
@@ -1241,8 +1255,8 @@ function renderInstalledFlaskChoices(data) {
       selectable?
         "검증된 설치 환경 "+rows.length+"건 중 구분 가능한 "+selectable+
         "건을 표시합니다. 서로 다른 출처를 임의로 합치지 않습니다.":
-        "검증된 설치본이 여러 개지만 표시된 F/J 조건만으로 구별할 수 없습니다. "+
-        "진단 영수증을 이용해 원본 구성을 확인해야 합니다.";
+        "검증된 설치본이 여러 개지만 저장된 영약·보석 물리 구성도 동일합니다. "+
+        "임의 설치본을 사용하지 않고 원본 차이를 확인해야 합니다.";
   }
   const selector=$("season-verified-flask");
   const prior=field("season-selected-flask-id");
