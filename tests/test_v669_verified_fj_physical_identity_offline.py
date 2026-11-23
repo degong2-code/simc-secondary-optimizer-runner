@@ -322,6 +322,15 @@ state.oilCatalog=payload;
   const sel=$('season-verified-budget');
   assert.equal(sel.options[1].disabled,true);
   assert.equal(sel.options[2].disabled,true);
+  payload.verified_base_flask_installs=[
+    {...base,installed_manifest_sha256:A,
+     verified_runtime_equivalence_blocker_codes:['DIFFERENT_SOURCE_STAGE']},
+    {...base,installed_manifest_sha256:B,
+     verified_runtime_equivalence_blocker_codes:['DIFFERENT_SOURCE_STAGE']}
+  ];
+  funcs.renderInstalledFlaskChoices(payload);
+  assert.equal(sel.options[1].disabled,true);
+  assert($('season-verified-budget-status').textContent.includes('v212 단계'));
   // Two originally verified and *runnable-input-equal* receipts:
   // only the server-marked representative becomes selectable, never both.
   payload.verified_base_flask_installs=[
@@ -428,6 +437,15 @@ class VerifiedRuntimeInputEquivalence(unittest.TestCase):
                     docs,details[1][0],details[1][2])
                 self.assertIsNotNone(first)
                 self.assertEqual(first,second)
+                parts_a=web._v672_verified_runtime_inputs_digest(
+                    docs,details[0][0],details[0][2],
+                    return_component_digests=True)
+                parts_b=web._v672_verified_runtime_inputs_digest(
+                    docs,details[1][0],details[1][2],
+                    return_component_digests=True)
+                self.assertEqual(set(parts_a),
+                                 {"installed","source_stage","runtime_snapshot"})
+                self.assertEqual(parts_a,parts_b)
                 # v673: original v216 preflight may vary in two
                 # non-executable diagnostic collections. Both original
                 # installed+stage receipts must STILL have been verified.
@@ -445,6 +463,15 @@ class VerifiedRuntimeInputEquivalence(unittest.TestCase):
                 changed=web._v672_verified_runtime_inputs_digest(
                     docs,details[1][0],details[1][2])
                 self.assertNotEqual(first,changed)
+                changed_parts=web._v672_verified_runtime_inputs_digest(
+                    docs,details[1][0],details[1][2],
+                    return_component_digests=True)
+                self.assertNotEqual(parts_a["source_stage"],
+                                    changed_parts["source_stage"])
+                self.assertEqual(parts_a["installed"],
+                                 changed_parts["installed"])
+                self.assertEqual(parts_a["runtime_snapshot"],
+                                 changed_parts["runtime_snapshot"])
                 altered.pop("numeric_budget_preview_unadmitted")
                 details[1][1].write_text(json.dumps(altered),encoding="utf8")
                 # A different saved SimC source input must not be merged.
@@ -480,6 +507,8 @@ class CraftedEmbellishmentTwoColumnLayout(unittest.TestCase):
         self.assertIn('#crafted-rows .gear-fields{',section)
         self.assertIn('#crafted-rows .gear-fields label:has([data-field="item_id"])',section)
         self.assertIn('grid-column:1/-1',section)
+        self.assertIn('#crafted-rows .gear-fields label[hidden]',section)
+        self.assertIn('display:none!important',section)
         self.assertIn('@media(max-width:680px)',section)
         self.assertIn('grid-template-columns:1fr',section)
         self.assertIn('box-sizing:border-box',section)
