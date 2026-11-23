@@ -1440,7 +1440,7 @@ const check=(saved,variant,guard=apply)=>{
  guard(state,$,scope,
   v=>revoked.push(["gear",v]),v=>revoked.push(["options",v]),
   ()=>{budgetResets++},v=>shown.push(v),()=>{},()=>{},
-  saved,variant,{environment_ready:true,T:3333});
+  "12.1.5.70783",334,saved,variant,{environment_ready:true,T:3333});
 };
 const original=scope(true);
 check(original,true);
