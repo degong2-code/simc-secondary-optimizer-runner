@@ -8720,7 +8720,7 @@ def _fresh_v680_source_owned_food_potion(*,collected,compilation):
                  type(projection.get("source_receipt_sha256")) is str,
                  "V680_SOURCE_JOIN_OUTPUT_INVALID")
             dest.parent.mkdir(parents=True,exist_ok=True)
-            dest.write_text(canonical(projection)+"\\n",encoding="utf8")
+            dest.write_text(canonical(projection)+"\n",encoding="utf8")
         def validate(files):
             found=json.loads(files["options"].read_text(encoding="utf8"))
             return (found.get("game_build")==inputs["game_build"] and
