@@ -357,6 +357,109 @@ def _v672_verified_runtime_inputs_digest(docs, installed, snapshot, *,
         return None
 
 
+
+def _v677_verified_existing_budget(jobs, *, game_build, target_ilevel,
+                                  installed_manifest_sha256,
+                                  selected_flask_item_id,
+                                  required_reference_G_track):
+    """Read-only budget from ONE independently admitted v212/v113 install.
+
+    No new season build, Wago fetch, SimC/native process, cache write,
+    user-profile mutation, or cross-installation equality requirement.
+    Return values are evidence for this exact *historical build*, never a
+    claim of current KR Retail compatibility or DPS optimization success.
+    """
+    if (type(game_build) is not str or
+            re.fullmatch(r"\d+(?:\.\d+){3}",game_build) is None or
+            type(target_ilevel) is not int or not 1<=target_ilevel<=1000 or
+            type(installed_manifest_sha256) is not str or
+            re.fullmatch(r"[a-f0-9]{64}",installed_manifest_sha256) is None or
+            type(selected_flask_item_id) is not int or
+            not 1<=selected_flask_item_id<=999999999 or
+            required_reference_G_track not in ("general","fury_dual_2h")):
+        return None
+    docs=(jobs.root/"_fresh_season_sources"/
+          ("wago_"+game_build)/"fresh_source")
+    if (docs.is_symlink() or not docs.is_dir() or
+            docs.parent.is_symlink()):
+        return None
+    with jobs.season_source_lock:
+        found=environment_build.find_verified_installed_season_environment(
+            jobs.root,target_ilevel,expected_game_build=game_build,
+            selected_oil_item_ids_by_hand={},
+            expected_installed_manifest_sha256=installed_manifest_sha256,
+            required_reference_G_track=required_reference_G_track)
+        if (type(found) is not dict or
+                found.get("installed_manifest_sha256")!=
+                    installed_manifest_sha256 or
+                found.get("environment_ready") is not True or
+                found.get("environment_installed") is not True):
+            return None
+        path=docs/("v212_installed_"+
+                   installed_manifest_sha256[:20]+".json")
+        snapshot=docs/("v113_profile_"+
+                       installed_manifest_sha256[:20]+".json")
+        if (path.is_symlink() or not path.is_file() or
+                path.stat().st_size>environment_build.MAX_RECEIPT_BYTES or
+                snapshot.is_symlink() or not snapshot.is_file() or
+                not 0<snapshot.stat().st_size<=8_000_000):
+            return None
+        doc,_=environment_manifest.read_json(
+            path,environment_build.MAX_RECEIPT_BYTES)
+        environment_manifest.verify_fresh_installed_environment(doc)
+        if (doc.get("manifest_sha256")!=installed_manifest_sha256 or
+                doc.get("game_build")!=game_build or
+                doc.get("target_ilevel")!=target_ilevel or
+                doc.get("official_G_reference_track","general")!=
+                    required_reference_G_track):
+            return None
+        physical=doc.get("official_F_physical_source")
+        if (type(physical) is not dict or
+                physical.get("physical_item_id")!=selected_flask_item_id or
+                physical.get("F_rating")!=doc.get("official_F") or
+                doc.get("official_O_physical_source") is not None or
+                found.get("selected_oil_item_ids_by_hand")!={}):
+            return None
+        if _v672_verified_runtime_inputs_digest(
+                docs,doc,snapshot) is None:
+            return None
+        payload=json.loads(snapshot.read_bytes())
+        original=payload.get("environment_result")
+        if not _verified_snapshot_gem_layout_matches(
+                original,special_gem_id=None,socket_total=4):
+            return None
+        # The original installed manifest verifies owner identities and
+        # B/T; the matched v216 receipt is a separate original attestation.
+        stats=environment_manifest.season_budget.STATS
+        oil=doc.get("official_O")
+        if (type(oil) is not dict or set(oil)!=set(stats) or
+                any(type(oil[x]) is not int or oil[x]!=0 for x in stats)):
+            return None
+        g,j,f,b,t=(doc.get("official_"+name)
+                   for name in ("G","J","F","B","T"))
+        if (any(type(x) is not int or x<0 for x in (g,j,f,b,t)) or
+                b!=g+j+f or t!=b+sum(oil.values()) or
+                any(found.get(name)!=value for name,value in
+                    (("G",g),("J",j),("F",f),("B",b),("T",t))) or
+                found.get("O")!=oil):
+            return None
+        return {
+            "schema":"v677_verified_existing_installed_budget_v1",
+            "status":"VERIFIED_EXISTING_INSTALLED_BUDGET",
+            "game_build":game_build,
+            "target_ilevel":target_ilevel,
+            "installed_manifest_sha256":installed_manifest_sha256,
+            "selected_flask_item_id":selected_flask_item_id,
+            "reference_G_track":required_reference_G_track,
+            "G":g,"J":j,"F":f,"O":dict(oil),"B":b,"T":t,
+            "verified_saved_v113_profile":True,
+            "source_scope":"EXACT_V212_V113_INSTALLED_REUSE",
+            "current_retail_build_verified":False,
+            "native_calls_now":0,"network_calls_now":0,
+            "dps_optimization_started":False
+        }
+
+
 class UpdateInstallRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     filename: str = Field(min_length=12,max_length=140)
@@ -3564,6 +3667,36 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     "status":"SEASON_BUILD_NOT_SELECTED",
                     "native_calls_now":0,"network_calls_now":0}
         return official_ko_env.cache_status(jobs.root,build)
+
+    @app.get("/api/v1/environment/installed-budget")
+    def exact_installed_budget(game_build: str,
+                               target_ilevel: int,
+                               installed_manifest_sha256: str,
+                               selected_flask_item_id: int,
+                               reference_G_track: str = "general"):
+        """User-selected exact installed source only. No Native or rebuild."""
+        if (re.fullmatch(r"\d+(?:\.\d+){3}",game_build) is None or
+                not 1<=target_ilevel<=1000 or
+                re.fullmatch(r"[a-f0-9]{64}",
+                             installed_manifest_sha256) is None or
+                not 1<=selected_flask_item_id<=999999999 or
+                reference_G_track not in ("general","fury_dual_2h")):
+            raise HTTPException(422,detail={
+                "code":"EXISTING_INSTALLED_BUDGET_SCOPE_INVALID"})
+        try:
+            report=_v677_verified_existing_budget(
+                jobs,game_build=game_build,target_ilevel=target_ilevel,
+                installed_manifest_sha256=installed_manifest_sha256,
+                selected_flask_item_id=selected_flask_item_id,
+                required_reference_G_track=reference_G_track)
+        except (OSError,ValueError,TypeError,KeyError,
+                stage_engine.StageExecutionBlocked,
+                environment_manifest.EnvironmentBlocked):
+            report=None
+        if report is None:
+            raise HTTPException(409,detail={
+                "code":"EXISTING_INSTALLED_BUDGET_SOURCE_NOT_VERIFIED"})
+        return report
 
     @app.get("/api/v1/season-gear")
     def current_season_gear(game_build: str | None = None,
