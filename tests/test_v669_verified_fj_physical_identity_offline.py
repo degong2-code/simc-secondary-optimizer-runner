@@ -239,6 +239,38 @@ class SealedFJCollisionReceipt(unittest.TestCase):
         self.assertEqual(result[0]["difference_codes"],
                          ["OTHER_SEALED_IDENTITY"])
 
+    def test_v671_stage_provenance_is_split_into_exact_existing_receipts(self):
+        # All source and numeric owners are unchanged. Compare the exact
+        # original v216/v217 stage identity fields without admitting either.
+        a={
+            "simc_revision":"same",
+            "staged_source_environment_sha256":"a"*64,
+            "original_v216_preflight_sha256":"1"*64,
+            "original_v217_stage_receipts":{
+                "v191_stage":"9"*64,"v211_stage":"2"*64,
+                "v213_stage":"3"*64},
+        }
+        b={
+            **a,
+            "staged_source_environment_sha256":"b"*64,
+            "original_v216_preflight_sha256":"4"*64,
+            "original_v217_stage_receipts":{
+                "v191_stage":"9"*64,"v211_stage":"5"*64,
+                "v213_stage":"3"*64},
+        }
+        key=(241320,2,165,92,4,(240890,240898,240906,240914))
+        reports=web._v670_colliding_fj_diagnostics([
+            (key,web._v670_sealed_fj_difference_proofs(a,{})),
+            (key,web._v670_sealed_fj_difference_proofs(b,{}))])
+        self.assertEqual(reports[0]["difference_codes"],[
+            "SOURCE_STAGES","STAGED_SOURCE_MANIFEST",
+            "V216_PREFLIGHT_SEAL","V217_V211_RECEIPT"])
+        serialized=json.dumps(reports)
+        self.assertNotIn("a"*64,serialized)
+        self.assertNotIn("b"*64,serialized)
+        self.assertNotIn("5"*64,serialized)
+        self.assertEqual(reports[0]["installed_count"],2)
+
     def test_real_ui_safe_copy_only_after_exact_local_scope(self):
         node=shutil.which("node")
         if node is None:self.skipTest("Node needed")
