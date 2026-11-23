@@ -264,8 +264,7 @@ const setNotice=message=>notices.push(message);
 const state={seasonGear:null,verifiedInstalledBuildFromThisPage:null};
 $('season-game-build').value='12.1.5.70961';
 $('ilevel').value='334';
-const funcs=Function('state','field','valueInt','    unittest.main()
-,'document','option',
+const funcs=Function('state','field','valueInt','$','document','option',
   'refreshDefaultConsumableSummaries','navigator','setNotice',
   raw.slice(a,b)+'\nreturn {renderInstalledFlaskChoices,copyVerifiedFjCollisionDiagnostic};')(
   state,field,valueInt,$,document,option,()=>{},navigator,setNotice);
