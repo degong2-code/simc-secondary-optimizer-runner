@@ -247,9 +247,17 @@ def _v672_verified_runtime_inputs_digest(docs, installed, snapshot):
                 linked.get("manifest_sha256")!=digest):
             return None
         # Compare all other sealed fields without reinterpreting values.
+        # Only two preflight-derived *non-executable* status lists may
+        # differ after two independent READY installations have each passed
+        # original stage+profile verification. Keep all numeric, Policy A,
+        # source owner, code and profile inputs in the comparison.
+        # Unqualified v216 source stages remain NOT INSTALLED and cannot
+        # authorize a selection on their own.
         stage_clean={k:v for k,v in stage_doc.items()
                      if k not in ("manifest_sha256",
-                                  "original_v216_preflight_sha256")}
+                                  "original_v216_preflight_sha256",
+                                  "pending_core_requirements",
+                                  "optional_item_missing")}
         installed_clean={k:v for k,v in installed.items()
                          if k not in ("manifest_sha256",
                                       "staged_source_environment_sha256",
