@@ -24,7 +24,7 @@
 ## QA 경계
 
 - 신규 테스트 `tests/test_v677_existing_budget_readonly_p1.py`: 첫 실패 체크별 409/422, 원본 파일 유지·Native/네트워크 차단, 실제 JS 첫 차단 안내 및 코드·개인 경로 비노출, v677 기존 예산 경로 회귀.
-- 최종 검증 링크: [API 오프라인 run #45141719636](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45141719636), [Windows ZIP run #45141719416](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45141719416). **기록 작성 시 일부 CI는 진행/대기 중이므로 PASS를 미리 선언하지 않는다.**
+- 최종 검증 링크: [API 오프라인 run #45141719636](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45141719636), [Windows ZIP run #45141719416](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45141719416). **최종 두 workflow 모두 `completed/success`:** API Ubuntu3.12/Windows3.14 각각 **530 tests OK (skipped=1), 0 FAIL**. Windows Beta Python3.12/3.14 각각 **371 tests PASS/0 FAIL**, 별도 ZIP 패키징 **5 tests PASS** 및 실제 추출 CMD·로컬 HTTP 3계획·세션 재열람 Native0 PASS. Windows wrapper artifact [#14801624814](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45141719416/artifacts/14801624814) 보존. 이 실행은 개인 PC v677/v678 자동 T·실제 DPS E2E 검증이 아니다.
 - 개발 도중 과거 run #45141198373은 분리 JS 클릭 test의 새 상태 참조 오류로 FAIL, run #45141551285는 신규 test fixture가 원본 대신 mock 복사본을 변경해 실패; 각각 고쳤으며 본 변경의 최종 PASS 판정은 위 최신 실행 결과로만 한다.
 - 새 DPS Native·G/F Native·외부 DB2/Wago 요청·기존 설치본/캐시 삭제·프로필 변경 0. 기존 v639 Native64/결과 E2E는 역사 재사용이며 개인 PC v677 검증을 대체하지 않는다.
 
