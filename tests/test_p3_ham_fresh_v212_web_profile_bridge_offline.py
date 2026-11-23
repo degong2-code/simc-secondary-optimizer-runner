@@ -945,6 +945,12 @@ class FreshOptionalConsumableForwarding(unittest.TestCase):
             folder.mkdir()
             (folder/"V106_SESSION_IDENTITY.json").write_text(json.dumps(
                 {"profile_stage":{"identity_sha256":"c"*64}}))
+            # This test models a future installed season option authority.
+            # The production path now reads it through the same v212 owner.
+            installed_file=folder/"mock-installed-source.json"
+            installed_file.write_text(json.dumps({
+                "installed_optional_consumables":{
+                    "schema":"mocked-source-for-adapter-test"}}))
             recorded={}
             def source_plan(*args,**kwargs):
                 recorded.update(kwargs)
@@ -971,14 +977,20 @@ class FreshOptionalConsumableForwarding(unittest.TestCase):
                     return_value={
                         "food":["source_default","royal_roast"],
                         "potion":["source_default"],
-                        "augmentation":["source_default","void_touched"]})
+                        "augmentation":["source_default","void_touched"]}),
+                mock.patch.object(web.profile_stage.installed_manifest,
+                    "verify_fresh_installed_environment",
+                    return_value=True)
             ):
                 data,receipt=web.profile_stage.build_or_reuse(
                     user=user,session_folder=folder,binary=folder/"simc",
                     revision="abcdeff",static_cache=None,
                     current_season_product=True,
                     verified_fresh_environment_result={
-                        "normal_build_entry":True})
+                        "normal_build_entry":True,
+                        "source_compilation":{
+                            "verified_environment_install":{
+                                "stage_output_path":str(installed_file)}}})
             self.assertEqual(builder.call_count,1)
             self.assertEqual(recorded["season_controls"],{
                 "food":"royal_roast","potion":"disabled",
