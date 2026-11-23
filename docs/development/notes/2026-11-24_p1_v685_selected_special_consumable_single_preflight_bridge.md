@@ -19,3 +19,7 @@
 최소 신규 회귀: 실제 v113 코드 분기의 `preflight exactly once`, 같은 `season_controls`, 검증 fresh 환경 객체, 세션·Native 이전 중단, 기존 `v212/v218` 검증 테스트 보존. 기존 v684 실제 동일 시즌 Wago 원본 stage Actions/영수증을 확보하지 못했으므로 실 음식·물약 자동 등록 개수는 **미확정**. 추가 Native·HTTP·Wago/DB2 0, 환경/정적/DPS 캐시 변화 없음.
 
 사용자 PC v677 T/DPS 시험 보류, 기존 v570/v639 Native 이력 재사용, 26전문화 Native 전수·새 효과 인증/최적화기/완료 Gate 금지. 공식 `15/78 COMPLETE`는 완료율 아님, `full_product_e2e=PENDING`, `next_review=B10`. main/immutable v003/v016 원본/Project UI/Work OS/기존 주 제품 개발 채팅 권한 변함 없음.
+
+## v685.1 — 신규 회귀의 CI 실제 실행 경로 조정
+
+P1 v388 focused Actions #45205277833의 로그에는 `tests/test_v113_local_web_api_offline.py` 96 PASS가 보이지만 `tests/test_v680_one_build_optional_consumables.py`는 해당 job에서 호출되지 않았다. 따라서 v685의 새 결합 회귀를 PASS로 과장하지 않으며 **새로 만든 CI 워크플로 없이**, 해당 새 테스트 하나를 이미 실행되는 웹/API `LocalWebAPIOffline` 클래스로 이동했다. 기존 v680 원본 연결·토큰 테스트는 원래 파일에 그대로 둔다. 다음 focused Actions에 정확 `test_selected_special_preview_reuses_exact_installed_consumable_preflight`의 개별 ok가 찍힌 경우에만 신규 테스트 PASS로 보고한다. 이 이동은 제품 동작·데이터·Native·HTTP·캐시 0 변경.

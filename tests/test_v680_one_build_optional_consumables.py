@@ -19,8 +19,6 @@ import v218_v098_profile_stage_adapter as profile
 import v106_user_session_controller as sessions
 import v280_consumable_item_use_spell_source as wago_effects
 import v216_environment_build_coordinator as fresh_build
-import v113_local_web_api as web
-from fastapi import HTTPException
 
 BUILD="12.1.5.70961"
 REV="a"*40
@@ -175,69 +173,6 @@ class OneBuildOptionalChoices(unittest.TestCase):
                     Exception,"FRESH_SEASON_OPTIONAL_CONSUMABLE_NOT_INSTALLED"):
                 profile._verified_fresh_season_consumables(
                     invalid,installed_environment=doc)
-
-    def test_selected_special_preview_reuses_exact_installed_consumable_preflight(self):
-        """Verified food + special gear must share one v212 choice result.
-
-        No source fetch, new source-authority engine, Native, DPS, or session
-        creation. Stop at the real selected-B8 preview boundary.
-        """
-        with tempfile.TemporaryDirectory() as td:
-            root=pathlib.Path(td)
-            binary=root/"test_simc.exe"
-            binary.write_bytes(b"OFFLINE_ONLY")
-            cache=root/"static-cache.json"
-            cache.write_text("{}",encoding="utf8")
-            build=BUILD
-            sha="a"*64
-            controls=sessions.standard_controls(("mage","frost"))
-            controls["special_items"]=[
-                {"slot":"head","item_id":290111,"options":{}}]
-            controls["consumable_choices"]={
-                **controls["consumable_choices"],"food":"royal_roast_3"}
-            params=web.UserRequest(
-                controls=controls,binary=str(binary),revision=REV,
-                static_cache=str(cache),current_season_product=True,
-                installed_season_game_build=build,
-                installed_manifest_sha256=sha)
-            fresh={
-                "verified_target_ilevel":334,
-                "verified_oil_item_ids_by_hand":{},
-                "source_compilation":{
-                    "source_catalog_path":str(root/"sealed_catalog.json"),
-                    "verified_environment_install":{
-                        "manifest_sha256":sha,
-                        "stage_output_path":str(root/"installed_v212.json"),
-                        "installed_source_game_build":build}}}
-            expected={"food":"royal_roast_3","potion":"disabled",
-                      "augmentation":"disabled"}
-            jobs=web.LocalJobs(root/"runs")
-            with (mock.patch.object(
-                    web,"_v680_preflight_optional_consumables",
-                    return_value=expected) as preflight,
-                  mock.patch.object(jobs,"load_fresh_profile_for_user",
-                                    return_value=fresh) as lookup,
-                  mock.patch.object(
-                      web.bootstrap,"preview_from_environment_build",
-                      side_effect=web.environment_manifest.EnvironmentBlocked(
-                          "V685_STOP_AFTER_EXACT_CHOICE_FORWARD")) as preview,
-                  mock.patch.object(
-                      web.sessions,"store_selected_fresh_session",
-                      side_effect=AssertionError("NO_SESSION_BEFORE_PREVIEW")),
-                  mock.patch.object(
-                      web.subprocess,"Popen",
-                      side_effect=AssertionError("NO_NATIVE"))):
-                with self.assertRaises(HTTPException) as blocked:
-                    jobs.plan(params)
-            self.assertEqual(blocked.exception.status_code,422)
-            self.assertEqual(blocked.exception.detail["code"],
-                             "V685_STOP_AFTER_EXACT_CHOICE_FORWARD")
-            preflight.assert_called_once()
-            lookup.assert_called_once()
-            preview.assert_called_once()
-            self.assertEqual(preview.call_args.kwargs["season_controls"],
-                             expected)
-            self.assertIs(preview.call_args.kwargs["environment_result"],fresh)
 
     def test_actual_user_ui_consumes_only_the_exact_installed_source(self):
         node=shutil.which("node")
