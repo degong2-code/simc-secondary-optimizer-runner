@@ -2006,6 +2006,37 @@ function verifiedInstalledGearScopeMatchesRun(build,ilevel) {
     /^[a-f0-9]{64}$/.test(gear.installed_manifest_sha256||"");
 }
 
+function verifiedExistingBudgetScopeMatchesRun() {
+  const saved=state.verifiedExistingBudget;
+  if(!saved||saved.schema!=="v677_verified_existing_installed_budget_v1"||
+     saved.status!=="VERIFIED_EXISTING_INSTALLED_BUDGET"||
+     saved.verified_saved_v113_profile!==true||
+     saved.current_retail_build_verified!==false||
+     saved.native_calls_now!==0)return false;
+  const build=field("season-game-build")||
+    state.verifiedInstalledBuildFromThisPage;
+  const level=Number(field("ilevel"));
+  const track=field("spec")==="warrior/fury"&&!$("manual-t-mode").checked?
+    "fury_dual_2h":"general";
+  const sha=field("season-verified-budget");
+  const flask=Number(field("season-verified-flask"));
+  const oil=saved.O;
+  return verifiedInstalledGearScopeMatchesRun(build,level) &&
+    saved.game_build===build && saved.target_ilevel===level &&
+    saved.installed_manifest_sha256===sha &&
+    state.seasonGear.installed_manifest_sha256===sha &&
+    saved.selected_flask_item_id===flask &&
+    saved.reference_G_track===track &&
+    !oilUseIntent && Number(field("season-target-socket-count"))===4 &&
+    !field("season-existing-special-gem-id") &&
+    oil&&typeof oil==="object" &&
+    ["crit_rating","haste_rating","mastery_rating","versatility_rating"].every(stat=>
+      Number.isSafeInteger(oil[stat])&&oil[stat]===0) &&
+    [saved.G,saved.J,saved.F,saved.B,saved.T].every(v=>
+      Number.isSafeInteger(v)&&v>=0) &&
+    saved.B===saved.G+saved.J+saved.F &&
+    saved.T===saved.B;
+}
 function optimizerNeedsSeasonPreparation() {
   const build=field("season-game-build") ||
     state.verifiedInstalledBuildFromThisPage;
