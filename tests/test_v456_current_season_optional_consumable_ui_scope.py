@@ -260,16 +260,16 @@ const f=Function('state','$','field',src.slice(a,b)+
  'return {status:currentSeasonOptionalUseStatus,refresh:refreshDefaultConsumableSummaries};'
 )(state,$,field);
 f.refresh();
-assert(nodes['food-application-status'].textContent.includes('SimC 미사용'));
-assert(nodes['potion-application-status'].textContent.includes('SimC 미사용'));
-assert(nodes['food-application-status'].textContent.includes('ID·품질 미등록'));
+assert(nodes['food-application-status'].textContent.includes('음식 효과 없이 계산합니다.'));
+assert(nodes['potion-application-status'].textContent.includes('물약 효과 없이 계산합니다.'));
+assert(nodes['food-application-status'].textContent.includes('이번 시즌 음식 선택을 준비하지 못했습니다.'));
 nodes.potion.value='potion_of_recklessness_2';
 nodes.potion.selectedOptions=[{dataset:{historic:'true'}}];
 f.refresh();
-assert(nodes['potion-application-status'].textContent.includes('신규 최적화에 적용 불가'));
-assert(!nodes['potion-application-status'].textContent.includes('SimC 미사용'));
+assert(nodes['potion-application-status'].textContent.includes('이번 시즌에서는 다시 선택해 주세요.'));
+assert(!nodes['potion-application-status'].textContent.includes('효과 없이 계산합니다.'));
 delete state.options.current_season_product_choices;
-assert(f.status('food').includes('상태 미확인'));
+assert(f.status('food').includes('정보를 아직 가져오지 못했습니다.'));
 state.options.current_season_product_choices={
  schema:'v113_current_season_optional_consumables_v1',
  source_default_simc_token:'disabled',
@@ -277,7 +277,7 @@ state.options.current_season_product_choices={
 };
 nodes.food.value='harandar_celebration';
 nodes.food.selectedOptions=[{dataset:{}}];
-assert(f.status('food').includes('실행 프로필에서 확인'));
+assert(f.status('food').includes('선택한 음식으로 계산합니다.'));
 const html=fs.readFileSync(process.argv[2],'utf8');
 for(const id of ['food','potion'])
   assert(html.includes('id="'+id+'-application-status"'));
