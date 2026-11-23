@@ -24,7 +24,11 @@ v679까지 음식·물약은 Wago/SimC 후보를 수집하면서도 UI/실행에
 
 - 합성 source/오프라인: v680 테스트는 Wago 아이템→사용 주문, 기존 ItemEffect 요청 1회 재사용, 추가 네트워크 0, SimC generated item metadata/handler 결합, 최신 입력 revision·최저 버전 분기, 효과/사용 조건별 최고 품질 분류, 동률·토큰 충돌 비선택, 실제 JS 설치 SHA 전환, v218 선택/기본 disabled 경계, 동일 소스 반복 호출 시 item_data 재파싱 금지를 확인한다.
 - 실제 원래 v212 테스트에 **선택형 메뉴가 들어간 새 설치 매니페스트** 계약을 추가하여 G/J/F/O/B/T 계산·v212 봉인 일치와 기존 매니페스트 불변을 비교한다.
-- 전체 Actions CI는 해당 실행 ID의 `completed/success`를 확인한 후에만 PASS 기록. 개인 사용자 PC 실측 및 신규 DPS/G/F Native **0회**.
+- **실제 코드 HEAD `f48a283dd18e734e16d089eba35948eb30a23f84`의 CI 완료·성공**:
+  - [API #45152990800](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45152990800): Windows Python3.14/Ubuntu Python3.12 **각 540 tests OK, 1 SKIP, 0 FAIL**.
+  - [Windows ZIP #45152990735](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45152990735): Windows Python3.12/3.14 **각 389 tests OK, 0 FAIL**, 패키징 **5 PASS**, 실제 ZIP 추출·CMD·로컬 HTTP 3계획·세션 복원 **Native0**. Wrapper artifact [#14808020590](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45152990735/artifacts/14808020590); 래퍼 digest `sha256:8892803c6c917b3e88933f1a6ced27a1f88128d5b6793eb466ffb3e5fe3400db`는 내부 ZIP 해시와 다르다.
+  - [v212 설치 계약 #45152990885](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45152990885), [UI #45152990775](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45152990775), [기존 focused #45152990813](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45152990813), [v410 분류 #45152990679](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45152990679) 모두 성공.
+  - 개인 사용자 PC 실측 및 신규 DPS/G/F Native **0회**. 테스트는 실제 최신 시즌 전체 소모품 등록 PASS가 아닌 **합성 원본+기존 제품 계약의 오프라인 PASS**다.
 - 기존 11/8 고양 주술사 소모품 Native 시험, 기존 v639 최적화/95% 결과는 *역사 재사용*이다. 이번 코드의 새 시즌 실제 실행 PASS가 아니다.
 
 ## 아직 미해결 — 완료를 과장하지 않음
