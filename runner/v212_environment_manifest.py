@@ -634,7 +634,20 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
                 "quality":highest,
                 "effect_identity":key[1],
                 "use_condition_identity":key[2]})
+        # Ambiguous parser token or physical ID is an *optional* omission,
+        # not an error that prevents core G/J/F/O from installing.
+        seen_token={}
+        seen_id={}
         for name in ("food","potion"):
+            for row in kinds[name]["options"]:
+                seen_token[row["simc_token"]]=(
+                    seen_token.get(row["simc_token"],0)+1)
+                seen_id[row["item_id"]]=seen_id.get(row["item_id"],0)+1
+        for name in ("food","potion"):
+            kinds[name]["options"]=[
+                row for row in kinds[name]["options"]
+                if seen_token[row["simc_token"]]==1 and
+                   seen_id[row["item_id"]]==1]
             kinds[name]["options"].sort(key=lambda x:x["item_id"])
             kinds[name]["status"]=(
                 "SOURCE_BACKED_OPTIONS_READY" if kinds[name]["options"]
