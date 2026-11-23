@@ -159,5 +159,166 @@ console.log('V669_PHYSICAL_FJ_UI_EXACT_CHOICES_PASS');
         self.assertIn("V669_PHYSICAL_FJ_UI_EXACT_CHOICES_PASS", p.stdout)
 
 
+class SealedFJCollisionReceipt(unittest.TestCase):
+    def test_existing_v212_diff_categories_only_not_auto_approved(self):
+        build="12.1.5.70961"
+        sha_a,sha_b="a"*64,"b"*64
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)/"runs"
+            folder=root/"_fresh_season_sources"/("wago_"+build)/"fresh_source"
+            folder.mkdir(parents=True)
+            for sha,rev,proof in (
+                    (sha_a,"revision-A","j-evidence-A"),
+                    (sha_b,"revision-B","j-evidence-B")):
+                doc={
+                    "manifest_sha256":sha,"game_build":build,
+                    "target_ilevel":334,"official_G":2850,
+                    "official_J":92,"official_F":165,"official_B":3107,
+                    "official_T":3107,"manual_final_T_authoritative":False,
+                    "simc_revision":rev,"trusted_budget_component_source_identities":{
+                        "G":{"source_sha256":"same"},
+                        "J":{"source_sha256":proof},
+                        "F":{"source_sha256":"same"},
+                        "O":{"source_sha256":"same"}},
+                    "official_F_physical_source":{
+                        "physical_item_id":241324,"crafting_quality":2,
+                        "F_rating":165,"simc_input_token":"flask_2"},
+                    "official_O_physical_source":None}
+                profile={"environment_result":{"source_compilation":{
+                    "physical_gem_layout_unadmitted":{
+                        "schema":"v271_user_socket_gem_layout_stage_v1",
+                        "status":"PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING",
+                        "ordinary_gem_ids":[240001,240002,240003,240004],
+                        "special_gem_id":None,"socket_total":4}}}}
+                (folder/("v212_installed_"+sha[:20]+".json")).write_text(
+                    json.dumps(doc),encoding="utf8")
+                (folder/("v113_profile_"+sha[:20]+".json")).write_text(
+                    json.dumps(profile),encoding="utf8")
+            before={p.name:p.read_bytes() for p in folder.iterdir()}
+            def exact(*args,**kwargs):
+                return {"installed_manifest_sha256":
+                        kwargs["expected_installed_manifest_sha256"]}
+            def read(path,*args):
+                return json.loads(path.read_text("utf8")), "synthetic"
+            jobs=web.LocalJobs(root,source_credential_store=object())
+            with mock.patch.object(web.environment_manifest,"read_json",
+                                   side_effect=read), \
+                 mock.patch.object(web.environment_manifest,
+                                   "verify_fresh_installed_environment"), \
+                 mock.patch.object(web.environment_build,
+                                   "find_verified_installed_season_environment",
+                                   side_effect=exact), \
+                 mock.patch.object(web.official_ko_env,"read_names",
+                                   return_value={}), \
+                 mock.patch.object(web.subprocess,"Popen",
+                                   side_effect=AssertionError("NO_NATIVE")):
+                data=jobs.installed_oil_loadouts(334,game_build=build)
+            self.assertEqual(len(data["verified_base_flask_installs"]),2)
+            diag=data["verified_base_fj_collision_diagnostics"]
+            self.assertEqual(len(diag),1)
+            self.assertEqual(diag[0]["installed_count"],2)
+            self.assertEqual(diag[0]["difference_codes"],
+                             ["J_SOURCE","SIMC_REVISION"])
+            serialized=json.dumps(diag)
+            for secret in (sha_a,sha_b,str(folder),"revision-A",
+                           "j-evidence-A","source_sha256"):
+                self.assertNotIn(secret,serialized)
+            self.assertEqual(data["native_calls"],0)
+            self.assertEqual(data["network_calls"],0)
+            self.assertEqual(before,
+                {p.name:p.read_bytes() for p in folder.iterdir()},
+                "read-only collision comparison cannot edit saved receipts")
+
+    def test_identical_known_fields_do_not_make_multiple_sha_selectable(self):
+        vals={"simc_revision":"same",
+              "trusted_budget_component_source_identities":{}}
+        a=web._v670_sealed_fj_difference_proofs(vals,{})
+        b=web._v670_sealed_fj_difference_proofs(dict(vals),{})
+        key=(241324,2,165,92,4,(240001,240002,240003,240004))
+        result=web._v670_colliding_fj_diagnostics([(key,a),(key,b)])
+        self.assertEqual(result[0]["difference_codes"],
+                         ["OTHER_SEALED_IDENTITY"])
+
+    def test_real_ui_safe_copy_only_after_exact_local_scope(self):
+        node=shutil.which("node")
+        if node is None:self.skipTest("Node needed")
+        harness=r"""
+const fs=require('fs'), assert=require('assert');
+const raw=fs.readFileSync(process.argv[1],'utf8');
+const a=raw.indexOf('function installedConsumableScopeMatches(data) {');
+const b=raw.indexOf('async function chooseInstalledFlask()',a);
+assert(a>=0&&b>a);
+const nodes=Object.create(null),copies=[],notices=[];
+const $=id=>(nodes[id]??={
+ value:'',hidden:true,disabled:false,textContent:'',options:[],
+ replaceChildren(...items){this.options=items;this.value=items[0]?.value||'';},
+ appendChild(item){this.options.push(item)}
+});
+const field=id=>String($(id).value||'');
+const valueInt=id=>Number(field(id));
+const document={getElementById:id=>$(id)};
+const option=(value,label)=>({value:String(value),textContent:String(label),
+ disabled:false});
+const navigator={clipboard:{writeText:async text=>copies.push(text)}};
+const setNotice=message=>notices.push(message);
+const state={seasonGear:null,verifiedInstalledBuildFromThisPage:null};
+$('season-game-build').value='12.1.5.70961';
+$('ilevel').value='334';
+const funcs=Function('state','field','valueInt','    unittest.main()
+,'document','option',
+  'refreshDefaultConsumableSummaries','navigator','setNotice',
+  raw.slice(a,b)+'\\nreturn {renderInstalledFlaskChoices,copyVerifiedFjCollisionDiagnostic};')(
+  state,field,valueInt,$,document,option,()=>{},navigator,setNotice);
+const A='a'.repeat(64),B='b'.repeat(64);
+const base={flask_item_id:241324,flask_quality:2,J:92,F:165,
+ socket_total:4,ordinary_gem_item_ids:[240001,240002,240003,240004]};
+const payload={
+ schema:'v113_verified_installed_oil_loadouts_v1',
+ game_build:'12.1.5.70961',target_ilevel:334,
+ verified_base_flask_installs:[
+   {...base,installed_manifest_sha256:A},
+   {...base,installed_manifest_sha256:B}],
+ verified_flasks:[],
+ verified_base_fj_collision_diagnostics:[{
+   flask_item_id:241324,flask_quality:2,
+   F:165,J:92,socket_total:4,
+   ordinary_gem_item_ids:[240001,240002,240003,240004],
+   installed_count:2,difference_codes:['SIMC_REVISION','J_SOURCE']}]
+};
+state.oilCatalog=payload;
+(async()=>{
+  funcs.renderInstalledFlaskChoices(payload);
+  const sel=$('season-verified-budget');
+  assert.equal(sel.options[1].disabled,true);
+  assert.equal(sel.options[2].disabled,true);
+  assert.equal($('season-verified-fj-diagnostic-copy').hidden,false);
+  assert($('season-verified-budget-status').textContent.includes('SimC revision'));
+  await funcs.copyVerifiedFjCollisionDiagnostic();
+  assert.equal(copies.length,1);
+  const receipt=JSON.parse(copies[0]);
+  assert.equal(receipt.groups[0].installed_count,2);
+  assert.deepEqual(receipt.groups[0].difference_codes,
+    ['SIMC_REVISION','J_SOURCE']);
+  assert.equal(receipt.environment_ready,false);
+  assert(!copies[0].includes(A));
+  assert(!copies[0].includes(B));
+  assert(!copies[0].includes('C:\\Users'));
+  $('season-game-build').value='12.1.5.70575';
+  funcs.renderInstalledFlaskChoices(payload);
+  assert.equal($('season-verified-fj-diagnostic-copy').hidden,true);
+  await funcs.copyVerifiedFjCollisionDiagnostic();
+  assert.equal(copies.length,1,'Old build cannot copy as present evidence');
+  console.log('V670_SEALED_FJ_COLLISION_SAFE_DIAGNOSTIC_PASS');
+})().catch(e=>{console.error(e.stack||e);process.exitCode=1});
+"""
+        result=subprocess.run([node,"-e",harness,
+                str(ROOT/"runner/webui/app.js")],cwd=ROOT,
+                text=True,capture_output=True,timeout=20)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V670_SEALED_FJ_COLLISION_SAFE_DIAGNOSTIC_PASS",
+                      result.stdout)
+
+
+
 if __name__ == "__main__":
     unittest.main()
