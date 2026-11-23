@@ -189,11 +189,24 @@ def build_or_reuse(*,user,session_folder,binary,revision,static_cache,
             if not current_season_product or static_cache is not None:
                 raise engine.StageExecutionBlocked(
                     "V218_FRESH_INSTALLED_PROFILE_MODE_MISMATCH")
-            installed=verified_fresh_environment_result[
-                "source_compilation"]["verified_environment_install"]
-            installed_doc,_=installed_manifest.read_json(
-                pathlib.Path(installed["stage_output_path"]))
-            installed_manifest.verify_fresh_installed_environment(installed_doc)
+            # No extra manifest I/O or new admission gate for a BASE run.
+            # An actual selected optional effect must match the exact
+            # installed source, also checked by v113 before costly Native.
+            chosen=user.get(bootstrap.CONSUME_FIELD) or {}
+            selected_optional=any(chosen.get(name) not in
+                (None,"source_default","disabled")
+                for name in ("food","potion","augmentation"))
+            installed_doc=None
+            if selected_optional:
+                install=verified_fresh_environment_result.get(
+                    "source_compilation",{}).get(
+                        "verified_environment_install")
+                if type(install) is not dict:
+                    raise engine.StageExecutionBlocked(
+                        "FRESH_OPTIONAL_INSTALLED_SEASON_MISSING")
+                installed_doc,_=installed_manifest.read_json(
+                    pathlib.Path(install["stage_output_path"]))
+                installed_manifest.verify_fresh_installed_environment(installed_doc)
             result=bootstrap.run_from_verified_environment_build(
                 user,generated,binary,revision,
                 environment_result=verified_fresh_environment_result,
