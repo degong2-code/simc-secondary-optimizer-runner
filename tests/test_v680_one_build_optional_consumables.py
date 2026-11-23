@@ -42,6 +42,19 @@ class OneBuildOptionalChoices(unittest.TestCase):
         return manifest.project_fresh_optional_consumables(
             game_build=BUILD,simc_revision=REV,source=self.source(rows))
 
+    def test_70961_simc_parser_spelling_drops_punctuation_instead_of_underscores(self):
+        # Same-revision consumable.cpp/util.cpp: punctuation is removed,
+        # spaces are underscores and only a one-digit rank is parsed.
+        token=fresh_build.optional_source_join.candidate_token
+        self.assertEqual(token("Sweet-and-Sour Skewers",3),
+                         "sweetandsour_skewers_3")
+        self.assertEqual(token("Loa's Gathering",2),"loas_gathering_2")
+        self.assertEqual(token("Mana-Infused Stew",1),"manainfused_stew_1")
+        self.assertIsNone(token("SimC + symbol",3))
+        self.assertIsNone(token("A two-digit rank",12))
+        # Spelling is only a candidate: actual SimC input acceptance and
+        # numerical quality dominance remain distinct, unproven boundaries.
+
     def test_same_effect_and_use_condition_best_quality_is_only_one_option(self):
         # Same spell/use family: lower rank excluded. Different effects and
         # different use conditions remain independently selectable.

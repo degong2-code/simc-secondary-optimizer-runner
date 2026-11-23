@@ -43,10 +43,27 @@ def need(condition, code):
 
 
 def candidate_token(name, rank):
-    """A spelling candidate from SimC DBC, NOT SimC input acceptance."""
-    if type(name) is not str or not name.isascii():
+    """Conservative SimC parser spelling, NOT proof that a token selects an item.
+
+    Pinned SimC 12.1.5.70961 engine/util/util.cpp::tokenize removes ASCII
+    punctuation (including hyphens and apostrophes) instead of replacing it
+    with underscores; spaces become underscores. consumable.cpp reads only a
+    single-digit crafting-quality suffix. Names with supported SimC punctuation
+    that cannot fit the existing installed-token grammar stay unadmitted.
+    """
+    if (type(name) is not str or not name.isascii() or
+            type(rank) is not int or not 0<=rank<=9):
         return None
-    stem=re.sub(r"[^a-z0-9]+","_",name.lower()).strip("_")
+    chars=[]
+    for char in name.lstrip("_+"):
+        if char.isalpha():
+            chars.append(char.lower())
+        elif char==" ":
+            chars.append("_")
+        elif char.isdecimal() or char in "_+.%":
+            chars.append(char)
+        # SimC removes other ASCII punctuation rather than inserting '_'.
+    stem="".join(chars)
     if TOKEN.fullmatch(stem) is None:
         return None
     return stem+("_"+str(rank) if rank else "")
