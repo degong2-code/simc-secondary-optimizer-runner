@@ -92,6 +92,73 @@ def _verified_snapshot_gem_layout_matches(result, *, special_gem_id,
         and len(ordinary)+int(special_gem_id is not None)==socket_total)
 
 
+
+def _v670_sealed_fj_difference_proofs(doc, gem_layout):
+    """Fingerprint allowlisted existing source evidence; no hashes leave this process.
+
+    The caller separately verifies original v212/v113 and exact installed SHA.
+    These comparisons confer no READY or session admission authority.
+    """
+    owners=doc.get("trusted_budget_component_source_identities")
+    owners=owners if type(owners) is dict else {}
+    groups={
+        "SIMC_REVISION":doc.get("simc_revision"),
+        "G_REFERENCE":(
+            doc.get("official_G_reference_track","general"),
+            doc.get("official_G"),doc.get("official_effective_G"),
+            doc.get("official_G_profile_receipt_sha256")),
+        "B_T_ACCOUNTING":(
+            doc.get("official_B"),doc.get("official_T"),
+            doc.get("manual_final_T_authoritative")),
+        "G_SOURCE":owners.get("G"),
+        "J_SOURCE":owners.get("J"),
+        "F_SOURCE":owners.get("F"),
+        "O_SOURCE":owners.get("O"),
+        "F_NATIVE_PROOF":doc.get("official_F_physical_source"),
+        "O_FIXED_VECTOR":doc.get("official_O"),
+        "SOURCE_CATALOG":(
+            doc.get("source_catalog_manifest_sha256"),
+            doc.get("source_catalog_artifact_sha256")),
+        "SOURCE_STAGES":(
+            doc.get("staged_source_environment_sha256"),
+            doc.get("original_v216_preflight_sha256"),
+            doc.get("original_v217_stage_receipts")),
+        "TRUSTED_BUDGET_EVIDENCE":doc.get("trusted_budget_evidence_sha256"),
+        "V222_BUDGET_OWNER":doc.get("v222_reconciled_budget"),
+        "POLICY_A_OPTIONS":(
+            doc.get("original_v196_prepared_options_sha256"),
+            doc.get("published_verified_options"),
+            doc.get("optional_quality_pending_item_ids"),
+            doc.get("optional_other_proof_pending_by_id")),
+        "DK_OPTIONAL_MODULE":doc.get("verified_DK_runeforges"),
+        "GEM_LAYOUT_PROOF":gem_layout}
+    return {name:hashlib.sha256(json.dumps(value,sort_keys=True,
+        ensure_ascii=True,separators=(",",":")).encode("utf8")).hexdigest()
+        for name,value in groups.items()}
+
+
+def _v670_colliding_fj_diagnostics(proofs):
+    """Describe differences without exposing installed SHA, paths or source data."""
+    buckets={}
+    for physical,proof in proofs:
+        buckets.setdefault(physical,[]).append(proof)
+    reports=[]
+    for physical,entries in sorted(buckets.items()):
+        if len(entries)<2:
+            continue
+        differences=sorted(name for name in entries[0]
+                           if len({entry[name] for entry in entries})>1)
+        if not differences:
+            differences=["OTHER_SEALED_IDENTITY"]
+        flask_id,quality,F,J,sockets,gem_ids=physical
+        reports.append({
+            "flask_item_id":flask_id,"flask_quality":quality,
+            "F":F,"J":J,"socket_total":sockets,
+            "ordinary_gem_item_ids":list(gem_ids),
+            "installed_count":len(entries),
+            "difference_codes":differences})
+    return reports
+
 class UpdateInstallRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     filename: str = Field(min_length=12,max_length=140)
@@ -1286,6 +1353,7 @@ class LocalJobs:
                 "game_build":build,"target_ilevel":ilevel,
                 "items":[],"verified_flasks":[],
                 "verified_base_flask_installs":[],
+                "verified_base_fj_collision_diagnostics":[],
                 "native_calls":0,"network_calls":0}
         if build is None:
             result["status"]="SELECT_LOCAL_INSTALLED_BUILD"
@@ -1306,6 +1374,7 @@ class LocalJobs:
         seen=set()
         flasks_by_id={}
         conflicting_flasks=set()
+        base_fj_proofs=[]
         for _,path in sorted(candidates,key=lambda p:(-p[0],str(p[1]))):
             try:
                 if path.stat().st_size>environment_build.MAX_RECEIPT_BYTES:
@@ -1372,6 +1441,13 @@ class LocalJobs:
                                 "J":doc["official_J"],
                                 "F":doc["official_F"],
                                 "socket_total":4})
+                            # v670: compare only installed proof differences.
+                            # Never expose SHA/path or authorize a selection.
+                            identity=(flask["physical_item_id"],quality,
+                                      doc["official_F"],doc["official_J"],
+                                      4,tuple(sorted(gem_ids)))
+                            base_fj_proofs.append((identity,
+                                _v670_sealed_fj_difference_proofs(doc,layout)))
                 if type(flask) is dict:
                     physical=flask["physical_item_id"]
                     if physical not in conflicting_flasks:
@@ -1438,6 +1514,7 @@ class LocalJobs:
                  entry["selected_oil_item_ids_by_hand"].values()}
         official_names=official_ko_env.read_names(
             self.root,build,set(flasks_by_id)|oil_ids)
+        result["verified_base_fj_collision_diagnostics"]=_v670_colliding_fj_diagnostics(base_fj_proofs)
         result["verified_base_flask_installs"].sort(
             key=lambda x:(x["flask_item_id"],x["J"],
                           x["installed_manifest_sha256"]))
