@@ -240,7 +240,7 @@
             <div class="field"><label for="source-wcl-secret">Warcraft Logs Client Secret</label><input id="source-wcl-secret" type="password" autocomplete="new-password" spellcheck="false"></div>
           </div>
           <div class="actions"><button type="button" class="btn secondary" id="source-credentials-save-btn" disabled>내 API 인증정보 저장</button><button type="button" class="btn secondary" id="source-credentials-clear-btn" disabled>저장된 인증정보 삭제</button></div>
-          <p class="hint" id="source-credentials-status" role="status" aria-live="polite">로컬 인증정보 상태 확인 중…</p>
+          <p class="hint settings-live-status" id="source-credentials-status" role="status" aria-live="polite">로컬 인증정보 상태 확인 중…</p>
           <p class="hint">저장은 Windows 보안 저장소에 보관된 상태만 확인합니다. 실제 Blizzard·Warcraft Logs 계정 인증 및 해당 시즌 데이터 접근 권한은 환경 구축 때 별도로 확인됩니다.</p>
           <p class="hint">비밀키는 브라우저에 다시 표시하지 않습니다. 암호화 파일을 ZIP에 넣지 않고 Windows 계정별 보안 저장소를 사용합니다. 동일 Windows 계정의 다른 프로그램은 접근할 수 있으므로 신뢰하는 PC에서만 사용하세요.</p>
         </details>
@@ -263,10 +263,11 @@
           <div class="season-activity-track" aria-hidden="true"><span></span></div>
           <p class="hint">외부 API 인증과 Wago DB2 원본 수집은 시간이 걸릴 수 있습니다. 여기에는 임의의 진행률(%)을 표시하지 않습니다. 정확한 단계별 결과는 서버 응답이 도착하면 아래에 표시됩니다. 페이지를 닫지 마세요.</p>
         </div>
+        <div id="season-environment-status-facts" class="settings-status-facts" role="group" aria-label="시즌 환경 확인 결과" hidden></div>
         <p id="season-build-stage" class="hint" role="status" aria-live="polite">기본: 검증된 기존 설치를 재사용하며, 설치가 없거나 갱신이 필요하면 원본 수집·검증을 수행합니다. 최적화 세션은 시작하지 않습니다.</p>
         <details class="fold" id="season-build-technical-panel" hidden><summary>원본 수집·검증 세부 기록 (고급)</summary><p id="season-build-technical" class="hint"></p></details>
-        <p id="season-locale-status" class="hint" role="status" aria-live="polite">공식 한국어 아이템명은 시즌 환경 구축에서 검증합니다.</p>
-        <p id="season-terms-status" class="hint" role="status" aria-live="polite">직업·전문화·종족의 공식 한국어 명칭도 환경 구축에서 확인합니다.</p>
+        <p id="season-locale-status" class="hint settings-live-status" role="status" aria-live="polite">공식 한국어 아이템명은 시즌 환경 구축에서 검증합니다.</p>
+        <p id="season-terms-status" class="hint settings-live-status" role="status" aria-live="polite">직업·전문화·종족의 공식 한국어 명칭도 환경 구축에서 확인합니다.</p>
         <p id="season-build-summary" class="hint" role="status" aria-live="polite">시즌 환경 확인·설치를 누르면 검증된 결과와 미완료 이유를 여기서 요약합니다.</p>
         <div class="season-remedy" id="season-build-remedy" role="status" aria-live="polite" hidden>
           <strong id="season-build-remedy-title">우선 해결할 문제</strong>
@@ -282,22 +283,23 @@
  <details class="fold simc-technical-panel" id="simc-technical-panel"><summary>SimulationCraft 연결 및 업데이트 <small>처음 사용하거나 버전을 바꿀 때</small></summary><div class="field"><label for="binary">simc.exe 경로 <small>실행 파일은 서버로 업로드하지 않습니다</small></label><input id="binary" placeholder="C:\SimC\simc.exe" required spellcheck="false"></div>
             <div class="two"><div class="field"><label for="revision">SimC Git revision</label><input id="revision" required pattern="[a-fA-F0-9]{7,12}|[a-fA-F0-9]{40}" placeholder="예: 9933ffb" spellcheck="false"></div><div class="field"><label for="static_cache">정적 캐시 JSON 경로 <small>고급 · 선택</small></label><input id="static_cache" spellcheck="false" placeholder="기본 로컬 정적 캐시가 있으면 자동 사용"></div></div>
             <div class="actions simc-connection-actions"><button type="button" id="simc-connection-confirm-btn" class="btn primary">SimC 연결 확인·저장</button></div>
+            <div id="simc-connection-status-facts" class="settings-status-facts" role="group" aria-label="SimC 연결 검증 결과" hidden></div>
             <p id="simc-connection-status" class="hint" role="status" aria-live="polite">경로와 Git revision을 입력한 뒤 확인·저장하세요. SimC를 짧게 한 번 실행해 기동을 확인하며 DPS 계산은 하지 않습니다.</p>
             <p class="hint">수동 입력한 Git revision은 실행파일만으로 자동 인증되지 않을 수 있습니다. 내장 게임 데이터 빌드가 표시되더라도 현재 WoW 빌드와의 호환성은 시즌 구축에서 별도 검증합니다.</p>
             <details class="fold simc-update-panel" id="simc-update-panel"><summary><span>설정 · SimulationCraft 관리</span><small>사용자 승인 후에만 다운로드·설치</small></summary>
               <p class="hint">공식 Windows x64 nightly를 우선 사용합니다. 공식 배포가 없다면 정확한 소스 SHA에서 별도로 빌드한 CLI ZIP을 직접 선택할 수 있습니다. 현재 지정한 simc.exe는 덮어쓰지 않으며 버전 변경으로 시즌 DB를 자동 갱신하지 않습니다.</p>
-              <p class="hint" id="simc-update-status" role="status" aria-live="polite">관리 중인 SimC 조회 전 · 기존 직접 지정 경로도 계속 사용할 수 있습니다.</p>
+              <p class="hint settings-live-status" id="simc-update-status" role="status" aria-live="polite">관리 중인 SimC 조회 전 · 기존 직접 지정 경로도 계속 사용할 수 있습니다.</p>
               <div class="simc-update-actions">
                 <button type="button" class="btn primary" id="simc-auto-prepare-btn">SimC 자동 확보·설치</button>
                 <button type="button" class="btn secondary" id="simc-check-btn">공식 업데이트 확인</button>
                 <button type="button" class="btn primary" id="simc-install-btn" disabled>확인한 버전 설치</button>
                 <button type="button" class="btn secondary" id="simc-rollback-btn" disabled>이전 버전 복원</button>
               </div>
-              <p class="hint" id="simc-auto-prepare-status" role="status" aria-live="polite">한 번의 사용자 승인으로 공식 SimC 또는 공개 배포된 자체 빌드 캐시를 확인해 설치합니다. 공개 바이너리가 전혀 없을 때 원격 컴파일 자동 요청은 아직 지원하지 않습니다. GitHub 로그인이나 개인 토큰은 요구하지 않습니다.</p>
-              <p class="hint" id="simc-update-candidate" role="status" aria-live="polite">새 버전 확인은 버튼을 누른 경우에만 인터넷에 접속합니다.</p>
+              <p class="hint settings-live-status" id="simc-auto-prepare-status" role="status" aria-live="polite">한 번의 사용자 승인으로 공식 SimC 또는 공개 배포된 자체 빌드 캐시를 확인해 설치합니다. 공개 바이너리가 전혀 없을 때 원격 컴파일 자동 요청은 아직 지원하지 않습니다. GitHub 로그인이나 개인 토큰은 요구하지 않습니다.</p>
+              <p class="hint settings-live-status" id="simc-update-candidate" role="status" aria-live="polite">새 버전 확인은 버튼을 누른 경우에만 인터넷에 접속합니다.</p>
               <div class="field"><label for="simc-local-archive">공식 사이트에서 직접 내려받은 .7z 경로 <small>자동 조회가 실패할 때 사용</small></label><input id="simc-local-archive" spellcheck="false" placeholder="C:\\Users\\...\\Downloads\\simc-1215-01-win64-xxxxxxx.7z"></div>
               <button type="button" class="btn secondary" id="simc-install-local-btn">내 PC의 .7z 파일 설치</button>
-              <p id="simc-local-install-status" class="hint" role="status" aria-live="polite">.7z 설치에는 7-Zip의 7z.exe가 필요합니다. Windows PATH 또는 기본 설치 폴더(Program Files\\7-Zip, Program Files (x86)\\7-Zip)에서 자동 탐색하며, 설치할 .7z 파일의 저장 위치에는 제한이 없습니다.</p>
+              <p id="simc-local-install-status" class="hint settings-live-status" role="status" aria-live="polite">.7z 설치에는 7-Zip의 7z.exe가 필요합니다. Windows PATH 또는 기본 설치 폴더(Program Files\\7-Zip, Program Files (x86)\\7-Zip)에서 자동 탐색하며, 설치할 .7z 파일의 저장 위치에는 제한이 없습니다.</p>
               <div class="field"><label for="simc-self-built-artifact">자체 빌드 SimC Actions ZIP 경로 <small>공식 배포가 없는 경우에만 · build_receipt.json 포함</small></label><input id="simc-self-built-artifact" spellcheck="false" placeholder="C:\\Users\\...\\Downloads\\simc-win64-cli-xxxxx.zip"></div>
               <button type="button" class="btn secondary" id="simc-install-self-built-btn">검증된 자체 빌드 ZIP 설치</button>
               <p id="simc-self-built-status" class="hint" role="status" aria-live="polite">공식·공개 캐시 자동 확보는 위 ‘SimC 자동 확보·설치’를 사용하세요. 별도 Windows CLI 빌드의 Actions artifact ZIP은 수동 대체 경로입니다. 관리자는 내부 영수증·SHA·실제 내장 빌드를 검사하지만, 사용자가 제공한 ZIP 자체의 GitHub 출처 서명까지 인증하지는 않습니다. <a href="https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/workflows/p3_v658_generic_simc_windows_cli.yml" target="_blank" rel="noopener noreferrer">Windows CLI 빌드 기록</a></p>
@@ -315,7 +317,7 @@
             <div class="session-meta" hidden><span>세션 ID</span><code id="session-id">없음</code></div>
             <div class="progress-info"><strong id="progress-label">평가 0회</strong><span id="progress-pct">0%</span></div><div class="progress-track"><div id="progress-bar"></div></div>
             <p id="stage-text" class="subtle">기존 세션이나 새 조건을 선택해 주세요.</p>
-            <p id="environment-build-status" class="hint" role="status" aria-live="polite">환경 구축 전 · 설치된 시즌 데이터의 검증 상태를 확인합니다.</p>
+            <p id="environment-build-status" class="hint settings-live-status" role="status" aria-live="polite">환경 구축 전 · 설치된 시즌 데이터의 검증 상태를 확인합니다.</p>
             <div class="two-button"><button class="btn secondary" id="resume-btn" type="button" disabled>계산 재개</button><button class="btn secondary" id="cache-btn" hidden type="button" disabled>캐시 6/6 재검증</button></div><button class="btn danger" id="cancel-btn" type="button" disabled>계산 중단</button>
             <details class="fold" id="longrun-controls" hidden><summary>장기 탐색 작업 관리 · 0 Native 캐시 재생</summary>
               <p class="hint">장기 탐색을 시작한 세션에서는 아래 버튼으로만 재개·중단합니다. 각 회차의 신규 SimC 호출 상한은 왼쪽 ‘이번 실행’ 수치를 따릅니다.</p>
