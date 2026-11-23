@@ -1,3 +1,4 @@
+import copy
 import json
 import shutil
 import tempfile
@@ -14,6 +15,8 @@ from runner import v106_user_session_controller as sessions
 from runner import v212_environment_manifest as p
 from runner import v213_source_to_catalog as source_bridge
 from runner import v216_environment_build_coordinator as environment_build
+from runner import v218_v098_profile_stage_adapter as user_profile
+from runner import v098_target_user_scenario_bootstrap as profile_bootstrap
 from tests.test_v213_source_to_catalog import SourceToCatalogTests
 
 
@@ -885,6 +888,68 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
             self.assertEqual(with_optional["installed_optional_consumables"][
                 "categories"]["food"]["options"][0]["simc_token"],
                 "example_food_3")
+            # The exact same *compiled, verified* v212 document must supply
+            # the food choice to the user-input consumer and to the actual
+            # v098 season-settings builder. This is synthetic source evidence,
+            # not an observed SimC item acceptance / complete DPS execution.
+            approved=user_profile.current_season_approved_optional_choices(
+                with_optional)
+            self.assertEqual(approved["food"],
+                             ["source_default","example_food_3"])
+            self.assertEqual(approved["potion"],["source_default"])
+            controls=sessions.standard_controls(("mage","frost"))
+            controls["consumable_choices"]={
+                **controls["consumable_choices"],
+                "food":"example_food_3"}
+            user=sessions.user_scenario(controls)
+            selected=user_profile._verified_fresh_season_consumables(
+                user,installed_environment=with_optional)
+            self.assertEqual(selected,{"food":"example_food_3",
+                                       "potion":"disabled",
+                                       "augmentation":"disabled"})
+            gem_ids=[241901,241902,241903,241904]
+            original_compilation={
+                "physical_gem_layout_unadmitted":{
+                    "schema":"v271_user_socket_gem_layout_stage_v1",
+                    "status":"PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING",
+                    "ordinary_gem_ids":gem_ids,
+                    "special_gem_id":240983,
+                    "special_slot":"head",
+                    "socket_counts":{"head":1,"neck":1,"chest":1,
+                                     "finger1":1,"finger2":1}},
+                "physical_gem_J_arithmetic_unadmitted":{
+                    "status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
+                    "physical_gem_item_ids":gem_ids,
+                    "J_candidate_unadmitted":with_optional["official_J"]}}
+            stat_vector={stat:0 for stat in gjfo.STATS}
+            stat_vector["haste_rating"]=with_optional["official_F"]
+            numeric_inputs={
+                "v216_numeric_preview":{"calculation":{
+                    "game_build":with_optional["game_build"],
+                    "target_ilevel":with_optional["target_ilevel"],
+                    "J":with_optional["official_J"],
+                    "F":with_optional["official_F"]}},
+                "flask":{"simc_input_token":"fixture_flask_3",
+                         "static_CHMV_vector":stat_vector}}
+            v098_settings=profile_bootstrap._season_settings_from_v216(
+                compilation=original_compilation,
+                numeric_inputs=numeric_inputs,controls=selected,
+                need=profile_bootstrap.need)
+            self.assertEqual(v098_settings["missing"],[])
+            self.assertEqual(v098_settings["settings"][
+                "default_consumables"]["food"],"example_food_3")
+            self.assertEqual(v098_settings["settings"][
+                "default_consumables"]["potion"],"disabled")
+            self.assertEqual(v098_settings["settings"][
+                "default_consumables"]["augmentation"],"disabled")
+            wrong=copy.deepcopy(user)
+            wrong["consumable_choices"]["food"]="not_installed_3"
+            with self.assertRaisesRegex(
+                    Exception,"FRESH_SEASON_OPTIONAL_CONSUMABLE_NOT_INSTALLED"):
+                user_profile._verified_fresh_season_consumables(
+                    wrong,installed_environment=with_optional)
+            self.assertEqual(with_optional["official_B"],published["official_B"])
+            self.assertEqual(with_optional["official_T"],published["official_T"])
             # Fury's extra off-hand 2H G must be its OWN original v277
             # source-owned component. No new Native, old install unchanged.
             measured=gjfo.standardize_representative_G(
