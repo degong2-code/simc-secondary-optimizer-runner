@@ -564,12 +564,137 @@ def _project_season_dk_runes(source, *, game_build, simc_revision):
     return source
 
 
+# Built once by the original season source owner, consumed by UI AND profile.
+# This is NOT an independent item-effect certification gate.
+OPTIONAL_KINDS=("food","potion","augmentation")
+OPTIONAL_INSTALL_SCHEMA="v680_one_build_optional_consumables_v1"
+
+def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
+    """Install a compact source-owned menu, or a truthful per-kind gap.
+
+    Rows must originate from the same-build Wago ID + pinned SimC input
+    bridge. In particular a normalized item NAME is not an input token.
+    A shared effect identity may coalesce qualities only when the source
+    declares the same effect AND use conditions, never by name/rank alone.
+    """
+    need(type(game_build) is str and type(simc_revision) is str,
+         "OPTIONAL_SOURCE_SEASON_IDENTITY_REQUIRED")
+    kinds={name:{"options":[],"status":"SOURCE_NOT_YET_RESOLVED"}
+           for name in OPTIONAL_KINDS}
+    origin=None
+    if source is not None:
+        need(type(source) is dict and
+             source.get("game_build")==game_build and
+             source.get("simc_revision")==simc_revision and
+             type(source.get("rows")) is list and
+             type(source.get("source_receipt_sha256")) is str and
+             valid_sha(source["source_receipt_sha256"]),
+             "OPTIONAL_SOURCE_SAME_BUILD_AND_RECEIPT_REQUIRED")
+        origin=source["source_receipt_sha256"]
+        groups={}
+        for row in source["rows"]:
+            need(type(row) is dict and
+                 set(row)=={"kind","physical_item_id","simc_input_token",
+                            "crafting_quality","effect_identity",
+                            "use_condition_identity","name_enUS"} and
+                 row["kind"] in ("food","potion") and
+                 type(row["physical_item_id"]) is int and
+                 row["physical_item_id"]>0 and
+                 type(row["crafting_quality"]) is int and
+                 row["crafting_quality"]>=0 and
+                 type(row["name_enUS"]) is str and
+                 0<len(row["name_enUS"])<=200 and
+                 type(row["simc_input_token"]) is str and
+                 re.fullmatch(r"[a-z0-9_]{1,100}",
+                              row["simc_input_token"]) is not None and
+                 row["simc_input_token"] not in
+                     ("disabled","source_default") and
+                 type(row["effect_identity"]) is str and
+                 0<len(row["effect_identity"])<=180 and
+                 type(row["use_condition_identity"]) is str and
+                 0<len(row["use_condition_identity"])<=180,
+                 "OPTIONAL_SOURCE_EXACT_WAGO_SIMC_ROW_REQUIRED")
+            group=(row["kind"],row["effect_identity"],
+                   row["use_condition_identity"])
+            groups.setdefault(group,[]).append(row)
+        # When equally ranked distinct items cannot be separated, preserve
+        # the entire group as unavailable rather than picking arbitrarily.
+        for key,rows in groups.items():
+            ranks=sorted(rows,key=lambda row:(-row["crafting_quality"],
+                                               row["physical_item_id"]))
+            highest=ranks[0]["crafting_quality"]
+            champions=[row for row in ranks if
+                       row["crafting_quality"]==highest]
+            if len(champions)!=1:continue
+            chosen=champions[0]
+            kinds[key[0]]["options"].append({
+                "item_id":chosen["physical_item_id"],
+                "label":chosen["name_enUS"],
+                "simc_token":chosen["simc_input_token"],
+                "quality":highest,
+                "effect_identity":key[1],
+                "use_condition_identity":key[2]})
+        for name in ("food","potion"):
+            kinds[name]["options"].sort(key=lambda x:x["item_id"])
+            kinds[name]["status"]=(
+                "SOURCE_BACKED_OPTIONS_READY" if kinds[name]["options"]
+                else "SOURCE_OPTIONS_UNAVAILABLE")
+    return {"schema":OPTIONAL_INSTALL_SCHEMA,
+            "game_build":game_build,
+            "simc_revision":simc_revision,
+            "source_receipt_sha256":origin,
+            "categories":kinds,
+            "source_owned_not_effect_reimplemented":True,
+            "optional_items_do_not_block_base":True}
+
+def verify_fresh_optional_consumables(doc,*,game_build,simc_revision):
+    need(type(doc) is dict and
+         doc.get("schema")==OPTIONAL_INSTALL_SCHEMA and
+         doc.get("game_build")==game_build and
+         doc.get("simc_revision")==simc_revision and
+         (doc.get("source_receipt_sha256") is None or
+          valid_sha(doc["source_receipt_sha256"])) and
+         doc.get("source_owned_not_effect_reimplemented") is True and
+         doc.get("optional_items_do_not_block_base") is True and
+         type(doc.get("categories")) is dict and
+         set(doc["categories"])==set(OPTIONAL_KINDS),
+         "OPTIONAL_INSTALLED_SOURCE_SCOPE_INVALID")
+    tokens=set()
+    for name,group in doc["categories"].items():
+        need(type(group) is dict and
+             group.get("status") in (
+                "SOURCE_NOT_YET_RESOLVED","SOURCE_OPTIONS_UNAVAILABLE",
+                "SOURCE_BACKED_OPTIONS_READY") and
+             type(group.get("options")) is list and
+             (not group["options"] or
+              group["status"]=="SOURCE_BACKED_OPTIONS_READY") and
+             (doc["source_receipt_sha256"] is not None or
+              not group["options"]),
+             "OPTIONAL_INSTALLED_CHOICES_STATUS_INVALID")
+        for row in group["options"]:
+            need(type(row) is dict and
+                 set(row)=={"item_id","label","simc_token","quality",
+                            "effect_identity","use_condition_identity"} and
+                 type(row["item_id"]) is int and row["item_id"]>0 and
+                 type(row["quality"]) is int and row["quality"]>=0 and
+                 type(row["label"]) is str and row["label"] and
+                 type(row["simc_token"]) is str and
+                 re.fullmatch(r"[a-z0-9_]{1,100}",
+                              row["simc_token"]) is not None and
+                 all(type(row[x]) is str and row[x] for x in
+                     ("effect_identity","use_condition_identity")) and
+                 row["simc_token"] not in tokens,
+                 "OPTIONAL_INSTALLED_ROW_ID_OR_TOKEN_INVALID")
+            tokens.add(row["simc_token"])
+    return True
+
 def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha256,
                                         staged_source_environment,
                                         trusted_budget_evidence, source_ui,
                                         trusted_policy_A_receipts_by_id,
                                         target_ilevel, manual_final_T=None,
-                                        verified_DK_runeforge_source=None):
+                                        verified_DK_runeforge_source=None,
+                                        source_optional_consumables=None):
     """Assemble the actual fresh-season install from existing verified owners.
 
     INTERNAL ONLY: trusted_budget_evidence must originate from verified
@@ -640,6 +765,14 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
         verified_DK_runeforge_source,
         game_build=source_catalog["game_build"],
         simc_revision=source_catalog["simc_revision"])
+    # The original v216 source owner supplies joined rows, if any.
+    # No second SimC effect audit and no change to legacy manifest bytes
+    # unless a new season installer explicitly provides this projection.
+    optional=(project_fresh_optional_consumables(
+        game_build=source_catalog["game_build"],
+        simc_revision=source_catalog["simc_revision"],
+        source=source_optional_consumables)
+        if source_optional_consumables is not None else None)
     payload={
         "schema":FRESH_SEASON_INSTALLED_SCHEMA,
         "status":"FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY",
@@ -681,6 +814,8 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
         "v222_reconciled_budget":budget,
         "original_v196_prepared_options_sha256":
             prepared["prepared_options_sha256"],
+        **({"installed_optional_consumables":optional}
+           if optional is not None else {}),
         "published_verified_options":published,
         "published_verified_option_count":len(published),
         "optional_quality_pending_item_ids":
@@ -746,6 +881,11 @@ def verify_fresh_installed_environment(document):
          document.get("dps_optimization_required") is False and
          document.get("native_calls")==0 and document.get("network_calls")==0,
          "FRESH_INSTALL_READY_OR_BUDGET_CONTRACT_DRIFT")
+    if "installed_optional_consumables" in document:
+        verify_fresh_optional_consumables(
+            document["installed_optional_consumables"],
+            game_build=document.get("game_build"),
+            simc_revision=document.get("simc_revision"))
     # A v212 E vector is only installed when v196 propagated the trusted
     # existing CHMV receipt; neither absence nor a changed signed value
     # may mean E=0. Legacy published rows without E remain unchanged.
