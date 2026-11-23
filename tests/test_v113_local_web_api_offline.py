@@ -16,6 +16,8 @@ import v106_user_session_controller as sessions
 from tests.test_v106_user_session_controller import fake_native
 from tests.test_v213_source_to_catalog import SourceToCatalogTests
 import v213_source_to_catalog as source_bridge
+# P1 v677: include exact-source budget/browser regressions in the established API gate.
+from tests.test_v677_existing_budget_readonly_p1 import ExistingBudgetReadOnlyHTTP, ExistingBudgetReadOnlyBrowser
 
 class LocalWebAPIOffline(unittest.TestCase):
     def setUp(self):
