@@ -1193,6 +1193,27 @@ function oilCompatibility() {
 }
 
 
+// Show actual CURRENT-SEASON SimC application, not historical v108
+// spelling or unadmitted v484 candidates. This is presentation only.
+function currentSeasonOptionalUseStatus(name) {
+  const approved=state.options?.current_season_product_choices;
+  const chosen=field(name);
+  const label=name==="food"?"음식":"물약";
+  if(approved?.schema!=="v113_current_season_optional_consumables_v1" ||
+     approved.source_default_simc_token!=="disabled" ||
+     !Array.isArray(approved[name]) ||
+     !approved[name].includes("source_default"))
+    return "현재 시즌 적용 상태 미확인 · 미검증 소모품 자동 적용 안 함";
+  const selected=$(name).selectedOptions?.[0];
+  if(chosen==="source_default")
+    return "SimC 미사용 · 현재 시즌 "+label+" ID·품질 미등록";
+  if(selected?.dataset?.historic==="true" ||
+     !approved[name].includes(chosen))
+    return "이전 세션 값 · 이번 시즌 신규 최적화에 적용 불가";
+  // A future signed registration must be checked by the server's original
+  // v218/v212 profile owner; rendering cannot authorize the SimC token.
+  return "현재 시즌 선택지 · 실제 SimC 적용은 실행 프로필에서 확인";
+}
 function refreshDefaultConsumableSummaries(){
   const fid=field("season-selected-flask-id");
   const fOption=[...$("season-verified-flask").options].find(o=>o.value===fid);
@@ -1201,6 +1222,9 @@ function refreshDefaultConsumableSummaries(){
   const potion=$("potion"),chosen=field("potion");
   $("env-potion-summary").textContent=!chosen||chosen==="source_default"?
     "미사용 (이번 시즌 기본)":potion.selectedOptions?.[0]?.textContent||chosen;
+  for(const name of ["food","potion"])
+    $(name+"-application-status").textContent=
+      currentSeasonOptionalUseStatus(name);
 }
 
 function installedConsumableScopeMatches(data) {
@@ -1845,6 +1869,7 @@ function fillSessionInputs(payload) {
     }
     node.value=value;
   }
+  refreshDefaultConsumableSummaries();
   const oldOmnium=choices.omnium_talents??"source_default";
   const omni=$("omnium");
   for(const x of Array.from(omni.options))
@@ -5186,7 +5211,8 @@ function registerHandlers() {
     $("season-verified-flask").value=String(exact.flask_item_id);
     await chooseInstalledFlask();
   }));
-  $("potion").addEventListener("change",refreshDefaultConsumableSummaries);
+  for(const name of ["food","potion"])
+    $(name).addEventListener("change",refreshDefaultConsumableSummaries);
   $("season-selected-flask-id").addEventListener("input",()=>{
     $("season-verified-flask").value="";
     refreshDefaultConsumableSummaries();
@@ -5334,7 +5360,16 @@ function registerHandlers() {
     // Missing season: first explicit click builds and seals gear only.
     if(await prepareSeasonBeforeOptimizerStart())return;
     // This is the only new-job action. Never start SimC on page load or refresh.
-    if(!window.confirm("이 PC에서 최적화를 시작할까요? 계산 중에도 중단할 수 있습니다."))return;
+    // A successful BASE run may deliberately omit optional consumables.
+    // Make that DPS condition visible at the final user confirmation.
+    const approved=state.options?.current_season_product_choices;
+    const disabledOptional=approved?.schema==="v113_current_season_optional_consumables_v1" &&
+      approved.source_default_simc_token==="disabled"?
+      ["food","potion"].filter(name=>field(name)==="source_default"):[];
+    const omitted=disabledOptional.map(name=>name==="food"?"음식":"물약").join("·");
+    const warning=omitted?
+      omitted+"은 현재 시즌 SimC 미사용입니다. 이 효과를 제외한 DPS 조건으로 계산합니다.\\n\\n":"";
+    if(!window.confirm(warning+"이 PC에서 최적화를 시작할까요? 계산 중에도 중단할 수 있습니다."))return;
     const p=await api("/api/v1/longrun/start",{method:"POST",payload:{...buildRequest(),max_native_calls:64,continuous:true}});
     markSession(p.session_id);$("filled-result").hidden=true;
     $("empty-result").hidden=false;
