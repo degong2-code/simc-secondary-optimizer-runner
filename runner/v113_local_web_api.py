@@ -649,6 +649,22 @@ def _v680_exact_installed_optional_document(root,params,user):
     return doc
 
 
+def _v680_preflight_optional_consumables(root,params,user):
+    """Only an ACTUAL selected optional item needs the installed registry.
+
+    Disabled/source_default is the old BASE path: no extra manifest read,
+    no new validation and no extra I/O in a normal product session.
+    """
+    selected=user.get(bootstrap.CONSUME_FIELD) or {}
+    needs_installed=any(selected.get(name) not in
+                        (None,"source_default","disabled")
+                        for name in ("food","potion","augmentation"))
+    doc=(_v680_exact_installed_optional_document(root,params,user)
+         if needs_installed else None)
+    return profile_stage._verified_fresh_season_consumables(
+        user,installed_environment=doc)
+
+
 def blocked(exc, *, stage=None):
     """Return stable codes, not private absolute paths, talent strings, or tracebacks.
 
@@ -2321,10 +2337,7 @@ class LocalJobs:
             # creating sessions or resolving any exact-static-L Native.
             # A historical v108 SimC token is not a registered item.
             if params.current_season_product:
-                optional_doc=_v680_exact_installed_optional_document(
-                    self.root,params,user)
-                profile_stage._verified_fresh_season_consumables(
-                    user,installed_environment=optional_doc)
+                _v680_preflight_optional_consumables(self.root,params,user)
             exact_oils=params.selected_oil_item_ids_by_hand
             sockets=params.user_socket_total
             special=params.user_special_gem_id
@@ -2686,10 +2699,7 @@ class LocalJobs:
             if params.current_season_product:
                 # Same exact v212 optional choices as the later profile,
                 # before possible special-L Native work, not an old v108 list.
-                optional_doc=_v680_exact_installed_optional_document(
-                    self.root,params,user)
-                profile_stage._verified_fresh_season_consumables(
-                    user,installed_environment=optional_doc)
+                _v680_preflight_optional_consumables(self.root,params,user)
         except Exception as exc:
             raise blocked(exc) from None
         hydrated=None
