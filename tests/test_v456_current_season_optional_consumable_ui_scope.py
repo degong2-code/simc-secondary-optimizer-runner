@@ -226,6 +226,86 @@ console.log("V456_SEASON_OPTION_UI_READONLY_RESTORE_PASS");
         self.assertIn("current_season_product:true",js)
         self.assertIn('old.dataset.historic="true";node.appendChild(old);',js)
 
+    def test_actual_food_potion_simc_disabled_status_without_fake_admission(self):
+        """Actual JS shows the excluded DPS effect and keeps old sessions read-only."""
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not available")
+        js=r"""
+const fs=require('fs'), assert=require('assert');
+const src=fs.readFileSync(process.argv[1],'utf8');
+const a=src.indexOf('function currentSeasonOptionalUseStatus(name) {');
+const b=src.indexOf('function installedConsumableScopeMatches(data)',a);
+assert(a>=0&&b>a);
+const nodes={
+ 'food':{value:'source_default',selectedOptions:[{dataset:{}}]},
+ 'potion':{value:'source_default',selectedOptions:[{dataset:{},textContent:'미사용'}]},
+ 'season-selected-flask-id':{value:''},
+ 'season-verified-flask':{options:[]},
+ 'env-flask-summary':{textContent:''},
+ 'env-potion-summary':{textContent:''},
+ 'food-application-status':{textContent:''},
+ 'potion-application-status':{textContent:''},
+};
+const $=id=>nodes[id];
+const field=id=>String(nodes[id]?.value||'');
+const state={options:{
+ current_season_product_choices:{
+  schema:'v113_current_season_optional_consumables_v1',
+  status:'NONDEFAULT_UNADMITTED_UNTIL_VERIFIED_SEASON_BINDING',
+  source_default_simc_token:'disabled',
+  food:['source_default'],potion:['source_default']
+ }}};
+const f=Function('state','
+        code=(ROOT/"runner"/"v098_target_user_scenario_bootstrap.py").read_text("utf8")
+        self.assertIn("bound[k]==default_choice[k]",code)
+        data=self.get_options()
+        self.assertIn("royal_roast",data["food"])
+        self.assertIn("potion_of_recklessness_2",data["potion"])
+        self.assertIn("void_touched",data["augmentation"])
+
+
+if __name__=="__main__":
+    unittest.main()
+,'field',src.slice(a,b)+
+ 'return {status:currentSeasonOptionalUseStatus,refresh:refreshDefaultConsumableSummaries};'
+)(state,$,field);
+f.refresh();
+assert(nodes['food-application-status'].textContent.includes('SimC 미사용'));
+assert(nodes['potion-application-status'].textContent.includes('SimC 미사용'));
+assert(nodes['food-application-status'].textContent.includes('ID·품질 미등록'));
+nodes.potion.value='potion_of_recklessness_2';
+nodes.potion.selectedOptions=[{dataset:{historic:'true'}}];
+f.refresh();
+assert(nodes['potion-application-status'].textContent.includes('신규 최적화에 적용 불가'));
+assert(!nodes['potion-application-status'].textContent.includes('SimC 미사용'));
+delete state.options.current_season_product_choices;
+assert(f.status('food').includes('상태 미확인'));
+state.options.current_season_product_choices={
+ schema:'v113_current_season_optional_consumables_v1',
+ source_default_simc_token:'disabled',
+ food:['source_default','harandar_celebration'],potion:['source_default']
+};
+nodes.food.value='harandar_celebration';
+nodes.food.selectedOptions=[{dataset:{}}];
+assert(f.status('food').includes('실행 프로필에서 확인'));
+const html=fs.readFileSync(process.argv[2],'utf8');
+for(const id of ['food','potion'])
+  assert(html.includes('id="'+id+'-application-status"'));
+assert(src.includes('const disabledOptional='));
+assert(src.includes('이 효과를 제외한 DPS 조건으로 계산합니다.'));
+assert(src.includes('$(name).addEventListener("change",refreshDefaultConsumableSummaries)'));
+console.log('V679_NO_FALSE_FOOD_POTION_SIMC_APPLICATION_PASS');
+"""
+        p=subprocess.run(
+            [node,"-e",js,
+             str(ROOT/"runner/webui/app.js"),
+             str(ROOT/"runner/webui/index.html")],
+            capture_output=True,text=True,timeout=20)
+        self.assertEqual(p.returncode,0,p.stderr)
+        self.assertIn("V679_NO_FALSE_FOOD_POTION_SIMC_APPLICATION_PASS",
+                      p.stdout)
+
     def test_source_validations_and_legacy_catalogue_remain_unchanged(self):
         code=(ROOT/"runner"/"v098_target_user_scenario_bootstrap.py").read_text("utf8")
         self.assertIn("bound[k]==default_choice[k]",code)
