@@ -1280,16 +1280,22 @@ function renderInstalledFlaskChoices(data) {
     let selectable=0;
     for(const item of rows){
       const duplicate=labels.get(key(item))!==1;
+      // Server sets this only after independently verifying each v212/v113
+      // receipt and comparing all saved runnable inputs. Exact SHA is still
+      // rechecked by the existing season-gear/session endpoint.
+      const equivalentRepresentative=duplicate &&
+        item.verified_runtime_equivalent_representative===true;
       const detail=numericLabels.get(numericKey(item))>1?
         " · 영약 #"+item.flask_item_id+" (품질 "+item.flask_quality+")"+
         " · 보석 "+physicalIds(item).map(id=>"#"+id).join("/"):"";
       const text="영약 F "+item.F+" · 보석 J "+item.J+
         " · 소켓 "+item.socket_total+" · 기름 없음"+detail+
-        (duplicate?" · 물리 구성이 같아 원본 구분 보류":"");
+        (equivalentRepresentative?" · 검증된 동일 실행 입력 대표 설치본":
+          duplicate?" · 물리 구성 동일 · 개별 선택 보류":"");
       const candidate=option(item.installed_manifest_sha256,text);
-      candidate.disabled=duplicate;
+      candidate.disabled=duplicate&&!equivalentRepresentative;
       budgetSelector.appendChild(candidate);
-      if(!duplicate)selectable++;
+      if(!candidate.disabled)selectable++;
     }
     budgetSelector.value=Array.from(budgetSelector.options).some(opt=>
       opt.value===previous&&!opt.disabled)?previous:"";
