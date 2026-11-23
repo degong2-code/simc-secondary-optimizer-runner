@@ -4,6 +4,7 @@ from __future__ import annotations
 import functools,hashlib,json,pathlib
 import v098_target_user_scenario_bootstrap as bootstrap
 import v217_stage_execution_engine as engine
+import v212_environment_manifest as installed_manifest
 
 SCHEMA="v218_v098_profile_stage_adapter_v1"
 STAGE_ID="v098_target_profile"
@@ -100,19 +101,31 @@ def _validate(paths,user):
         return True
     except Exception:return False
 
-def current_season_approved_optional_choices():
-    """One source for *currently* executable optional choices, not v108 history.
+def current_season_approved_optional_choices(installed_environment=None):
+    """Read from the ONE installed v212 season registry; no v108 promotion.
 
-    No new season physical ItemID/quality/SimC receipt for food/potion/aug
-    has been installed, so all three controls permit only source_default.
-    Future exact verified installed registrations must be bound here AND in
-    the normal v212 runtime before expanding these lists. This is not a
-    substitute for that source owner or an extra effect certification.
+    The caller provides the already validated v212 document, never a
+    browser-submitted token list. Historical installs with no registry retain
+    exactly the old source_default/disabled behavior and identity.
     """
-    return {name:["source_default"] for name in ("food","potion","augmentation")}
+    choices={name:["source_default"] for name in
+             ("food","potion","augmentation")}
+    if installed_environment is None:
+        return choices
+    # v212 itself owns the installed identity and optional menu integrity.
+    installed_manifest.verify_fresh_installed_environment(
+        installed_environment)
+    optional=installed_environment.get("installed_optional_consumables")
+    if optional is None:
+        return choices
+    for name in choices:
+        choices[name].extend(
+            row["simc_token"] for row in
+            optional["categories"][name]["options"])
+    return choices
 
 
-def _verified_fresh_season_consumables(user):
+def _verified_fresh_season_consumables(user,installed_environment=None):
     """Forward actual user F/O-safe optional SimC tokens, not old J/F budgets.
 
     The source-v212 installed flask and physical gems remain authoritative.
@@ -130,7 +143,7 @@ def _verified_fresh_season_consumables(user):
                    chosen["diamond_id"]==0 and
                    chosen["omnium_talents"]=="source_default",
                    "FRESH_SEASON_FLASK_DIAMOND_OR_MODULE_NOT_ADMITTED")
-    approved=current_season_approved_optional_choices()
+    approved=current_season_approved_optional_choices(installed_environment)
     optional={}
     for name in ("food","potion","augmentation"):
         token=chosen[name]
@@ -176,10 +189,16 @@ def build_or_reuse(*,user,session_folder,binary,revision,static_cache,
             if not current_season_product or static_cache is not None:
                 raise engine.StageExecutionBlocked(
                     "V218_FRESH_INSTALLED_PROFILE_MODE_MISMATCH")
+            installed=verified_fresh_environment_result[
+                "source_compilation"]["verified_environment_install"]
+            installed_doc,_=installed_manifest.read_json(
+                pathlib.Path(installed["stage_output_path"]))
+            installed_manifest.verify_fresh_installed_environment(installed_doc)
             result=bootstrap.run_from_verified_environment_build(
                 user,generated,binary,revision,
                 environment_result=verified_fresh_environment_result,
-                season_controls=_verified_fresh_season_consumables(user),
+                season_controls=_verified_fresh_season_consumables(
+                    user,installed_environment=installed_doc),
                 execute=False)
         else:
             result=bootstrap.build(user,generated,binary,revision,static_cache,
