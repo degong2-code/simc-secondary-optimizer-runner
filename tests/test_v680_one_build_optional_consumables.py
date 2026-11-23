@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import copy
+import io
+import json
+import tempfile
 import pathlib
 import shutil
 import subprocess
@@ -14,6 +17,7 @@ sys.path.insert(0,str(ROOT/"runner"))
 import v212_environment_manifest as manifest
 import v218_v098_profile_stage_adapter as profile
 import v106_user_session_controller as sessions
+import v280_consumable_item_use_spell_source as wago_effects
 
 BUILD="12.1.5.70961"
 REV="a"*40
@@ -185,6 +189,62 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                          cwd=ROOT,capture_output=True,text=True,timeout=15)
         self.assertEqual(p.returncode,0,p.stderr)
         self.assertIn("V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS",p.stdout)
+
+    def test_zero_new_http_optional_use_spell_source_reuses_original_wago(self):
+        class Response(io.BytesIO):
+            status=200
+        relation=b"ItemID,ItemEffectID\n201,11\n202,12\n"
+        effects=b"ID,SpellID,TriggerType\n11,5001,0\n12,6002,0\n"
+        source={
+            "schema":"v190_same_build_consumable_item_candidates_v1",
+            "source":{"wago_snapshot_build":BUILD},
+            "automatic_ui_promotion":False,
+            "items":[{
+                "item_id":201,"kind":"food","name_enUS":"Royal Roast",
+                "ui_selectable":False,"simc_token":"UNRESOLVED"},{
+                "item_id":202,"kind":"potion",
+                "name_enUS":"Potion of Recklessness",
+                "ui_selectable":False,"simc_token":"UNRESOLVED"}]
+        }
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            (root/"source").mkdir()
+            (root/"source/v254_ItemXItemEffect.csv").write_bytes(relation)
+            candidate=root/"source/v282_v190_items.json"
+            candidate.write_text(json.dumps(source),encoding="utf8")
+            gear={"source_stage":{"status":"EXECUTED_AND_SEALED",
+                "receipt_sha256":"1"*64,
+                "output_paths":{"effect":"source/v254_ItemXItemEffect.csv"}}}
+            consumables={"candidate_path":str(candidate),"source_stage":{
+                "status":"EXECUTED_AND_SEALED","receipt_sha256":"2"*64,
+                "stage_id":"fresh-v189-v190-consumable-physical-other"}}
+            fetched=[]
+            def original_transport(req,timeout):
+                fetched.append(req.full_url)
+                return Response(effects)
+            old=wago_effects.collect(
+                stage_root=root,build=BUILD,fresh_gear=gear,
+                consumables=consumables,transport=original_transport)
+            self.assertEqual(old["status"],
+                "ITEM_USE_SPELL_SOURCE_JOINED_UNADMITTED")
+            fresh=wago_effects.collect_optional_food_potion_from_existing(
+                stage_root=root,build=BUILD,fresh_gear=gear,
+                consumables=consumables,item_effect_stage=old)
+            self.assertEqual(fresh["status"],
+                "FOOD_POTION_WAGO_USE_SPELLS_SOURCE_READY",fresh)
+            doc=json.loads(pathlib.Path(fresh["candidate_path"]).read_text())
+            self.assertEqual([r["on_use_spell_ids"] for r in doc["items"]],
+                             [[5001],[6002]])
+            self.assertFalse(fresh["user_choices_installed"])
+            self.assertEqual(fresh["network_calls_by_stage"],0)
+            self.assertEqual(fresh["native_calls"],0)
+            reused=wago_effects.collect_optional_food_potion_from_existing(
+                stage_root=root,build=BUILD,fresh_gear=gear,
+                consumables=consumables,item_effect_stage=old)
+            self.assertEqual(reused["source_stage"]["status"],
+                             "REUSED_VERIFIED")
+            self.assertEqual(len(fetched),1,
+                             "The original v280 fetched once; optional bridge none")
 
     def test_no_native_and_no_separate_approval_engine(self):
         with mock.patch("subprocess.Popen",
