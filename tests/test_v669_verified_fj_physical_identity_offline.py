@@ -330,7 +330,27 @@ state.oilCatalog=payload;
   ];
   funcs.renderInstalledFlaskChoices(payload);
   assert.equal(sel.options[1].disabled,true);
-  assert($('season-verified-budget-status').textContent.includes('v212 단계'));
+  assert($('season-verified-budget-diagnostic-detail-text').textContent.includes('v212 단계'));
+  assert.equal($('season-verified-budget-diagnostic-detail').hidden,false);
+  assert($('season-verified-budget-status').textContent.length<90);
+  // A v113 field-level mismatch is diagnosis only, not admission.
+  payload.verified_base_flask_installs=[
+    {...base,installed_manifest_sha256:A,
+      verified_runtime_equivalence_blocker_codes:['DIFFERENT_RUNTIME_SNAPSHOT'],
+      verified_runtime_input_difference_codes:['COMPILATION_V098_PROFILE']},
+    {...base,installed_manifest_sha256:B,
+      verified_runtime_equivalence_blocker_codes:['DIFFERENT_RUNTIME_SNAPSHOT'],
+      verified_runtime_input_difference_codes:['COMPILATION_V098_PROFILE']}
+  ];
+  funcs.renderInstalledFlaskChoices(payload);
+  assert.equal(sel.options[1].disabled,true);
+  assert.equal(sel.options[2].disabled,true);
+  assert($('season-verified-budget-diagnostic-detail-text').textContent.includes('SimC 입력 프로필'));
+  await funcs.copyVerifiedFjCollisionDiagnostic();
+  const fieldReceipt=JSON.parse(copies[0]);
+  assert.equal(fieldReceipt.schema,'v675_local_verified_fj_collision_diagnostic_v1');
+  assert.deepEqual(fieldReceipt.groups[0].runtime_difference_codes,['COMPILATION_V098_PROFILE']);
+  assert(!copies[0].includes(A)&&!copies[0].includes(B));
   // Two originally verified and *runnable-input-equal* receipts:
   // only the server-marked representative becomes selectable, never both.
   payload.verified_base_flask_installs=[
@@ -344,10 +364,10 @@ state.oilCatalog=payload;
   assert.equal(sel.options[2].disabled,true);
   assert(sel.options[1].textContent.includes('동일 실행 입력'));
   assert.equal($('season-verified-fj-diagnostic-copy').hidden,false);
-  assert($('season-verified-budget-status').textContent.includes('SimC revision'));
+  assert($('season-verified-budget-diagnostic-detail-text').textContent.includes('SimC revision'));
   await funcs.copyVerifiedFjCollisionDiagnostic();
-  assert.equal(copies.length,1);
-  const receipt=JSON.parse(copies[0]);
+  assert.equal(copies.length,2);
+  const receipt=JSON.parse(copies[1]);
   assert.equal(receipt.groups[0].installed_count,2);
   assert.deepEqual(receipt.groups[0].difference_codes,
     ['SIMC_REVISION','J_SOURCE']);
@@ -359,7 +379,7 @@ state.oilCatalog=payload;
   funcs.renderInstalledFlaskChoices(payload);
   assert.equal($('season-verified-fj-diagnostic-copy').hidden,true);
   await funcs.copyVerifiedFjCollisionDiagnostic();
-  assert.equal(copies.length,1,'Old build cannot copy as present evidence');
+  assert.equal(copies.length,2,'Old build cannot copy as present evidence');
   console.log('V670_SEALED_FJ_COLLISION_SAFE_DIAGNOSTIC_PASS');
 })().catch(e=>{console.error(e.stack||e);process.exitCode=1});
 """
@@ -444,7 +464,7 @@ class VerifiedRuntimeInputEquivalence(unittest.TestCase):
                     docs,details[1][0],details[1][2],
                     return_component_digests=True)
                 self.assertEqual(set(parts_a),
-                                 {"installed","source_stage","runtime_snapshot"})
+                                 {"installed","source_stage","runtime_snapshot","runtime_fields"})
                 self.assertEqual(parts_a,parts_b)
                 # v673: original v216 preflight may vary in two
                 # non-executable diagnostic collections. Both original
@@ -572,6 +592,92 @@ class ConsumableDropdownLayoutRegression(unittest.TestCase):
         # option IDs just to improve a narrow dropdown's presentation.
         self.assertIn("candidate.disabled=duplicate&&!equivalentRepresentative",js)
         self.assertIn("candidate=option(item.installed_manifest_sha256,text)",js)
+
+
+
+class V675FieldLevelAndOptionDedupe(unittest.TestCase):
+    def test_field_digests_only_known_codes_unknown_fails_closed(self):
+        source={"schema":"v113_verified_v212_profile_source_snapshot_v1",
+                "source_catalog_artifact_sha256":"a"*64,
+                "environment_result":{
+                    "normal_build_entry":True,"verified_target_ilevel":334,
+                    "source_compilation":{
+                        "v098_source_only_profile_inputs_unadmitted":{
+                            "flask":{"physical_item_id":241320,
+                                     "simc_input_token":"flask_2"}},
+                        "physical_gem_layout_unadmitted":{
+                            "ordinary_gem_ids":[240890,240898,240906,240914]}}}}
+        baseline=web._v675_runtime_input_field_digests(source)
+        self.assertIsNotNone(baseline)
+        self.assertEqual(len(baseline),27)
+        other=json.loads(json.dumps(source))
+        other["environment_result"]["source_compilation"][
+            "v098_source_only_profile_inputs_unadmitted"]["flask"][
+                "simc_input_token"]="changed_simc_token"
+        differences=web._v675_runtime_input_field_digests(other)
+        self.assertEqual([name for name in baseline
+                          if baseline[name]!=differences[name]],
+                         ["COMPILATION_V098_PROFILE"])
+        # Unknown additions never disappear or become an implicit approved
+        # default; the OTHER_COMPILATION_FIELDS bucket changes.
+        other=json.loads(json.dumps(source))
+        other["environment_result"]["source_compilation"][
+            "new_unrecognized_effect"]="non-default"
+        differences=web._v675_runtime_input_field_digests(other)
+        self.assertEqual([name for name in baseline
+                          if baseline[name]!=differences[name]],
+                         ["OTHER_COMPILATION_FIELDS"])
+        # A missing value must differ from an explicitly present null.
+        other=json.loads(json.dumps(source))
+        other["environment_result"]["fresh_ordinary_gear"]=None
+        differences=web._v675_runtime_input_field_digests(other)
+        self.assertNotEqual(baseline["RUNTIME_ORDINARY_GEAR"],
+                            differences["RUNTIME_ORDINARY_GEAR"])
+        self.assertNotIn("changed_simc_token",json.dumps(differences))
+        self.assertNotIn("241320",json.dumps(differences))
+
+    def test_real_js_only_dedupes_identical_option_values(self):
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("Node needed for actual JS guard")
+        harness=r"""
+const fs=require('fs'),assert=require('assert');
+const raw=fs.readFileSync(process.argv[1],'utf8');
+const a=raw.indexOf('function populateSelect(id, values, labeler) {');
+const b=raw.indexOf('function field(id) {',a);
+assert(a>=0 && b>a);
+const nodes={};
+const $=id=>(nodes[id]??={
+ options:[],
+ replaceChildren(){this.options=[]},
+ appendChild(o){this.options.push(o)}
+});
+const option=(v,label)=>({value:String(v),textContent:String(label)});
+const populateSelect=Function('    unittest.main()
+,'option',raw.slice(a,b)+
+ '\\nreturn populateSelect;')($,option);
+populateSelect('food',['source_default','source_default',
+ 'flask_same','flask_same','different_effect'],v=>v);
+assert.deepEqual($('food').options.map(o=>o.value),
+ ['source_default','flask_same','different_effect']);
+populateSelect('potion',[0,'0',1,'1'],v=>String(v));
+assert.deepEqual($('potion').options.map(o=>o.value),['0','1']);
+console.log('V675_EXACT_OPTION_VALUES_ONLY_PASS');
+"""
+        completed=subprocess.run([node,"-e",harness,
+            str(ROOT/"runner/webui/app.js")],cwd=ROOT,
+            text=True,capture_output=True,timeout=20)
+        self.assertEqual(completed.returncode,0,completed.stderr)
+        self.assertIn("V675_EXACT_OPTION_VALUES_ONLY_PASS",completed.stdout)
+
+    def test_detail_markup_unbroken_and_hidden_until_evidence(self):
+        html=(ROOT/"runner/webui/index.html").read_text(encoding="utf8")
+        css=(ROOT/"runner/webui/styles.css").read_text(encoding="utf8")
+        self.assertEqual(html.count('id="season-verified-budget-diagnostic-detail"'),1)
+        self.assertIn('<summary>원본 차이 자세히</summary>',html)
+        self.assertIn('id="season-verified-budget-diagnostic-detail-text"',html)
+        self.assertIn('#season-verified-budget-diagnostic-detail[hidden]',css)
+        self.assertIn('white-space:normal',css.split('/* v675: long F/J reasons',1)[1])
 
 
 
