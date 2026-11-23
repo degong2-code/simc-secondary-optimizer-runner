@@ -1652,3 +1652,74 @@ body{background:#24252B;color:var(--ink)}
     grid-template-columns:1fr;
   }
 }
+
+
+/* v674: scoped consumable layout. Four compact combat inputs above,
+   two genuinely readable columns for food/flask/potion/rune below.
+   Long verified F/J variants occupy their own full-width grid row. */
+#optimizer-form .conditions-panel .env-input-grid > .env-grid-cell:nth-child(n+5):nth-child(-n+8){
+  grid-column:span 2!important;min-width:0;
+}
+#optimizer-form .conditions-panel .env-input-grid > #season-verified-budget-group{
+  grid-column:1/-1!important;
+  width:100%;max-width:100%;min-width:0;box-sizing:border-box;
+  display:grid;grid-template-columns:minmax(0,1fr);
+  gap:4px;align-content:start;padding:4px 0 8px;
+}
+#optimizer-form .conditions-panel .env-input-grid > #season-verified-budget-group[hidden]{
+  display:none!important;
+}
+#optimizer-form .conditions-panel .env-input-grid > #season-verified-budget-group > label{
+  color:#d8cdbd;font-size:10.5px;line-height:17px;min-width:0;
+}
+#optimizer-form .conditions-panel .env-input-grid > #season-verified-budget-group > select{
+  display:block;min-width:0!important;max-width:100%!important;
+  width:100%!important;height:33px!important;
+  text-overflow:ellipsis;white-space:nowrap;overflow:hidden;
+  padding:5px 18px 5px 8px!important;box-sizing:border-box;
+  background:#2C2B30!important;border:1px solid transparent!important;
+  border-radius:5px!important;color:#f4f0e8;font-size:11px!important;
+}
+#optimizer-form .conditions-panel .env-input-grid > #season-verified-budget-group > .hint{
+  color:#bcb3a5;font-size:10px;line-height:1.45;margin:2px 0 0;
+  overflow-wrap:anywhere;white-space:normal;min-width:0;
+}
+#optimizer-form .conditions-panel .env-input-grid > #season-verified-budget-group > button{
+  justify-self:start;min-height:29px;padding:5px 9px;font-size:10px;
+}
+/* Prevent native select and custom search controls from creating implicit
+   min-content grid tracks wider than the owning cell. */
+#optimizer-form .conditions-panel .env-input-grid > .env-grid-cell > .field{
+  grid-template-columns:minmax(0,1fr)!important;min-width:0;max-width:100%;
+}
+#optimizer-form .conditions-panel .env-input-grid > .env-grid-cell .choice-picker{
+  min-width:0;max-width:100%;box-sizing:border-box;
+}
+#optimizer-form .conditions-panel .env-input-grid > .env-grid-cell .choice-picker > input[type=search]{
+  min-width:0;width:100%!important;max-width:100%;
+  text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box;
+}
+/* Search option names are always one line. Full option text is available
+   as each button's native title and accessible text, not truncated data. */
+#optimizer-form .choice-results .choice-result{
+  display:block;width:100%;min-width:0;max-width:100%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  box-sizing:border-box;line-height:1.5;
+}
+#optimizer-form .conditions-panel .env-input-grid > .env-grid-cell .choice-results{
+  width:max(100%, min(290px, calc(100vw - 32px)));
+  max-width:calc(100vw - 32px);min-width:0;
+}
+#optimizer-form .conditions-panel .env-input-grid > .env-grid-cell:nth-child(2n) .choice-results{
+  left:auto;right:0;
+}
+@media(max-width:880px){
+  #optimizer-form .conditions-panel .env-input-grid > .env-grid-cell:nth-child(n+5):nth-child(-n+8){
+    grid-column:span 1!important;
+  }
+}
+@media(max-width:540px){
+  #optimizer-form .conditions-panel .env-input-grid > .env-grid-cell:nth-child(n+5):nth-child(-n+8){
+    grid-column:1/-1!important;
+  }
+}
