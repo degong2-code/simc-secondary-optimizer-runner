@@ -101,6 +101,8 @@ def _v670_sealed_fj_difference_proofs(doc, gem_layout):
     """
     owners=doc.get("trusted_budget_component_source_identities")
     owners=owners if type(owners) is dict else {}
+    stage_receipts=doc.get("original_v217_stage_receipts")
+    stage_receipts=stage_receipts if type(stage_receipts) is dict else {}
     groups={
         "SIMC_REVISION":doc.get("simc_revision"),
         "G_REFERENCE":(
@@ -123,6 +125,16 @@ def _v670_sealed_fj_difference_proofs(doc, gem_layout):
             doc.get("staged_source_environment_sha256"),
             doc.get("original_v216_preflight_sha256"),
             doc.get("original_v217_stage_receipts")),
+        # v671: decompose the sole observed collision class without
+        # comparing source values by eye or choosing a manifest by order.
+        "STAGED_SOURCE_MANIFEST":doc.get("staged_source_environment_sha256"),
+        "V216_PREFLIGHT_SEAL":doc.get("original_v216_preflight_sha256"),
+        "V217_V191_RECEIPT":stage_receipts.get("v191_stage"),
+        "V217_V211_RECEIPT":stage_receipts.get("v211_stage"),
+        "V217_V213_RECEIPT":stage_receipts.get("v213_stage"),
+        "V217_OTHER_RECEIPTS":{
+            key:value for key,value in stage_receipts.items()
+            if key not in ("v191_stage","v211_stage","v213_stage")},
         "TRUSTED_BUDGET_EVIDENCE":doc.get("trusted_budget_evidence_sha256"),
         "V222_BUDGET_OWNER":doc.get("v222_reconciled_budget"),
         "POLICY_A_OPTIONS":(
