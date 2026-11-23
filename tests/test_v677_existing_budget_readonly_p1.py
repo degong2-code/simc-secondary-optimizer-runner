@@ -173,6 +173,54 @@ class ExistingBudgetReadOnlyHTTP(unittest.TestCase):
             self.assertEqual(self.get().status_code,409)
 
 
+    def test_first_failed_original_check_code_without_native_or_paths(self):
+        """One original verifier stage, not nine guessed root causes."""
+        with mock.patch.object(web.subprocess,"Popen",
+                               side_effect=AssertionError("NO_NATIVE")), \
+             mock.patch.object(web.retail_build_source,"discover",
+                               side_effect=AssertionError("NO_NETWORK")):
+            invalid=self.get(game_build="not-a-build")
+            self.assertEqual(invalid.status_code,422)
+            self.assertEqual(invalid.json()["detail"]["check"],"SCOPE_INPUT")
+            with mock.patch.object(web.environment_build,
+                                   "find_verified_installed_season_environment",
+                                   return_value=None):
+                missing=self.get()
+            self.assertEqual(missing.status_code,409)
+            self.assertEqual(missing.json()["detail"]["check"],
+                             "INSTALLED_ENVIRONMENT")
+            with mock.patch.object(web.environment_build,
+                                   "find_verified_installed_season_environment",
+                                   return_value=dict(self.matched)), \
+                 mock.patch.object(web.environment_manifest,
+                                   "verify_fresh_installed_environment"):
+                self.snapshot.unlink()
+                missing_profile=self.get()
+                self.assertEqual(missing_profile.json()["detail"]["check"],
+                                 "INSTALL_OR_PROFILE_RECEIPT")
+                self.snapshot.write_text(json.dumps({
+                    "environment_result":{}}),encoding="utf8")
+                wrong_flask=self.get(selected_flask_item_id=241321)
+                self.assertEqual(wrong_flask.json()["detail"]["check"],
+                                 "FLASK_OR_OIL_PHYSICAL_IDENTITY")
+                with mock.patch.object(web,
+                                       "_v672_verified_runtime_inputs_digest",
+                                       return_value=None):
+                    mismatch=self.get()
+                self.assertEqual(mismatch.json()["detail"]["check"],
+                                 "SAVED_PROFILE_INPUTS")
+                with mock.patch.object(web,
+                                       "_v672_verified_runtime_inputs_digest",
+                                       return_value="original-stage"):
+                    self.matched["T"]=3108
+                    total=self.get()
+                self.assertEqual(total.json()["detail"]["check"],
+                                 "GJFO_TOTAL_CONSISTENCY")
+                self.assertNotIn(str(self.root),total.text)
+                self.assertNotIn("simc.exe",total.text)
+
+
+
 class ExistingBudgetReadOnlyBrowser(unittest.TestCase):
     def test_actual_js_button_uses_only_exact_get_not_season_build(self):
         node=shutil.which("node")
@@ -271,6 +319,56 @@ const funcs=Function('state','field','$','oilUseIntent',
         self.assertIn('return buildSeasonEnvironment(true)',s)
         self.assertNotIn(
             '"user-variant-prepare-btn").addEventListener("click",()=>withBusy(()=>buildSeasonEnvironment(true))',s)
+
+
+    def test_first_blocker_user_text_and_safe_codes_real_js(self):
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("Node needed for actual browser helper")
+        harness=r"""
+const fs=require('fs'),assert=require('assert');
+const src=fs.readFileSync(process.argv[1],'utf8');
+const a=src.indexOf('function describeUserBlocker(err,context) {');
+const b=src.indexOf('function clearUserBlocker()',a);
+assert(a>=0&&b>a);
+const describe=Function(src.slice(a,b)+'return describeUserBlocker;')();
+const missing=describe({message:'EXISTING_INSTALLED_BUDGET_SOURCE_NOT_VERIFIED',
+ safeCheck:'FOUR_GEM_LAYOUT',preparationStep:'BUDGET_READ',
+ httpStatus:409},'environment');
+assert(missing.message.includes('보석'));
+assert(missing.message.includes('기존 예산 조회'));
+assert(missing.message.includes('다음 조치'));
+assert(missing.technical.includes('FOUR_GEM_LAYOUT'));
+const unknown=describe({message:'LOCAL_SESSION_PRECHECK_BLOCKED',
+ safeKind:'ValueError'},'optimizer');
+assert(unknown.message.includes('내부 원인'));
+assert(unknown.technical.includes('ValueError'));
+const oil=describe({message:'WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED'},
+ 'optimizer');
+assert(oil.message.includes('무기 기름'));
+const b8=describe({message:'WEB_SELECTED_B8_EXACT_STATIC_VARIANTS_PENDING'},
+ 'optimizer');
+assert(b8.message.includes('정적 rating'));
+const leaked=describe({message:'C:\\Users\\private\\secret-key'},
+ 'environment');
+assert(!leaked.message.includes('private'));
+assert(!leaked.technical.includes('private'));
+console.log('V678_FIRST_BLOCKER_SAFE_STAGE_UI_PASS');
+"""
+        p=subprocess.run([node,"-e",harness,
+                          str(ROOT/"runner/webui/app.js")],
+                         cwd=ROOT,text=True,capture_output=True,timeout=20)
+        self.assertEqual(p.returncode,0,p.stderr)
+        self.assertIn("V678_FIRST_BLOCKER_SAFE_STAGE_UI_PASS",p.stdout)
+        html=(ROOT/"runner/webui/index.html").read_text(encoding="utf8")
+        self.assertIn('id="user-variant-diagnostic"',html)
+        self.assertIn('id="user-variant-diagnostic-text"',html)
+        js=(ROOT/"runner/webui/app.js").read_text(encoding="utf8")
+        self.assertIn("error.safeCheck=check",js)
+        self.assertIn('err.preparationStep="BUDGET_READ"',js)
+        self.assertIn('err.preparationStep="GEAR_BIND"',js)
+        self.assertIn("state.lastUserBlocker.message",js)
+
 
 
 if __name__=="__main__":
