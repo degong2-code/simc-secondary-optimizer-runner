@@ -23,3 +23,9 @@
 ## v685.1 — 신규 회귀의 CI 실제 실행 경로 조정
 
 P1 v388 focused Actions #45205277833의 로그에는 `tests/test_v113_local_web_api_offline.py` 96 PASS가 보이지만 `tests/test_v680_one_build_optional_consumables.py`는 해당 job에서 호출되지 않았다. 따라서 v685의 새 결합 회귀를 PASS로 과장하지 않으며 **새로 만든 CI 워크플로 없이**, 해당 새 테스트 하나를 이미 실행되는 웹/API `LocalWebAPIOffline` 클래스로 이동했다. 기존 v680 원본 연결·토큰 테스트는 원래 파일에 그대로 둔다. 다음 focused Actions에 정확 `test_selected_special_preview_reuses_exact_installed_consumable_preflight`의 개별 ok가 찍힌 경우에만 신규 테스트 PASS로 보고한다. 이 이동은 제품 동작·데이터·Native·HTTP·캐시 0 변경.
+
+## v685.2 — 실제 70961 원본 영수증 회수 및 신규 테스트 CI 첫 실패 정정
+
+기존 `[v684-source-once]` commit `7c556c493af3c7293069490b1d47dd24defb7b2e`에서 이미 실행된 [Actions #45198409461](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45198409461) Windows job `one-source-only`은 **SUCCESS**이고 실제 로그 `V684_SOURCE_ONLY_VERDICT`는 다음을 보고했다: 동일 빌드 Wago 음식 물리 후보 192개·물약 61개, Wago→SimC source-owned 연결 행 **59개(음식42·물약17)**, `v212.project_fresh_optional_consumables`의 **음식35·물약1·증강0(미구축)**, 원본 source compilation `FRESH_V191_V211_V213_COMPILED_UNADMITTED`, Native 호출 **0**. 이는 설치된/실제로 SimC 실행된 사용자 옵션 36건이나 품질 비열등 Native 승인으로 승격하지 않는다. `v684` 진단 artifact #14830042126가 존재하며 원본 CSV 전체는 없다. 기존 영수증을 먼저 조회하지 못해 '실행 미확인'이라고 표현했던 상태를 **실행 증거 확인**으로 정정한다. 동일 시즌 원본을 재수집하지 않는다.
+
+v685.1 code commit `cb157da94e26a4b36e30f32bb5281801472c0660`의 기존 [v113 API #45205602235](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45205602235) / [v388 focused #45205602181](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45205602181)는 신규 테스트에서 **NameError: BUILD is not defined**로 FAIL. 제품 경로의 값 전달 결함 자체가 검증 실패한 것은 아니며 이전 v680 테스트 모듈에 있던 상수를 `test_v113`으로 옮기며 복사 누락한 테스트 코드 오류. 이번 v685.2는 신규 테스트 안에서 문자 그대로 `build="12.1.5.70961"`, `revision="a"*40`으로 고쳤다. 신규 focused PASS는 다음 Actions 로그 개별 ok를 확인한 뒤에만 보고한다. 코드/Native/수집/제품 캐시 수정 0. 

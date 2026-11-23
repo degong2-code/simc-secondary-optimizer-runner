@@ -59,7 +59,7 @@ class LocalWebAPIOffline(unittest.TestCase):
             binary.write_bytes(b"OFFLINE_ONLY")
             cache=root/"static-cache.json"
             cache.write_text("{}",encoding="utf8")
-            build=BUILD
+            build="12.1.5.70961"
             sha="a"*64
             controls=sessions.standard_controls(("mage","frost"))
             controls["special_items"]=[
@@ -67,7 +67,7 @@ class LocalWebAPIOffline(unittest.TestCase):
             controls["consumable_choices"]={
                 **controls["consumable_choices"],"food":"royal_roast_3"}
             params=web.UserRequest(
-                controls=controls,binary=str(binary),revision=REV,
+                controls=controls,binary=str(binary),revision="a"*40,
                 static_cache=str(cache),current_season_product=True,
                 installed_season_game_build=build,
                 installed_manifest_sha256=sha)

@@ -30,3 +30,7 @@ v681 파서 문자열 정규화, v682 SimC 부분문자열 충돌, v683 Wago ID 
 ## v684.2 — 별도 오프라인 회귀 실행 경로
 
 기존 v684 1회 실수집 트리거는 `[v684-source-once]` 커밋으로만 허용하므로, 회귀 테스트용 후속 push에서 Wago/SimC 본 원본을 반복 수집하지 않는다. 동일 workflow에 `source-only-offline-contract` Ubuntu Python3.12 job을 분리해 `tests.test_v684_real_optional_source_onebuild_probe` 네 가지 조합을 직접 실행한다. 이 job은 자격증명 없이 기존 모듈만 설치, v216 실제 호출은 mock, SimC Native 0, Wago HTTP 0이다. CI 실행·PASS는 **실제 GitHub status 확인 전까지 미확인**. 실원본 Actions artifact와 완전히 구분한다.
+
+## v684.3 — 기존 실원본 1회 Windows Actions 영수증 확인 (재수집 없음)
+
+후속 정확한 GitHub Actions runs 컬렉션·job 로그 확인: [#45198409461](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45198409461) 실수집 job SUCCESS, 70961 실제 1회 Wago/SimC 연결 **59개(음식42·물약17)**, 기존 `v212` 원본 projection 결과 **음식35·물약1·증강0**. 원본 food 후보 192·potion 61, Native0, 컴파일 단계 `FRESH_V191_V211_V213_COMPILED_UNADMITTED`로 **실 설치와 구분**. 영수증 artifact #14830042126. 향후 동일 실수집 반복 STOP, 유효한 한 설치 환경의 UI/SimC 소비 쪽으로 진행.
