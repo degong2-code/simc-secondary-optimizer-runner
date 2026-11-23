@@ -688,7 +688,15 @@ function initializeSearchChoices(){
 
 function populateSelect(id, values, labeler) {
   const el=$(id); el.replaceChildren();
-  for (const value of values) el.appendChild(option(value,labeler(value)));
+  // A single original value can never represent two different choices.
+  // Deduplicate exact select values only; distinct SimC effect tokens remain.
+  const seen=new Set();
+  for(const value of values){
+    const key=String(value);
+    if(seen.has(key))continue;
+    seen.add(key);
+    el.appendChild(option(value,labeler(value)));
+  }
 }
 function field(id) {return $(id).value.trim();}
 function valueInt(id) {
@@ -1311,34 +1319,71 @@ function renderInstalledFlaskChoices(data) {
       opt.value===previous&&!opt.disabled)?previous:"";
     group.hidden=rows.length<2;
     const status=document.getElementById("season-verified-budget-status");
+    const detail=document.getElementById("season-verified-budget-diagnostic-detail");
+    const detailText=document.getElementById("season-verified-budget-diagnostic-detail-text");
+    const blockers={
+      RECEIPT_PROOF_UNAVAILABLE:"기존 원본 영수증 재검증 필요",
+      DIFFERENT_INSTALLED:"v212 설치 예산·옵션 원본",
+      DIFFERENT_SOURCE_STAGE:"v212 단계 원본 입력",
+      DIFFERENT_RUNTIME_SNAPSHOT:"v113 저장 실행 프로필"
+    };
+    const runtimeNames={
+      SNAPSHOT_SCHEMA:"v113 스냅샷 형식",
+      SNAPSHOT_CATALOG:"스냅샷 카탈로그 증거",
+      RUNTIME_ENTRY:"실행 진입 조건",
+      RUNTIME_READY:"환경 READY 원본 상태",
+      RUNTIME_REPRESENTATIVE:"SimC 대표 프로필",
+      RUNTIME_ORDINARY_GEAR:"대표 일반 장비·무기",
+      RUNTIME_TIER_BRIDGE:"티어·SimC 연결",
+      RUNTIME_PINNED_ITEM_SOURCE:"일반 아이템 원본",
+      RUNTIME_GAME_BUILD:"대상 게임 빌드",
+      RUNTIME_PERMANENT_ENCHANT:"영구 마부 원본",
+      RUNTIME_TARGET_ILEVEL:"대표 목표 ilvl",
+      RUNTIME_OIL_IDS:"무기 기름 ItemID",
+      COMPILATION_STATUS:"프로필 구성 단계 상태",
+      COMPILATION_SOURCE_CATALOG_PATH:"원본 카탈로그 참조 위치",
+      COMPILATION_STAGE_ROOT:"시즌 원본 단계 경로",
+      COMPILATION_SIMC_REVISION:"SimC revision",
+      COMPILATION_TIER_SOURCE_PATHS:"티어 원본 파일 참조",
+      COMPILATION_V098_PROFILE:"SimC 입력 프로필",
+      COMPILATION_GEM_LAYOUT:"보석 배치",
+      COMPILATION_GEM_BUDGET:"보석 J 계산",
+      COMPILATION_GEM_ITEM_RELATION:"보석 ItemID 증거",
+      OTHER_SNAPSHOT_FIELDS:"기타 스냅샷 필드",
+      OTHER_RUNTIME_FIELDS:"기타 실행 원본 필드",
+      OTHER_COMPILATION_FIELDS:"기타 프로필 구성 필드"
+    };
+    const reasonCodes=[...new Set(rows.flatMap(item=>
+      Array.isArray(item.verified_runtime_equivalence_blocker_codes)?
+        item.verified_runtime_equivalence_blocker_codes:[]))]
+      .filter(code=>Object.prototype.hasOwnProperty.call(blockers,code));
+    const runtimeCodes=[...new Set(rows.flatMap(item=>
+      Array.isArray(item.verified_runtime_input_difference_codes)?
+        item.verified_runtime_input_difference_codes:[]))]
+      .filter(code=>Object.prototype.hasOwnProperty.call(runtimeNames,code));
     if(status)status.textContent=rows.length<2?
-      "기본 구성은 하나만 검증돼 있습니다.":
+      "검증된 기본 구성 1건입니다.":
       selectable?
-        "검증된 설치 환경 "+rows.length+"건 중 구분 가능한 "+selectable+
-        "건을 표시합니다. 서로 다른 출처를 임의로 합치지 않습니다.":
-        "검증된 설치본이 여러 개지만 저장된 영약·보석 물리 구성도 동일합니다. "+
-        "임의 설치본을 사용하지 않고 원본 차이를 확인해야 합니다.";
-    if(status){
-      const reasons={
-        RECEIPT_PROOF_UNAVAILABLE:"원본 단계·프로필 영수증 재검증 미충족",
-        DIFFERENT_INSTALLED:"v212 설치 예산·옵션 원본 차이",
-        DIFFERENT_SOURCE_STAGE:"v212 단계의 숫자·원본 입력 차이",
-        DIFFERENT_RUNTIME_SNAPSHOT:"v113 실행 프로필 입력 차이"
-      };
-      const codes=[...new Set(rows.flatMap(item=>
-        item.verified_runtime_equivalence_blocker_codes||[]))];
-      const safe=codes.filter(code=>
-        Object.prototype.hasOwnProperty.call(reasons,code));
-      if(safe.length)
-        status.textContent+=" · 대표 설치본 선택 보류: "+
-          safe.map(code=>reasons[code]).join(", ")+
-          " · 원본을 임의 병합하지 않습니다.";
-    }
-    if(status&&state.verifiedFjCollisionReport.length){
-      const codes=[...new Set(state.verifiedFjCollisionReport.flatMap(r=>r.difference_codes))];
-      status.textContent+=" · 기존 봉인 영수증의 차이: "+
-        codes.map(code=>collisionNames[code]).join(", ")+
-        " · 중복 원본 진단 복사로 원인 코드만 전달할 수 있습니다.";
+        "검증 설치본 "+rows.length+"건 · 구별 가능한 "+selectable+
+        "건 선택 가능":
+        "동일 F/J 설치본 "+rows.length+"건 · 원본 차이로 선택 보류";
+    if(detail&&detailText){
+      detail.hidden=rows.length<2 ||
+        (!reasonCodes.length&&!runtimeCodes.length&&
+         !state.verifiedFjCollisionReport.length);
+      if(detail.hidden)detail.open=false;
+      const sections=[];
+      if(reasonCodes.length)sections.push("선택 보류: "+
+        reasonCodes.map(code=>blockers[code]).join(", "));
+      if(runtimeCodes.length)sections.push("v113 실행 입력 차이: "+
+        runtimeCodes.map(code=>runtimeNames[code]).join(", "));
+      const evidence=[...new Set(state.verifiedFjCollisionReport.flatMap(
+        item=>item.difference_codes))].filter(code=>
+        Object.prototype.hasOwnProperty.call(collisionNames,code));
+      if(evidence.length)sections.push("시즌 봉인 영수증 차이: "+
+        evidence.map(code=>collisionNames[code]).join(", "));
+      detailText.textContent=sections.join(" · ") ||
+        "원본 검증에 필요한 세부 근거가 아직 없습니다.";
     }
   }
   const selector=$("season-verified-flask");
@@ -1378,16 +1423,44 @@ async function copyVerifiedFjCollisionDiagnostic() {
   // Diagnostic comparison is not an authenticated current-Retail run.
   if(!installedConsumableScopeMatches(state.oilCatalog) ||
      !state.verifiedFjCollisionReport?.length)return;
-  const groups=state.verifiedFjCollisionReport.map(item=>({
-    installed_count:item.installed_count,
-    flask_item_id:item.flask_item_id,
-    flask_quality:item.flask_quality,
-    F:item.F,J:item.J,socket_total:item.socket_total,
-    ordinary_gem_item_ids:item.ordinary_gem_item_ids,
-    difference_codes:item.difference_codes
-  }));
+  // A field label is shared by exactly the same four-gem physical group.
+  // Only fixed allowlisted codes are exported, never a source path or SHA.
+  const runtimeCodes=new Set([
+    "SNAPSHOT_SCHEMA","SNAPSHOT_CATALOG","RUNTIME_ENTRY","RUNTIME_READY",
+    "RUNTIME_REPRESENTATIVE","RUNTIME_ORDINARY_GEAR","RUNTIME_TIER_BRIDGE",
+    "RUNTIME_PINNED_ITEM_SOURCE","RUNTIME_GAME_BUILD",
+    "RUNTIME_PERMANENT_ENCHANT","RUNTIME_TARGET_ILEVEL","RUNTIME_OIL_IDS",
+    "COMPILATION_STATUS","COMPILATION_SOURCE_CATALOG_PATH",
+    "COMPILATION_STAGE_ROOT","COMPILATION_SIMC_REVISION",
+    "COMPILATION_TIER_SOURCE_PATHS","COMPILATION_V098_PROFILE",
+    "COMPILATION_GEM_LAYOUT","COMPILATION_GEM_BUDGET",
+    "COMPILATION_GEM_ITEM_RELATION","OTHER_SNAPSHOT_FIELDS",
+    "OTHER_RUNTIME_FIELDS","OTHER_COMPILATION_FIELDS"
+  ]);
+  const groups=state.verifiedFjCollisionReport.map(item=>{
+    const matches=state.verifiedBaseFlaskInstalls.filter(row=>
+      row.flask_item_id===item.flask_item_id&&
+      row.flask_quality===item.flask_quality&&
+      row.F===item.F&&row.J===item.J&&
+      row.socket_total===item.socket_total&&
+      [...row.ordinary_gem_item_ids].sort((a,b)=>a-b).join("/")===
+      [...item.ordinary_gem_item_ids].sort((a,b)=>a-b).join("/"));
+    const fieldCodes=[...new Set(matches.flatMap(row=>
+      Array.isArray(row.verified_runtime_input_difference_codes)?
+        row.verified_runtime_input_difference_codes:[]))]
+      .filter(code=>runtimeCodes.has(code)).sort();
+    return {
+      installed_count:item.installed_count,
+      flask_item_id:item.flask_item_id,
+      flask_quality:item.flask_quality,
+      F:item.F,J:item.J,socket_total:item.socket_total,
+      ordinary_gem_item_ids:item.ordinary_gem_item_ids,
+      difference_codes:item.difference_codes,
+      runtime_difference_codes:fieldCodes
+    };
+  });
   const safe=JSON.stringify({
-    schema:"v670_local_verified_fj_collision_diagnostic_v1",
+    schema:"v675_local_verified_fj_collision_diagnostic_v1",
     outcome:"IDENTITY_DIFFERENCE_NOT_APPROVED",
     game_build:field("season-game-build")||
       state.verifiedInstalledBuildFromThisPage,
