@@ -19,3 +19,7 @@
 [GitHub Actions #45230565019](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45230565019)는 새 ZIP 빌드 전 `V181_MINIMUM_PRODUCT_RUNTIME_FILES_MISSING`로 실패했다. `v181_windows_beta_packager.py`가 항상 `data/current_season_source_to_catalog.json`을 과거 packaging source metadata로 요구하지만 새 체크아웃에는 해당 바이너리/과거 소스가 없다. 다른 런타임 모듈은 존재함을 repo 파일 목록으로 확인. 이번 실행은 사용자 화면·Native 이전에 종료되어 *사용자 제로베이스 PASS가 아니고* Native0, 소스 수집0.
 
 **최소 원래 계약 재사용:** 기존 정상 `v181_windows_beta_packaging.yml`과 동일하게 과거 **봉인된 v213 read-only source artifact** #13104842881 (Actions #41360273361)를 ZIP **메타데이터 생성 단계에만** 바인딩한다. 압축 해제 직후 사용자 앱이 시작되기 **전에** v690이 해당 역사 소스 파일을 별도 격리 폴더로 이동/삭제하여 최초 시즌 빌드와 세션이 과거 내용을 소비하지 못하게 한다. 사용자 준비물도, 새 시즌 원본·G/J/F/O 인증도 아니며 역사 70783(?) 수치를 새 시즌으로 복제하지 않는다. 현재 `v181` 패키저 자체의 역사 메타데이터 의존성은 범용 패키지 설계 과제로 명시적으로 남긴다(한 번의 시즌 Build 실행 경로와 분리). 신규 원본 Native 호출은 아직 없고 수정 후 실제 1회 Actions 결과가 나와야 통합 성공 여부를 판정한다.
+
+## #45231076160 — 현재 ZIP 286개 패키징 PASS, 시험 인자 오류 차단
+
+기존 역사 `v213` 패키징 전용 source artifact를 정상 복원·검증하고, `v181` **286파일 현재 HEAD ZIP 생성 PASS**. 그 다음 첫사용자 실행 시작 전 `p1_v690...stage(args)`가 `argparse.Namespace`를 폴더 경로 객체인 것처럼 `pathlib.Path(out)`에 전달해 `TypeError`. 제품 SimC/환경/native 모두 호출 0. 실제 사용자 실패가 아닌 신설 harness의 범위 한정 오류. `stage(args)`에서 명시 `args.out`을 쓰도록 1곳 수정. 같은 ZIP을 새 사용자 런타임에서 검증하는 목적 유지, Native 중복 0. 다음 run 결과만으로 첫 사용자 제품 성공을 판정.

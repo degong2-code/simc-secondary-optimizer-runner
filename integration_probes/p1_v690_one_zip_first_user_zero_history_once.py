@@ -77,8 +77,8 @@ def eliminate_historical_sources(root,env,work):
     return removed
 
 
-def stage(out):
-    out=pathlib.Path(out).resolve()
+def stage(args):
+    out=pathlib.Path(args.out).resolve()
     out.mkdir(parents=True,exist_ok=True)
     destination=out/RECEIPT
     record={"schema":SCHEMA,"status":"STARTED",
