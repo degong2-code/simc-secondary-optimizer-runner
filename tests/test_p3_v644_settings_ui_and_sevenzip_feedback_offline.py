@@ -39,7 +39,7 @@ class SettingsUI(unittest.TestCase):
                    "resume-btn","cancel-btn","recent-refresh-btn","dps",
                    "sem","conf95","budget","stat-bars","alt-list"):
             with self.subTest(id=id):self.assertIn(id,parser.ids)
-        self.assertIn('id="simc-local-install-status" class="hint" role="status" aria-live="polite"',html)
+        self.assertIn('id="simc-local-install-status" class="hint settings-live-status" role="status" aria-live="polite"',html)
         self.assertIn('href="https://www.7-zip.org/download.html"',html)
         self.assertLess(html.index('id="simc-check-btn"'),
                         html.index('id="simc-update-candidate"'))
