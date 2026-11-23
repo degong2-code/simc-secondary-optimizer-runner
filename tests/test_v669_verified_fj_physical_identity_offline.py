@@ -107,64 +107,66 @@ const b=raw.indexOf('async function chooseInstalledFlask() {',a);
 assert(a>=0&&b>a);
 const nodes=Object.create(null);
 const $=id=>(nodes[id]??={
- value:'',textContent:'',hidden:true,options:[],
+ value:'',textContent:'',hidden:true,disabled:false,options:[],
  replaceChildren(...xs){this.options=[...xs];this.value=xs[0]?.value||'';},
  appendChild(x){this.options.push(x);}
 });
 const field=id=>String($(id).value||'');
-const option=(value,label)=>({value:String(value),textContent:String(label),
-                             disabled:false});
+const option=(value,label)=>({value:String(value),textContent:String(label),disabled:false});
 const document={getElementById:id=>$(id)};
 const state={verifiedInstalledBuildFromThisPage:null,seasonGear:null};
 $('season-game-build').value='12.1.5.70961';
 $('ilevel').value='334';
 const api=Function('state','field','$','document','option',
-                   'refreshDefaultConsumableSummaries',
-                   raw.slice(a,b)+'\nreturn {renderInstalledFlaskChoices};')(
- state,field,$,document,option,()=>{});
+  'refreshDefaultConsumableSummaries',
+  raw.slice(a,b)+'\nreturn {renderInstalledFlaskChoices};')(
+  state,field,$,document,option,()=>{});
 const base={
- flask_item_id:241324,flask_quality:2,J:92,F:165,socket_total:4
+ flask_item_id:241324,flask_quality:2,J:92,F:165,socket_total:4,
+ ordinary_gem_item_ids:[240001,240002,240003,240004]
 };
 const A='a'.repeat(64),B='b'.repeat(64);
-const gemA=[240001,240002,240003,240004];
-const gemB=[240005,240006,240007,240008];
-const mk=(sha,gems)=>({...base,installed_manifest_sha256:sha,
-                         ordinary_gem_item_ids:gems});
-const payload=(rows)=>({
- schema:'v113_verified_installed_oil_loadouts_v1',
- game_build:'12.1.5.70961',target_ilevel:334,
- verified_base_flask_installs:rows,verified_flasks:[]
-});
-api.renderInstalledFlaskChoices(payload([mk(A,gemA),mk(B,gemB)]));
+const mk=(sha,verified=true)=>({...base,
+  installed_manifest_sha256:sha,individually_verified:verified,
+  simc_revision:sha===A?'revision-A':'revision-B'});
+const payload=rows=>({schema:'v113_verified_installed_oil_loadouts_v1',
+  game_build:'12.1.5.70961',target_ilevel:334,
+  verified_base_flask_installs:rows,verified_flasks:[],
+  verified_base_fj_collision_diagnostics:[]});
+api.renderInstalledFlaskChoices(payload([mk(A),mk(B)]));
 const sel=$('season-verified-budget');
 assert.equal(state.verifiedBaseFlaskInstalls.length,2);
 assert.strictEqual($('season-verified-budget-group').hidden,false);
 assert.equal(sel.options.length,3);
 assert.equal(sel.options[1].disabled,false);
 assert.equal(sel.options[2].disabled,false);
-assert(sel.options[1].textContent.includes('#240001'));
-assert(sel.options[2].textContent.includes('#240005'));
+assert(sel.options[1].textContent.includes('검증 환경 1'));
+assert(sel.options[2].textContent.includes('검증 환경 2'));
+assert(sel.options[1].title.includes('revision-A'));
 assert(!sel.options[1].textContent.includes(A));
 assert(!sel.options[2].textContent.includes(B));
-// Exact duplicate physical F/J profiles are NOT distinguished by arbitrary SHA.
-api.renderInstalledFlaskChoices(payload([mk(A,gemA),mk(B,gemA)]));
-assert.equal(sel.options[1].disabled,true);
-assert.equal(sel.options[2].disabled,true);
-assert($('season-verified-budget-status').textContent.includes('원본'));
-// A fake/missing physical gem identity never becomes selectable.
-api.renderInstalledFlaskChoices(payload([mk(A,gemA),mk(B,[])]));
+assert($('season-verified-budget-status').textContent.includes('개별 검증'));
+assert.equal($('season-verified-budget-diagnostic-detail').hidden,true);
+assert.equal($('season-verified-fj-diagnostic-copy').hidden,true);
+// Each original v212+v113 source must be admitted on its own exact receipt.
+// A fabricated or not-yet-verified row must not enter the selector.
+api.renderInstalledFlaskChoices(payload([mk(A),mk(B,false)]));
 assert.equal(state.verifiedBaseFlaskInstalls.length,1);
-// The same installed data for a different build cannot be reused.
+assert.equal(sel.options.length,2);
+assert.equal($('season-verified-budget-group').hidden,true);
+sel.value=A;
+api.renderInstalledFlaskChoices(payload([mk(A),mk(B)]));
+assert.equal(sel.value,A,'prior exact selected SHA retained');
 $('season-game-build').value='12.1.5.70575';
-api.renderInstalledFlaskChoices(payload([mk(A,gemA),mk(B,gemB)]));
+api.renderInstalledFlaskChoices(payload([mk(A),mk(B)]));
 assert.equal(state.verifiedBaseFlaskInstalls.length,0);
-console.log('V669_PHYSICAL_FJ_UI_EXACT_CHOICES_PASS');
+console.log('V676_INDEPENDENT_EXACT_SHA_FJ_CHOICES_PASS');
 """
         p = subprocess.run([node, "-e", harness,
                             str(ROOT / "runner/webui/app.js")],
                            cwd=ROOT, capture_output=True, text=True, timeout=20)
         self.assertEqual(p.returncode, 0, p.stderr)
-        self.assertIn("V669_PHYSICAL_FJ_UI_EXACT_CHOICES_PASS", p.stdout)
+        self.assertIn("V676_INDEPENDENT_EXACT_SHA_FJ_CHOICES_PASS", p.stdout)
 
 
 class SealedFJCollisionReceipt(unittest.TestCase):
@@ -283,12 +285,11 @@ class SealedFJCollisionReceipt(unittest.TestCase):
         node=shutil.which("node")
         if node is None:self.skipTest("Node needed")
         harness=r"""
-const fs=require('fs'), assert=require('assert');
+const fs=require('fs'),assert=require('assert');
 const raw=fs.readFileSync(process.argv[1],'utf8');
 const a=raw.indexOf('function installedConsumableScopeMatches(data) {');
 const b=raw.indexOf('async function chooseInstalledFlask()',a);
-assert(a>=0&&b>a);
-const nodes=Object.create(null),copies=[],notices=[];
+const nodes=Object.create(null),copies=[];
 const $=id=>(nodes[id]??={
  value:'',hidden:true,disabled:false,textContent:'',options:[],
  replaceChildren(...items){this.options=items;this.value=items[0]?.value||'';},
@@ -299,103 +300,50 @@ const valueInt=id=>Number(field(id));
 const document={getElementById:id=>$(id)};
 const option=(value,label)=>({value:String(value),textContent:String(label),
  disabled:false});
-const navigator={clipboard:{writeText:async text=>copies.push(text)}};
-const setNotice=message=>notices.push(message);
+const navigator={clipboard:{writeText:async x=>copies.push(x)}};
 const state={seasonGear:null,verifiedInstalledBuildFromThisPage:null};
 $('season-game-build').value='12.1.5.70961';
 $('ilevel').value='334';
 const funcs=Function('state','field','valueInt','$','document','option',
   'refreshDefaultConsumableSummaries','navigator','setNotice',
   raw.slice(a,b)+'\nreturn {renderInstalledFlaskChoices,copyVerifiedFjCollisionDiagnostic};')(
-  state,field,valueInt,$,document,option,()=>{},navigator,setNotice);
+  state,field,valueInt,$,document,option,()=>{},navigator,()=>{});
 const A='a'.repeat(64),B='b'.repeat(64);
-const base={flask_item_id:241324,flask_quality:2,J:92,F:165,
- socket_total:4,ordinary_gem_item_ids:[240001,240002,240003,240004]};
+const mk=sha=>({
+  flask_item_id:241324,flask_quality:2,J:92,F:165,socket_total:4,
+  ordinary_gem_item_ids:[240001,240002,240003,240004],
+  installed_manifest_sha256:sha,individually_verified:true
+});
 const payload={
  schema:'v113_verified_installed_oil_loadouts_v1',
  game_build:'12.1.5.70961',target_ilevel:334,
- verified_base_flask_installs:[
-   {...base,installed_manifest_sha256:A},
-   {...base,installed_manifest_sha256:B}],
+ verified_base_flask_installs:[mk(A),mk(B)],
  verified_flasks:[],
  verified_base_fj_collision_diagnostics:[{
-   flask_item_id:241324,flask_quality:2,
-   F:165,J:92,socket_total:4,
-   ordinary_gem_item_ids:[240001,240002,240003,240004],
-   installed_count:2,difference_codes:['SIMC_REVISION','J_SOURCE']}]
+  flask_item_id:241324,flask_quality:2,F:165,J:92,socket_total:4,
+  ordinary_gem_item_ids:[240001,240002,240003,240004],
+  installed_count:2,difference_codes:['SIMC_REVISION','J_SOURCE']}]
 };
 state.oilCatalog=payload;
 (async()=>{
   funcs.renderInstalledFlaskChoices(payload);
   const sel=$('season-verified-budget');
-  assert.equal(sel.options[1].disabled,true);
-  assert.equal(sel.options[2].disabled,true);
-  payload.verified_base_flask_installs=[
-    {...base,installed_manifest_sha256:A,
-     verified_runtime_equivalence_blocker_codes:['DIFFERENT_SOURCE_STAGE']},
-    {...base,installed_manifest_sha256:B,
-     verified_runtime_equivalence_blocker_codes:['DIFFERENT_SOURCE_STAGE']}
-  ];
-  funcs.renderInstalledFlaskChoices(payload);
-  assert.equal(sel.options[1].disabled,true);
-  assert($('season-verified-budget-diagnostic-detail-text').textContent.includes('v212 단계'));
-  assert.equal($('season-verified-budget-diagnostic-detail').hidden,false);
-  assert($('season-verified-budget-status').textContent.length<90);
-  // A v113 field-level mismatch is diagnosis only, not admission.
-  payload.verified_base_flask_installs=[
-    {...base,installed_manifest_sha256:A,
-      verified_runtime_equivalence_blocker_codes:['DIFFERENT_RUNTIME_SNAPSHOT'],
-      verified_runtime_input_difference_codes:['COMPILATION_V098_PROFILE']},
-    {...base,installed_manifest_sha256:B,
-      verified_runtime_equivalence_blocker_codes:['DIFFERENT_RUNTIME_SNAPSHOT'],
-      verified_runtime_input_difference_codes:['COMPILATION_V098_PROFILE']}
-  ];
-  funcs.renderInstalledFlaskChoices(payload);
-  assert.equal(sel.options[1].disabled,true);
-  assert.equal(sel.options[2].disabled,true);
-  assert($('season-verified-budget-diagnostic-detail-text').textContent.includes('SimC 입력 프로필'));
-  await funcs.copyVerifiedFjCollisionDiagnostic();
-  const fieldReceipt=JSON.parse(copies[0]);
-  assert.equal(fieldReceipt.schema,'v675_local_verified_fj_collision_diagnostic_v1');
-  assert.deepEqual(fieldReceipt.groups[0].runtime_difference_codes,['COMPILATION_V098_PROFILE']);
-  assert(!copies[0].includes(A)&&!copies[0].includes(B));
-  // Two originally verified and *runnable-input-equal* receipts:
-  // only the server-marked representative becomes selectable, never both.
-  payload.verified_base_flask_installs=[
-    {...base,installed_manifest_sha256:A,
-     verified_runtime_equivalent_representative:true},
-    {...base,installed_manifest_sha256:B,
-     verified_runtime_equivalent_representative:false}
-  ];
-  funcs.renderInstalledFlaskChoices(payload);
   assert.equal(sel.options[1].disabled,false);
-  assert.equal(sel.options[2].disabled,true);
-  assert(sel.options[1].textContent.includes('동일 실행 입력'));
-  assert.equal($('season-verified-fj-diagnostic-copy').hidden,false);
-  assert($('season-verified-budget-diagnostic-detail-text').textContent.includes('SimC revision'));
-  await funcs.copyVerifiedFjCollisionDiagnostic();
-  assert.equal(copies.length,2);
-  const receipt=JSON.parse(copies[1]);
-  assert.equal(receipt.groups[0].installed_count,2);
-  assert.deepEqual(receipt.groups[0].difference_codes,
-    ['SIMC_REVISION','J_SOURCE']);
-  assert.equal(receipt.environment_ready,false);
-  assert(!copies[0].includes(A));
-  assert(!copies[0].includes(B));
-  assert(!copies[0].includes('C:\\Users'));
-  $('season-game-build').value='12.1.5.70575';
-  funcs.renderInstalledFlaskChoices(payload);
+  assert.equal(sel.options[2].disabled,false);
   assert.equal($('season-verified-fj-diagnostic-copy').hidden,true);
+  assert.equal($('season-verified-budget-diagnostic-detail').hidden,true);
+  assert.equal(state.verifiedFjCollisionReport.length,0);
   await funcs.copyVerifiedFjCollisionDiagnostic();
-  assert.equal(copies.length,2,'Old build cannot copy as present evidence');
-  console.log('V670_SEALED_FJ_COLLISION_SAFE_DIAGNOSTIC_PASS');
+  assert.equal(copies.length,0,'retired debug report must not leak through basic flow');
+  assert($('season-verified-budget-status').textContent.length<110);
+  console.log('V676_RETIRED_CROSS_INSTALL_DIAGNOSTIC_PASS');
 })().catch(e=>{console.error(e.stack||e);process.exitCode=1});
 """
         result=subprocess.run([node,"-e",harness,
                 str(ROOT/"runner/webui/app.js")],cwd=ROOT,
                 text=True,capture_output=True,timeout=20)
         self.assertEqual(result.returncode,0,result.stderr)
-        self.assertIn("V670_SEALED_FJ_COLLISION_SAFE_DIAGNOSTIC_PASS",
+        self.assertIn("V676_RETIRED_CROSS_INSTALL_DIAGNOSTIC_PASS",
                       result.stdout)
 
 
