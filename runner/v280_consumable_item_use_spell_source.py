@@ -257,3 +257,102 @@ def collect(*, stage_root, build, fresh_gear, consumables, transport=None):
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
             "network_calls_by_stage":calls[0],"native_calls":0,
             "F":None,"O":None,"environment_ready":False}
+
+def collect_optional_food_potion_from_existing(*,stage_root,build,
+                                               fresh_gear,consumables,
+                                               item_effect_stage):
+    """Source-only v680 continuation of the ONE original v280 fetch.
+
+    The normal v280 stage already owns the same-build ItemEffect CSV. Its
+    original bytes and the v254 ItemXItemEffect CSV are reused to add food
+    and potion foreign-key joins without another Wago/SimC/Native request.
+    This is data extraction, NOT a second effect certification gate.
+    """
+    root=Path(stage_root).resolve()
+    gear=(fresh_gear or {}).get("source_stage") or {}
+    source=(consumables or {}).get("source_stage") or {}
+    original=(item_effect_stage or {}).get("source_stage") or {}
+    if (gear.get("status") not in STAGED or
+        source.get("status") not in STAGED or
+        original.get("status") not in STAGED or
+        not (consumables or {}).get("candidate_path") or
+        not (item_effect_stage or {}).get("candidate_path")):
+        return {"status":"FOOD_POTION_WAGO_SOURCE_PENDING",
+                "candidate_path":None,"network_calls_by_stage":0,
+                "native_calls":0}
+    try:
+        paths=(root/gear["output_paths"]["effect"],
+               root/original["output_paths"]["item_effect"],
+               Path(consumables["candidate_path"]))
+        for item in paths:
+            need(item.is_file() and not item.is_symlink() and
+                 item.resolve().is_relative_to(root) and
+                 0<item.stat().st_size<=MAX_EFFECT_BYTES,
+                 "V680_ORIGINAL_WAGO_STAGE_PATH_INVALID")
+        relation,effect,candidate=(p.read_bytes() for p in paths)
+        physical_source=json.loads(candidate)
+        need(physical_source.get("schema")==physical.SCHEMA and
+             physical_source.get("source",{}).get(
+                "wago_snapshot_build")==build,
+             "V680_ORIGINAL_WAGO_BUILD_DRIFT")
+        outputs={"optional":"source/v680_food_potion_wago_effects.json"}
+        dest=root/outputs["optional"]
+        code=stages.module_dependency_fingerprint(
+            [Path(__file__),Path(stages.__file__)])
+        def execute():
+            enriched=join(physical_source,relation,effect,build=build,
+                relation_sha256=sha(relation),effect_sha256=sha(effect),
+                include_optional_food_potion=True)
+            rows=[{"item_id":row["item_id"],"kind":row["kind"],
+                   "name_enUS":row["name_enUS"],
+                   "on_use_spell_ids":row["item_effect_source"][
+                       "on_use_spell_ids"],
+                   "source_status":row["item_effect_source"]["status"]}
+                  for row in enriched["items"]
+                  if row["kind"] in ("food","potion")]
+            output={"schema":"v680_optional_food_potion_wago_source_v1",
+                    "game_build":build,"items":rows,
+                    "source_only":True,"native_calls":0,"network_calls":0}
+            dest.parent.mkdir(parents=True,exist_ok=True)
+            dest.write_text(json.dumps(output,ensure_ascii=False,
+                sort_keys=True,indent=2)+"\n",encoding="utf8")
+        def validate(files):
+            doc=json.loads(files["optional"].read_text("utf8"))
+            return (doc.get("schema")==
+                    "v680_optional_food_potion_wago_source_v1"
+                    and doc.get("game_build")==build
+                    and doc.get("source_only") is True
+                    and doc.get("native_calls")==0
+                    and doc.get("network_calls")==0
+                    and type(doc.get("items")) is list
+                    and all(row.get("kind") in ("food","potion") and
+                            type(row.get("on_use_spell_ids")) is list
+                            for row in doc["items"]))
+        stage=stages.execute_stage(
+            root=root,stage_id="fresh-v680-optional-food-potion-use-spells",
+            stage_version="v680-reuse-original-v280-csv-v1",
+            inputs={"game_build":build,
+                "v254_source_receipt_sha256":gear.get("receipt_sha256"),
+                "v190_source_receipt_sha256":source.get("receipt_sha256"),
+                "v280_original_receipt_sha256":
+                    original.get("receipt_sha256"),
+                "original_v280_item_effect_sha256":sha(effect),
+                "original_relation_sha256":sha(relation),
+                "code_sha256":code["sha256"]},
+            outputs=outputs,execute=execute,validate=validate)
+        doc=json.loads(dest.read_text("utf8"))
+        return {"schema":doc["schema"],
+                "status":"FOOD_POTION_WAGO_USE_SPELLS_SOURCE_READY",
+                "candidate_path":str(dest.resolve()),
+                "source_stage":{k:v for k,v in stage.items()
+                                if k!="result"},
+                "food_item_count":sum(x["kind"]=="food" for x in doc["items"]),
+                "potion_item_count":sum(x["kind"]=="potion" for x in doc["items"]),
+                "network_calls_by_stage":0,"native_calls":0,
+                "user_choices_installed":False}
+    except (stages.StageExecutionBlocked,ItemSpellBlocked,
+            KeyError,TypeError,ValueError,OSError) as exc:
+        return {"status":"FOOD_POTION_WAGO_SOURCE_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "candidate_path":None,"network_calls_by_stage":0,
+                "native_calls":0}
