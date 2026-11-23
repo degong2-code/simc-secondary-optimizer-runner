@@ -1488,6 +1488,7 @@ class LocalJobs:
         flasks_by_id={}
         conflicting_flasks=set()
         base_fj_proofs=[]
+        base_fj_documents={}
         for _,path in sorted(candidates,key=lambda p:(-p[0],str(p[1]))):
             try:
                 if path.stat().st_size>environment_build.MAX_RECEIPT_BYTES:
@@ -1561,6 +1562,7 @@ class LocalJobs:
                                       4,tuple(sorted(gem_ids)))
                             base_fj_proofs.append((identity,
                                 _v670_sealed_fj_difference_proofs(doc,layout)))
+                            base_fj_documents[doc["manifest_sha256"]]=(doc,snapshot)
                 if type(flask) is dict:
                     physical=flask["physical_item_id"]
                     if physical not in conflicting_flasks:
@@ -1628,6 +1630,33 @@ class LocalJobs:
         official_names=official_ko_env.read_names(
             self.root,build,set(flasks_by_id)|oil_ids)
         result["verified_base_fj_collision_diagnostics"]=_v670_colliding_fj_diagnostics(base_fj_proofs)
+        # Only exact same-physical-input collisions are eligible. Reverify
+        # original v212 source and v113 runtime profile stage separately.
+        # A single missing or differing owner keeps the entire group blocked.
+        by_physical={}
+        for row in result["verified_base_flask_installs"]:
+            physical=(row["flask_item_id"],row["flask_quality"],
+                      row["F"],row["J"],row["socket_total"],
+                      tuple(sorted(row["ordinary_gem_item_ids"])))
+            by_physical.setdefault(physical,[]).append(row)
+        for rows in by_physical.values():
+            if len(rows)<2:
+                continue
+            fingerprints=[]
+            for row in rows:
+                bundle=base_fj_documents.get(
+                    row["installed_manifest_sha256"])
+                fingerprints.append(_v672_verified_runtime_inputs_digest(
+                    docs,*bundle) if bundle is not None else None)
+            if (all(fp is not None for fp in fingerprints)
+                    and len(set(fingerprints))==1):
+                # Canonical SHA only AFTER sealed runtime equivalence proof.
+                # The UI still asks the user to select, and exact SHA is
+                # independently rechecked on session creation.
+                canonical=min(row["installed_manifest_sha256"] for row in rows)
+                for row in rows:
+                    row["verified_runtime_equivalent_representative"]=(
+                        row["installed_manifest_sha256"]==canonical)
         result["verified_base_flask_installs"].sort(
             key=lambda x:(x["flask_item_id"],x["J"],
                           x["installed_manifest_sha256"]))
