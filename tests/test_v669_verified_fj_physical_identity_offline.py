@@ -34,6 +34,7 @@ class VerifiedPhysicalFJIdentity(unittest.TestCase):
                     "target_ilevel": 334,
                     "official_J": 92,
                     "official_F": 165,
+                    "simc_revision": "synthetic-" + letter,
                     "official_O_physical_source": None,
                     "official_F_physical_source": {
                         "physical_item_id": 241324,
@@ -73,7 +74,11 @@ class VerifiedPhysicalFJIdentity(unittest.TestCase):
                                    "find_verified_installed_season_environment",
                                    side_effect=verified_find), \
                  mock.patch.object(web.official_ko_env, "read_names",
-                                   return_value={}):
+                                   return_value={}), \
+                 mock.patch.object(web,
+                                   "_v672_verified_runtime_inputs_digest",
+                                   side_effect=lambda docs, doc, snapshot:
+                                       doc["manifest_sha256"]):
                 result = jobs.installed_oil_loadouts(334, game_build=build)
             rows = result["verified_base_flask_installs"]
             self.assertEqual(len(rows), 2)
@@ -82,6 +87,9 @@ class VerifiedPhysicalFJIdentity(unittest.TestCase):
             self.assertEqual([row["flask_quality"] for row in rows], [2, 2])
             self.assertEqual([row["J"] for row in rows], [92, 92])
             self.assertEqual([row["F"] for row in rows], [165, 165])
+            self.assertTrue(all(row["individually_verified"] for row in rows))
+            self.assertEqual(set(row["simc_revision"] for row in rows),
+                             {"synthetic-a","synthetic-b"})
             self.assertNotEqual(rows[0]["installed_manifest_sha256"],
                                 rows[1]["installed_manifest_sha256"])
             self.assertEqual(result["native_calls"], 0)
