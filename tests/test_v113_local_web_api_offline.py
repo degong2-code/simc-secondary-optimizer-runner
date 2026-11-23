@@ -673,8 +673,10 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(res.status_code,200,res.text)
         self.assertEqual(res.json()["verified_base_flask_installs"],[
             {"installed_manifest_sha256":"a"*64,"flask_item_id":241326,
+             "flask_quality":3,"ordinary_gem_item_ids":[11,12,13,14],
              "J":92,"F":165,"socket_total":4},
             {"installed_manifest_sha256":"b"*64,"flask_item_id":241326,
+             "flask_quality":3,"ordinary_gem_item_ids":[11,12,13,14],
              "J":108,"F":165,"socket_total":4}])
         self.assertEqual(len(res.json()["verified_flasks"]),1)
         self.assertEqual(res.json()["native_calls"],0)
