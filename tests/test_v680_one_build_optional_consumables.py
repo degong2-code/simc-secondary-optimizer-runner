@@ -81,6 +81,19 @@ class OneBuildOptionalChoices(unittest.TestCase):
                 game_build=BUILD,simc_revision=REV,
                 source={**self.source([]),"game_build":"12.1.5.70575"})
 
+    def test_conflicting_optional_parser_tokens_do_not_block_base(self):
+        rows=[
+            exact_row("food",33,"same_token_3",3,"spell:33"),
+            exact_row("food",34,"same_token_3",3,"spell:34"),
+            exact_row("potion",35,"safe_potion_3",3,"spell:35")]
+        result=self.registry(rows)
+        self.assertTrue(manifest.verify_fresh_optional_consumables(
+            result,game_build=BUILD,simc_revision=REV))
+        self.assertEqual(result["categories"]["food"]["options"],[])
+        self.assertEqual(result["categories"]["potion"]["options"][0][
+                         "simc_token"],"safe_potion_3")
+        self.assertTrue(result["optional_items_do_not_block_base"])
+
     def test_source_missing_keeps_base_and_original_disabled_default(self):
         built=manifest.project_fresh_optional_consumables(
             game_build=BUILD,simc_revision=REV)
