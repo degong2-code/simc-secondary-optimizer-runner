@@ -215,22 +215,42 @@ def stage(args):
             require(driver.execute_script(
                 "return field('spec')==='warlock/destruction'"),
                 "GENERIC_NON_PRIOR_SPEC_SELECTION_INVALID")
+            record["selected_user_spec"]="warlock/destruction"
+            # Each following real UI action gets a named step. Avoid
+            # inventing success from Selenium's generic TimeoutException.
+            record["last_completed_stage"]="SPEC_EXACT_VALUE_VERIFIED"
+            save()
             oil=driver.find_element(By.ID,"optimizer-oil-enabled")
+            record["oil_initial_checked"]=oil.is_selected()
+            record["oil_input_visible"]=oil.is_displayed()
+            record["oil_input_enabled"]=oil.is_enabled()
+            record["last_completed_stage"]="OIL_BUTTON_BEFORE_CLICK"
+            save()
             if oil.is_selected():
                 clickable(driver,oil)
+            record["last_completed_stage"]="OIL_DEFAULT_DISABLED_BY_USER"
+            save()
             navigate(driver,"optimizer")
+            record["last_completed_stage"]="OPTIMIZER_TAB_AFTER_OIL"
+            save()
             start=browser_snapshot(driver)
             require(start["gear_sha"] is None and
                     "시즌 환경 준비" in start["start_label"] and
                     not start["start_disabled"],
                     "COLD_SOURCE_BUTTON_NOT_AVAILABLE")
             record["first_user_visible_initial_environment"]=True
+            record["last_completed_stage"]="COLD_SEASON_BUTTON_READY"
+            save()
             driver.execute_script("""window.__v690_season=null;
               const original=showSeasonEnvironmentBuild;
               showSeasonEnvironmentBuild=function(...args) {
                 window.__v690_season=args[0]; return original(...args);
               };""")
+            record["last_completed_stage"]="SEASON_START_CLICKING"
+            save()
             clickable(driver,driver.find_element(By.ID,"start-btn"))
+            record["last_completed_stage"]="SEASON_START_CLICK_ACCEPTED"
+            save()
             wait_idle(driver,1650)
             environment=driver.execute_script("""const e=window.__v690_season;
               if(!e)return null;

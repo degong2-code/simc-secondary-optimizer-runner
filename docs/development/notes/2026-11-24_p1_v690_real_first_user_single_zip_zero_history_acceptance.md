@@ -37,3 +37,7 @@ Windows [Actions #45231378708](https://github.com/degong2-code/simc-secondary-op
 ## #45232773634 — 사용자 실제 전문화 선택 단계 Timeout, 원인 분기 검사만 보강
 
 [v690.4 Windows Actions #45232773634](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45232773634), 원본 아티팩트 #14846743961: ZIP/첫 웹 동의/비밀키 입력 및 삭제/현재 빌드 SimC 원클릭 자동 확보까지 PASS. `last_completed_stage=VISIBLE_OPTIMIZER_TAB`에서 `TimeoutException`. **신규 시험이 사용한 실제 visible class/spec combobox의 정확한 현재 상태/라벨을 기록하지 않아** 자료 부족으로 제품 검색 UI 오류인지 harness 대기 조건 문제인지 구분 불가능. 기존 제품 JS/Native 변경 대신 한 번의 다음 시험에서 실제 활성 탭·클래스/전문화 검색 입력 존재/disabled·class options의 UI 공개 라벨·검색 이벤트 후 마지막 정상 단계를 bounded JSON에만 기록하도록 시험 진단 강화. 비밀키·원본 전문 데이터/비공개 내부 문자열/HTML·개인정보 수집 없음. 실제 GJFO 시즌 구축/DPS Native는 아직 0, 원본을 반복 수집하지 않음. 다음 정확 첫 결손이 나오면 해당 UI 경계만 해결하며 반복적인 전체 시즌 실측 Native는 STOP.
+
+## #45233714558 — 실제 흑마법사/파괴 class/spec 검색 성공, 다음 초기 UI 클릭에서 Timeout
+
+[GitHub Windows Actions #45233714558](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45233714558), artifact #14848526190 원본 진단: 현재 286 ZIP/새 사용자 동의/비밀키 저장 및 cleanup/공개 70961 SimC 설치 PASS, 실제 optimizer 탭, `choice-class-choice` 및 `choice-spec` 존재·enabled, class UI에 **흑마법사 라벨** 있음. `last_completed_stage=SPEC_SELECTED`, 즉 실제 검색 목록에서 클래스·전문화 선택 두 단계 성공. 이후 `TimeoutException`은 다음 사용자 초기 UI 동작 중 발생, 환경/사용자 Native0. 신규 Selenium helper의 입력/선택 레이블 문제가 아니었음. 상품 엔진/원본 변경 없이 같은 함수의 실제 기름 체크박스·첫 시즌 버튼 단계별 상태만 기록해 다음 재현에서 **첫 클릭을 특정**할 것. 이미 70783/70961 이전 다른 전문화의 oil UI 동작 증거를 재활용하고, 원본 수집/Native는 아직 한 번도 호출하지 않았다. 테스트의 실패를 제품 버그라고 임의 지정하지 않음.
