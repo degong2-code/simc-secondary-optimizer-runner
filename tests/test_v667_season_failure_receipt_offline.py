@@ -78,8 +78,11 @@ class SeasonFailureReceipt(unittest.TestCase):
         self.assertEqual(html.count('id="season-verified-budget"'),1)
         self.assertIn('id="season-verified-budget-group"',html)
         self.assertIn('const budgetSelector=typeof document',ui)
-        self.assertIn('labels.get(key(item))!==1',ui)
-        self.assertIn('candidate.disabled=duplicate',ui)
+        # v676: multiple individually verified installed environments
+        # remain separate exact-SHA choices; no cross-source equality Gate.
+        self.assertIn('item.individually_verified===true',ui)
+        self.assertIn('const candidate=option(item.installed_manifest_sha256,label)',ui)
+        self.assertNotIn('candidate.disabled=duplicate',ui)
         self.assertIn('state.verifiedBaseFlaskInstalls.filter(x=>',ui)
         self.assertIn('x.installed_manifest_sha256===selectedBudget',ui)
         self.assertIn('field("season-verified-budget")!==selectedBudget',ui)
