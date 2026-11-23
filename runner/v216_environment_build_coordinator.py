@@ -54,6 +54,7 @@ import v229_simc_only_source_seed as simc_source
 import v230_simc_item_metadata as simc_item_metadata
 import v189_simc_consumable_embellishment_discovery as simc_effect_candidates
 import v190_consumable_item_snapshot_join as consumable_item_candidates
+import v484_exact_optional_consumable_source_join as optional_source_join
 import v232_simc_only_ordinary_representative as simc_representative
 import v233_source_only_G_probe_profile as g_probe_profile
 import v217_stage_execution_engine as stage_engine
@@ -4793,6 +4794,13 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             stage_root=stage_root,build=expected_game_build,
             fresh_gear=fresh_gear,consumables=fresh_consumables,
             transport=item_effect_transport)
+    # v680: the original v280 already fetched the same-build Wago ItemEffect
+    # data. Extend its Wago FK join to food/potion with Native0 and HTTP0.
+    fresh_optional_food_effects=(
+        item_spell_bridge.collect_optional_food_potion_from_existing(
+            stage_root=stage_root,build=expected_game_build,
+            fresh_gear=fresh_gear,consumables=fresh_consumables,
+            item_effect_stage=fresh_item_spell))
     # Reuse the v229 generated gem/temp bytes and v189 unique_gear bytes;
     # only still-missing first-party v211/permanent files are fetched.
     # When upstream v189 is pending (e.g. injected CSV without exact SimC
@@ -4891,6 +4899,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_one_spec_simc_representative":one_spec,
         "fresh_one_spec_physical_G_probe":physical_probe,
         "fresh_food_potion_item_sources":fresh_consumables,
+        "fresh_optional_food_potion_wago_effects":fresh_optional_food_effects,
         "fresh_consumable_item_spell_source":fresh_item_spell,
         "fresh_consumable_simc_effect_relation":simc_consumable_relation,
         "fresh_permanent_enchant_item_source":permanent_source,
@@ -8556,6 +8565,109 @@ def _fresh_source_owner_exact_no_oil(*, preflight, selected_budget_items,
             "components":{**components,"O":exact}}
 
 
+def _fresh_v680_source_owned_food_potion(*,collected,compilation):
+    """Same BUILD one-pass Wago ItemID/spell -> pinned SimC DBC/handler.
+
+    This derives product input tokens using SimC-generated item spelling,
+    not a second independent effect certification. SimC's real parser/DPS
+    remains authoritative when a user actually executes the selected item.
+    No new API, Native, DB2 download, or character-specific selection.
+    """
+    original=collected.get("fresh_optional_food_potion_wago_effects") or {}
+    source=collected.get("fresh_food_potion_item_sources") or {}
+    seed=collected.get("fresh_lazy_full_pinned_simc_item_source") or {}
+    if (original.get("status")!="FOOD_POTION_WAGO_USE_SPELLS_SOURCE_READY" or
+            not original.get("candidate_path") or
+            not seed.get("source_dir") or
+            not source.get("simc_effect_source_receipt_path")):
+        return None
+    try:
+        stage_root=pathlib.Path(compilation["stage_root"]).resolve()
+        paths=[pathlib.Path(original["candidate_path"]),
+               pathlib.Path(source["simc_effect_source_receipt_path"])]
+        need(all(p.is_file() and not p.is_symlink() and
+                 p.resolve().is_relative_to(stage_root) for p in paths),
+             "V680_ORIGINAL_CONSUMABLE_SOURCE_OUTSIDE_BUILD")
+        physical=json.loads(paths[0].read_text(encoding="utf8"))
+        handlers=json.loads(paths[1].read_text(encoding="utf8"))
+        build=collected["expected_game_build"]
+        revision=compilation["simc_revision"]
+        need(physical.get("game_build")==build and
+             physical.get("source_only") is True and
+             type(physical.get("items")) is list and
+             handlers.get("schema")==simc_effect_candidates.SCHEMA and
+             handlers.get("source",{}).get("commit")==revision and
+             type(handlers.get("candidates")) is dict,
+             "V680_WAGO_SIMC_SAME_BUILD_SOURCE_INVALID")
+        items=physical["items"]
+        ids=[row["item_id"] for row in items
+             if row.get("kind") in ("food","potion") and
+             row.get("source_status")==
+                 "EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY" and
+             len(row.get("on_use_spell_ids",[]))==1]
+        need(len(ids)==len(set(ids)) and len(ids)<=750,
+             "V680_CONSUMABLE_SOURCE_DUPLICATE_OR_EXCESS")
+        if not ids:
+            return {"game_build":build,"simc_revision":revision,
+                    "source_receipt_sha256":original[
+                        "source_stage"]["receipt_sha256"],"rows":[]}
+        metadata=simc_item_metadata.from_seed(
+            directory=seed["source_dir"],item_ids=ids)
+        need(metadata.get("game_build")==build and
+             metadata.get("source_receipt_sha256") and
+             metadata.get("selection_mode")=="EXACT_REQUESTED_IDS",
+             "V680_SIMC_GENERATED_ITEM_BUILD_MISMATCH")
+        simc={row["item_id"]:row for row in metadata["items"]}
+        needed={kind:{} for kind in ("food","potion")}
+        for kind in needed:
+            for row in handlers["candidates"].get(kind,[]):
+                if row.get("implemented") is not True:continue
+                for spell in row.get("spell_ids",[]):
+                    needed[kind].setdefault(spell,set()).add(
+                        row.get("handler"))
+        rows=[]
+        classes={"food":5,"potion":1}
+        for origin in items:
+            item_id=origin.get("item_id")
+            if item_id not in simc:continue
+            kind=origin["kind"]
+            spell=origin["on_use_spell_ids"][0]
+            names=needed[kind].get(spell,set())
+            if len(names)!=1:continue
+            row=simc[item_id]
+            if (row.get("class_id")!=0 or
+                    row.get("subclass_id")!=classes[kind] or
+                    row.get("inventory_type")!=0 or
+                    type(row.get("crafting_quality")) is not int or
+                    row["crafting_quality"]<0):continue
+            token=optional_source_join.candidate_token(
+                row["name"],row["crafting_quality"])
+            if token is None:continue
+            rows.append({
+                "kind":kind,"physical_item_id":item_id,
+                "simc_input_token":token,
+                "crafting_quality":row["crafting_quality"],
+                "effect_identity":"simc:"+next(iter(names))+
+                    ":spell:"+str(spell),
+                "use_condition_identity":"wago_on_use_0",
+                "name_enUS":row["name"]})
+        return {"game_build":build,"simc_revision":revision,
+                "source_receipt_sha256":digest(canonical({
+                    "wago_stage":original["source_stage"]["receipt_sha256"],
+                    "simc_item_source":metadata["source_receipt_sha256"],
+                    "handler_stage":source["source_stage"]["receipt_sha256"]
+                }).encode("utf8")),"rows":rows}
+    except (EnvironmentBuildBlocked,simc_item_metadata.ItemMetadataBlocked,
+            OSError,ValueError,TypeError,KeyError) as exc:
+        # Missing optional data is not the same as failed CORE G/J/F/O.
+        return {"game_build":collected["expected_game_build"],
+                "simc_revision":compilation["simc_revision"],
+                "source_receipt_sha256":
+                    (original.get("source_stage") or {}).get(
+                        "receipt_sha256","0"*64),
+                "rows":[]}
+
+
 def _install_verified_fresh_environment_only(*, compilation, staged,
                                              trusted_budget_evidence,
                                              target_ilevel, manual_final_T=None,
@@ -8988,6 +9100,11 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         try:
             source_compilation=source_wiring.compile_collected(
                 collected,compiler=fresh_stage.compile_fresh_candidate)
+            source_owned_v680=_fresh_v680_source_owned_food_potion(
+                collected=collected,compilation=source_compilation)
+            if source_owned_v680 is not None:
+                source_compilation["source_owned_optional_consumables"]=(
+                    source_owned_v680)
             # v680: the ONE ordinary build carries the exact pinned
             # Wago/SimC consumable source identity into the installed v212
             # owner. Source candidates alone are not valid SimC input
@@ -9005,11 +9122,12 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         "RECOVERED_VERIFIED") and
                         type(sha) is str and
                         re.fullmatch(r"[a-f0-9]{64}",sha) is not None):
-                    source_compilation["source_owned_optional_consumables"]={
+                    source_compilation.setdefault(
+                        "source_owned_optional_consumables",{
                         "game_build":collected["expected_game_build"],
                         "simc_revision":source_compilation["simc_revision"],
                         "source_receipt_sha256":sha,
-                        "rows":[]}
+                        "rows":[]})
             _fresh_attach_existing_v280_socket_preview(
                 collected=collected,compilation=source_compilation,
                 progress=progress,selected_roles=source_selected_gem_roles,
