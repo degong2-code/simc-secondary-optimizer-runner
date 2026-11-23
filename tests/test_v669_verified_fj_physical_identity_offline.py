@@ -516,5 +516,64 @@ class CraftedEmbellishmentTwoColumnLayout(unittest.TestCase):
 
 
 
+class ConsumableDropdownLayoutRegression(unittest.TestCase):
+    def test_v674_verified_fj_is_direct_full_width_grid_sibling(self):
+        from html.parser import HTMLParser
+        html=(ROOT/"runner/webui/index.html").read_text(encoding="utf8")
+        class GridNesting(HTMLParser):
+            def __init__(self):
+                super().__init__(convert_charrefs=True)
+                self.divs=[]
+                self.parent=None
+            def handle_starttag(self,tag,attrs):
+                if tag!="div":
+                    return
+                data=dict(attrs)
+                if data.get("id")=="season-verified-budget-group":
+                    self.parent=self.divs[-1] if self.divs else {}
+                self.divs.append(data)
+            def handle_endtag(self,tag):
+                if tag=="div" and self.divs:
+                    self.divs.pop()
+        structure=GridNesting()
+        structure.feed(html)
+        self.assertEqual(structure.parent.get("class"),"env-input-grid")
+        segment=html.split('<div class="env-input-grid"',1)[1].split(
+            '<div class="env-bottom-row">',1)[0]
+        self.assertLess(segment.index('for="food"'),
+                        segment.index('for="season-verified-flask"'))
+        self.assertLess(segment.index('for="season-verified-flask"'),
+                        segment.index('for="potion"'))
+        self.assertLess(segment.index('for="potion"'),
+                        segment.index('for="augmentation"'))
+        self.assertLess(segment.index('for="augmentation"'),
+                        segment.index('id="season-verified-budget-group"'))
+        self.assertLess(segment.index('id="season-verified-budget-group"'),
+                        segment.index('env-grid-cell env-omnium'))
+        self.assertEqual(segment.count('id="season-verified-budget-group"'),1)
+
+    def test_v674_consumables_are_readable_and_options_never_wrap(self):
+        css=(ROOT/"runner/webui/styles.css").read_text(encoding="utf8")
+        js=(ROOT/"runner/webui/app.js").read_text(encoding="utf8")
+        section=css.split("/* v674: scoped consumable layout.",1)[1]
+        self.assertIn("nth-child(n+5):nth-child(-n+8)",section)
+        self.assertIn("grid-column:span 2!important",section)
+        self.assertIn("#season-verified-budget-group[hidden]",section)
+        self.assertIn("grid-template-columns:minmax(0,1fr)",section)
+        self.assertIn("overflow-wrap:anywhere;white-space:normal",section)
+        self.assertIn("max-width:100%",section)
+        self.assertIn(".choice-results .choice-result",section)
+        self.assertIn("white-space:nowrap;overflow:hidden;text-overflow:ellipsis",section)
+        self.assertIn("@media(max-width:880px)",section)
+        self.assertIn("@media(max-width:540px)",section)
+        self.assertIn("b.title=opt.textContent;",js)
+        self.assertIn('input.title=selected?.textContent||"";',js)
+        # Avoid changing stored SimC identity, verified install selection or
+        # option IDs just to improve a narrow dropdown's presentation.
+        self.assertIn("candidate.disabled=duplicate&&!equivalentRepresentative",js)
+        self.assertIn("candidate=option(item.installed_manifest_sha256,text)",js)
+
+
+
 if __name__ == "__main__":
     unittest.main()
