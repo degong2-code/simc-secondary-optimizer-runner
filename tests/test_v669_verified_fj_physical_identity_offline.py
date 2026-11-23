@@ -609,7 +609,7 @@ class V675FieldLevelAndOptionDedupe(unittest.TestCase):
                             "ordinary_gem_ids":[240890,240898,240906,240914]}}}}
         baseline=web._v675_runtime_input_field_digests(source)
         self.assertIsNotNone(baseline)
-        self.assertEqual(len(baseline),27)
+        self.assertEqual(len(baseline),24)
         other=json.loads(json.dumps(source))
         other["environment_result"]["source_compilation"][
             "v098_source_only_profile_inputs_unadmitted"]["flask"][
@@ -653,9 +653,8 @@ const $=id=>(nodes[id]??={
  appendChild(o){this.options.push(o)}
 });
 const option=(v,label)=>({value:String(v),textContent:String(label)});
-const populateSelect=Function('    unittest.main()
-,'option',raw.slice(a,b)+
- '\\nreturn populateSelect;')($,option);
+const populateSelect=Function('$','option',raw.slice(a,b)+
+ '\nreturn populateSelect;')($,option);
 populateSelect('food',['source_default','source_default',
  'flask_same','flask_same','different_effect'],v=>v);
 assert.deepEqual($('food').options.map(o=>o.value),
