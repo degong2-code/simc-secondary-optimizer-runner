@@ -1224,7 +1224,9 @@ function renderInstalledFlaskChoices(data) {
       item.difference_codes.length>=1&&item.difference_codes.length<=24&&
       item.difference_codes.every(code=>
         Object.prototype.hasOwnProperty.call(collisionNames,code))):[];
-  const diagButton=document.getElementById("season-verified-fj-diagnostic-copy");
+  const diagButton=typeof document==="object"&&
+    typeof document.getElementById==="function"?
+    document.getElementById("season-verified-fj-diagnostic-copy"):null;
   if(diagButton){
     diagButton.hidden=state.verifiedFjCollisionReport.length===0;
     diagButton.disabled=diagButton.hidden;
