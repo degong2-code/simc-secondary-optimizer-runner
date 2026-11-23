@@ -8565,7 +8565,7 @@ def _fresh_source_owner_exact_no_oil(*, preflight, selected_budget_items,
             "components":{**components,"O":exact}}
 
 
-def _fresh_v680_source_owned_food_potion(*,collected,compilation):
+def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
     """Same BUILD one-pass Wago ItemID/spell -> pinned SimC DBC/handler.
 
     This derives product input tokens using SimC-generated item spelling,
@@ -8675,6 +8675,68 @@ def _fresh_v680_source_owned_food_potion(*,collected,compilation):
                     (original.get("source_stage") or {}).get(
                         "receipt_sha256","0"*64),
                 "rows":[]}
+
+
+
+def _fresh_v680_source_owned_food_potion(*,collected,compilation):
+    """Reuse the first same-build source join without reparsing item_data.inc.
+
+    The original v217 owner already checks the Wago & pinned SimC bytes.
+    The compact projection receives one content-addressed derived stage,
+    keyed by source+SimC+code identities; it never downloads or runs Native.
+    """
+    original=collected.get("fresh_optional_food_potion_wago_effects") or {}
+    source=collected.get("fresh_food_potion_item_sources") or {}
+    seed=collected.get("fresh_lazy_full_pinned_simc_item_source") or {}
+    if (original.get("status")!="FOOD_POTION_WAGO_USE_SPELLS_SOURCE_READY" or
+            not original.get("candidate_path") or
+            not source.get("simc_effect_source_receipt_path") or
+            not seed.get("source_dir") or
+            not seed.get("receipt_sha256")):
+        return None
+    try:
+        root=pathlib.Path(compilation["stage_root"])
+        code=stage_engine.module_dependency_fingerprint([
+            pathlib.Path(__file__),
+            pathlib.Path(simc_item_metadata.__file__),
+            pathlib.Path(optional_source_join.__file__)])
+        inputs={"game_build":collected["expected_game_build"],
+            "simc_revision":compilation["simc_revision"],
+            "wago_optional_stage_sha256":original["source_stage"]["receipt_sha256"],
+            "wago_simc_handler_stage_sha256":source["source_stage"][
+                "receipt_sha256"],
+            "simc_generated_item_stage_sha256":seed["receipt_sha256"],
+            "code_sha256":code["sha256"]}
+        key=digest(canonical(inputs).encode("utf8"))[:16]
+        output={"options":"source/v680_source_owned_options_"+key+".json"}
+        dest=root/output["options"]
+        def execute():
+            projection=_fresh_v680_source_owned_food_potion_uncached(
+                collected=collected,compilation=compilation)
+            need(type(projection) is dict and
+                 projection.get("game_build")==inputs["game_build"] and
+                 projection.get("simc_revision")==inputs["simc_revision"] and
+                 type(projection.get("rows")) is list and
+                 type(projection.get("source_receipt_sha256")) is str,
+                 "V680_SOURCE_JOIN_OUTPUT_INVALID")
+            dest.parent.mkdir(parents=True,exist_ok=True)
+            dest.write_text(canonical(projection)+"\\n",encoding="utf8")
+        def validate(files):
+            found=json.loads(files["options"].read_text(encoding="utf8"))
+            return (found.get("game_build")==inputs["game_build"] and
+                found.get("simc_revision")==inputs["simc_revision"] and
+                type(found.get("rows")) is list and
+                type(found.get("source_receipt_sha256")) is str and
+                len(found["source_receipt_sha256"])==64)
+        stage_engine.execute_stage(
+            root=root,stage_id="fresh-v680-simc-consumable-options-"+key,
+            stage_version="v680-one-build-source-owned-option-v1",
+            inputs=inputs,outputs=output,execute=execute,validate=validate)
+        return json.loads(dest.read_text(encoding="utf8"))
+    except (EnvironmentBuildBlocked,stage_engine.StageExecutionBlocked,
+            OSError,ValueError,TypeError,KeyError):
+        # An optional source/projection failure never changes base G/J/F/O.
+        return None
 
 
 def _install_verified_fresh_environment_only(*, compilation, staged,
