@@ -44,8 +44,12 @@ class FirstUserOilVisibleContractTests(unittest.TestCase):
         self.assertIn(
             'e.web_environment_scope?.environment_installed===true',script)
         self.assertIn('oil_mode.is_displayed() and oil_mode.is_enabled()',script)
-        self.assertIn(
-            "document.getElementById('optimizer-oil-enabled').checked",script)
+        # JS uses an explicit line break before .checked. Whitespace is
+        # not a behavioral change; inspect the exact target expression.
+        self.assertRegex(
+            script,
+            r"document\.getElementById\('optimizer-oil-enabled'\)\s*"
+            r"\.checked")
         self.assertIn('record["last_completed_stage"]="VISIBLE_OIL_OFF_APPLIED"',
                       script)
         self.assertNotIn("clickable(driver,oil)",script)

@@ -59,3 +59,7 @@ Windows [Actions #45231378708](https://github.com/degong2-code/simc-secondary-op
 **다음 설치 단계에 대한 독립 코드 대조:** 기존 harness의 `showSeasonEnvironmentBuild` hook은 `e.environment_ready`/`e.environment_installed`을 참조했으나 실제 제품은 `e.web_environment_scope.environment_ready` 및 `.environment_installed`이 authoritative. 수정된 실 검사도 제품에서 사용하는 *그 동일 필드*로만 READY 판단해 정상 원본 설치를 허위 PENDING으로 만들지 않도록 했다. 원래 v216/v212 예산·원본·Native/캐시·제품 UI 코드는 변경하지 않음.
 
 이 단계는 유효한 하나의 실제 Windows 첫사용자 시나리오 수락을 위한 harness 정확도 개선이며 새 Native/효과 인증 독립 Gate가 아님. 세 번째 재시도 이상 원본 시즌 Native 반복 방지 원칙 유지. 이번 v690.7까지 사용자 원본/Native 0, 전체 E2E PENDING. 공식 15/78, next_review B10, 개인 PC 보류·기존 승인 권한 변경 없음.
+
+## v690.9 — focused 3건 테스트의 JS 개행 비교식만 수정
+
+[v690.8 Windows #45237038136](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45237038136)는 현재 원본 ZIP 생성/브라우저/Native 호출 이전 **추가한 선행 정적 회귀 3개 중 1개 FAIL**: 기대 문자열이 `getElementById('optimizer-oil-enabled').checked`로 한 줄이어야 한다고 잘못 가정. 실제 harness는 같은 객체의 `.checked`를 다음 줄에 표기한 올바른 JS이다. 나머지 HTML visible control/JS change wiring focused 2개 PASS. 테스트 문자열을 공백·줄바꿈을 허용하는 정확한 대상 정규식으로 변경. 제품 코드·harness 동작·원본/시즌 캐시/Native 변경 0. 실제 제로베이스 결과는 다음 GitHub Actions 영수증 이후에만 확정한다.
