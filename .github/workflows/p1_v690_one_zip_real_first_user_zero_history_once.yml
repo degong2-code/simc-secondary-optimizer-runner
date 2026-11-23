@@ -6,6 +6,7 @@ on:
       - .github/workflows/p1_v690_one_zip_real_first_user_zero_history_once.yml
       - integration_probes/p1_v690_one_zip_first_user_zero_history_once.py
       - integration_probes/p1_v573_windows_zip_cold_web_setup_consent_once.py
+      - tests/test_v690_visible_oil_user_contract.py
 permissions:
   contents: read
   actions: read
@@ -64,6 +65,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'V690_CI_HARNESS_REQUIREMENTS' }
           python -m py_compile integration_probes/p1_v573_windows_zip_cold_web_setup_consent_once.py integration_probes/p1_v690_one_zip_first_user_zero_history_once.py
           if ($LASTEXITCODE -ne 0) { throw 'V690_SYNTAX' }
+          python -m unittest discover -s tests -p test_v690_visible_oil_user_contract.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'V690_VISIBLE_OIL_CONTRACT_PRECHECK' }
           New-Item -ItemType Directory -Force out/v690 | Out-Null
           python integration_probes/v181_windows_beta_packager.py --out out/v690/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
           if ($LASTEXITCODE -ne 0) { throw 'V690_CURRENT_HEAD_ZIP_PACKAGER' }

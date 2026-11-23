@@ -21,7 +21,7 @@ import sys
 import time
 
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select, WebDriverWait
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0]=[str(ROOT),str(ROOT/"integration_probes"),str(ROOT/"runner")]
@@ -220,15 +220,26 @@ def stage(args):
             # inventing success from Selenium's generic TimeoutException.
             record["last_completed_stage"]="SPEC_EXACT_VALUE_VERIFIED"
             save()
-            oil=driver.find_element(By.ID,"optimizer-oil-enabled")
-            record["oil_initial_checked"]=oil.is_selected()
-            record["oil_input_visible"]=oil.is_displayed()
-            record["oil_input_enabled"]=oil.is_enabled()
-            record["last_completed_stage"]="OIL_BUTTON_BEFORE_CLICK"
+            # The user-facing control is the SELECT '사용/미사용'. The
+            # original hidden checkbox is an internal state mirror and is
+            # not click-targetable by a browser user. Previous v690.6
+            # accidentally tried to click that hidden input.
+            oil_mode=driver.find_element(By.ID,"optimizer-oil-use-mode")
+            require(oil_mode.is_displayed() and oil_mode.is_enabled(),
+                    "VISIBLE_OIL_MODE_NOT_INTERACTIVE")
+            record["oil_visible_mode_before"]=oil_mode.get_attribute("value")
+            record["last_completed_stage"]="VISIBLE_OIL_MODE_BEFORE_SELECT"
             save()
-            if oil.is_selected():
-                clickable(driver,oil)
-            record["last_completed_stage"]="OIL_DEFAULT_DISABLED_BY_USER"
+            if oil_mode.get_attribute("value")!="off":
+                Select(oil_mode).select_by_value("off")
+            wait_idle(driver,45)
+            require(driver.execute_script("""return
+                document.getElementById('optimizer-oil-use-mode').value==='off'
+                && !document.getElementById('optimizer-oil-enabled').checked
+                && !state.busy;"""),
+                "VISIBLE_OIL_OFF_NOT_APPLIED")
+            record["oil_visible_mode_after"]="off"
+            record["last_completed_stage"]="VISIBLE_OIL_OFF_APPLIED"
             save()
             navigate(driver,"optimizer")
             record["last_completed_stage"]="OPTIMIZER_TAB_AFTER_OIL"

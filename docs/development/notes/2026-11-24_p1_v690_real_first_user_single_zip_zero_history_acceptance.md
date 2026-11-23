@@ -41,3 +41,11 @@ Windows [Actions #45231378708](https://github.com/degong2-code/simc-secondary-op
 ## #45233714558 — 실제 흑마법사/파괴 class/spec 검색 성공, 다음 초기 UI 클릭에서 Timeout
 
 [GitHub Windows Actions #45233714558](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45233714558), artifact #14848526190 원본 진단: 현재 286 ZIP/새 사용자 동의/비밀키 저장 및 cleanup/공개 70961 SimC 설치 PASS, 실제 optimizer 탭, `choice-class-choice` 및 `choice-spec` 존재·enabled, class UI에 **흑마법사 라벨** 있음. `last_completed_stage=SPEC_SELECTED`, 즉 실제 검색 목록에서 클래스·전문화 선택 두 단계 성공. 이후 `TimeoutException`은 다음 사용자 초기 UI 동작 중 발생, 환경/사용자 Native0. 신규 Selenium helper의 입력/선택 레이블 문제가 아니었음. 상품 엔진/원본 변경 없이 같은 함수의 실제 기름 체크박스·첫 시즌 버튼 단계별 상태만 기록해 다음 재현에서 **첫 클릭을 특정**할 것. 이미 70783/70961 이전 다른 전문화의 oil UI 동작 증거를 재활용하고, 원본 수집/Native는 아직 한 번도 호출하지 않았다. 테스트의 실패를 제품 버그라고 임의 지정하지 않음.
+
+## v690.7 — 숨겨진 체크박스 대신 사용자 가시 메뉴 사용, 저비용 선행 검증
+
+[#45234577569](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45234577569) v690.6 영수증에서 `failure_after_stage=OIL_BUTTON_BEFORE_CLICK` / `oil_input_visible=false` / `oil_input_enabled=true` / `oil_initial_checked=true` / `TimeoutException` 확인. 정확 실제 UI `runner/webui/index.html`의 `optimizer-oil-enabled`는 `hidden aria-hidden` 내부 미러이고, 일반 사용자가 조작하는 컨트롤은 `optimizer-oil-use-mode` 선택 메뉴(`use`/ `off`)다. `app.js`는 visible select의 `change` 이벤트를 기존 `applyOilUseToggle`에 연결하므로 **제품 로직은 수정하지 않는다**.
+
+새 harness는 Selenium `Select(oil_mode).select_by_value("off")`로 사용자에게 보이는 '미사용'을 선택, `state.busy`가 끝난 뒤 visible menu=off 및 hidden mirror checked=false를 읽기 전용으로 검증한다. 실제 사용자 키보드/마우스 조작에 부합하며 내부 요소를 직접 click하지 않는다. 원본 시즌 G/J/F/O, Native/SimC 결과 계산, ZIP 및 캐시 알고리즘 변경 없음.
+
+재차 전체 Windows ZIP/SimC 자동 설치를 실행하기 전에 기존 v690 workflow의 **패키징 앞 단계**에서 `tests/test_v690_visible_oil_user_contract.py` focused 3개 검증(HTML visible option, JS change wiring, Selenium visible Select 코딩)을 먼저 실행한다. 정적 계약은 Chrome 실제 UI 조작 PASS의 대체물이 아니며 실제 Windows Actions 영수증 이후에만 제로베이스 단계 성공을 판정. 과거 v690.6 Native0·실시즌 원본0. 개인 PC 시험·26개 전문화/신규 시즌 전수 미검증. 공식 `15/78 COMPLETE`, `full_product_e2e=PENDING`, `next_review=B10`; 기존 권한 변경 없음.
