@@ -2037,6 +2037,87 @@ function verifiedExistingBudgetScopeMatchesRun() {
     saved.B===saved.G+saved.J+saved.F &&
     saved.T===saved.B;
 }
+// v677: existing validated ordinary environment uses read-only original
+// v212/v113 evidence. This action performs no season Build or Native.
+async function prepareSelectedExistingEnvironment() {
+  const sha=field("season-verified-budget");
+  const build=field("season-game-build")||
+    state.verifiedInstalledBuildFromThisPage;
+  const level=Number(field("ilevel"));
+  const exact=state.verifiedBaseFlaskInstalls.find(item=>
+    item.installed_manifest_sha256===sha &&
+    item.individually_verified===true);
+  if(!exact || !/^[a-f0-9]{64}$/.test(sha||"") ||
+     !/^\d+(?:\.\d+){3}$/.test(build||"") ||
+     !Number.isSafeInteger(level)||level<1||level>1000 ||
+     oilUseIntent || Number(field("season-target-socket-count"))!==4 ||
+     field("season-existing-special-gem-id"))
+    throw Error("기름 미사용·보석 4개의 기존 검증 환경을 먼저 선택하세요.");
+  const flask=String(exact.flask_item_id);
+  if(field("season-verified-flask")!==flask ||
+     field("season-selected-flask-id")!==flask)
+    throw Error("영약 선택과 검증 설치본이 일치하지 않습니다. 다시 선택하세요.");
+  const referenceTrack=field("spec")==="warrior/fury"&&
+    !$("manual-t-mode").checked?"fury_dual_2h":"general";
+  const scope=seasonBuildInputScope(true);
+  state.verifiedExistingBudget=null;
+  updateBudgetPreview();
+  $("user-variant-status").textContent=
+    "선택한 기존 설치본의 G/J/F/O와 프로필을 재확인 중 · 신규 Native 0회";
+  const result=await api("/api/v1/environment/installed-budget?"+
+    "game_build="+encodeURIComponent(build)+
+    "&target_ilevel="+level+
+    "&installed_manifest_sha256="+sha+
+    "&selected_flask_item_id="+exact.flask_item_id+
+    "&reference_G_track="+referenceTrack);
+  const currentTrack=field("spec")==="warrior/fury"&&
+    !$("manual-t-mode").checked?"fury_dual_2h":"general";
+  if(seasonBuildInputScope(true)!==scope ||
+     field("season-verified-budget")!==sha ||
+     oilUseIntent||currentTrack!==referenceTrack)
+    throw Error("검증 요청 중 선택 조건이 변경됐습니다. 다시 확인하세요.");
+  if(result?.schema!=="v677_verified_existing_installed_budget_v1"||
+     result?.status!=="VERIFIED_EXISTING_INSTALLED_BUDGET"||
+     result.game_build!==build||result.target_ilevel!==level||
+     result.installed_manifest_sha256!==sha||
+     result.selected_flask_item_id!==exact.flask_item_id||
+     result.reference_G_track!==referenceTrack||
+     result.verified_saved_v113_profile!==true||
+     result.native_calls_now!==0||
+     result.current_retail_build_verified!==false)
+    throw Error("EXISTING_INSTALLED_BUDGET_RECEIPT_MISMATCH");
+  if(!verifiedInstalledGearScopeMatchesRun(build,level) ||
+     state.seasonGear.installed_manifest_sha256!==sha)
+    await chooseInstalledFlask(); // one exact read-only gear GET
+  if(seasonBuildInputScope(true)!==scope ||
+     !verifiedInstalledGearScopeMatchesRun(build,level) ||
+     state.seasonGear.installed_manifest_sha256!==sha)
+    throw Error("EXISTING_INSTALLED_GEAR_SOURCE_NOT_READY");
+  state.verifiedExistingBudget=result;
+  if(!verifiedExistingBudgetScopeMatchesRun()){
+    state.verifiedExistingBudget=null;
+    throw Error("EXISTING_INSTALLED_BUDGET_SCOPE_CHANGED");
+  }
+  updateBudgetPreview();
+  $("user-variant-status").textContent=
+    "기존 설치본 검증 완료 · G "+number(result.G)+
+    " / J "+number(result.J)+" / F "+number(result.F)+
+    " / O 0 · B=T "+number(result.T)+
+    " · 신규 Native 0회 · 현재 KR Live 일치 별도 확인";
+  setNotice("정확한 검증 설치본의 예산·프로필 연결 완료. 장신구·특성 등 사용자 조건을 확인할 수 있습니다.");
+  return true;
+}
+async function prepareUserSelectedEnvironment() {
+  if(field("season-verified-budget"))
+    return prepareSelectedExistingEnvironment();
+  // No accidental Native run simply because a valid ordinary installation
+  // has not been chosen yet. Advanced variants retain explicit Build consent.
+  if(!oilUseIntent && Number(field("season-target-socket-count"))===4 &&
+     !field("season-existing-special-gem-id") &&
+     state.verifiedBaseFlaskInstalls.length>0)
+    throw Error("검증된 기존 환경을 먼저 선택하세요. 새 측정은 시작하지 않았습니다.");
+  return buildSeasonEnvironment(true);
+}
 function optimizerNeedsSeasonPreparation() {
   const build=field("season-game-build") ||
     state.verifiedInstalledBuildFromThisPage;
