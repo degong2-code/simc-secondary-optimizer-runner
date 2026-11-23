@@ -1353,10 +1353,11 @@ const api=async (url,args)=>{
 const run=Function("$","field","valueInt","state","window","api",
  "beginSeasonBuildActivity","seasonBuildInputScope","oilUseIntent",
  "displaySeasonBuildRecovery","seasonBuildRecoveryPlan",
+ "displaySeasonEnvironmentAttempt",
  "let lastSeasonDiagnosticReceipt=null;"+src.slice(start,end)+
  "return buildSeasonEnvironment;")(
   $,field,valueInt,state,window,api,()=>()=>{},()=>JSON.stringify(["inputs"]),
-  false,()=>{},()=>null);
+  false,()=>{},()=>null,()=>{});
 (async()=>{
  await assert.rejects(run(false),/REQUEST_CAPTURED_BEFORE_NATIVE/);
  assert.strictEqual(submitted.length,1,
@@ -1428,7 +1429,8 @@ const state={verifiedInstalledBuildFromThisPage:"12.1.5.70783"};
 const args=["state","$","seasonBuildInputScope",
  "installSeasonGearHints","renderSeasonOptionCatalog",
  "updateBudgetPreview","showSeasonEnvironmentBuild",
- "displaySeasonBuildRecovery","requestedInputScope","forUserVariant","report"];
+ "displaySeasonBuildRecovery","displaySeasonEnvironmentAttempt",
+ "requestedInputScope","forUserVariant","report"];
 const apply=Function(...args,
  src.slice(c,d)+"showSeasonEnvironmentBuild(report,forUserVariant);");
 const afterGear=Function(...args,
@@ -1437,7 +1439,7 @@ const afterGear=Function(...args,
 const check=(saved,variant,guard=apply)=>{
  guard(state,$,scope,
   v=>revoked.push(["gear",v]),v=>revoked.push(["options",v]),
-  ()=>{budgetResets++},v=>shown.push(v),()=>{},
+  ()=>{budgetResets++},v=>shown.push(v),()=>{},()=>{},
   saved,variant,{environment_ready:true,T:3333});
 };
 const original=scope(true);
