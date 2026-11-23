@@ -171,6 +171,107 @@ def _v670_colliding_fj_diagnostics(proofs):
             "difference_codes":differences})
     return reports
 
+
+def _v672_verified_runtime_inputs_digest(docs, installed, snapshot):
+    """Prove saved runtime-input equivalence, NOT preflight or current Live.
+
+    Called only after exact original v216/v212 installed receipt verification.
+    Independently verify v212 staged and v113 profile stage receipts too.
+    Removing only content-address linking fields cannot grant source approval.
+    """
+    try:
+        if (type(installed) is not dict or
+                docs.is_symlink() or not docs.is_dir() or
+                docs.parent.is_symlink() or not docs.parent.is_dir()):
+            return None
+        digest=installed["manifest_sha256"]
+        staged_sha=installed["staged_source_environment_sha256"]
+        if not (re.fullmatch(r"[a-f0-9]{64}",digest) and
+                re.fullmatch(r"[a-f0-9]{64}",staged_sha)):
+            return None
+        stage_path=docs/("v212_environment_"+staged_sha[:20]+".json")
+        if (stage_path.is_symlink() or not stage_path.is_file() or
+                stage_path.stat().st_size>environment_build.MAX_RECEIPT_BYTES):
+            return None
+        stage_doc,_=environment_manifest.read_json(
+            stage_path,environment_build.MAX_RECEIPT_BYTES)
+        environment_manifest.verify_fresh_source_environment(stage_doc)
+        if (stage_doc.get("manifest_sha256")!=staged_sha or
+                stage_doc.get("original_v216_preflight_sha256")!=
+                    installed.get("original_v216_preflight_sha256") or
+                stage_doc.get("original_v217_stage_receipts")!=
+                    installed.get("original_v217_stage_receipts") or
+                stage_doc.get("game_build")!=installed.get("game_build") or
+                stage_doc.get("target_ilevel")!=installed.get("target_ilevel") or
+                stage_doc.get("source_catalog_artifact_sha256")!=
+                    installed.get("source_catalog_artifact_sha256")):
+            return None
+        stage_engine.verify_stage(
+            root=docs.parent,
+            stage_id="fresh-v212-environment-"+staged_sha[:20],
+            stage_version="v212-fresh-source-environment-1",
+            inputs={"manifest_sha256":staged_sha,
+                    "v216_preflight_sha256":
+                        stage_doc["original_v216_preflight_sha256"]},
+            outputs={"environment":"fresh_source/"+stage_path.name})
+        if (snapshot.is_symlink() or not snapshot.is_file() or
+                snapshot.stat().st_size>8_000_000 or
+                snapshot!=docs/("v113_profile_"+digest[:20]+".json")):
+            return None
+        raw=snapshot.read_bytes()
+        snap=json.loads(raw.decode("utf8"))
+        if (type(snap) is not dict or
+                snap.get("schema")!=
+                    "v113_verified_v212_profile_source_snapshot_v1" or
+                snap.get("installed_manifest_sha256")!=digest or
+                snap.get("source_catalog_artifact_sha256")!=
+                    installed.get("source_catalog_artifact_sha256") or
+                raw!=(stage_engine.canonical(snap)+"\n").encode("utf8")):
+            return None
+        stage_engine.verify_stage(
+            root=docs.parent,
+            stage_id="fresh-v113-profile-"+digest[:20],
+            stage_version="v113-fresh-v212-profile-snapshot-1",
+            inputs={"installed_manifest_sha256":digest,
+                    "source_catalog_artifact_sha256":
+                        installed["source_catalog_artifact_sha256"],
+                    "snapshot_sha256":stage_engine.digest(raw)},
+            outputs={"snapshot":"fresh_source/"+snapshot.name})
+        runtime=snap.get("environment_result")
+        compilation=runtime.get("source_compilation") if type(runtime) is dict else None
+        linked=(compilation.get("verified_environment_install")
+                if type(compilation) is dict else None)
+        if (type(compilation) is not dict or type(linked) is not dict or
+                compilation.get("preflight_sha256")!=
+                    installed.get("original_v216_preflight_sha256") or
+                linked.get("manifest_sha256")!=digest):
+            return None
+        # Compare all other sealed fields without reinterpreting values.
+        stage_clean={k:v for k,v in stage_doc.items()
+                     if k not in ("manifest_sha256",
+                                  "original_v216_preflight_sha256")}
+        installed_clean={k:v for k,v in installed.items()
+                         if k not in ("manifest_sha256",
+                                      "staged_source_environment_sha256",
+                                      "original_v216_preflight_sha256")}
+        runtime_clean={k:v for k,v in runtime.items()
+                       if k!="source_compilation"}
+        runtime_clean["source_compilation"]={
+            k:v for k,v in compilation.items()
+            if k not in ("preflight_sha256","verified_environment_install")}
+        snapshot_clean={k:v for k,v in snap.items()
+                        if k not in ("installed_manifest_sha256",
+                                     "environment_result")}
+        snapshot_clean["environment_result"]=runtime_clean
+        return stage_engine.digest(stage_engine.canonical({
+            "installed":installed_clean,"source_stage":stage_clean,
+            "runtime_snapshot":snapshot_clean}).encode("utf8"))
+    except (ValueError,TypeError,KeyError,UnicodeError,OSError,
+            stage_engine.StageExecutionBlocked,
+            environment_manifest.EnvironmentBlocked):
+        return None
+
+
 class UpdateInstallRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     filename: str = Field(min_length=12,max_length=140)
