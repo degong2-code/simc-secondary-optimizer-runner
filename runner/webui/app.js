@@ -598,7 +598,10 @@ function enhanceSelect(select){
   const norm=s=>String(s).normalize("NFKC").toLocaleLowerCase("ko-KR").trim();
   const sync=()=>{
     if(!shown){const selected=select.selectedOptions?.[0];
-      input.value=selected?.value?selected.textContent:"";}
+      input.value=selected?.value?selected.textContent:"";
+      // A single-line search input may elide a long saved item name.
+      // Keep the complete source label available without changing its ID.
+      input.title=selected?.textContent||"";}
     input.disabled=select.disabled;
     if(!select.validity||select.validity.valid)input.removeAttribute("aria-invalid");
   };
@@ -620,6 +623,8 @@ function enhanceSelect(select){
     for(const [i,opt] of visible.entries()){
       const b=document.createElement("button");b.type="button";
       b.className="choice-result";b.textContent=opt.textContent;
+      // CSS intentionally shows one line; hovering exposes the full label.
+      b.title=opt.textContent;
       b.setAttribute("role","option");
       b.setAttribute("aria-selected",String(opt.value===select.value));
       if(i===index)b.classList.add("choice-active");
@@ -1285,14 +1290,19 @@ function renderInstalledFlaskChoices(data) {
       // rechecked by the existing season-gear/session endpoint.
       const equivalentRepresentative=duplicate &&
         item.verified_runtime_equivalent_representative===true;
-      const detail=numericLabels.get(numericKey(item))>1?
-        " · 영약 #"+item.flask_item_id+" (품질 "+item.flask_quality+")"+
+      // Compact labels prevent native option popovers from spanning the
+      // workspace. Distinct physical sources still retain exact ItemIDs.
+      const detail=numericLabels.get(numericKey(item))>1&&!duplicate?
+        " · 영약 #"+item.flask_item_id+
         " · 보석 "+physicalIds(item).map(id=>"#"+id).join("/"):"";
-      const text="영약 F "+item.F+" · 보석 J "+item.J+
-        " · 소켓 "+item.socket_total+" · 기름 없음"+detail+
+      const text="F "+item.F+" · J "+item.J+" · "+item.socket_total+
+        "소켓 · 기름 없음"+detail+
         (equivalentRepresentative?" · 검증된 동일 실행 입력 대표 설치본":
-          duplicate?" · 물리 구성 동일 · 개별 선택 보류":"");
+          duplicate?" · 동일 물리 구성 · 개별 선택 보류":"");
       const candidate=option(item.installed_manifest_sha256,text);
+      candidate.title=text+" · 영약 #"+item.flask_item_id+
+        " (품질 "+item.flask_quality+") · 보석 "+
+        physicalIds(item).map(id=>"#"+id).join("/");
       candidate.disabled=duplicate&&!equivalentRepresentative;
       budgetSelector.appendChild(candidate);
       if(!candidate.disabled)selectable++;
