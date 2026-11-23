@@ -1430,7 +1430,7 @@ const args=["state","$","seasonBuildInputScope",
  "installSeasonGearHints","renderSeasonOptionCatalog",
  "updateBudgetPreview","showSeasonEnvironmentBuild",
  "displaySeasonBuildRecovery","displaySeasonEnvironmentAttempt",
- "requestedInputScope","forUserVariant","report"];
+ "game_build","target_ilevel","requestedInputScope","forUserVariant","report"];
 const apply=Function(...args,
  src.slice(c,d)+"showSeasonEnvironmentBuild(report,forUserVariant);");
 const afterGear=Function(...args,
