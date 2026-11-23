@@ -220,19 +220,22 @@ class SealedFJCollisionReceipt(unittest.TestCase):
                                    side_effect=exact), \
                  mock.patch.object(web.official_ko_env,"read_names",
                                    return_value={}), \
+                 mock.patch.object(web,"_v672_verified_runtime_inputs_digest",
+                                   side_effect=lambda docs,document,snapshot:
+                                       document["manifest_sha256"]), \
                  mock.patch.object(web.subprocess,"Popen",
                                    side_effect=AssertionError("NO_NATIVE")):
                 data=jobs.installed_oil_loadouts(334,game_build=build)
             self.assertEqual(len(data["verified_base_flask_installs"]),2)
-            diag=data["verified_base_fj_collision_diagnostics"]
-            self.assertEqual(len(diag),1)
-            self.assertEqual(diag[0]["installed_count"],2)
-            self.assertEqual(diag[0]["difference_codes"],
-                             ["J_SOURCE","SIMC_REVISION"])
-            serialized=json.dumps(diag)
-            for secret in (sha_a,sha_b,str(folder),"revision-A",
-                           "j-evidence-A","source_sha256"):
-                self.assertNotIn(secret,serialized)
+            # Independent original receipts need no cross-source equality;
+            # avoid any response with raw source SHA/provenance comparisons.
+            self.assertEqual(data["verified_base_fj_collision_diagnostics"],[])
+            self.assertTrue(all(
+                item["individually_verified"]
+                for item in data["verified_base_flask_installs"]))
+            self.assertEqual({item["simc_revision"]
+                              for item in data["verified_base_flask_installs"]},
+                             {"revision-A","revision-B"})
             self.assertEqual(data["native_calls"],0)
             self.assertEqual(data["network_calls"],0)
             self.assertEqual(before,
@@ -546,8 +549,10 @@ class ConsumableDropdownLayoutRegression(unittest.TestCase):
         self.assertIn('input.title=selected?.textContent||"";',js)
         # Avoid changing stored SimC identity, verified install selection or
         # option IDs just to improve a narrow dropdown's presentation.
-        self.assertIn("candidate.disabled=duplicate&&!equivalentRepresentative",js)
-        self.assertIn("candidate=option(item.installed_manifest_sha256,text)",js)
+        self.assertIn("item.individually_verified===true",js)
+        self.assertIn("candidate=option(item.installed_manifest_sha256,label)",js)
+        self.assertNotIn("candidate.disabled=duplicate",js)
+
 
 
 
