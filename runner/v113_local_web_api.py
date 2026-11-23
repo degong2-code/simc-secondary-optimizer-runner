@@ -623,6 +623,32 @@ class UserRequest(BaseModel):
     # install, DPS admission or ordinary season Build default.
     measure_fury_G_source_only: bool = False
 
+def _v680_exact_installed_optional_document(root,params,user):
+    """One original installed v212, not a browser-supplied token list.
+
+    This is a cheap lookup and same-scope read before possible Native work.
+    v113 plan still resolves/validates the exact original v217 install later.
+    Absent exact selection retains historical source_default-only behavior.
+    """
+    sha=params.installed_manifest_sha256
+    build=params.installed_season_game_build
+    if sha is None or build is None:
+        return None
+    level=user["target"]["ilevel"]
+    path=(pathlib.Path(root)/"_fresh_season_sources"/("wago_"+build)/
+          "fresh_source"/("v212_installed_"+sha[:20]+".json"))
+    if path.is_symlink() or not path.is_file():
+        raise environment_manifest.EnvironmentBlocked(
+            "WEB_SELECTED_SEASON_OPTION_INSTALL_MISSING")
+    doc,_=environment_manifest.read_json(path)
+    environment_manifest.verify_fresh_installed_environment(doc)
+    if (doc["manifest_sha256"]!=sha or doc["game_build"]!=build or
+            doc["target_ilevel"]!=level):
+        raise environment_manifest.EnvironmentBlocked(
+            "WEB_SELECTED_SEASON_OPTION_INSTALL_CHANGED")
+    return doc
+
+
 def blocked(exc, *, stage=None):
     """Return stable codes, not private absolute paths, talent strings, or tracebacks.
 
@@ -2295,7 +2321,10 @@ class LocalJobs:
             # creating sessions or resolving any exact-static-L Native.
             # A historical v108 SimC token is not a registered item.
             if params.current_season_product:
-                profile_stage._verified_fresh_season_consumables(user)
+                optional_doc=_v680_exact_installed_optional_document(
+                    self.root,params,user)
+                profile_stage._verified_fresh_season_consumables(
+                    user,installed_environment=optional_doc)
             exact_oils=params.selected_oil_item_ids_by_hand
             sockets=params.user_socket_total
             special=params.user_special_gem_id
@@ -2655,9 +2684,12 @@ class LocalJobs:
         try:
             user=sessions.user_scenario(params.controls)
             if params.current_season_product:
-                # This Start/LongRun preflight happens before exact-L
-                # cache hydration or other possible Native subprocess.
-                profile_stage._verified_fresh_season_consumables(user)
+                # Same exact v212 optional choices as the later profile,
+                # before possible special-L Native work, not an old v108 list.
+                optional_doc=_v680_exact_installed_optional_document(
+                    self.root,params,user)
+                profile_stage._verified_fresh_season_consumables(
+                    user,installed_environment=optional_doc)
         except Exception as exc:
             raise blocked(exc) from None
         hydrated=None
@@ -3610,7 +3642,28 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     entry["preferred_if_same_effect_source"]=(
                         "STRONGER_VARIANT_REPORTED" if rank=="stronger"
                         else "WEAKER_VARIANT_REPORTED")
+            # This is the SAME installed source consumed by v218 at
+            # preflight and profile generation; no second approval tier.
+            optional=(profile_stage.current_season_approved_optional_choices(doc)
+                      if option_source_verified else
+                      profile_stage.current_season_approved_optional_choices())
+            optional_doc=(doc.get("installed_optional_consumables")
+                          if option_source_verified else None)
             return {**published,
+                    "installed_optional_consumable_choices":{
+                        "schema":"v113_current_season_optional_consumables_v1",
+                        **optional,
+                        "source_default_simc_token":"disabled",
+                        "diamond_id":[0],
+                        "omnium_talents":["source_default"],
+                        "installed_manifest_sha256":(
+                            doc["manifest_sha256"]
+                            if option_source_verified else None),
+                        "items":([
+                            {"kind":kind,**row}
+                            for kind in ("food","potion","augmentation")
+                            for row in optional_doc["categories"][kind]["options"]]
+                            if type(optional_doc) is dict else [])},
                     "verified_exact_user_enchant_runtime":exact_runtime,
                     **({"source_scope":"VERIFIED_INSTALLED_V212_OPTION_CATALOG",
                         "installed_manifest_sha256":installed_manifest_sha256}
