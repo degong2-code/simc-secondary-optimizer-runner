@@ -5362,7 +5362,8 @@ function registerHandlers() {
     // This is the only new-job action. Never start SimC on page load or refresh.
     // A successful BASE run may deliberately omit optional consumables.
     // Make that DPS condition visible at the final user confirmation.
-    const approved=state.options?.current_season_product_choices;
+    const approved=typeof state==="undefined"?null:
+      state.options?.current_season_product_choices;
     const disabledOptional=approved?.schema==="v113_current_season_optional_consumables_v1" &&
       approved.source_default_simc_token==="disabled"?
       ["food","potion"].filter(name=>field(name)==="source_default"):[];
