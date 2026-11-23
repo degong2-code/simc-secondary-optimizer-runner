@@ -1223,9 +1223,11 @@ function renderInstalledFlaskChoices(data) {
     // v669: only original saved physical ItemIDs and flask quality may
     // distinguish equal numeric budgets. Never choose by manifest order,
     // SHA prefix, F/J totals alone, or an unverified UI guess.
+    const physicalIds=item=>[...item.ordinary_gem_item_ids]
+      .sort((a,b)=>a-b);
     const key=item=>[
       item.flask_item_id,item.flask_quality,item.F,item.J,
-      item.socket_total,...item.ordinary_gem_item_ids
+      item.socket_total,...physicalIds(item)
     ].join("/");
     for(const item of rows){
       labels.set(key(item),(labels.get(key(item))||0)+1);
@@ -1237,7 +1239,7 @@ function renderInstalledFlaskChoices(data) {
       const duplicate=labels.get(key(item))!==1;
       const detail=numericLabels.get(numericKey(item))>1?
         " · 영약 #"+item.flask_item_id+" (품질 "+item.flask_quality+")"+
-        " · 보석 "+item.ordinary_gem_item_ids.map(id=>"#"+id).join("/"):"";
+        " · 보석 "+physicalIds(item).map(id=>"#"+id).join("/"):"";
       const text="영약 F "+item.F+" · 보석 J "+item.J+
         " · 소켓 "+item.socket_total+" · 기름 없음"+detail+
         (duplicate?" · 물리 구성이 같아 원본 구분 보류":"");
