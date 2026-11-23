@@ -46,7 +46,9 @@ def require(ok,code):
 
 def safe(exc):
     value=str(exc).split(":",1)[0].split("\n",1)[0]
-    return value if re.fullmatch("V690_[A-Z0-9_]{4,110}",value) else type(exc).__name__
+    return value if re.fullmatch(
+        r"(?:V690|V344|V570)_[A-Z0-9_]{4,110}",value
+    ) else type(exc).__name__
 
 
 def eliminate_historical_sources(root,env,work):
@@ -181,6 +183,11 @@ def stage(args):
             # Verify the user's saved source and SimC connection. The
             # one-click UI may apply without a separate connection save.
             record["auto_simc_revision"]=provision["revision"]
+            # Class/spec controls belong to the optimizer tab. The product
+            # does not expose the search listboxes while Settings is active.
+            # Navigate like a real user BEFORE attempting keyboard selection.
+            navigate(driver,"optimizer")
+            record["last_completed_stage"]="VISIBLE_OPTIMIZER_TAB"
             choose_visible_search(driver,"class-choice",
                                   "흑마법사","흑마법사")
             choose_visible_search(driver,"spec","파괴","파괴")

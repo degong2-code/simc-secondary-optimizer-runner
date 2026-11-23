@@ -27,3 +27,9 @@
 ## #45231378708 — 실제 제로베이스 ZIP·동의·Chrome 첫 화면 PASS, 인증정보 패널 미전개 차단
 
 Windows [Actions #45231378708](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45231378708), artifact #14846088982의 원본 `V573_...` + `V690_...` 확인: **286파일 현재 HEAD ZIP**, 역사 파일13개 런타임 전 격리, 빈 사용자 세션/managed SimC, 사용자 동의 거절 상태 미설치→승인 실제 pip/venv 설치→실제 Chrome 첫 화면/26개 전문화 표시 성공. 이후 인증정보 입력 전에 `ElementNotInteractableException`: UI 인증정보 필드가 `<details id=season-credentials-panel>` 안에 있는데 신규 Selenium 시험이 summary를 열지 않고 키를 입력. 상품이 오류 메시지를 표시하거나 데이터 구축을 거부한 것이 아님. 신규 harness에서 **실제 패널 summary 클릭 후 입력**하도록 교정. 다음 오류 지점은 비밀키/SimC 소스 원문 노출 없이 `last_completed_stage`로 추적. 인증정보는 Windows Credential Manager에 쓰였다면 로컬 안전한 /clear API로 사용자 시험 종료 시 삭제; 토큰 자체는 JSON이나 로그에 기록하지 않는다. 이 시점까지 시즌 Native 0·DPS Native0, 실제 SimC 자동 설치와 새로운 전문화 원본 구축 여전히 미검증.
+
+## #45232046418 — 새로운 공개 SimC 실제 자동 설치 PASS, 시험의 화면 전환 누락
+
+원본 [Windows Actions #45232046418](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45232046418) 및 실제 ZIP artifact #14845689656: ZIP286, 과거 시즌 원본13개 앱 시작 전 격리, 새 HOME/LOCALAPPDATA, 처음 사용자 취소→승인→pip/venv/Chrome 첫 화면, 실제 사용자 UI를 통한 보안 저장소 API 키 등록·시험 후 삭제 **PASS**. 사용자 사전 실행파일/기존 관리 SimC 주입 없이 UI **SimC 자동 확보·설치 성공**: `PUBLIC_SELF_BUILT_BINARY_INSTALLED`, 게임 `12.1.5.70961`, revision `6924096820c0b5c9d7bfa9848ea48fe0cd15c7d7`, 설치된 바이너리 SHA `1195a3401a716c9f28b4de113d228cc3a669aebf83c0c47e5989db521d87c3c9`. 공개 자체 빌드가 최신 게임 빌드와 맞더라도 아직 시즌 G/J/F/O·DPS Native 증명은 아님.
+
+다음 단계 실패 위치 `last_completed_stage=SIMC_ONE_CLICK_RETURNED` + `RuntimeError`: 신규 harness가 **설정 화면에서 숨겨진 클래스/전문화 visible listbox를 직접 찾으려 했음**. 실제 앱 UI 설계에 따라 먼저 `navigate(driver,"optimizer")`로 탭 이동한 뒤 원래 `choose_visible_search`로 클릭하도록 정정. 기존 v344/V570 자체 검증 코드의 안전한 내부 오류 코드만 추가 기록해 단계별 원인 식별성 확보. 제품 코드·Native·시즌 캐시 변경0, 지금까지 새 시즌 수집/Native0. 후속 실행에서 실제 사용자 시즌 구축 및 Native가 가능하지 않으면 해당 첫 제품 차단 이유만 기록하고 반복하지 않는다.
