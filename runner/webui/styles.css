@@ -1631,6 +1631,9 @@ body{background:#24252B;color:var(--ink)}
 #optimizer-form .profile-embellishments #crafted-rows .gear-fields label:has([data-field="item_id"]){
   grid-column:1/-1;
 }
+#optimizer-form .profile-embellishments #crafted-rows .gear-fields label[hidden]{
+  display:none!important; /* hidden bonus/implementation fields never consume a grid cell */
+}
 #optimizer-form .profile-embellishments #crafted-rows .gear-fields select,
 #optimizer-form .profile-embellishments #crafted-rows .gear-fields input{
   display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;
