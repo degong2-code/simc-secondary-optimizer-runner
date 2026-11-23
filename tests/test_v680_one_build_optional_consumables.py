@@ -18,6 +18,7 @@ import v212_environment_manifest as manifest
 import v218_v098_profile_stage_adapter as profile
 import v106_user_session_controller as sessions
 import v280_consumable_item_use_spell_source as wago_effects
+import v216_environment_build_coordinator as fresh_build
 
 BUILD="12.1.5.70961"
 REV="a"*40
@@ -245,6 +246,79 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                              "REUSED_VERIFIED")
             self.assertEqual(len(fetched),1,
                              "The original v280 fetched once; optional bridge none")
+
+    def test_one_original_environment_build_links_wago_and_pinned_simc_source(self):
+        """Synthetic zero-source seam: Wago IDs/spells + SimC handlers/DBC.
+
+        This tests generic source wiring, not a real 70961 SimC item
+        acceptance receipt or permission to invent an effect family.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            (root/"source").mkdir()
+            observed={"schema":"v680_optional_food_potion_wago_source_v1",
+                "game_build":BUILD,"source_only":True,
+                "items":[
+                    {"item_id":201,"kind":"food","on_use_spell_ids":[5001],
+                     "source_status":"EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"},
+                    {"item_id":202,"kind":"food","on_use_spell_ids":[5001],
+                     "source_status":"EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"},
+                    {"item_id":203,"kind":"potion","on_use_spell_ids":[6002],
+                     "source_status":"EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"}]}
+            src=root/"source"/"wago-optional.json"
+            src.write_text(json.dumps(observed),encoding="utf8")
+            handlers={"schema":fresh_build.simc_effect_candidates.SCHEMA,
+                      "source":{"commit":REV},
+                      "candidates":{
+                        "food":[{"spell_ids":[5001],
+                                 "handler":"consumables::food_a",
+                                 "implemented":True}],
+                        "potion":[{"spell_ids":[6002],
+                                   "handler":"consumables::potion_a",
+                                   "implemented":True}]}}
+            h=root/"source"/"simc-handlers.json"
+            h.write_text(json.dumps(handlers),encoding="utf8")
+            collected={
+                "expected_game_build":BUILD,
+                "fresh_optional_food_potion_wago_effects":{
+                    "status":"FOOD_POTION_WAGO_USE_SPELLS_SOURCE_READY",
+                    "candidate_path":str(src),
+                    "source_stage":{"receipt_sha256":"1"*64}},
+                "fresh_food_potion_item_sources":{
+                    "simc_effect_source_receipt_path":str(h),
+                    "source_stage":{"receipt_sha256":"3"*64}},
+                "fresh_lazy_full_pinned_simc_item_source":{
+                    "source_dir":str(root)}}
+            comp={"stage_root":str(root),"simc_revision":REV}
+            meta={"game_build":BUILD,
+                "source_receipt_sha256":"2"*64,
+                "selection_mode":"EXACT_REQUESTED_IDS",
+                "items":[
+                    {"item_id":201,"name":"Royal Roast",
+                     "class_id":0,"subclass_id":5,"inventory_type":0,
+                     "crafting_quality":1},
+                    {"item_id":202,"name":"Royal Roast",
+                     "class_id":0,"subclass_id":5,"inventory_type":0,
+                     "crafting_quality":3},
+                    {"item_id":203,"name":"Potion of Recklessness",
+                     "class_id":0,"subclass_id":1,"inventory_type":0,
+                     "crafting_quality":3}]}
+            with mock.patch.object(fresh_build.simc_item_metadata,
+                                   "from_seed",return_value=meta) as lookup:
+                source=fresh_build._fresh_v680_source_owned_food_potion(
+                    collected=collected,compilation=comp)
+            lookup.assert_called_once_with(
+                directory=str(root),item_ids=[201,202,203])
+            self.assertEqual(len(source["rows"]),3)
+            ready=manifest.project_fresh_optional_consumables(
+                game_build=BUILD,simc_revision=REV,source=source)
+            self.assertEqual(
+                [r["item_id"] for r in
+                 ready["categories"]["food"]["options"]],[202])
+            self.assertEqual(
+                [r["item_id"] for r in
+                 ready["categories"]["potion"]["options"]],[203])
+            self.assertTrue(ready["optional_items_do_not_block_base"])
 
     def test_no_native_and_no_separate_approval_engine(self):
         with mock.patch("subprocess.Popen",
