@@ -38,8 +38,18 @@ jobs:
           name: p1-v708-public-70961-db2-reuse
           path: out/v708/runs/_fresh_season_sources/wago_12.1.5.70961
           github-token: ${{ github.token }}
+      - name: Reuse exact v718 public bonus raw receipts
+        if: ${{ contains(github.event.head_commit.message, '[v722-product-effect-replay]') }}
+        uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 45431936045
+          name: p1-v716-public-70961-bonus-source-reuse
+          path: out/v708/runs/_fresh_season_sources/wago_12.1.5.70961
+          github-token: ${{ github.token }}
       - name: One original source-only observation
         env:
+          V722_PRODUCT_EFFECT_REPLAY: ${{ contains(github.event.head_commit.message, '[v722-product-effect-replay]') && '1' || '0' }}
           V716_BONUS_REVIEW: ${{ contains(github.event.head_commit.message, '[v716-bonus-review]') && '1' || '0' }}
           V709_REUSE_REQUIRED: ${{ contains(github.event.head_commit.message, '[v709-reuse-once]') && '1' || '0' }}
         run: |

@@ -737,6 +737,26 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertEqual(second["candidate_path"],first["candidate_path"])
         self.assertEqual(len(calls),2)
         for k,v in raw.items():self.assertEqual((self.root/output[k]).read_bytes(),v)
+        # Existing independently sealed same-build raw must also work
+        # when the optional tier-cohort stage has no receipt.
+        from urllib.parse import urlencode
+        for table,data in raw.items():
+            build._sealed_season_raw_source(root=self.root,
+                source_id="season-bonus-raw-"+table,build=self.BUILD,
+                url="https://wago.tools/db2/"+table+"/csv?"+urlencode(
+                    {"build":self.BUILD,"locale":"enUS"}),
+                relative="source/raw_"+table+".csv",obtain=lambda:data,
+                validate_bytes=lambda value:build.bonus_effect_review.valid_raw_table(value,table))
+        tier_receipt=self.root/".stage_receipts/fresh-v250-raid-bonus-corroboration.json"
+        tier_receipt.rename(tier_receipt.with_suffix(".saved"))
+        standalone=build._review_selectable_bonus_effects(**args)
+        self.assertEqual(standalone["status"],first["status"],standalone)
+        self.assertEqual(standalone["network_calls_by_stage"],0)
+        self.assertEqual(standalone["candidate_item_count"],first["candidate_item_count"])
+        self.assertEqual(len(calls),2)
+        again=build._review_selectable_bonus_effects(**args)
+        self.assertEqual(again["candidate_path"],standalone["candidate_path"])
+        self.assertEqual(again["network_calls_by_stage"],0)
 
     def test_unauthenticated_join_has_zero_network(self):
         result=build._fresh_ordinary_gear_source_stage(

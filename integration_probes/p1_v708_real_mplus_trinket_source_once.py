@@ -245,6 +245,60 @@ def observe_registered_boss_bonus_sources(folder, source):
         "native_calls":0,"budget_rebuilt":False,"automatic_registration":False,
         "full_season_completeness_confirmed":False}
 
+def verify_product_effect_registration(folder,gear,candidate):
+    """Real authenticated source -> existing sealed product choice generation.
+
+    Source-only; no installed environment, native, DPS or claim of full UI E2E.
+    The expected IDs are regression assertions, not discovery inputs.
+    """
+    import v098_target_user_scenario_bootstrap as bootstrap
+    def no_fetch(*args,**kwargs):
+        raise RuntimeError("V722_UNEXPECTED_BONUS_REDOWNLOAD")
+    review=original._review_selectable_bonus_effects(
+        stage_root=folder,build=BUILD,gear=gear,transport=no_fetch)
+    assert review.get("candidate_path"),review.get("reason")
+    assert review["network_calls_by_stage"]==0
+    sealed=original.read_sealed_selectable_gear_generation(
+        stage_root=folder,build=BUILD)
+    assert sealed is not None,"V722_SELECTABLE_GENERATION_UNAVAILABLE"
+    public=original.product_gear_db.public_options(sealed["candidate"])
+    registered={x["item_id"]:x for x in public["choices"]["special_effect_gear_candidate"]
+                if x.get("season_list_basis")=="SEALED_CONTEXT_FREE_EFFECT_OPTION"}
+    expected={271874:"13846",271875:"13847",271876:"13846",271878:"13708",
+              281235:"14049",281236:"14049",281238:"14049",281239:"14049",
+              268202:"13847",268207:"13708",268215:"13846"}
+    missing=sorted(i for i,b in expected.items() if i not in registered or
+                   registered[i].get("required_options")!={"bonus_id":b})
+    selected=[]
+    for iid in sorted(set(expected)&set(registered)):
+        row=registered[iid]
+        user={"special_items":[{"slot":row.get("slot_hint") or "main_hand",
+                               "item_id":iid,"options":{}}]}
+        found,binding=bootstrap._selected_refresh_special_source(
+            user=user,gear=candidate,stage_root=folder)
+        if len(found)!=1 or found[0]["item_id"]!=iid or not binding:continue
+        assert bootstrap._selected_refresh_special_source(
+            user=user,gear=candidate,stage_root=folder,pinned=binding)==(found,binding)
+        assert found[0]["required_options"]==row["required_options"]
+        selected.append(iid)
+    # Read-only restart and reuse must bind identical choice generation.
+    replay=original.read_sealed_selectable_gear_generation(
+        stage_root=folder,build=BUILD,generation_sha256=sealed["source_generation_sha256"])
+    assert replay is not None and replay["candidate"]==sealed["candidate"]
+    assert json.loads(Path(gear["candidate_path"]).read_text("utf8"))==candidate
+    unbound=sorted(set(expected)-set(selected))
+    result={"status":"PASS_REAL_EFFECT_OPTION_CATALOG_AND_SELECTED_SOURCE" if not missing and not unbound
+            else "PENDING_REAL_EFFECT_OPTION_CATALOG_OR_SELECTED_SOURCE",
+            "game_build":BUILD,"registered_effect_option_count":len(registered),
+            "registered_effect_options":[registered[i] for i in sorted(registered)],
+            "expected_regression_count":len(expected),"missing_or_wrong_option_ids":missing,
+            "selected_source_bound_ids":selected,"selected_source_unbound_ids":unbound,
+            "source_generation_sha256":sealed["source_generation_sha256"],
+            "bonus_source_network_calls":0,"native_calls":0,"budget_rebuilt":False,
+            "original_catalog_unchanged":True,"installed_http_or_native_e2e_verified":False}
+    return result
+
+
 def observe(out):
     dest=Path(out).resolve()
     dest.mkdir(parents=True,exist_ok=True)
@@ -315,6 +369,15 @@ def observe(out):
         candidate=json.loads(candidate_path.read_text("utf8"))
         state["candidate_sha256"]=original.digest(candidate_path.read_bytes())
         state["gear_source_stage_sha256"]=gear["source_stage"]["receipt_sha256"]
+        if os.environ.get("V722_PRODUCT_EFFECT_REPLAY")=="1":
+            assert state["source_provenance_verified"],"V722_BASE_A7_UNAVAILABLE"
+            state.update(verify_product_effect_registration(folder,gear,candidate))
+            print("V722_PRODUCT_EFFECT "+json.dumps({k:state[k] for k in (
+                "status","registered_effect_option_count","registered_effect_options",
+                "missing_or_wrong_option_ids","selected_source_bound_ids",
+                "selected_source_unbound_ids","bonus_source_network_calls",
+                "original_catalog_unchanged")},ensure_ascii=False,sort_keys=True),flush=True)
+            return 0 if state["status"].startswith("PASS_") else 2
         state.update(project(source,gear,candidate))
         print("V715_DIRECT_SPECIAL_SOURCE "+json.dumps({k:v for k,v in state.items()
             if k.startswith("rotation_direct_special_") or

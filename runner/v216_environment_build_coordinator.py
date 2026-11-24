@@ -3640,18 +3640,37 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
     expected["result"]="source/v250_raid_bonus_corroboration.json"
     try:
         files,receipt_path=stage_engine._safe_paths(root,stage_id,expected)
-        if not receipt_path.is_file():return pending("V250_RAW_SOURCE_NOT_READY")
-        receipt=stage_engine._read_receipt(receipt_path)
-        if receipt.get("status")!="COMPLETE":return pending("V250_RAW_SOURCE_NOT_READY")
-        need(receipt.get("stage_id")==stage_id and
-             receipt.get("output_paths")==expected,"BONUS_V250_SCOPE_DRIFT")
-        stage_engine._verify_outputs(receipt,files)
-        v250_doc=json.loads((root/expected["result"]).read_text("utf8"))
-        need(v250_doc.get("game_build")==build and
-             v250_doc.get("schema")==raid_bonus.SCHEMA and all(
-             v250_doc.get("source_evidence",{}).get(t+"_sha256")==
-                 receipt["outputs"][t]["sha256"] for t in raid_bonus.TABLES),
-             "BONUS_V250_BUILD_OR_SHA_DRIFT")
+        receipt=stage_engine._read_receipt(receipt_path) if receipt_path.is_file() else None
+        table_paths={}
+        raw_identity={}
+        if receipt is not None and receipt.get("status")=="COMPLETE":
+            need(receipt.get("stage_id")==stage_id and
+                 receipt.get("output_paths")==expected,"BONUS_V250_SCOPE_DRIFT")
+            stage_engine._verify_outputs(receipt,files)
+            v250_doc=json.loads((root/expected["result"]).read_text("utf8"))
+            need(v250_doc.get("game_build")==build and
+                 v250_doc.get("schema")==raid_bonus.SCHEMA and all(
+                 v250_doc.get("source_evidence",{}).get(t+"_sha256")==
+                     receipt["outputs"][t]["sha256"] for t in raid_bonus.TABLES),
+                 "BONUS_V250_BUILD_OR_SHA_DRIFT")
+            table_paths={t:root/expected[t] for t in raid_bonus.TABLES}
+            raw_identity["v250_receipt_sha256"]=receipt["receipt_sha256"]
+        else:
+            # Independent, already sealed same-build public raw is equally
+            # usable. No tier cohort approval is necessary for effect links.
+            # Do not fetch duplicate v250 tables while its source is pending.
+            for table in raid_bonus.TABLES:
+                url="https://wago.tools/db2/"+table+"/csv?"+urlencode(
+                    {"build":build,"locale":"enUS"})
+                relative="source/raw_"+table+".csv"
+                sid="season-bonus-raw-"+table
+                if not (root/".stage_receipts"/(sid+".json")).is_file():
+                    return pending("V250_OR_SEALED_BONUS_RAW_NOT_READY")
+                sealed=stage_engine.verify_stage(root=root,stage_id=sid,
+                    stage_version="same-build-raw-v1",
+                    inputs={"game_build":build,"source_url":url},outputs={"raw":relative})
+                table_paths[table]=root/relative
+                raw_identity[table+"_receipt_sha256"]=sealed["receipt_sha256"]
         # Gear stage outputs have already been sealed/verified by v217.
         gear_stage=gear["source_stage"]
         out=gear_stage["output_paths"]
@@ -3683,8 +3702,7 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
             delve=json.loads((root/out["delve"]).read_text("utf8")).get("report")
             if delve is not None:ids.update(x["item_id"] for x in delve["items"])
         if not ids:return pending("NO_SOURCE_SCOPED_ITEM_IDS")
-        table_paths={t:root/expected[t] for t in raid_bonus.TABLES}
-        inputs={"game_build":build,"v250_receipt_sha256":receipt["receipt_sha256"],
+        inputs={"game_build":build,**raw_identity,
             "gear_receipt_sha256":gear_stage["receipt_sha256"],
             "review_ids_sha256":digest(canonical(sorted(ids)).encode("utf8")),
             "code_sha256":stage_engine.module_dependency_fingerprint(
