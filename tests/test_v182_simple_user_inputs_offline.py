@@ -34,6 +34,26 @@ class SimpleUserInputs(unittest.TestCase):
                     "OIL_HANDS_INCOMPATIBLE_WITH_SOURCE_WEAPON_FORM"):
                     sessions.user_scenario(controls)
 
+    def test_public_selected_slot_contract_matches_backend_for_all_26_specs(self):
+        import v143_specialization_contracts as contracts
+        doc=seasons.public_options(seasons.read())
+        self.assertTrue(contracts.validate_contracts())
+        self.assertEqual(set(doc["selected_slot_inventory"]),set(contracts.WEAPON_FORMS))
+        for spec,form in doc["weapon_forms"].items():
+            actual=doc["selected_slot_inventory"][form]
+            self.assertEqual(actual,{slot:list(types) for slot,types in
+                                     contracts.selected_slot_inventory(form).items()})
+            self.assertEqual(actual["finger1"],[11])
+            self.assertEqual(actual["finger2"],[11])
+            self.assertEqual(tuple(s for s in actual if s in contracts.WEAPON_SLOTS),
+                             contracts.WEAPON_FORMS[form])
+        self.assertEqual(doc["selected_slot_inventory"]["ranged"]["main_hand"],[15,26])
+        self.assertEqual(doc["selected_slot_inventory"]["one_hand_frill"]["off_hand"],[23])
+        self.assertEqual(doc["selected_slot_inventory"]["dual_two_hand"]["off_hand"],[17])
+        js=(ROOT/"runner/webui/app.js").read_text("utf8")
+        self.assertIn("specialAllowedSlots(item,spec)",js)
+        self.assertIn("state.seasonGear?.selected_slot_inventory?.[form]",js)
+
     def test_four_stat_runes_leave_source_rows_except_fourth(self):
         # An actual pinned-SimC execution rejected the invented name
         # rune_of_versatile_warrior; the source-observed numeric token

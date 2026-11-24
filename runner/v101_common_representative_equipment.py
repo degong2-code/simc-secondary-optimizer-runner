@@ -514,20 +514,9 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
     spec=contracts.lookup(*key)
     need(spec is not None,"CURRENT_SEASON_EQUIPMENT_SPEC_REQUIRED")
     armor_type=product_gear.ARMOR_SUBCLASS[spec["family"]]
-    core={"head":(1,),"shoulders":(3,),"chest":(5,20),
-          "hands":(10,),"legs":(7,),"wrists":(9,),
-          "waist":(6,),"feet":(8,),"neck":(2,),"back":(16,),
-          "finger1":(11,),"finger2":(11,)}
     form=spec["weapon_form"]
     weapon_slots=contracts.WEAPON_FORMS[form]
-    weapon_inventory={
-        "one_hand_frill":{"main_hand":(13,),"off_hand":(23,)},
-        "one_hand_shield":{"main_hand":(13,),"off_hand":(14,)},
-        "dual_one_hand":{"main_hand":(13,),"off_hand":(13,)},
-        "dual_two_hand":{"main_hand":(17,),"off_hand":(17,)},
-        "single_one_hand":{"main_hand":(13,)},
-        "single_two_hand":{"main_hand":(17,)},
-        "ranged":{"main_hand":(15,26)}}
+    allowed_slots=contracts.selected_slot_inventory(form)
     expected_primary=source_stage.PRIMARY_STAT_CODES[spec["primary"]]
     mask=tier["classes"][key[0]]["allowed_class_mask"]
     for group,selection in (("special",user["special_items"]),
@@ -561,7 +550,6 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
                     "plain_representative_candidate",
                     "special_effect_gear_candidate"},
                     "CURRENT_SEASON_CATALYST_SOURCE_NOT_IN_APPROVED_ROLE:"+slot)
-                allowed_slots=core if slot in core else weapon_inventory[form]
                 need(slot in allowed_slots and
                      origin.get("inventory_type") in allowed_slots[slot],
                      "CURRENT_SEASON_CATALYST_SOURCE_WRONG_PHYSICAL_SLOT:"+slot)
@@ -583,7 +571,6 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
             expected="special_effect_gear_candidate" if group=="special" else "selectable_stat_craft"
             need(row is not None and row["category"]==expected,
                  "CURRENT_SEASON_SELECTED_ITEM_NOT_IN_APPROVED_ROLE:"+slot)
-            allowed_slots=core if slot in core else weapon_inventory[form]
             need(slot in allowed_slots and
                  row["inventory_type"] in allowed_slots[slot],
                  "CURRENT_SEASON_SELECTED_ITEM_WRONG_PHYSICAL_SLOT:"+slot)

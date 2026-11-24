@@ -29,6 +29,36 @@ WEAPON_FORMS={
     "ranged":("main_hand",),
 }
 
+# Stable physical slot contract for the representative loadout. This is
+# NOT a full class proficiency/loot-specialization table. No season IDs.
+SELECTED_CORE_INVENTORY={
+    "head":(1,), "shoulders":(3,), "chest":(5,20),
+    "hands":(10,), "legs":(7,), "wrists":(9,),
+    "waist":(6,), "feet":(8,), "neck":(2,), "back":(16,),
+    "finger1":(11,), "finger2":(11,),
+}
+SELECTED_WEAPON_INVENTORY={
+    "one_hand_frill":{"main_hand":(13,),"off_hand":(23,)},
+    "one_hand_shield":{"main_hand":(13,),"off_hand":(14,)},
+    "dual_one_hand":{"main_hand":(13,),"off_hand":(13,)},
+    "dual_two_hand":{"main_hand":(17,),"off_hand":(17,)},
+    "single_one_hand":{"main_hand":(13,)},
+    "single_two_hand":{"main_hand":(17,)},
+    "ranged":{"main_hand":(15,26)},
+}
+
+def selected_slot_inventory(weapon_form):
+    """A fresh projection of the exact server-side physical slot rules."""
+    return {**SELECTED_CORE_INVENTORY,**SELECTED_WEAPON_INVENTORY[weapon_form]}
+
+def public_selected_slot_inventory():
+    # Use lists explicitly: the JSON contract must not depend on encoder
+    # treatment of Python tuples.
+    return {form:{slot:list(types) for slot,types in
+                  selected_slot_inventory(form).items()}
+            for form in WEAPON_FORMS}
+
+
 # Explicitly product-proven source-independent P1 cases; not yet 26 native-
 # verified profile compiler contracts. Season IDs must not appear here.
 CONTRACTS={
@@ -176,6 +206,9 @@ def lookup(class_name,specialization):
 
 def validate_contracts():
     """Cheap offline invariant, without season records or external sources."""
+    assert set(SELECTED_WEAPON_INVENTORY)==set(WEAPON_FORMS)
+    for form,slots in WEAPON_FORMS.items():
+        assert tuple(SELECTED_WEAPON_INVENTORY[form])==slots
     expected={"simc_class","simc_spec","family","primary","role",
               "position","weapon_form","allowed_races"}
     for key,info in CONTRACTS.items():

@@ -394,7 +394,7 @@ function equipmentSpecCompatible(item,group,spec){
   // temporary occupied slots with class/spec incompatibility.
   if(group==="special_effect_gear_candidate"&&
      state.seasonGear?.weapon_forms?.[spec]&&
-     !specialAllowedSlots(item).length)return false;
+     !specialAllowedSlots(item,spec).length)return false;
   return true;
 }
 function eligibleEquipment(group){
@@ -994,25 +994,15 @@ function installSeasonGearHints(catalog) {
 }
 // Item.InventoryType determines special equipment slot. Ring and dual
 // weapons have equivalent hands, so select the next free valid slot.
-function specialAllowedSlots(item) {
+function specialAllowedSlots(item,spec=field("spec")) {
   if(!item)return [];
-  const form=state.seasonGear?.weapon_forms?.[field("spec")];
-  const fixed={1:"head",2:"neck",3:"shoulders",5:"chest",20:"chest",
-    6:"waist",7:"legs",8:"feet",9:"wrists",10:"hands",16:"back"};
-  if(Object.hasOwn(fixed,item.inventory_type))return [fixed[item.inventory_type]];
-  if(item.inventory_type===11)return ["finger1","finger2"];
-  if(item.inventory_type===13) {
-    if(["dual_one_hand"].includes(form))return ["main_hand","off_hand"];
-    if(["one_hand_frill","one_hand_shield","single_one_hand"].includes(form))
-      return ["main_hand"];
-    return [];
-  }
-  if(item.inventory_type===17)return form==="dual_two_hand"?
-    ["main_hand","off_hand"]:form==="single_two_hand"?["main_hand"]:[];
-  if([15,26].includes(item.inventory_type))return form==="ranged"?["main_hand"]:[];
-  if(item.inventory_type===14)return form==="one_hand_shield"?["off_hand"]:[];
-  if(item.inventory_type===23)return form==="one_hand_frill"?["off_hand"]:[];
-  return [];
+  const form=state.seasonGear?.weapon_forms?.[spec];
+  const rules=state.seasonGear?.selected_slot_inventory?.[form];
+  // The same server contract also validates the submitted equipment.
+  // No browser-owned second list of inventory type IDs or hand rules.
+  return Object.entries(rules||{})
+    .filter(([,types])=>Array.isArray(types)&&types.includes(item.inventory_type))
+    .map(([slot])=>slot);
 }
 function refreshSpecialSlots() {
   const used=new Set(),ids=new Set();
