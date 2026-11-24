@@ -206,17 +206,25 @@ const a=raw.indexOf('const equipNorm=');
 const b=raw.indexOf('\nfunction refreshEquipmentSelectionUI()',a);
 assert(a>=0&&b>a);
 const state={seasonGear:null};
-const choices=Function('state',raw.slice(a,b)+
-  '\nreturn eligibleEquipment;')(state);
+let spec='mage/fire';
+const choices=Function('state','field','specialAllowedSlots',raw.slice(a,b)+
+  '\nreturn eligibleEquipment;')(state,id=>{assert.equal(id,'spec');return spec;},()=>['head']);
 assert.deepEqual(choices('trinket'),[]);
 state.seasonGear={choices:{
-  trinket:[{item_id:2,name_ko:'나'},{item_id:1,name_ko:'가'},
+  trinket:[{item_id:2,name_ko:'나'},{item_id:1,name_ko:'가',compatible_dps_specs:['mage/fire']},
            {item_id:-1,name_ko:'무효'}],
   special_effect_gear_candidate:[{item_id:3,name_ko:'검'}]
 }};
 const first=choices('trinket');
 assert.deepEqual(first.map(x=>x.item_id),[1,2]);
 assert.strictEqual(choices('trinket'),first);
+spec='warrior/fury';
+const changed=choices('trinket');
+assert.notStrictEqual(changed,first);
+assert.deepEqual(changed.map(x=>x.item_id),[2]);
+assert.strictEqual(choices('trinket'),changed);
+spec='mage/fire';
+assert.deepEqual(choices('trinket').map(x=>x.item_id),[1,2]);
 assert.equal(choices('special_effect_gear_candidate')[0].item_id,3);
 state.seasonGear.choices.trinket=[{item_id:4,name_ko:'바뀐 목록'}];
 assert.notStrictEqual(choices('trinket'),first);

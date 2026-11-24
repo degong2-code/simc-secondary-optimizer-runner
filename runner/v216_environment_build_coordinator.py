@@ -3702,11 +3702,7 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
                              "BONUS_SOURCE_HTTP_SIZE_LIMIT")
                 return bytes(data)
             def valid(raw):
-                header=raw.split(b"\n",1)[0].decode("utf-8-sig")
-                import csv
-                return (0<len(raw)<=bonus_effect_review.MAX_BYTES[table]
-                        and set(bonus_effect_review.COLUMNS[table])<=
-                            set(next(csv.reader([header]))))
+                return bonus_effect_review.valid_raw_table(raw,table)
             target,raw,sealed=_sealed_season_raw_source(
                 root=root,source_id="season-bonus-raw-"+table,
                 build=build,url=url,relative="source/raw_"+table+".csv",

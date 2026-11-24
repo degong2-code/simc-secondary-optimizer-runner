@@ -33,6 +33,19 @@ def positive(value):
     except (TypeError,ValueError):
         raise BonusReviewBlocked("BONUS_SOURCE_NUMERIC_FIELD_INVALID")
 
+def valid_raw_table(raw,table):
+    """One bounded header validator shared by live and diagnostic acquisition."""
+    if not isinstance(raw,bytes) or not 0<len(raw)<=MAX_BYTES[table]:
+        return False
+    try:
+        end=raw.find(b"\n",0,65536)
+        if end<0:end=min(len(raw),65536)
+        header=raw[:end].decode("utf-8-sig").rstrip("\r")
+        return set(COLUMNS[table])<=set(next(csv.reader([header])))
+    except (UnicodeError,csv.Error,IndexError,StopIteration):
+        return False
+
+
 def rows(path,table):
     p=Path(path)
     need(p.is_file() and not p.is_symlink() and

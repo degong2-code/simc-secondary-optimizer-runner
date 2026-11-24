@@ -201,15 +201,21 @@ def observe_registered_boss_bonus_sources(folder, source):
                     assert len(data)<=review.MAX_BYTES[table]
             return bytes(data)
         def valid(raw):
-            header=raw.split(b"\\n",1)[0].decode("utf-8-sig")
-            return (0<len(raw)<=review.MAX_BYTES[table] and
-                    set(review.COLUMNS[table])<=set(next(csv.reader([header]))))
+            return review.valid_raw_table(raw,table)
         path,raw,seal=original._sealed_season_raw_source(root=folder,
             source_id="season-bonus-raw-"+table,build=BUILD,url=url,
             relative="source/raw_"+table+".csv",obtain=obtain,validate_bytes=valid)
         table_paths[table]=path
         identities[table]={"sha256":original.digest(raw),"receipt_sha256":seal}
         del raw
+    # Exercise the real source expansion used in both Environment Build
+    # and existing-season refresh. Focus IDs are never fed into its scope.
+    expanded=pool.expand_selectable_source(source,folder/"wago",
+        folder/"source/raw_gear_effect.csv",wcl_report=report)
+    extension=expanded["selectable_source_extension"]
+    product_review_ids=set(extension.get("indirect_review_item_ids",[]))
+    product_review_ids.update(row["item_id"] for row in expanded["items"])
+    product_review_ids &= wanted
     result=review.discover(wanted,table_paths)
     by_id={row["item_id"]:row for row in result["items"]}
     # Retain source links, not an invented obtainable variant. No automatic
@@ -233,6 +239,9 @@ def observe_registered_boss_bonus_sources(folder, source):
         "registered_boss_indirect_candidates":all_indirect,
         "focus_registered_count":sum(bool(x["registered_current_wcl_origins"]) for x in focus),
         "focus_bonus_link_count":sum(bool(x["bonus_effects"]) for x in focus),
+        "focus_product_review_scope_ids":sorted(targets&product_review_ids),
+        "focus_product_review_missing_ids":sorted(
+            {x["item_id"] for x in focus if x["registered_current_wcl_origins"]}-product_review_ids),
         "native_calls":0,"budget_rebuilt":False,"automatic_registration":False,
         "full_season_completeness_confirmed":False}
 
@@ -282,7 +291,7 @@ def observe(out):
         if os.environ.get("V716_BONUS_REVIEW")=="1":
             state.update(observe_registered_boss_bonus_sources(folder,source))
             print("V716_FOCUS "+json.dumps(state["focus_items"],ensure_ascii=False,sort_keys=True),flush=True)
-            print("V716_SUMMARY "+json.dumps({k:state[k] for k in ("focus_registered_count","focus_bonus_link_count","raw_bonus_network_calls","reviewed_equipment_count")},sort_keys=True),flush=True)
+            print("V716_SUMMARY "+json.dumps({k:state[k] for k in ("focus_registered_count","focus_bonus_link_count","raw_bonus_network_calls","reviewed_equipment_count","focus_product_review_scope_ids","focus_product_review_missing_ids")},sort_keys=True),flush=True)
             return 0
         # The same stage used by existing-season refresh, without the
         # unrelated optional bonus/tier/SimC investigation.

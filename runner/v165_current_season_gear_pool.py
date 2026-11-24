@@ -269,6 +269,8 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
     dungeon_loot=defaultdict(set)
     unscoped_origins=defaultdict(list)
     world_pending=[]
+    registered_unscoped=defaultdict(list)
+    registered_seasons=defaultdict(set)
     for row in read_csv(folder/"JournalEncounterItem.csv",(
             "ID","JournalEncounterID","ItemID","DisplaySeasonID")):
         eid=integer(row["JournalEncounterID"]);iid=integer(row["ItemID"],0)
@@ -294,11 +296,14 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
         if instance in instances and iid not in indexed and season in (0,sid):
             origins.setdefault(iid,[]).append({**base,"source":"raid_journal"})
         if eid in registered:
+            registered_seasons[(eid,iid)].add(season)
             if season==sid:
                 origins.setdefault(iid,[]).append({
                     **base,"source":"raid_journal",**registered[eid]})
             elif season==0:
                 world_pending.append({"item_id":iid,"journal_encounter_id":eid})
+                registered_unscoped[iid].append({
+                    **base,"source":"raid_journal",**registered[eid]})
 
     for row in read_csv(folder/"CraftingData.csv",("ID","CraftedItemID")):
         iid=integer(row["CraftedItemID"],0)
@@ -307,7 +312,7 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
                 "source":"crafted_fixed_gear",
                 "expansion_id":original["db2_expansion_id"],
                 "classification":"SAME_EXPANSION_CRAFTED_PHYSICAL_CANDIDATE"})
-    ids=set(origins)|set(dungeon_loot)
+    ids=set(origins)|set(dungeon_loot)|set(registered_unscoped)
     item={integer(x["ID"]):x for x in read_csv(
         folder/"Item.csv",("ID","ClassID","InventoryType"))
         if integer(x["ID"]) in ids}
@@ -317,7 +322,7 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
         ("ID","Display_lang","InventoryType","ExpansionID"))
         if integer(x["ID"]) in wanted}
     linked,_=effects(effect_path,equipment)
-    pending=[];added=[];indirect_review=[]
+    pending=[];added=[];indirect_review=[];effect_review_rows=[]
     for iid in sorted(wanted):
         src=origins.get(iid,[])
         it=item.get(iid);sp=sparse.get(iid)
@@ -366,12 +371,48 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
                 src.append({**origin,"season_evidence":ROTATION_SPECIAL_EVIDENCE,
                     "active_rotation_display_season_id":sid})
                 dungeon_rows[cid]["rotation_unscoped_admitted_special_ids"].append(iid)
+        # Discovery must not depend on direct effects or explicit item
+        # DisplaySeasonID. Preserve scoped zero-season occurrences separately
+        # from admission. This cannot add a representative G candidate or
+        # promote unverified variants. Explicit other-season conflicts are
+        # retained as pending reasons, never treated as current eligibility.
+        if slot in SPECIAL_INVENTORY_TYPES:
+            review_origins=list(src)
+            conflicts=[]
+            for origin in unscoped_origins.get(iid,()):
+                cid=origin["challenge_mode_id"]
+                seasons={s for c,s in dungeon_loot[iid] if c==cid}
+                if any(s not in (0,sid) for s in seasons) and sid not in seasons:
+                    conflicts.append(origin)
+                else:
+                    review_origins.append(origin)
+            for origin in registered_unscoped.get(iid,()):
+                seasons=registered_seasons[(origin["journal_encounter_id"],iid)]
+                if any(s not in (0,sid) for s in seasons) and sid not in seasons:
+                    conflicts.append(origin)
+                else:
+                    review_origins.append(origin)
+            in_scope=(integer(sp["ExpansionID"])==original["db2_expansion_id"]
+                      or any(x["source"]=="mplus_journal" for x in review_origins))
+            if in_scope and (review_origins or conflicts):
+                if iid not in linked and review_origins:
+                    indirect_review.append(iid)
+                # Preserve only missing/ambiguous public candidates, not an
+                # extra full ordinary catalog. Exact origins are needed later.
+                if iid not in linked or not src or conflicts:
+                    unique={json.dumps(x,sort_keys=True):x for x in review_origins}
+                    effect_review_rows.append({
+                        "item_id":iid,"name":sp["Display_lang"],"slot":slot,
+                        "direct_item_effect_record":iid in linked,
+                        "acquisition_sources":[unique[k] for k in sorted(unique)],
+                        "conflicting_source_occurrences":conflicts,
+                        "variant_applicability_verified":False,
+                        "source_review_only":True})
         if not src:continue
         is_current_mplus=any(x["source"]=="mplus_journal" for x in src)
         if (integer(sp["ExpansionID"])!=original["db2_expansion_id"]
                 and not is_current_mplus):continue
         if slot!=TRINKET and iid not in linked:
-            if iid not in indexed:indirect_review.append(iid)
             continue
         # Update existing public IDs only, never add new representative G.
         old=indexed.get(iid)
@@ -401,7 +442,9 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
     result["selectable_source_extension"]={
         "source_basis":"PINNED_MATCHED_RAID_INSTANCES_AND_CRAFTINGDATA",
         "additional_candidate_ids":[x["item_id"] for x in added],
-        "indirect_review_item_ids":indirect_review,
+        "indirect_review_item_ids":sorted(set(indirect_review)),
+        "effect_review_rows":effect_review_rows,
+        "effect_review_is_source_only":True,
         "unresolved_join_rows":pending,
         "mplus_dungeon_review":list(dungeon_rows.values()),
         "mplus_rotation_reviewed":rotation,

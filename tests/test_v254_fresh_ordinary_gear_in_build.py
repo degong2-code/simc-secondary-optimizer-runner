@@ -434,7 +434,10 @@ class FreshOrdinaryGearSource(unittest.TestCase):
                (299910,"Unscoped direct cloak",16,7),
                (299911,"Conflicting direct sword",17,7),
                (299912,"Unscoped direct unsupported type",19,11),
-               (299913,"Unscoped plain armor",9,11)]
+               (299913,"Unscoped plain armor",9,11),
+               (299914,"Registered unscoped indirect head",1,11),
+               (299915,"Unregistered unscoped indirect legs",7,11),
+               (299916,"Registered conflicting indirect chest",5,11)]
         with (self.wago/"Item.csv").open("a",encoding="utf8",newline="") as f:
             csv.writer(f).writerows([[iid,4,0,slot] for iid,_,slot,_ in extra])
         with (self.wago/"ItemSparse.csv").open("a",encoding="utf8",newline="") as f:
@@ -462,7 +465,8 @@ class FreshOrdinaryGearSource(unittest.TestCase):
                 (502,299905,47),(503,299906,47),(402,299907,0),
                 (402,299908,0),(402,299908,46),(402,299909,47),
                 (402,299910,0),(402,299911,0),(402,299911,46),
-                (402,299912,0),(402,299913,0)],1)])
+                (402,299912,0),(402,299913,0),(502,299914,0),
+                (503,299915,0),(502,299916,0),(502,299916,46)],1)])
         self.write_csv("CraftingData.csv",["ID","CraftedItemID"],[])
         tables={p.stem:{"sha256":build.digest(p.read_bytes()),
                          "bytes":p.stat().st_size} for p in self.wago.glob("*.csv")}
@@ -518,6 +522,16 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertTrue(any(x["season_evidence"]=="DB2_ACTIVE_ROTATION_UNSCOPED_DIRECT_SPECIAL"
             and x["display_season_id"]==0 and x["active_rotation_display_season_id"]==47
             for x in special["source_evidence"]))
+        extension=first["selectable_source_extension"]
+        self.assertEqual(extension["indirect_review_item_ids"],[299907,299913,299914])
+        review_rows={r["item_id"]:r for r in extension["effect_review_rows"]}
+        self.assertNotIn(299915,review_rows)
+        self.assertTrue(review_rows[299914]["source_review_only"])
+        self.assertFalse(review_rows[299914]["variant_applicability_verified"])
+        self.assertEqual(review_rows[299914]["acquisition_sources"][0]["journal_encounter_id"],502)
+        self.assertEqual(review_rows[299914]["acquisition_sources"][0]["display_season_id"],0)
+        self.assertFalse(review_rows[299916]["acquisition_sources"])
+        self.assertTrue(review_rows[299916]["conflicting_source_occurrences"])
         raw_rotation=first["selectable_source_extension"]["mplus_dungeon_review"][0]
         self.assertEqual(raw_rotation["unscoped_direct_special_ids"],[299910,299911])
         self.assertEqual(raw_rotation["rotation_unscoped_admitted_special_ids"],[299910])
@@ -569,6 +583,13 @@ class FreshOrdinaryGearSource(unittest.TestCase):
                 user=user,gear=base,stage_root=self.root,pinned=binding)
         self.assertIsNone(build.read_sealed_selectable_gear_generation(
             stage_root=self.root,build=self.BUILD))
+
+    def test_bonus_raw_header_parser_accepts_multiline_and_rejects_invalid(self):
+        validator=build.bonus_effect_review.valid_raw_table
+        self.assertTrue(validator(b"ItemID,ItemBonusTreeID\r\n1,2\r\n3,4\r\n","ItemXBonusTree"))
+        self.assertTrue(validator(b"\xef\xbb\xbfItemID,ItemBonusTreeID\n1,2\n","ItemXBonusTree"))
+        self.assertFalse(validator(b"ID,Unknown\n1,2\n","ItemXBonusTree"))
+        self.assertFalse(validator(b"","ItemXBonusTree"))
 
     def test_bonus_review_reuses_tier_raw_and_caches_missing_two_tables(self):
         linked=self.source()
