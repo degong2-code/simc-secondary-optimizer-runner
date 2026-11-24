@@ -621,6 +621,35 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertFalse(out["automatic_bonus_attachment"])
         self.assertFalse(out["itemlevel_and_acquisition_admission_verified"])
 
+    def test_effect_input_join_preserves_scoped_source_and_pending(self):
+        review=build.bonus_effect_review
+        origin={"source":"raid_journal","journal_encounter_id":12,
+                "journal_instance_id":34,"display_season_id":0}
+        def row(i,**kw):
+            return dict({"item_id":i,"name":"Source "+str(i),"slot":1,
+                "direct_item_effect_record":False,"acquisition_sources":[dict(origin)]},**kw)
+        def proof(i):
+            return {"item_id":i,"bonus_ids":[101,102],"bonus_effects":[
+                {"bonus_id":101,"item_effect_ids":[91]},
+                {"bonus_id":102,"item_effect_ids":[92]}]}
+        observed={"schema":review.SCHEMA,"items":[{"item_id":i} for i in range(1,6)],
+                  "context_free_effect_bonus_candidates":[proof(i) for i in (1,3,4,5)]}
+        result=review.reconcile_effect_options(observed,[
+            row(1),row(2),row(3,direct_item_effect_record=True),
+            row(4,acquisition_sources=[dict(origin,display_season_id=46)])],
+            season_id=47)
+        self.assertEqual(result["effect_option_candidate_count"],1)
+        option=result["effect_option_candidates"][0]
+        self.assertEqual(option["required_options"],{"bonus_id":"101/102"})
+        self.assertEqual(option["acquisition_sources"],[origin])
+        self.assertFalse(option["explicit_current_season_origin"])
+        self.assertFalse(option["itemlevel_and_acquisition_admission_verified"])
+        self.assertEqual({r["item_id"]:r["reason"] for r in result["effect_option_pending"]},
+            {2:"CONDITIONAL_OR_MIXED_EFFECT_BONUS",3:"DIRECT_OR_UNKNOWN_EFFECT_SOURCE_REQUIRES_MERGE",
+             4:"NO_SCOPED_JOURNAL_ORIGIN",5:"NO_SCOPED_PHYSICAL_SOURCE_ROW"})
+        with self.assertRaisesRegex(review.BonusReviewBlocked,"DUPLICATE"):
+            review.reconcile_effect_options(observed,[row(1),row(1)],season_id=47)
+
     def test_bonus_review_reuses_tier_raw_and_caches_missing_two_tables(self):
         linked=self.source()
         original=json.loads(Path(linked["candidate_path"]).read_text("utf8"))

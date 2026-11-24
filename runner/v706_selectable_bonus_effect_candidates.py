@@ -181,3 +181,67 @@ def discover(item_ids,paths):
             "itemlevel_and_acquisition_admission_verified":False,
             "automatic_bonus_attachment":False,
             "full_season_completeness_confirmed":False,"native_calls":0}
+
+
+def reconcile_effect_options(review,source_rows,*,season_id):
+    """Prepare exact effect-only SimC input candidates from scoped source rows.
+
+    Called by the existing sealed season review, not by user-facing UI.
+    No item names, expansion IDs or season-specific item/bonus IDs in policy.
+    Preserve acquisition uncertainty and never silently replace a mixed list.
+    """
+    need(review.get("schema")==SCHEMA and type(season_id) is int and season_id>0,
+         "BONUS_OPTION_SOURCE_SCOPE_INVALID")
+    need(type(source_rows) is list and len(source_rows)<=MAX_ITEMS,
+         "BONUS_OPTION_SOURCE_ROWS_INVALID")
+    by_id={}
+    for row in source_rows:
+        iid=row.get("item_id")
+        need(type(iid) is int and iid>0 and iid not in by_id,
+             "BONUS_OPTION_DUPLICATE_OR_INVALID_ITEM")
+        by_id[iid]=row
+    resolved={r["item_id"]:r for r in review.get("context_free_effect_bonus_candidates",[])}
+    options=[];pending=[]
+    for item in review["items"]:
+        iid=item["item_id"]
+        row=by_id.get(iid)
+        if row is None:
+            pending.append({"item_id":iid,"reason":"NO_SCOPED_PHYSICAL_SOURCE_ROW"})
+            continue
+        if iid not in resolved:
+            pending.append({"item_id":iid,"reason":"CONDITIONAL_OR_MIXED_EFFECT_BONUS"})
+            continue
+        if row.get("direct_item_effect_record") is not False:
+            pending.append({"item_id":iid,"reason":"DIRECT_OR_UNKNOWN_EFFECT_SOURCE_REQUIRES_MERGE"})
+            continue
+        origins=[]
+        for origin in row.get("acquisition_sources",[]):
+            if (origin.get("source") in ("raid_journal","mplus_journal")
+                    and type(origin.get("journal_encounter_id")) is int
+                    and origin["journal_encounter_id"]>0
+                    and type(origin.get("journal_instance_id")) is int
+                    and origin["journal_instance_id"]>0
+                    and type(origin.get("display_season_id")) is int
+                    and origin["display_season_id"] in (0,season_id)):
+                origins.append(origin)
+        if not origins:
+            pending.append({"item_id":iid,"reason":"NO_SCOPED_JOURNAL_ORIGIN"})
+            continue
+        proof=resolved[iid]
+        bonuses=proof["bonus_ids"]
+        need(bool(bonuses) and all(type(b) is int and b>0 for b in bonuses),
+             "BONUS_OPTION_IDS_INVALID")
+        # This is the source-level required option, not an entire equipped
+        # variant. Preserve all effect IDs and exact original acquisition
+        # conditions for the later normal catalogue/selected profile join.
+        options.append({"item_id":iid,"name":row["name"],"inventory_type":row["slot"],
+            "required_options":{"bonus_id":"/".join(map(str,bonuses))},
+            "bonus_effects":proof["bonus_effects"],
+            "acquisition_sources":origins,
+            "conflicting_source_occurrences":row.get("conflicting_source_occurrences",[]),
+            "explicit_current_season_origin":any(o["display_season_id"]==season_id for o in origins),
+            "source_input_only":True,
+            "itemlevel_and_acquisition_admission_verified":False})
+    return {"effect_option_candidates":options,
+            "effect_option_candidate_count":len(options),
+            "effect_option_pending":pending}

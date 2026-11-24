@@ -3663,7 +3663,7 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
              and gear_receipt.get("output_paths")==out,
              "BONUS_GEAR_SOURCE_DRIFT")
         # Recheck only small inputs used here, not any large CSV.
-        subset={k:paths[k] for k in ("pool","delve") if k in paths}
+        subset={k:paths[k] for k in ("pool","delve","expanded_source") if k in paths}
         actual,_=stage_engine._snapshot(subset)
         need(all(gear_receipt["outputs"].get(k)==v for k,v in actual.items()),
              "BONUS_GEAR_OUTPUT_DRIFT")
@@ -3671,8 +3671,14 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
         need(pool.get("build")==build,"BONUS_GEAR_BUILD_DRIFT")
         ids={x["item_id"] for x in pool["items"]
              if x["season_selection"]=="CURRENT_CANDIDATE"}
-        ids.update((gear.get("selectable_source_extension") or {}).get(
-                   "indirect_review_item_ids",[]))
+        extension={}
+        if "expanded_source" in out:
+            expanded=json.loads((root/out["expanded_source"]).read_text("utf8"))
+            need(expanded.get("build")==build and
+                 expanded.get("db2_display_season_id")==pool.get("db2_display_season_id"),
+                 "BONUS_EXPANDED_SOURCE_SCOPE_DRIFT")
+            extension=expanded.get("selectable_source_extension") or {}
+        ids.update(extension.get("indirect_review_item_ids",[]))
         if "delve" in out:
             delve=json.loads((root/out["delve"]).read_text("utf8")).get("report")
             if delve is not None:ids.update(x["item_id"] for x in delve["items"])
@@ -3717,6 +3723,9 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
             result=bonus_effect_review.discover(ids,table_paths)
             result["game_build"]=build
             result["source_identity"]=inputs
+            result.update(bonus_effect_review.reconcile_effect_options(
+                result,extension.get("effect_review_rows",[]),
+                season_id=pool["db2_display_season_id"]))
             stage_engine._atomic_write(root/relative,
                 (canonical(result)+"\n").encode("utf8"))
         def validate(outputs):
@@ -3734,6 +3743,7 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
                 "reviewed_item_count":result["reviewed_item_count"],
                 "context_free_effect_bonus_candidate_count":result.get("context_free_effect_bonus_candidate_count",0),
                 "conditional_or_mixed_bonus_candidate_count":result.get("conditional_or_mixed_bonus_candidate_count",0),
+                "effect_option_candidate_count":result.get("effect_option_candidate_count",0),
                 "candidate_path":str((root/relative).resolve()),
                 "source_stage":{k:v for k,v in stage.items() if k!="result"},
                 "network_calls_by_stage":attempted[0],"native_calls":0,

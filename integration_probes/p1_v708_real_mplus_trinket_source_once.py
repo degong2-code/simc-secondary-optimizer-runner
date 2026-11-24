@@ -380,12 +380,12 @@ def replay_context_free_bonus(out):
     for name in review.COLUMNS:
         sid="season-bonus-raw-"+name
         relative="source/raw_"+name+".csv"
-        files,receipt_path=stages._safe_paths(folder,sid,{"raw":relative})
-        receipt=stages._read_receipt(receipt_path)
-        assert receipt["status"]=="COMPLETE" and receipt["stage_id"]==sid
-        assert receipt["inputs"]["game_build"]==BUILD
+        from urllib.parse import urlencode
+        url="https://wago.tools/db2/"+name+"/csv?"+urlencode({"build":BUILD,"locale":"enUS"})
+        receipt=stages.verify_stage(root=folder,stage_id=sid,
+            stage_version="same-build-raw-v1",inputs={"game_build":BUILD,"source_url":url},
+            outputs={"raw":relative})
         assert receipt["receipt_sha256"]==prior["raw_bonus_sources"][name]["receipt_sha256"]
-        stages._verify_outputs(receipt,files)
         paths[name]=folder/relative
     # Actual previous source scope, not the 8 focus IDs as the resolver input.
     # Reuse all prior discovered indirect candidates (and the focal IDs).
