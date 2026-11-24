@@ -3849,6 +3849,17 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         return _current_season_gear(game_build,target_ilevel,installed_manifest_sha256,
                                     include_refresh=True)
 
+    def _annotate_current_trinket_roles(base,root,build):
+        # Read-only optional metadata; failure must not hide any choices.
+        try:
+            import v737_trinket_loot_spec_source as roles
+            role_sources=roles.read_sources(root,build)
+            if role_sources is not None:
+                roles.annotate_trinkets(base["choices"]["trinket"],build,role_sources)
+        except (OSError,ValueError,TypeError,KeyError):
+            pass
+        return base
+
     def _current_season_gear(game_build,target_ilevel,installed_manifest_sha256,
                              *,include_refresh):
         if game_build is not None or installed_manifest_sha256 is not None:
@@ -3928,9 +3939,9 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                                 refreshed={**refreshed,"special_generation_verified":True,
                                            "explicit_refresh_complete":False}
                                 jobs.season_gear_refresh_cache[game_build]=refreshed
-                    if refreshed is None:return base
+                    if refreshed is None:return _annotate_current_trinket_roles(base,docs.parent,game_build)
                     candidate=refreshed["candidate"]
-                    if candidate.get("season_build")!=game_build:return base
+                    if candidate.get("season_build")!=game_build:return _annotate_current_trinket_roles(base,docs.parent,game_build)
                     old_ids={r["item_id"] for rows in groups.values() for r in rows}
                     additions={r["item_id"] for r in candidate["items"]
                         if r["category"]=="trinket" and r["item_id"] not in old_ids}
@@ -3953,7 +3964,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     base["source_generation_sha256"]=refreshed["source_generation_sha256"]
                 except (OSError,ValueError,TypeError,KeyError):
                     pass
-                return base
+                return _annotate_current_trinket_roles(base,docs.parent,game_build)
             except (OSError,ValueError,KeyError,TypeError):
                 return empty
         # Historical browsing fallback only. It is NOT an installed v212
@@ -4044,7 +4055,13 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                                 "POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED"):
                         jobs.season_gear_refresh_cache[game_build]={
                             **refreshed,"network_calls":0,"explicit_refresh_complete":True}
-            result["network_calls_now"]=refreshed["network_calls"]
+                # Independent optional retry: do not repeat gear refresh
+                # merely because loot-spec metadata is missing.
+                role_review=environment_build.refresh_trinket_loot_spec_sources(
+                    stage_root=jobs.root/"_fresh_season_sources"/("wago_"+game_build),
+                    build=game_build)
+            result["network_calls_now"]=refreshed["network_calls"]+role_review["network_calls_by_stage"]
+            result["loot_spec_source_status"]=role_review["status"]
             source=refreshed["candidate"]
             prior_ids={r["item_id"] for rows in base["choices"].values() for r in rows}
             new_ids={r["item_id"] for r in source["items"]

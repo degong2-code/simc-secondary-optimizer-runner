@@ -75,6 +75,59 @@ class ProductAdapterTests(unittest.TestCase):
             adapter.public_options(c,loot_spec_sources={
                 "game_build":"99.1.1.12345","tables":raw})
 
+    def test_reuse_sealed_tier_specialization_and_only_fetch_override_once(self):
+        import io
+        import v216_environment_build_coordinator as env
+        import v217_stage_execution_engine as stages
+        import v737_trinket_loot_spec_source as role
+        build="12.2.0.99999"
+        spec=b"ID,ClassID,Role,Name_lang\n1,1,0,Protection\n2,8,2,Fire\n"
+        overrides=b"ID,ItemID,SpecID\n1,104,1\n2,105,2\n"
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            calls=[]
+            class Response(io.BytesIO):
+                status=200
+                def __enter__(self):return self
+                def __exit__(self,*args):self.close()
+            def transport(req,timeout):
+                calls.append(req.full_url)
+                return Response(overrides)
+            pending=env.refresh_trinket_loot_spec_sources(
+                stage_root=root,build=build,transport=transport)
+            self.assertEqual(pending["network_calls_by_stage"],0)
+            self.assertIsNone(role.read_sources(root,build))
+            outputs={"ChrSpecialization":"source/db2_tier_ilvl_ChrSpecialization.csv",
+                     "candidates":"source/v245_db2_tier_candidates_ilvl.json"}
+            def seal_tier():
+                for key,relative in outputs.items():
+                    p=root/relative;p.parent.mkdir(exist_ok=True)
+                    p.write_bytes(spec if key=="ChrSpecialization" else json.dumps({
+                        "schema":"v245_db2_first_class_tier_candidates_v1",
+                        "game_build":build,
+                        "evidence":{"chr_specialization_sha256":role.sha(spec)}
+                    }).encode("utf8"))
+            original=stages.execute_stage(root=root,stage_id=role.TIER_STAGE_ID,
+                stage_version=role.TIER_STAGE_VERSION,inputs={"game_build":build},
+                outputs=outputs,execute=seal_tier)
+            first=env.refresh_trinket_loot_spec_sources(
+                stage_root=root,build=build,transport=transport)
+            second=env.refresh_trinket_loot_spec_sources(
+                stage_root=root,build=build,transport=transport)
+            self.assertEqual(first["status"],"TRINKET_LOOT_SPEC_SOURCE_OBSERVED")
+            self.assertEqual((first["network_calls_by_stage"],second["network_calls_by_stage"]),(1,0))
+            self.assertEqual(calls,[role.source_url("ItemSpecOverride",build)])
+            self.assertEqual(role.read_sources(root,build),{"game_build":build,
+                "tables":{"ChrSpecialization":spec,"ItemSpecOverride":overrides}})
+            self.assertEqual(stages.verify_stage(root=root,stage_id=role.TIER_STAGE_ID,
+                stage_version=role.TIER_STAGE_VERSION,inputs={"game_build":build},
+                outputs=outputs)["receipt_sha256"],original["receipt_sha256"])
+            with self.assertRaisesRegex(ValueError,"ROLE_SEALED_SOURCE_IDENTITY_DRIFT"):
+                role.read_sources(root,"12.3.0.99999")
+            (root/outputs["ChrSpecialization"]).write_bytes(spec.replace(b"Fire",b"Frost"))
+            with self.assertRaisesRegex(ValueError,"ROLE_SEALED_SOURCE_SIZE_DRIFT"):
+                role.read_sources(root,build)
+
     def test_plain_representative_is_nonmutating_and_class_family_filtered(self):
         c=adapter.from_v166(source())
         plate=adapter.ordinary_candidates(c,"plate")

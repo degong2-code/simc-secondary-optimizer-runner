@@ -9,6 +9,9 @@ import csv
 from collections import defaultdict
 import hashlib
 import io
+import json
+from pathlib import Path
+from urllib.parse import urlencode
 
 # Stable DB2 role enum: TrinityCore DBCEnums.h ChrSpecializationRole.
 ROLES={0:"TANK",1:"HEALER",2:"DPS"}
@@ -93,3 +96,90 @@ def annotate_trinkets(choices,build,source):
             "source":"SAME_BUILD_DB2_EXPLICIT_LOOT_SPEC_OVERRIDE",
             "equipment_eligibility_proven":False,
             "dps_effect_usefulness_proven":False}
+
+
+TIER_STAGE_ID="fresh-db2-class-tier-candidates-ilvl"
+TIER_STAGE_VERSION="v245-physical-base-ilvl-roster-1"
+OVERRIDE_STAGE_ID="season-trinket-role-raw-ItemSpecOverride"
+OVERRIDE_RELATIVE="source/raw_ItemSpecOverride.csv"
+
+
+def source_url(table,build):
+    need(table in TABLES,"ROLE_SOURCE_TABLE_UNKNOWN")
+    return "https://wago.tools/db2/"+table+"/csv?"+urlencode(
+        {"build":build,"locale":"enUS"})
+
+
+def valid_raw(raw,table):
+    """Check a newly acquired source once before sealing, not each UI event."""
+    try:
+        for row in read_rows(raw,table):
+            if table=="ItemSpecOverride":
+                int(row["ItemID"]);int(row["SpecID"])
+            else:
+                int(row["ClassID"]);int(row["Role"])
+        return True
+    except (ValueError,TypeError,KeyError,UnicodeError,csv.Error):
+        return False
+
+
+def _sealed_raw(root,stage_id,version,outputs,*,input_fingerprint=None):
+    import v217_stage_execution_engine as stages
+    paths,receipt_path=stages._safe_paths(root,stage_id,outputs)
+    if not receipt_path.is_file():return None
+    receipt=stages._read_receipt(receipt_path)
+    if receipt.get("status")=="RUNNING":return None
+    need(receipt.get("status")=="COMPLETE" and
+         receipt.get("stage_id")==stage_id and receipt.get("stage_version")==version
+         and all(receipt.get("output_paths",{}).get(k)==v for k,v in outputs.items())
+         and (input_fingerprint is None or
+              receipt.get("input_fingerprint")==input_fingerprint),
+         "ROLE_SEALED_SOURCE_IDENTITY_DRIFT")
+    result={}
+    for key,(relative,path) in paths.items():
+        limit=(TABLES["ItemSpecOverride"][0] if key=="raw"
+               else TABLES.get(key,(2_000_000,None))[0])
+        record=receipt.get("outputs",{}).get(key,{})
+        need(path.is_file() and 0<path.stat().st_size<=limit and
+             path.stat().st_size==record.get("size"),
+             "ROLE_SEALED_SOURCE_SIZE_DRIFT")
+        raw=path.read_bytes()
+        need(record=={"path":relative,"size":len(raw),"sha256":sha(raw)},
+             "ROLE_SEALED_SOURCE_HASH_DRIFT")
+        result[key]=raw
+    return result
+
+
+def read_tier_specialization(root,build):
+    """Reuse v245's same-build original, without changing its stage identity.
+
+    Verify both consumed files against the sealed receipt and the original
+    tier document's build and raw evidence. Other tier outputs are not read.
+    """
+    sources=_sealed_raw(root,TIER_STAGE_ID,TIER_STAGE_VERSION,{
+        "ChrSpecialization":"source/db2_tier_ilvl_ChrSpecialization.csv",
+        "candidates":"source/v245_db2_tier_candidates_ilvl.json"})
+    if sources is None:return None
+    doc=json.loads(sources["candidates"])
+    raw=sources["ChrSpecialization"]
+    need(doc.get("schema")=="v245_db2_first_class_tier_candidates_v1"
+         and doc.get("game_build")==build and doc.get("evidence",{}).get(
+             "chr_specialization_sha256")==sha(raw),
+         "ROLE_TIER_SOURCE_BUILD_OR_EVIDENCE_DRIFT")
+    # Historical/synthetic sources lacking Role columns are not evidence.
+    if not valid_raw(raw,"ChrSpecialization"):return None
+    return raw
+
+
+def read_sources(root,build):
+    """Read only existing sealed sources; no network or cache mutation."""
+    import v217_stage_execution_engine as stages
+    expected=stages._input_sha(OVERRIDE_STAGE_ID,"same-build-raw-v1",
+        {"game_build":build,"source_url":source_url("ItemSpecOverride",build)})
+    override=_sealed_raw(root,OVERRIDE_STAGE_ID,"same-build-raw-v1",
+        {"raw":OVERRIDE_RELATIVE},input_fingerprint=expected)
+    if override is None:return None
+    spec=read_tier_specialization(root,build)
+    if spec is None:return None
+    return {"game_build":build,"tables":{"ChrSpecialization":spec,
+                                        "ItemSpecOverride":override["raw"]}}

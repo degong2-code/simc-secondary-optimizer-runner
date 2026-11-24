@@ -50,6 +50,7 @@ import v405_a7_selected_source_contract as a7_source_contract
 import v245_db2_first_tier_discovery as tier_db
 import v250_raid_tier_bonus_corroboration as raid_bonus
 import v706_selectable_bonus_effect_candidates as bonus_effect_review
+import v737_trinket_loot_spec_source as loot_spec_source
 import v251_db2_raid_tier_simc_bridge as tier_simc_bridge
 import v261_tier_source_evidence_reuse as tier_evidence_reuse
 import v229_simc_only_source_seed as simc_source
@@ -3620,6 +3621,52 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
             "seasonal_G_verified":False,"native_calls":0}
 
 
+def refresh_trinket_loot_spec_sources(*,stage_root,build,transport=None):
+    """Optional role metadata only; reuse tier ChrSpecialization and v217.
+
+    Without a verified tier source do not start unrelated extra downloads.
+    No role result changes gear registration, G/J/F/O, or Native execution.
+    """
+    root=pathlib.Path(stage_root)
+    attempted=0
+    def pending(reason):
+        return {"status":"TRINKET_LOOT_SPEC_SOURCE_PENDING","reason":reason,
+                "network_calls_by_stage":attempted,"native_calls":0}
+    try:
+        need(type(build) is str and re.fullmatch(r"\d+(?:\.\d+){3}",build),
+             "ROLE_SOURCE_BUILD_INVALID")
+        if loot_spec_source.read_tier_specialization(root,build) is None:
+            return pending("VERIFIED_TIER_SPECIALIZATION_UNAVAILABLE")
+        table="ItemSpecOverride"
+        url=loot_spec_source.source_url(table,build)
+        def obtain():
+            nonlocal attempted
+            attempted+=1
+            req=Request(url,headers={"User-Agent":"SIMC-Secondary-DB2-Role/1.0",
+                                     "Accept":"text/csv"})
+            data=bytearray()
+            with (urlopen if transport is None else transport)(req,timeout=60) as response:
+                need(response.status==200,"ROLE_SOURCE_HTTP_NON_200")
+                while True:
+                    chunk=response.read(262144)
+                    if not chunk:break
+                    data.extend(chunk)
+                    need(len(data)<=loot_spec_source.TABLES[table][0],
+                         "ROLE_SOURCE_SIZE_LIMIT")
+            return bytes(data)
+        _,_,receipt=_sealed_season_raw_source(
+            root=root,source_id=loot_spec_source.OVERRIDE_STAGE_ID,build=build,
+            url=url,relative=loot_spec_source.OVERRIDE_RELATIVE,obtain=obtain,
+            validate_bytes=lambda raw:loot_spec_source.valid_raw(raw,table))
+        return {"status":"TRINKET_LOOT_SPEC_SOURCE_OBSERVED",
+                "override_receipt_sha256":receipt,"tier_source_reused":True,
+                "network_calls_by_stage":attempted,"native_calls":0}
+    except (OSError,ValueError,TypeError,KeyError) as exc:
+        return pending(str(exc).split(":",1)[0] if re.fullmatch(
+            r"[A-Z][A-Z0-9_]{1,119}",str(exc).split(":",1)[0])
+            else "ROLE_SOURCE_UNAVAILABLE")
+
+
 def _season_bonus_raw_table(*,root,build,table,transport,attempted):
     """Shared acquisition owner for tier and effect discovery.
 
@@ -5390,6 +5437,14 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         build=expected_game_build,linked=linked,
         wago_receipt_sha256=stage["receipt_sha256"],
         transport=tier_transport)
+    # Optional live role metadata does not mix fixture/injected transports
+    # or make the numeric environment dependent on an extra DB2 table.
+    role_review=(refresh_trinket_loot_spec_sources(
+        stage_root=stage_root,build=expected_game_build)
+        if (fetch is None and gear_transport is None and tier_transport is None
+            and fresh_gear.get("candidate_path") and fresh_tier.get("candidate_path"))
+        else {"status":"TRINKET_LOOT_SPEC_SOURCE_NOT_REQUESTED",
+              "network_calls_by_stage":0,"native_calls":0})
     tier_bonus=_raid_correlated_tier_stage(
         stage_root=stage_root,build=expected_game_build,
         linked=linked,fresh_tier=fresh_tier,transport=bonus_transport)
@@ -5582,6 +5637,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_tier":fresh_tier,
         "fresh_tier_raid_bonus_corroboration":tier_bonus,
         "fresh_selectable_bonus_effect_review":bonus_review,
+        "fresh_trinket_loot_spec_source":role_review,
         "fresh_tier_simc_candidate_bridge":tier_bridge,
         "fresh_tier_first_party_simc_options":first_party,
         "fresh_tier_selected_from_existing_evidence":selected_tier,
@@ -5599,6 +5655,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             fresh_tier["network_calls_by_stage"]+
             tier_bonus["network_calls_by_stage"]+
             bonus_review["network_calls_by_stage"]+
+            role_review["network_calls_by_stage"]+
             pinned_simc["network_calls_by_stage"]+
             resolved_simc["network_calls_by_stage"]+
             full_seed["network_calls_by_stage"]+
