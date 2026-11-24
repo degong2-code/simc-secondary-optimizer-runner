@@ -3925,7 +3925,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                             refreshed=environment_build.read_sealed_selectable_gear_generation(
                                 stage_root=docs.parent,build=game_build)
                             if refreshed is not None:
-                                refreshed={**refreshed,"special_generation_verified":True}
+                                refreshed={**refreshed,"special_generation_verified":True,
+                                           "explicit_refresh_complete":False}
                                 jobs.season_gear_refresh_cache[game_build]=refreshed
                     if refreshed is None:return base
                     candidate=refreshed["candidate"]
@@ -4011,7 +4012,12 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         try:
             with jobs.season_source_lock:
                 refreshed=jobs.season_gear_refresh_cache.get(game_build)
-                if refreshed is None:
+                # GET restoration and a completed explicit refresh are
+                # different: the former need not have attempted bonus raw,
+                # and an optional source failure must be retryable.
+                if (refreshed is None or not refreshed.get("explicit_refresh_complete") or
+                        refreshed.get("bonus_effect_review",{}).get("status")!=
+                            "POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED"):
                     root=jobs.root/"_fresh_season_sources"/("wago_"+game_build)
                     refreshed=environment_build.refresh_existing_season_gear_source(
                         stage_root=root,build=game_build)
@@ -4027,13 +4033,17 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     refreshed={**refreshed,"special_generation_verified":(
                         sealed is not None and
                         sealed["source_generation_sha256"]==refreshed["source_generation_sha256"])}
-                    # A partial sealed source is reusable as-is; do not
-                    # repeat the same raw lookup or call it complete.
-                    if refreshed.get("supplementary_delve_status") in (
+                    # Display can reuse a partial result, but an explicit
+                    # refresh must retry failed optional acquisition. The
+                    # raw owner already reuses successful same-build bytes.
+                    jobs.season_gear_refresh_cache.pop(game_build,None)
+                    if (refreshed.get("supplementary_delve_status") in (
                             "SUPPLEMENTARY_SOURCE_OBSERVED",
-                            "SUPPLEMENTARY_SOURCE_PARTIAL"):
+                            "SUPPLEMENTARY_SOURCE_PARTIAL") and
+                            refreshed.get("bonus_effect_review",{}).get("status")==
+                                "POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED"):
                         jobs.season_gear_refresh_cache[game_build]={
-                            **refreshed,"network_calls":0}
+                            **refreshed,"network_calls":0,"explicit_refresh_complete":True}
             result["network_calls_now"]=refreshed["network_calls"]
             source=refreshed["candidate"]
             prior_ids={r["item_id"] for rows in base["choices"].values() for r in rows}

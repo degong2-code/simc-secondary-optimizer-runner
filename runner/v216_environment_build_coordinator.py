@@ -3840,11 +3840,39 @@ def _read_sealed_effect_option_overlay(root,build,stage,candidate,*,diagnostics=
     return next(iter(found.values())) if len(found)==1 else None
 
 
+def _resolve_selectable_generation(found):
+    """Only prefer an independently verified recovery of a pending optional
+    source. Never merge generations or choose by file date/order.
+
+    This is a selection-only view; all shared item rows must be identical.
+    Numeric G/profile consumers retain their original installed source.
+    """
+    if len(found)==1:return next(iter(found.values()))
+    if not found:return None
+    rows=list(found.values())
+    def scope(candidate):
+        return tuple(candidate.get(k) for k in
+                     ("schema","season_build","db2_display_season_id","expansion_id"))
+    def recovers(new,old):
+        if old.get("supplementary_delve_status")!="SUPPLEMENTARY_SOURCE_PENDING":
+            return False
+        if new.get("supplementary_delve_status") not in (
+                "SUPPLEMENTARY_SOURCE_OBSERVED","SUPPLEMENTARY_SOURCE_PARTIAL"):
+            return False
+        a,b=new["candidate"],old["candidate"]
+        if scope(a)!=scope(b):return False
+        newer={r["item_id"]:r for r in a["items"]}
+        return all(newer.get(r["item_id"])==r for r in b["items"])
+    preferred=[new for new in rows if all(new is old or recovers(new,old) for old in rows)]
+    return preferred[0] if len(preferred)==1 else None
+
+
 def read_sealed_selectable_gear_generation(*,stage_root,build,generation_sha256=None):
     """Read an existing derived source plus its A7 proof; no HTTP or writes.
 
-    Never choose among conflicting generations. Current compiler identity is
-    checked against the sealed A7 stage. Original numeric installation is
+    Never choose among conflicting generations; a verified recovery of a
+    previously pending optional source can supersede its unchanged rows.
+    Current compiler identity is checked against the sealed A7 stage. Original numeric installation is
     authenticated separately by the caller. Return None for optional gaps.
     """
     root=pathlib.Path(stage_root)
@@ -3923,16 +3951,24 @@ def read_sealed_selectable_gear_generation(*,stage_root,build,generation_sha256=
                 if generation_sha256 is not None and generation_sha256!=generation:continue
                 delve=json.loads((root/expected["delve"]).read_text("utf8"))
                 report=delve.get("report") or {}
-                found[candidate_sha]={"candidate":candidate,
+                candidate_sha=digest(canonical(candidate).encode("utf8"))
+                record={"candidate":candidate,
                     "source_generation_sha256":generation,
                     "a7_source_receipt_sha256":audit["receipt_sha256"],
                     "supplementary_delve_status":delve.get("status"),
                     "supplementary_delve_unresolved_count":report.get("unresolved_count"),
                     "selectable_source_extension":source.get("selectable_source_extension"),
                     "network_calls":0,"native_calls":0}
+                if generation_sha256 is not None:return record
+                prior=found.get(candidate_sha)
+                if (prior is None or
+                    (prior.get("supplementary_delve_status")=="SUPPLEMENTARY_SOURCE_PENDING"
+                     and record.get("supplementary_delve_status") in (
+                        "SUPPLEMENTARY_SOURCE_OBSERVED","SUPPLEMENTARY_SOURCE_PARTIAL"))):
+                    found[candidate_sha]=record
             except (stage_engine.StageExecutionBlocked,OSError,ValueError,TypeError,KeyError):
                 continue
-        return next(iter(found.values())) if len(found)==1 else None
+        return _resolve_selectable_generation(found)
     except (stage_engine.StageExecutionBlocked,OSError,ValueError,TypeError,KeyError):
         return None
 

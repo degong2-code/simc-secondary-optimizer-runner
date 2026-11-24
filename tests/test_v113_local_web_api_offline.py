@@ -647,11 +647,14 @@ class LocalWebAPIOffline(unittest.TestCase):
                    "items":[row,fresh_trinket,fresh_special,pending_special]}
         refresh={"candidate":candidate,"source_generation_sha256":"d"*64,
                  "supplementary_delve_status":"SUPPLEMENTARY_SOURCE_OBSERVED",
+                 "bonus_effect_review":{"status":"POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED"},
                  "network_calls":1,"native_calls":0}
+        partial={**refresh,"bonus_effect_review":{"status":"BONUS_EFFECT_SOURCE_PENDING"},
+                 "network_calls":2}
         url=("/api/v1/season-gear/refresh?game_build="+game_build+
              "&target_ilevel=334&installed_manifest_sha256="+digest)
         with (mock.patch.object(web.environment_manifest,"read_json",
-                 side_effect=[(doc,"source"),(catalog,catalog_sha)]*3),
+                 side_effect=[(doc,"source"),(catalog,catalog_sha)]*5),
               mock.patch.object(web.environment_manifest,
                  "verify_fresh_installed_environment",return_value=True),
               mock.patch.object(web.environment_build,
@@ -660,7 +663,7 @@ class LocalWebAPIOffline(unittest.TestCase):
               mock.patch.object(web.source_to_catalog,"verify_catalog",return_value=True),
               mock.patch.object(web.official_ko_env,"read_names",return_value={}),
               mock.patch.object(web.environment_build,"refresh_existing_season_gear_source",
-                 return_value=refresh) as collect,
+                 side_effect=[partial,refresh]) as collect,
               mock.patch.object(web.environment_build,"read_sealed_selectable_gear_generation",
                  return_value={**refresh,"network_calls":0}) as sealed,
               mock.patch.object(web.season_gear,"public_options",return_value={"choices":{
@@ -670,11 +673,17 @@ class LocalWebAPIOffline(unittest.TestCase):
             # The actual browser uses api(..., {method:"POST",payload:{}}).
             # Keep the production JSON-only middleware unchanged.
             self.assertEqual(self.client.post(url,headers=self.headers).status_code,415)
+            # A read-only restoration cannot suppress explicit acquisition,
+            # and a pending bonus result must retry on the next explicit POST.
+            initial=self.client.get(url.replace("/refresh",""),headers=self.headers)
+            self.assertEqual(initial.status_code,200)
+            pending=self.client.post(url,headers=self.headers,json={})
+            self.assertEqual(pending.json()["network_calls_now"],2)
             first=self.client.post(url,headers=self.headers,json={})
             second=self.client.post(url,headers=self.headers,json={})
             self.app.state.jobs.season_gear_refresh_cache.clear()
             get=self.client.get(url.replace("/refresh",""),headers=self.headers)
-            self.assertEqual(sealed.call_count,2)
+            self.assertEqual(sealed.call_count,4)
         self.assertEqual(get.status_code,200,get.text)
         self.assertEqual({r["item_id"] for r in get.json()["choices"]["trinket"]},
                          {269999,270000})
@@ -695,7 +704,7 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(second.json()["network_calls_now"],0)
         self.assertEqual(report["installed_manifest_sha256"],digest)
         self.assertEqual(install_path.read_text(),"{}")
-        collect.assert_called_once()
+        self.assertEqual(collect.call_count,2)
         self.assertEqual(self.client.post(url,json={}).status_code,403)
 
     def test_verified_installed_oil_loadouts_are_read_only_and_empty(self):

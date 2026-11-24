@@ -604,6 +604,29 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertIsNone(build.read_sealed_selectable_gear_generation(
             stage_root=self.root,build=self.BUILD))
 
+    def test_optional_generation_recovery_preserves_prior_rows_and_rejects_conflicts(self):
+        linked=self.source()
+        gear=build._fresh_ordinary_gear_source_stage(
+            stage_root=self.root,wago_folder=self.wago,build=self.BUILD,linked=linked,
+            transport=lambda *args,**kw:Response(b"ID,ItemID,ItemEffectID\n"))
+        original=json.loads(Path(gear["candidate_path"]).read_text("utf8"))
+        pending={"candidate":original,"supplementary_delve_status":"SUPPLEMENTARY_SOURCE_PENDING",
+                 "source_generation_sha256":"a"*64}
+        new_row={**original["items"][0],"item_id":self.item_id+1,"name":"Recovered option",
+                 "category":"trinket","inventory_type":12,"slot_hint":None}
+        recovered={**original,"items":original["items"]+[new_row],
+            "item_count":2,"role_counts":{"plain_representative_candidate":1,"trinket":1}}
+        build.product_gear_db.validate(recovered)
+        ready={"candidate":recovered,"supplementary_delve_status":"SUPPLEMENTARY_SOURCE_OBSERVED",
+               "source_generation_sha256":"b"*64}
+        self.assertIs(build._resolve_selectable_generation({"a":pending,"b":ready}),ready)
+        self.assertIs(build._resolve_selectable_generation({"b":ready,"a":pending}),ready)
+        changed={**recovered,"items":[{**original["items"][0],"name":"Conflicting row"},new_row]}
+        conflict={**ready,"candidate":changed}
+        self.assertIsNone(build._resolve_selectable_generation({"a":pending,"b":conflict}))
+        self.assertIsNone(build._resolve_selectable_generation({"a":{**pending,
+            "supplementary_delve_status":"SUPPLEMENTARY_SOURCE_OBSERVED"},"b":ready}))
+
     def test_bonus_raw_header_parser_accepts_multiline_and_rejects_invalid(self):
         validator=build.bonus_effect_review.valid_raw_table
         self.assertTrue(validator(b"ItemID,ItemBonusTreeID\r\n1,2\r\n3,4\r\n","ItemXBonusTree"))
