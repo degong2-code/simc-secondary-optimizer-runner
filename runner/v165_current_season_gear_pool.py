@@ -122,7 +122,8 @@ def _journal_origin_current(row, display_season, *, raid):
                              "UNKNOWN_WORLD_STATE_EXPRESSION"))
 
 
-def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALLED):
+def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALLED,
+                 delve_selectable_only=False):
     need(db2.get("schema")=="v163_zero_seed_db2_join_v1"
          and db2.get("source_provider")=="WAGO_TOOLS_PINNED_DB2_WCL_LIVE",
          "SOURCE_DB2_REPORT_INVALID")
@@ -207,8 +208,14 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
         # user-facing item membership proof, not the item's original era.
         # Scope this change to requested selectable loot; keep internal
         # representative equipment and crafting/tier policy unchanged.
+        public_loot=role in ("trinket","special_effect_gear_candidate")
+        # Supplemental Delve loot must not change ordinary G composition.
+        if (delve_selectable_only and source_names=={"localbots_delve_pool"}
+                and not public_loot):
+            continue
         season_eligible=((meta["expansion"]==db2["db2_expansion_id"] and
-                         (craft or raid or delve_ok or mplus_ok))
+                         (craft or raid or mplus_ok or
+                          (delve_ok and (not delve_selectable_only or public_loot))))
                          or (mplus_ok and role in
                              ("trinket","special_effect_gear_candidate")))
         # No hidden effect mechanism certification; exact SimC item variant

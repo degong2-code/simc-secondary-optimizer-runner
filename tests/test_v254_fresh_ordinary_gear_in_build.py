@@ -152,6 +152,67 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertFalse(result["season_representative_verified"])
         self.assertEqual(len(calls),1)
 
+    def test_v697_reuses_sealed_effect_and_adds_only_public_delve_loot(self):
+        linked=self.source()
+        original=json.loads(Path(linked["candidate_path"]).read_text())
+        original["full_season_completeness_confirmed"]=False
+        Path(linked["candidate_path"]).write_text(json.dumps(original),"utf8")
+        extra=[(299902,"Delve trinket",12),(299903,"Delve effect ring",11),
+               (299904,"Delve plain armor",5)]
+        with (self.wago/"Item.csv").open("a",encoding="utf8",newline="") as f:
+            csv.writer(f).writerows([[iid,4,0,slot] for iid,_,slot in extra])
+        with (self.wago/"ItemSparse.csv").open("a",encoding="utf8",newline="") as f:
+            csv.writer(f).writerows([[iid,name,slot,11,0,4,-1,4]
+                                    for iid,name,slot in extra])
+        args=dict(stage_root=self.root,wago_folder=self.wago,build=self.BUILD,
+                  linked=linked)
+        calls=[]
+        def old_transport(req,timeout):
+            calls.append(req.full_url)
+            return Response(b"ID,ItemID,ItemEffectID\n1,299903,12345\n")
+        first=build._fresh_ordinary_gear_source_stage(**args,transport=old_transport)
+        self.assertEqual(first["network_calls_by_stage"],1)
+        old_path=Path(first["candidate_path"])
+        old_bytes=old_path.read_bytes()
+        def supplement(req,timeout):
+            calls.append(req.full_url)
+            self.assertEqual(req.full_url,build.delve_provider.SOURCE_URL)
+            return Response(json.dumps({"items":[{"id":iid,"name":name}
+                for iid,name,_ in extra]}).encode("utf8"))
+        new=build._fresh_ordinary_gear_source_stage(
+            **args,transport=supplement,include_delve=True)
+        self.assertEqual(new["network_calls_by_stage"],1)
+        self.assertEqual(new["supplementary_delve_resolved_count"],3)
+        self.assertEqual(new["plain_candidate_count"],1)
+        self.assertTrue(new["a7_auto_source_choice_provenance"][
+                        "candidate_provenance_verified"],new)
+        data=json.loads(Path(new["candidate_path"]).read_text())
+        self.assertEqual({r["item_id"]:r["category"] for r in data["items"]},
+            {self.item_id:"plain_representative_candidate",
+             299902:"trinket",299903:"special_effect_gear_candidate"})
+        self.assertEqual(old_path.read_bytes(),old_bytes)
+        def no_fetch(req,timeout):
+            self.fail("NO_REPEAT_SOURCE_FETCH")
+        second=build._fresh_ordinary_gear_source_stage(
+            **args,transport=no_fetch,include_delve=True)
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(second["candidate_path"],new["candidate_path"])
+        self.assertEqual(len(calls),2)
+
+    def test_v697_optional_provider_failure_keeps_raid_mplus(self):
+        linked=self.source()
+        def transport(req,timeout):
+            if req.full_url==build.delve_provider.SOURCE_URL:
+                return Response(b"invalid source JSON")
+            return Response(b"ID,ItemID,ItemEffectID\n")
+        result=build._fresh_ordinary_gear_source_stage(
+            stage_root=self.root,wago_folder=self.wago,build=self.BUILD,
+            linked=linked,transport=transport,include_delve=True)
+        self.assertEqual(result["status"],"FRESH_GEAR_PLAIN_CANDIDATES_SOURCE_ONLY")
+        self.assertEqual(result["supplementary_delve_status"],
+                         "SUPPLEMENTARY_SOURCE_PENDING")
+        self.assertEqual(result["plain_candidate_count"],1)
+
     def test_unauthenticated_join_has_zero_network(self):
         result=build._fresh_ordinary_gear_source_stage(
             stage_root=self.root,wago_folder=self.wago,

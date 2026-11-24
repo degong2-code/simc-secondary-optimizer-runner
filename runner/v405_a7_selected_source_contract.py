@@ -49,7 +49,7 @@ def _eligible(source,season_id):
     return False
 
 def assess(*, source, catalog, expected_game_build, source_report_sha256,
-           candidate_sha256):
+           candidate_sha256, delve=None):
     """Proof for every *visible* item without preselected IDs or external calls.
 
     Ensure a WCL/DB2 original admitted the ID, an exact acquisition source
@@ -87,6 +87,31 @@ def assess(*, source, catalog, expected_game_build, source_report_sha256,
          "A7_SOURCE_ITEMS_INVALID")
     by_id={x["item_id"]:x for x in raw}
     need(len(by_id)==len(raw),"A7_DUPLICATE_SOURCE_ITEM_ID")
+    # Reconcile the approved supplementary provider separately. Do not
+    # manufacture a new v163 report or mutate its original acquisition rows.
+    if delve is not None:
+        need(delve.get("schema")=="v162_localbots_delve_source_v1"
+             and delve.get("source_provider")=="Localbots / balovich-matje/localbots"
+             and delve.get("db2_build")==expected_game_build
+             and delve.get("db2_expansion_id")==expansion
+             and type(delve.get("items")) is list,
+             "A7_DELVE_SOURCE_SCOPE_INVALID")
+        seen=set()
+        for row in delve["items"]:
+            iid=row.get("item_id")
+            need(type(iid) is int and iid>0 and iid not in seen
+                 and row.get("expansion_id")==expansion
+                 and row.get("resolution") in (
+                    "LOCALBOTS_EXPLICIT_ID_DB2_VERIFIED",
+                    "LOCALBOTS_NAME_DB2_RESOLVED"),
+                 "A7_DELVE_ITEM_IDENTITY_INVALID")
+            seen.add(iid)
+            old=by_id.get(iid,{})
+            by_id[iid]={**old,"acquisition_sources":[
+                *old.get("acquisition_sources",[]),
+                {"source":"localbots_delve_pool",
+                 "season_evidence":"TRUSTED_SOURCE_ITEMSPARSE_ID",
+                 "resolution":row["resolution"]}]}
     items=catalog.get("items")
     need(type(items) is list and len(items)<=MAX_PRODUCT_ITEMS,
          "A7_PRODUCT_ITEMS_INVALID")
@@ -116,6 +141,11 @@ def assess(*, source, catalog, expected_game_build, source_report_sha256,
              "A7_PUBLIC_ITEM_SOURCE_EVIDENCE_DRIFT")
         eligible=False
         for src in raw_sources:
+            if (src.get("source")=="localbots_delve_pool" and delve is not None
+                    and candidate["category"] in
+                       ("trinket","special_effect_gear_candidate")):
+                eligible=True
+                break
             if not _eligible(src,season_id):
                 continue
             if src["source"]=="selectable_stat_craft":
@@ -154,6 +184,8 @@ def assess(*, source, catalog, expected_game_build, source_report_sha256,
         "db2_display_season_id":season_id,
         "original_v163_sha256":source_report_sha256,
         "v167_candidate_sha256":candidate_sha256,
+        "supplementary_delve_source_sha256":(
+            delve.get("source_content_sha256") if delve is not None else None),
         "source_reconciled_candidate_count":len(verified_ids),
         "source_reconciled_candidate_ids_sha256":sha(sorted(verified_ids)),
         "public_candidate_count":len(public_ids),

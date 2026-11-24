@@ -101,3 +101,7 @@ Windows [Actions #45231378708](https://github.com/degong2-code/simc-secondary-op
 ## v696 — 자동 빌드 확인과 기존 환경 선택 분리
 
 v695 HEAD c77b7353의 12 workflow 모두 SUCCESS 확인 (v165 #45327255743, v113 #45327255678, v181 #45327255568, focused #45327255535, 78 #45327261776 포함). 실제 개인 PC의 자동 빌드 실패는 v113에서 이미 Retail KR 조회 후 v216 복수 설치본 예외가 build identity를 제거하는 흐름으로 확인. 해당 자동 오류에만 live build/SHA/ilevel/READY=false 안전 detail, UI는 요청 scope 일치 시 기존 local GET 1회로 FJ 목록을 표시하고 선택 화면 이동. 사용자가 게임 빌드 입력할 필요 없음; 정확한 설치 SHA 선택은 유지하고 READY/예산/프로필 연결은 원래 경로만 담당. 신규 focused server/JS 회귀 PENDING, 신규 Native0·DB2 수집0. 목록 확대는 v695의 active M+ 원래 expansion 필터 결함 수정 통과, 설치된 v212/v213 바이트 불변이며 사용자 기존 목록 자동 교체 미구현. Localbots 보충원본의 실제 시즌 귀속/이름-only 해결 및 중복 설치본 의미 비교는 남음. 별도 E2E/개인 PC 반복 없음.
+
+## v697 — 기존 v162 구렁 공급원 제품 연결
+
+v696 14 Actions SUCCESS. 기존 사용자 승인 v162 Localbots 정책 및 #40839426417 79/79 원본 대조 재사용, 과거 79/18 개수를 새 시즌 고정값으로 쓰지 않음. Live v216 신규 환경 원본 구축에서 v162 public JSON 1회 + 이미 확보한 pinned ItemSparse; ItemXItemEffect는 기존 same-build v254 receipt/output hashes가 검증되면 재사용. 구렁 단독 ordinary/craft/tier는 보충 경로에서 G 후보를 바꾸지 않으며 사용자 장신구·직접 효과 장비만 확대. 기존 v405 source provenance가 보충 보고서를 별도로 검증. 신규 stage 이름/파일은 원래 immutable v254/v405와 구분, v212/v213 기존 설치본 미변경. 구렁 공급원 실패는 선택적 PENDING; 기본 raid/M+ 소스는 계속 구축. 신규 fixture: source-only 이전 효과 재사용, 추가 1회 HTTP, 재호출0, old bytes 보존, role/출처 정합 및 optional failure. 실제 신규 70961 목록·기존 설치본 갱신은 아직 미검증/미구현. Native0, 실제 DB2 수집0, 신규 CI PENDING, 공식 상태/권한 불변.
