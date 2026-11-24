@@ -231,6 +231,37 @@ class SourceFirstRepresentative(unittest.TestCase):
               {k:self.tier["classes"]["mage"]["pieces"][k]
                for k in stage.FOUR})
 
+    def test_observed_offhand_fallback_preserves_original_weapon_form(self):
+        # Source-observed subtype only (v103/v082/v131); these synthetic
+        # IDs are not a new season or Native/proficiency certification.
+        for key,inv,main_sub,off_sub,primary in (
+                ("warrior/fury",17,8,6,4),
+                ("rogue/outlaw",13,7,15,3)):
+            cls=key.split("/")[0]
+            mask=self.tier["classes"][cls]["allowed_class_mask"]
+            form=stage.contracts.CONTRACTS[key]["weapon_form"]
+            def item(iid,sub,codes,allowed=mask):
+                return {"item_id":iid,"category":"plain_representative_candidate",
+                        "class_id":2,"inventory_type":inv,"subclass_id":sub,
+                        "allowed_class_mask":allowed,"stat_modifier_codes":codes}
+            main=item(900001,main_sub,[primary])
+            second=item(900002,main_sub,[primary])
+            off=item(900000,off_sub,[primary])
+            choose=lambda rows,**opts:stage.shape_weapons(
+                {"items":rows},form,mask,spec_key=key,**opts)
+            with self.subTest(spec=key):
+                self.assertEqual(choose([off,main,second]),
+                    {"main_hand":900001,"off_hand":900002})
+                self.assertEqual(choose([off,main]),
+                    {"main_hand":900001,"off_hand":900000})
+                for rows in ([off], [main], [main,item(900000,off_sub,[5])],
+                             [main,item(900000,off_sub,[primary],0)],
+                             [main,item(900001,off_sub,[primary])]):
+                    with self.assertRaises(stage.RepresentativeBlocked):
+                        choose(rows)
+                with self.assertRaises(stage.RepresentativeBlocked):
+                    choose([main,off],allow_observed_offhand_fallback=False)
+
     def test_weapon_inventory_form_only_not_class_proficiency(self):
         plan=stage.build_all(self.db,self.tier)["specializations"]
         self.assertEqual(len(plan["warrior/fury"]["weapons"]),2)

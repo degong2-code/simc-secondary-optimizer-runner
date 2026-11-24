@@ -68,6 +68,14 @@ SPEC_SUBCLASS_PREFS={
     "shaman/enhancement":(4,0,13),
 }
 
+# Bounded OFF-HAND alternatives witnessed by v103 pinned source profiles:
+# fury polearm (v082), outlaw dagger (v131). These are not exhaustive
+# proficiency lists and never permit the alternative as a main hand.
+OBSERVED_OFFHAND_FALLBACK_SUBCLASSES={
+    "warrior/fury":(6,),
+    "rogue/outlaw":(15,),
+}
+
 class RepresentativeBlocked(ValueError):pass
 def need(v,code):
     if not v:raise RepresentativeBlocked(code)
@@ -102,7 +110,8 @@ def available_plain(db,*,slot,family=None,class_mask=None,used=()):
         candidates.append(item["item_id"])
     return sorted(candidates)
 
-def shape_weapons(db,weapon_form,class_mask,*,spec_key):
+def shape_weapons(db,weapon_form,class_mask,*,spec_key,
+                  allow_observed_offhand_fallback=True):
     """Select source-backed compatible weapons; reject wrong primary stats.
 
     ItemSparse gives item *candidate* primary stat codes. The actual stat
@@ -144,11 +153,19 @@ def shape_weapons(db,weapon_form,class_mask,*,spec_key):
         and x["subclass_id"]==0]
     prefs=SPEC_SUBCLASS_PREFS.get(
         spec_key,FORM_SUBCLASS_PREFS[weapon_form])
-    def candidates(rows):
-        valid=[x for x in rows if x["subclass_id"] in prefs
+    def candidates(rows,preferred=prefs):
+        valid=[x for x in rows if x["subclass_id"] in preferred
                and allowed(x) and correct_primary(x)]
         return [x["item_id"] for x in sorted(valid,key=lambda x:(
-            prefs.index(x["subclass_id"]),x["item_id"]))]
+            preferred.index(x["subclass_id"]),x["item_id"]))]
+    def complete_dual(pool,rows):
+        if len(pool)!=1 or not allow_observed_offhand_fallback:
+            return pool
+        # Preserve every successful old pair and require an original
+        # main-hand candidate. No duplicated ID or invented weapon shape.
+        alternatives=candidates(rows,OBSERVED_OFFHAND_FALLBACK_SUBCLASSES.get(
+            spec_key,()))
+        return pool+[iid for iid in alternatives if iid!=pool[0]]
     def support(rows):
         # A shield/frill is armor, but must still supply the spec's primary.
         return sorted(x["item_id"] for x in rows
@@ -160,10 +177,12 @@ def shape_weapons(db,weapon_form,class_mask,*,spec_key):
     if weapon_form in ("dual_two_hand","single_two_hand"):
         pool=candidates(two_hand)
         count=2 if weapon_form=="dual_two_hand" else 1
+        if count==2:pool=complete_dual(pool,two_hand)
         need(len(pool)>=count,"NO_COMPATIBLE_TWO_HAND_PRIMARY_WEAPON_PAIR")
         return dict(zip(contracts.WEAPON_FORMS[weapon_form],pool[:count]))
     pool=candidates(main_one)
     count=2 if weapon_form=="dual_one_hand" else 1
+    if count==2:pool=complete_dual(pool,main_one)
     need(len(pool)>=count,"NO_COMPATIBLE_ONE_HAND_PRIMARY_WEAPON_PAIR")
     weapon={"main_hand":pool[0]}
     if weapon_form=="dual_one_hand":weapon["off_hand"]=pool[1]

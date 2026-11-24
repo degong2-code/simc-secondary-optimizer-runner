@@ -425,15 +425,17 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         try:
             weapons=chooser.shape_weapons(
                 explicit_weapons,contract["weapon_form"],class_mask,
-                spec_key=cl+"/"+sp)
+                spec_key=cl+"/"+sp,allow_observed_offhand_fallback=False)
         except chooser.RepresentativeBlocked:
             conditional_weapons={"items":[r for r in options
                 if source_rank(r["item_id"])<=1]}
             try:
                 weapons=chooser.shape_weapons(
                     conditional_weapons,contract["weapon_form"],class_mask,
-                    spec_key=cl+"/"+sp)
+                    spec_key=cl+"/"+sp,allow_observed_offhand_fallback=False)
             except chooser.RepresentativeBlocked:
+                # Only after the old provenance-ranked paths cannot make
+                # a pair may the pinned-profile off-hand fallback be used.
                 weapons=chooser.shape_weapons(
                     scratch,contract["weapon_form"],class_mask,
                     spec_key=cl+"/"+sp)
