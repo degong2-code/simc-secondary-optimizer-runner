@@ -111,7 +111,9 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           repository: degong2-code/simc-secondary-optimizer-runner
-          run-id: 45440562029
+          # Actual M+ coverage receipt, not the later effect-only replay
+          # which reused the same artifact name.
+          run-id: 45373819136
           name: p1-v708-real-mplus-trinket-coverage
           path: out/v735/prior
           github-token: ${{ github.token }}

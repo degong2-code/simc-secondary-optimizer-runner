@@ -71,12 +71,32 @@ def observe(prior,out):
         doc=json.loads(raw)
         build=doc["game_build"]
         need(doc.get("schema")=="p1_v708_real_mplus_trinket_source_only_v1"
-             and re.fullmatch(r"\d+(?:\.\d+){3}",build)
-             and doc.get("authenticated_rotation_trinket_coverage_verified") is True
-             and doc.get("native_calls")==0,"ROLE_PRIOR_SCOPE_INVALID")
+             and type(build) is str and re.fullmatch(r"\d+(?:\.\d+){3}",build)
+             and doc.get("native_calls")==0,"ROLE_PRIOR_SCHEMA_BUILD_NATIVE_INVALID")
+        need(doc.get("authenticated_rotation_trinket_coverage_verified") is True
+             and doc.get("status")=="PASS_REAL_AUTHENTICATED_ROTATION_TRINKET_COVERAGE",
+             "ROLE_PRIOR_NOT_AUTHENTICATED_ROTATION_COVERAGE")
+        dungeons=doc.get("dungeons")
+        need(type(dungeons) is list and len(dungeons)>0
+             and len(dungeons)==doc.get("reviewed_dungeons")==doc.get("expected_wcl_dungeons")
+             and doc.get("missing_rotation_trinket_ids")==[]
+             and doc.get("unmapped_challenge_mode_ids")==[],
+             "ROLE_PRIOR_ROTATION_INCOMPLETE")
         cohort={}
-        for dungeon in doc["dungeons"]:
-            for item in dungeon["registered_rotation_trinkets"]:
+        seen_dungeons=set()
+        for dungeon in dungeons:
+            did=dungeon.get("challenge_mode_id")
+            need(type(did) is int and did>0 and did not in seen_dungeons
+                 and dungeon.get("status")=="DUNGEON_JOURNAL_OBSERVED"
+                 and dungeon.get("registered_rotation_trinket_ids")==dungeon.get("rotation_eligible_trinket_ids")
+                 and dungeon.get("missing_rotation_trinket_ids")==[],
+                 "ROLE_PRIOR_DUNGEON_INCOMPLETE")
+            seen_dungeons.add(did)
+            registered=dungeon["registered_rotation_trinkets"]
+            need(type(registered) is list and len(registered)>0
+                 and sorted(x["item_id"] for x in registered)==dungeon["registered_rotation_trinket_ids"],
+                 "ROLE_PRIOR_DUNGEON_ID_DRIFT")
+            for item in registered:
                 iid=item["item_id"];name=item["name"]
                 need(type(iid) is int and iid>0 and isinstance(name,str) and bool(name)
                      and (iid not in cohort or cohort[iid]==name),"ROLE_COHORT_ITEM_INVALID")
@@ -84,7 +104,8 @@ def observe(prior,out):
         need(0<len(cohort)<=2000 and len(cohort)==doc["registered_rotation_trinket_count"],
              "ROLE_COHORT_COUNT_DRIFT")
         result.update(game_build=build,prior_sha256=sha(raw),scope="VERIFIED_MPLUS_ROTATION_ONLY",
-                      item_count=len(cohort))
+                      item_count=len(cohort),dungeon_count=len(seen_dungeons))
+        print("V735_PRIOR_SCOPE",build,len(seen_dungeons),len(cohort),sha(raw),flush=True)
         save()
         sources={}
         for table in TABLES:
