@@ -2699,7 +2699,7 @@ class LocalJobs:
         except Exception as exc:
             raise blocked(exc) from None
 
-    def _catalog_for_selected_special_L(self, user, params):
+    def _catalog_for_selected_special_L(self, user, params, *, with_environment=False):
         """Reuse the same installed v212 catalog as normal user planning.
 
         This executes only for an explicitly selected special item. An
@@ -2736,9 +2736,10 @@ class LocalJobs:
             if params.installed_season_game_build is not None:
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
-            return self.source_catalog_path()
-        return pathlib.Path(
-            verified["source_compilation"]["source_catalog_path"])
+            path=self.source_catalog_path()
+        else:
+            path=pathlib.Path(verified["source_compilation"]["source_catalog_path"])
+        return (path,verified) if with_environment else path
 
     def prepare_with_internal_special_L(self, params):
         """Share the existing exact static-L hydration for both explicit starts.
@@ -2746,12 +2747,14 @@ class LocalJobs:
         Never measure special item effects; SimC owns those. Only static L is
         recorded by the pre-existing exact Native cache/receipt path.
         """
+        season_controls=None
         try:
             user=sessions.user_scenario(params.controls)
             if params.current_season_product:
                 # Same exact v212 optional choices as the later profile,
                 # before possible special-L Native work, not an old v108 list.
-                _v680_preflight_optional_consumables(self.root,params,user)
+                season_controls=_v680_preflight_optional_consumables(
+                    self.root,params,user)
         except Exception as exc:
             raise blocked(exc) from None
         hydrated=None
@@ -2778,12 +2781,15 @@ class LocalJobs:
             with self.static_lock:
                 source=self.default_static_cache(user,params.static_cache)
                 try:
-                    selected_catalog=self._catalog_for_selected_special_L(
-                        user,params)
+                    selected_catalog,verified=self._catalog_for_selected_special_L(
+                        user,params,with_environment=True)
                     hydrated=exact_L.hydrate(
                         user,self.root,binary,params.revision,
                         existing=source,
-                        source_catalog_path=selected_catalog)
+                        source_catalog_path=selected_catalog,
+                        **({"environment_result":verified,
+                            "season_controls":season_controls}
+                           if verified is not None else {}))
                 except Exception as exc:
                     raise blocked(exc) from None
                 prepared_params=params.model_copy(update={

@@ -1391,7 +1391,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(season_profile_inputs is None or
          (type(season_profile_inputs) is dict and current_season_product
           and not source_first_stage and not pure_stage
-          and not static_special_probe_only
+          and (not static_special_probe_only or
+               (fresh_installed_environment_path is not None and
+                bool(user["special_items"]) and
+                season_selected_static_cache_path is None))
           and ENCHANT_FIELD not in user
           and (SEASON_ENCHANT_FIELD not in user or
                (fresh_installed_environment_path is not None
@@ -1403,7 +1406,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
                         for id_ in user[SEASON_ENCHANT_FIELD].values())
                 and set(user[SEASON_ENCHANT_FIELD])<=
                     SIGNED_E0_SINGLE_SLOTS))
-          and (not selected_season_items or
+          and (not selected_season_items or static_special_probe_only or
                season_selected_static_cache_path is not None)),
          "SEASON_PROFILE_INTERNAL_SOURCE_ONLY_MODE_REQUIRED")
     # Search policy is an explicitly new session opt-in, never inherited from
@@ -1802,6 +1805,36 @@ def build(user,folder,binary,revision,static_cache_path=None,
     cfg["source"]={"kind":"user_supplied",
                    "profile_sha256":hashlib.sha256(profile.encode("utf8")).hexdigest()}
     scenario.normalize(cfg)
+    if static_special_probe_only:
+        # v208 internal on-demand static-L source, never a product plan.
+        # Reuses exactly the real user/gear/consumables profile composition
+        # above, before v062 rejects a cache-missing selected L. Nothing is
+        # written, no SimC is executed, and no optimizer or result is seeded.
+        need(current_season_product and bool(user["special_items"])
+             and static_cache_path is None,
+             "STATIC_SPECIAL_PROBE_ONLY_EXACT_CURRENT_USER")
+        if season_profile_inputs is None:
+            probe_profile=oil_mod.configure(
+                profile,cfg,weapon_layout,user["oil_hands"])["profile"]
+        else:
+            # Use the exact installed season's physical consumable inputs.
+            # No selected L/budget admission or optimizer is attempted.
+            probe_profile=season_profile_source_only(
+                profile=profile,cfg=cfg,weapon_layout=weapon_layout,user=user,
+                season_profile_inputs=season_profile_inputs,
+                season_build=actual_season_build,simc_revision=revision,
+                fillers=None)["profile_simc"]
+        chosen_slots=({r["slot"] for r in cfg["equipment"]["special"]} |
+                      set(cfg["equipment"].get("catalyst_special_tier_slots",[])))
+        need(chosen_slots and
+             chosen_slots=={r["slot"] for r in user["special_items"]},
+             "STATIC_SPECIAL_PROBE_SLOTS_NOT_SOURCE_BOUND")
+        return {"schema":"v208_exact_current_special_static_source_v1",
+                "profile":probe_profile,
+                "special_rows":[copy.deepcopy(rows[s]) for s in sorted(chosen_slots)],
+                "source_profile_sha256":hashlib.sha256(
+                    probe_profile.encode("utf8")).hexdigest(),
+                "native_calls":0,"no_optimization_or_budget_produced":True}
     if season_selected_static_cache_path is not None:
         selected_result=_selected_season_profile_budget_preflight(
             user=user,profile=profile,cfg=cfg,rows=rows,
@@ -1866,26 +1899,6 @@ def build(user,folder,binary,revision,static_cache_path=None,
                  "final_user_enchant_source_mask_unadmitted":
                      actual_user_enchant_source}
                 if actual_user_enchant_source is not None else materialized)
-    if static_special_probe_only:
-        # v208 internal on-demand static-L source, never a product plan.
-        # Reuses exactly the real user/gear/consumables profile composition
-        # above, before v062 rejects a cache-missing selected L. Nothing is
-        # written, no SimC is executed, and no optimizer or result is seeded.
-        need(current_season_product and bool(user["special_items"])
-             and static_cache_path is None,
-             "STATIC_SPECIAL_PROBE_ONLY_EXACT_CURRENT_USER")
-        oil=oil_mod.configure(profile,cfg,weapon_layout,user["oil_hands"])
-        chosen_slots=({r["slot"] for r in cfg["equipment"]["special"]} |
-                      set(cfg["equipment"].get("catalyst_special_tier_slots",[])))
-        need(chosen_slots and
-             chosen_slots=={r["slot"] for r in user["special_items"]},
-             "STATIC_SPECIAL_PROBE_SLOTS_NOT_SOURCE_BOUND")
-        return {"schema":"v208_exact_current_special_static_source_v1",
-                "profile":oil["profile"],
-                "special_rows":[copy.deepcopy(rows[s]) for s in sorted(chosen_slots)],
-                "source_profile_sha256":hashlib.sha256(
-                    oil["profile"].encode("utf8")).hexdigest(),
-                "native_calls":0,"no_optimization_or_budget_produced":True}
     static=(cache_mod.empty_cache() if static_cache_path is None
             else cache_mod.load(pathlib.Path(static_cache_path)))
     prepared=oil_mod.prepare(profile,cfg,fillers,static,weapon_layout,
@@ -2354,7 +2367,8 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                                    environment_result,season_settings=None,
                                    season_controls=None,
                                    selected_static_cache_path=None,
-                                   exploration_policy=None):
+                                   exploration_policy=None,
+                                   static_special_probe_only=False):
     """Normal v216 source → v098 preview without manual gear/tier/J/F bundling.
 
     The v216 zero-history Build already compiles v191/v213 gear/tier and
@@ -2383,8 +2397,13 @@ def preview_from_environment_build(user,folder,binary,revision,*,
              "SEASON_V216_READY_WITHOUT_ORIGINAL_FRESH_INSTALL")
         installed_path=installed["stage_output_path"]
     selected_items=bool(user.get("special_items") or user.get("embellishments"))
+    if static_special_probe_only:
+        need(installed_path is not None and bool(user.get("special_items"))
+             and selected_static_cache_path is None,
+             "STATIC_SPECIAL_PROBE_REQUIRES_VERIFIED_INSTALL")
     if selected_items and (installed_path is None or
-                           selected_static_cache_path is None):
+                           (selected_static_cache_path is None and
+                            not static_special_probe_only)):
         return {
             "schema":"v433_v098_selected_user_physical_budget_preflight_v1",
             "status":"B8_SELECTED_VERIFIED_INSTALL_OR_EXACT_CACHE_PENDING",
@@ -2580,7 +2599,11 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                  season_physical_one_spec_candidate=one_spec_candidate,
                  season_selected_static_cache_path=(
                      selected_static_cache_path if selected_items else None),
-                 exploration_policy=exploration_policy)
+                 exploration_policy=exploration_policy,
+                 **({"static_special_probe_only":True}
+                    if static_special_probe_only else {}))
+    if static_special_probe_only:
+        return result
     # The selected v434 profile+budget must never inherit the old v106
     # session folder/DPS cache key. This is an identity-only preview.
     if selected_items:

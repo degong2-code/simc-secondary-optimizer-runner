@@ -100,6 +100,40 @@ class OneExactSpecialHydration(unittest.TestCase):
                              ["native_json2"]["sha256"],
                              receipt["selected_specials"][0]["native_json2"]["sha256"])
 
+    def test_verified_environment_probe_uses_same_source_preview_and_cache(self):
+        staged=hydrate.bootstrap.build(
+            self.user,self.root/"unwritten",self.binary,"710c2408bf",
+            static_special_probe_only=True,current_season_product=True)
+        env={"normal_build_entry":True,"zero_history_build":{"environment_ready":True}}
+        controls={"test":"same installed controls"}
+        with (mock.patch.object(hydrate.bootstrap,"preview_from_environment_build",
+                                return_value=staged) as preview,
+              mock.patch.object(hydrate.bootstrap,"build",
+                                side_effect=AssertionError("legacy probe used")),
+              mock.patch.object(hydrate.subprocess,"run",side_effect=self.fake_native)):
+            first=hydrate.hydrate(self.user,self.root/"runs",self.binary,
+                "710c2408bf",environment_result=env,season_controls=controls)
+            again=hydrate.hydrate(self.user,self.root/"runs",self.binary,
+                "710c2408bf",existing=first["static_cache_path"],
+                environment_result=env,season_controls=controls)
+        self.assertEqual(self.calls,1)
+        self.assertEqual(again["native_new_calls"],0)
+        self.assertEqual(preview.call_count,2)
+        self.assertIs(preview.call_args.kwargs["environment_result"],env)
+        self.assertIs(preview.call_args.kwargs["season_controls"],controls)
+        self.assertTrue(preview.call_args.kwargs["static_special_probe_only"])
+
+    def test_verified_probe_without_install_never_falls_back(self):
+        env={"normal_build_entry":True,
+             "zero_history_build":{"environment_ready":False},
+             "source_compilation":{}}
+        with mock.patch.object(hydrate.subprocess,"run") as native:
+            with self.assertRaisesRegex(hydrate.bootstrap.UserScenarioBlocked,
+                                       "STATIC_SPECIAL_PROBE_REQUIRES_VERIFIED_INSTALL"):
+                hydrate.hydrate(self.user,self.root/"runs",self.binary,
+                    "710c2408bf",environment_result=env)
+        native.assert_not_called()
+
     def test_explicit_old_cache_unmodified_one_native_then_new_snapshot(self):
         before=cache.empty_cache()
         legacy=self.root/"static-item-cache.json"

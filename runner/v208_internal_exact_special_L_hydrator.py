@@ -346,7 +346,8 @@ def snapshot(root,cache):
     return target
 
 def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
-            source_catalog_path=None):
+            source_catalog_path=None,environment_result=None,
+            season_controls=None):
     """Return snapshot path and Native count; NEVER mutate earlier cache bytes."""
     root=pathlib.Path(root).expanduser().resolve()
     binary=pathlib.Path(binary).expanduser().resolve()
@@ -355,10 +356,16 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
     need(binary.is_file(),"SIMC_BINARY_NOT_PRESENT")
     need(type(revision) is str and len(revision)>=7,"SIMC_REVISION_REQUIRED")
     need(type(timeout) is int and 1<=timeout<=MAX_SECONDS,"STATIC_NATIVE_TIMEOUT_BOUND")
-    staged=bootstrap.build(user,root.parent/"static-item-prebudget-no-write",
-                           binary,revision,static_special_probe_only=True,
-                           current_season_product=True,
-                           source_catalog_path=source_catalog_path)
+    if environment_result is None:
+        staged=bootstrap.build(user,root.parent/"static-item-prebudget-no-write",
+                               binary,revision,static_special_probe_only=True,
+                               current_season_product=True,
+                               source_catalog_path=source_catalog_path)
+    else:
+        staged=bootstrap.preview_from_environment_build(
+            user,root.parent/"static-item-prebudget-no-write",binary,revision,
+            environment_result=environment_result,season_controls=season_controls,
+            static_special_probe_only=True)
     initial=item_cache.load(pathlib.Path(existing)) if existing else item_cache.empty_cache()
     missing=missing_specials(initial,staged)
     if not missing:
