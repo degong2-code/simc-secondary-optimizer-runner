@@ -3620,11 +3620,40 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
             "seasonal_G_verified":False,"native_calls":0}
 
 
+def _season_bonus_raw_table(*,root,build,table,transport,attempted):
+    """Shared acquisition owner for tier and effect discovery.
+
+    Raw bytes depend on the game build and URL, not on the derived tier
+    roster, compiler, user, SimC revision or target ilvl.
+    """
+    need(table in bonus_effect_review.COLUMNS,"BONUS_SOURCE_TABLE_INVALID")
+    url="https://wago.tools/db2/"+table+"/csv?"+urlencode(
+        {"build":build,"locale":"enUS"})
+    def obtain():
+        req=Request(url,headers={"User-Agent":"SIMC-Secondary-Bonus/1.0",
+                                 "Accept":"text/csv"})
+        attempted[0]+=1
+        data=bytearray()
+        with (urlopen if transport is None else transport)(req,timeout=75) as response:
+            need(response.status==200,"BONUS_SOURCE_HTTP_NON_200")
+            while True:
+                chunk=response.read(262144)
+                if not chunk:break
+                data.extend(chunk)
+                need(len(data)<=bonus_effect_review.MAX_BYTES[table],
+                     "BONUS_SOURCE_HTTP_SIZE_LIMIT")
+        return bytes(data)
+    return _sealed_season_raw_source(
+        root=root,source_id="season-bonus-raw-"+table,
+        build=build,url=url,relative="source/raw_"+table+".csv",
+        obtain=obtain,validate_bytes=lambda raw:bonus_effect_review.valid_raw_table(raw,table))
+
+
 def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
-    """Reuse v250 raw relations and fetch only missing two tables once.
-    
-    This optional source inspection is not a new admission or G gate.
-    It runs after the existing gear derivation and v250 acquisition.
+    """Review authenticated equipment using shared same-build bonus raw.
+
+    Existing sealed tier relations are reusable, but a completed tier
+    cohort is not a prerequisite for optional effect discovery.
     """
     root=pathlib.Path(stage_root)
     attempted=[0]
@@ -3633,44 +3662,7 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
                 "candidate_item_count":None,"network_calls_by_stage":attempted[0],
                 "native_calls":0,"automatic_bonus_attachment":False}
     if not gear.get("candidate_path"):return pending("GEAR_SOURCE_NOT_READY")
-    # v250 may not yet have a complete tier corroboration source. Never
-    # launch an independent duplicate download of its two raw tables.
-    stage_id="fresh-v250-raid-bonus-corroboration"
-    expected={name:"source/v250_bonus_"+name+".csv" for name in raid_bonus.TABLES}
-    expected["result"]="source/v250_raid_bonus_corroboration.json"
     try:
-        files,receipt_path=stage_engine._safe_paths(root,stage_id,expected)
-        receipt=stage_engine._read_receipt(receipt_path) if receipt_path.is_file() else None
-        table_paths={}
-        raw_identity={}
-        if receipt is not None and receipt.get("status")=="COMPLETE":
-            need(receipt.get("stage_id")==stage_id and
-                 receipt.get("output_paths")==expected,"BONUS_V250_SCOPE_DRIFT")
-            stage_engine._verify_outputs(receipt,files)
-            v250_doc=json.loads((root/expected["result"]).read_text("utf8"))
-            need(v250_doc.get("game_build")==build and
-                 v250_doc.get("schema")==raid_bonus.SCHEMA and all(
-                 v250_doc.get("source_evidence",{}).get(t+"_sha256")==
-                     receipt["outputs"][t]["sha256"] for t in raid_bonus.TABLES),
-                 "BONUS_V250_BUILD_OR_SHA_DRIFT")
-            table_paths={t:root/expected[t] for t in raid_bonus.TABLES}
-            raw_identity["v250_receipt_sha256"]=receipt["receipt_sha256"]
-        else:
-            # Independent, already sealed same-build public raw is equally
-            # usable. No tier cohort approval is necessary for effect links.
-            # Do not fetch duplicate v250 tables while its source is pending.
-            for table in raid_bonus.TABLES:
-                url="https://wago.tools/db2/"+table+"/csv?"+urlencode(
-                    {"build":build,"locale":"enUS"})
-                relative="source/raw_"+table+".csv"
-                sid="season-bonus-raw-"+table
-                if not (root/".stage_receipts"/(sid+".json")).is_file():
-                    return pending("V250_OR_SEALED_BONUS_RAW_NOT_READY")
-                sealed=stage_engine.verify_stage(root=root,stage_id=sid,
-                    stage_version="same-build-raw-v1",
-                    inputs={"game_build":build,"source_url":url},outputs={"raw":relative})
-                table_paths[table]=root/relative
-                raw_identity[table+"_receipt_sha256"]=sealed["receipt_sha256"]
         # Gear stage outputs have already been sealed/verified by v217.
         gear_stage=gear["source_stage"]
         out=gear_stage["output_paths"]
@@ -3702,6 +3694,39 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
             delve=json.loads((root/out["delve"]).read_text("utf8")).get("report")
             if delve is not None:ids.update(x["item_id"] for x in delve["items"])
         if not ids:return pending("NO_SOURCE_SCOPED_ITEM_IDS")
+        # Prefer independently sealed raw once established. A later tier
+        # result must not change the effect review identity for the same
+        # bytes. Legacy v250 is a fallback for existing installations.
+        stage_id="fresh-v250-raid-bonus-corroboration"
+        expected={name:"source/v250_bonus_"+name+".csv" for name in raid_bonus.TABLES}
+        expected["result"]="source/v250_raid_bonus_corroboration.json"
+        files,receipt_path=stage_engine._safe_paths(root,stage_id,expected)
+        receipt=stage_engine._read_receipt(receipt_path) if receipt_path.is_file() else None
+        table_paths={}
+        raw_identity={}
+        def shared_complete(table):
+            path=root/".stage_receipts"/("season-bonus-raw-"+table+".json")
+            return path.is_file() and stage_engine._read_receipt(path).get("status")=="COMPLETE"
+        shared_ready=all(shared_complete(table) for table in raid_bonus.TABLES)
+        if not shared_ready and receipt is not None and receipt.get("status")=="COMPLETE":
+            need(receipt.get("stage_id")==stage_id and
+                 receipt.get("output_paths")==expected,"BONUS_V250_SCOPE_DRIFT")
+            stage_engine._verify_outputs(receipt,files)
+            v250_doc=json.loads((root/expected["result"]).read_text("utf8"))
+            need(v250_doc.get("game_build")==build and
+                 v250_doc.get("schema")==raid_bonus.SCHEMA and all(
+                 v250_doc.get("source_evidence",{}).get(t+"_sha256")==
+                     receipt["outputs"][t]["sha256"] for t in raid_bonus.TABLES),
+                 "BONUS_V250_BUILD_OR_SHA_DRIFT")
+            table_paths={t:root/expected[t] for t in raid_bonus.TABLES}
+            raw_identity["v250_receipt_sha256"]=receipt["receipt_sha256"]
+        else:
+            for table in raid_bonus.TABLES:
+                target,raw,sealed=_season_bonus_raw_table(
+                    root=root,build=build,table=table,transport=transport,attempted=attempted)
+                table_paths[table]=target
+                raw_identity[table+"_receipt_sha256"]=sealed
+                del raw
         inputs={"game_build":build,**raw_identity,
             "gear_receipt_sha256":gear_stage["receipt_sha256"],
             "review_ids_sha256":digest(canonical(sorted(ids)).encode("utf8")),
@@ -3711,28 +3736,8 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
                  pathlib.Path(source_gear_pool.__file__),
                  pathlib.Path(stage_engine.__file__)])["sha256"]}
         for table in ("ItemBonusListGroupEntry","ItemBonus"):
-            url="https://wago.tools/db2/"+table+"/csv?"+urlencode(
-                {"build":build,"locale":"enUS"})
-            def obtain():
-                req=Request(url,headers={"User-Agent":"SIMC-Secondary-Bonus/1.0",
-                                         "Accept":"text/csv"})
-                attempted[0]+=1
-                data=bytearray()
-                with (urlopen if transport is None else transport)(req,timeout=75) as response:
-                    need(response.status==200,"BONUS_SOURCE_HTTP_NON_200")
-                    while True:
-                        chunk=response.read(262144)
-                        if not chunk:break
-                        data.extend(chunk)
-                        need(len(data)<=bonus_effect_review.MAX_BYTES[table],
-                             "BONUS_SOURCE_HTTP_SIZE_LIMIT")
-                return bytes(data)
-            def valid(raw):
-                return bonus_effect_review.valid_raw_table(raw,table)
-            target,raw,sealed=_sealed_season_raw_source(
-                root=root,source_id="season-bonus-raw-"+table,
-                build=build,url=url,relative="source/raw_"+table+".csv",
-                obtain=obtain,validate_bytes=valid)
+            target,raw,sealed=_season_bonus_raw_table(
+                root=root,build=build,table=table,transport=transport,attempted=attempted)
             table_paths[table]=target
             inputs[table+"_sha256"]=digest(raw)
             inputs[table+"_receipt_sha256"]=sealed
@@ -4032,19 +4037,37 @@ def _raid_correlated_tier_stage(*,stage_root,build,linked,fresh_tier,
                for x in tier_doc.get("observed_base_ilvl_roster_groups",[])):
         return {"status":"RAID_BONUS_FULL_13_CLASS_BASE_ILVL_ROSTER_PENDING",
                 "network_calls_by_stage":0,"source_season_verified":False}
+    # Keep the original v250 derived-stage identity and historical output
+    # paths. Its existing injectable reader receives the shared sealed
+    # bytes; only the raw owner counts actual network acquisitions.
+    import io
+    attempted=[0]
+    urls={"https://wago.tools/db2/"+table+"/csv?"+urlencode(
+        {"build":build,"locale":"enUS"}):table for table in raid_bonus.TABLES}
+    class SealedRawReader(io.BytesIO):
+        status=200
+    def shared_reader(req,timeout):
+        table=urls.get(req.full_url)
+        need(table is not None,"TIER_BONUS_RAW_REQUEST_SCOPE_INVALID")
+        _,raw,_=_season_bonus_raw_table(
+            root=pathlib.Path(stage_root),build=build,table=table,
+            transport=transport,attempted=attempted)
+        return SealedRawReader(raw)
     try:
-        return raid_bonus.build_stage(
+        result=raid_bonus.build_stage(
             stage_root=stage_root,build=build,
             tier_candidate_path=tier_path,
             raid_candidate_path=linked["candidate_path"],
             tier_stage_receipt=fresh_tier["source_stage"]["receipt_sha256"],
             raid_stage_receipt=linked["stage"]["receipt_sha256"],
-            transport=transport)
-    except raid_bonus.BonusSourceBlocked as exc:
+            transport=shared_reader)
+        return {**result,"network_calls_by_stage":attempted[0]}
+    except (raid_bonus.BonusSourceBlocked,stage_engine.StageExecutionBlocked,
+            EnvironmentBuildBlocked,bonus_effect_review.BonusReviewBlocked,
+            OSError,ValueError,KeyError,TypeError) as exc:
         return {"status":"RAID_BONUS_CORROBORATION_PENDING",
                 "reason":str(exc).split(":",1)[0],
-                "network_calls_by_stage":getattr(
-                    exc,"network_calls_attempted",0),
+                "network_calls_by_stage":attempted[0],
                 "source_season_verified":False}
 
 

@@ -818,6 +818,46 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertEqual(again["candidate_path"],standalone["candidate_path"])
         self.assertEqual(again["network_calls_by_stage"],0)
 
+    def test_bonus_effect_cold_source_does_not_require_tier_cohort(self):
+        linked=self.source()
+        gear=build._fresh_ordinary_gear_source_stage(
+            stage_root=self.root,wago_folder=self.wago,build=self.BUILD,
+            linked=linked,transport=lambda *a,**kw:Response(b"ID,ItemID,ItemEffectID\n"))
+        raw={
+            "ItemXBonusTree":("ItemID,ItemBonusTreeID\n"+str(self.item_id)+",100\n").encode(),
+            "ItemBonusTreeNode":b"ParentItemBonusTreeID,ChildItemBonusTreeID,ChildItemBonusListID,ChildItemBonusListGroupID\n100,0,701,0\n",
+            "ItemBonusListGroupEntry":b"ItemBonusListGroupID,ItemBonusListID\n",
+            "ItemBonus":b"ParentItemBonusListID,Type,Value_0\n701,23,81\n"}
+        calls=[]
+        def transport(req,timeout):
+            table=req.full_url.split("/db2/")[1].split("/")[0]
+            calls.append(table)
+            return Response(raw[table])
+        args=dict(stage_root=self.root,build=self.BUILD,gear=gear,transport=transport)
+        first=build._review_selectable_bonus_effects(**args)
+        self.assertEqual(first["status"],"POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED",first)
+        self.assertEqual(first["network_calls_by_stage"],4)
+        self.assertEqual(first["candidate_item_count"],1)
+        self.assertEqual(calls,list(build.bonus_effect_review.COLUMNS))
+        self.assertFalse((self.root/".stage_receipts/fresh-v250-raid-bonus-corroboration.json").exists())
+        # A tier cohort becoming available later must not replace the
+        # already-established raw identity or create a second overlay.
+        output={k:"source/v250_bonus_"+k+".csv" for k in build.raid_bonus.TABLES}
+        output["result"]="source/v250_raid_bonus_corroboration.json"
+        def write_tier():
+            for k in build.raid_bonus.TABLES:(self.root/output[k]).write_bytes(raw[k])
+            (self.root/output["result"]).write_text(json.dumps({
+                "schema":build.raid_bonus.SCHEMA,"game_build":self.BUILD,
+                "source_evidence":{k+"_sha256":build.digest(raw[k])
+                                   for k in build.raid_bonus.TABLES}}),"utf8")
+        build.stage_engine.execute_stage(root=self.root,
+            stage_id="fresh-v250-raid-bonus-corroboration",stage_version="test",
+            inputs={"game_build":self.BUILD},outputs=output,execute=write_tier)
+        second=build._review_selectable_bonus_effects(**args)
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(second["candidate_path"],first["candidate_path"])
+        self.assertEqual(len(calls),4)
+
     def test_unauthenticated_join_has_zero_network(self):
         result=build._fresh_ordinary_gear_source_stage(
             stage_root=self.root,wago_folder=self.wago,

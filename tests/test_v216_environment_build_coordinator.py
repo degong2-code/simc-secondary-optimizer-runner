@@ -1628,6 +1628,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 bonus_nodes.append({"ID":len(bonus_nodes)+1,
                     "ParentItemBonusTreeID":900+wave,
                     "ChildItemBonusTreeID":0,
+                    "ChildItemBonusListID":0,
                     "ChildItemBonusListGroupID":
                         (608 if wave==0 else 614)+pos})
         bonus_sources={"ItemXBonusTree":extra_csv(bonus_xrefs),

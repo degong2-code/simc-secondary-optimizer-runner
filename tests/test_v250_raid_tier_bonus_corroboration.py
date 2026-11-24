@@ -23,6 +23,7 @@ def source_rows(dual_raid=False):
         for g in range(5):
             nodes.append({"ID":len(nodes)+1,"ParentItemBonusTreeID":900+wave,
                           "ChildItemBonusTreeID":0,
+                          "ChildItemBonusListID":0,
                           "ChildItemBonusListGroupID":(608 if wave==0 else 614)+g})
     for iid in (7001,7002):
         records.append({"ID":len(records)+1,"ItemID":iid,"ItemBonusTreeID":901})
@@ -135,6 +136,39 @@ class RaidBonusCorroboration(unittest.TestCase):
             self.assertEqual(second["source_stage"]["status"],"REUSED_VERIFIED")
             self.assertEqual(first["observed_leading_cohort"]["observed_base_item_level"],219)
             self.assertFalse(first["source_season_verified"])
+
+    def test_tier_reuses_shared_raw_when_effect_review_precedes_tier(self):
+        import sys
+        sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"runner"))
+        import v216_environment_build_coordinator as coordinator
+        class Response(io.BytesIO):
+            status=200
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td);tier,raid=inputs(td)
+            t=root/"tier.json";r=root/"raid.json"
+            t.write_text(json.dumps(tier),encoding="utf8")
+            r.write_text(json.dumps(raid),encoding="utf8")
+            folder=root/"stage";folder.mkdir()
+            data=source_rows();calls=[];attempted=[0]
+            def fetch(req,timeout):
+                name=req.full_url.split("/db2/")[1].split("/")[0]
+                calls.append(name)
+                return Response(data[name])
+            for table in v250.TABLES:
+                coordinator._season_bonus_raw_table(
+                    root=folder,build=BUILD,table=table,
+                    transport=fetch,attempted=attempted)
+            args=dict(stage_root=folder,build=BUILD,
+                linked={"candidate_path":str(r),"stage":{"receipt_sha256":"b"*64}},
+                fresh_tier={"candidate_path":str(t),"source_stage":{"receipt_sha256":"a"*64}},
+                transport=fetch)
+            first=coordinator._raid_correlated_tier_stage(**args)
+            second=coordinator._raid_correlated_tier_stage(**args)
+            self.assertEqual(first["status"],"UNIQUE_RAID_BONUS_CORRELATED_TIER_COHORT_SEASON_PENDING",first)
+            self.assertEqual(first["network_calls_by_stage"],0)
+            self.assertEqual(second["network_calls_by_stage"],0)
+            self.assertEqual(calls,list(v250.TABLES))
+            self.assertEqual(attempted[0],2)
 
 if __name__=="__main__":
     unittest.main()
