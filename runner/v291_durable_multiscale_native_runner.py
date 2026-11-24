@@ -103,14 +103,25 @@ def _verified_row(req, binary, folder, calibration, *, allow_cache):
     receipt = engine.execute_one(
         req, calibration, binary, folder, {"native_attempts": 0},
         cache_only=allow_cache)
+    actual = _accept_execution_result(
+        req, folder, receipt, "EXISTING_NATIVE_AND_OIL_VALIDATOR_DISAGREE")
+    return actual, receipt["source"]
+
+
+def _accept_execution_result(req, folder, receipt, drift_reason):
+    """Shared acceptance path for fresh execution and verified resume.
+
+    Keep the same byte, oil, numeric and seed checks for both. This is the
+    single integration point for subsequent removal of the duplicate read
+    across the executor and this adapter.
+    """
     native_bytes = (folder / "result.json").read_bytes()
     native_doc = json.loads(native_bytes)
     actual = oil.ingest_native(req, native_doc, native_bytes)
     actual["simc_seed"] = _source_seed(native_doc, receipt)
     need(actual["native_json_sha256"] == receipt["native_json_sha256"]
-         and actual["case_key"] == receipt["case_key"],
-         "EXISTING_NATIVE_AND_OIL_VALIDATOR_DISAGREE")
-    return actual, receipt["source"]
+         and actual["case_key"] == receipt["case_key"], drift_reason)
+    return actual
 
 
 def _source_seed(native_json, accepted_receipt):
@@ -1042,13 +1053,8 @@ def run(context, flask_vector, binary, output, *,
                 recover_verified_partial=recover_verified_partial)
             native_elapsed = time.monotonic() - native_started
             ingest_started = (time.monotonic() if case_timing_trace else None)
-            native_bytes = (folder / "result.json").read_bytes()
-            native_doc = json.loads(native_bytes)
-            native = oil.ingest_native(req, native_doc, native_bytes)
-            native["simc_seed"] = _source_seed(native_doc, result)
-            need(result["native_json_sha256"] == native["native_json_sha256"]
-                 and result["case_key"] == native["case_key"],
-                 "NATIVE_DOUBLE_ACCEPTANCE_DRIFT")
+            native = _accept_execution_result(
+                req, folder, result, "NATIVE_DOUBLE_ACCEPTANCE_DRIFT")
             source = result["source"]
             if source == "NEW_NATIVE":
                 attempts += 1

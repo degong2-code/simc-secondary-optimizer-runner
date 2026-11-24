@@ -87,6 +87,23 @@ class BoundedPipeline(unittest.TestCase):
             self.assertEqual(progress["native_attempts"],1)
             self.assertTrue(observed["recovered_partial_validated_without_native"])
             self.assertEqual((root/"result.json").read_bytes(),raw)
+    def test_oversized_cache_rejected_before_json2_read_or_native(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            request=self.request(root)
+            (root/"input.simc").write_bytes(request["input"].encode("utf8"))
+            native=root/"result.json"
+            with native.open("wb") as stream:
+                stream.truncate(50_000_000)
+            (root/"native_receipt.json").write_text("{}")
+            with mock.patch.object(runner.subprocess,"run") as exe, mock.patch.object(
+                runner.evaluator,"verify_disk_cache") as verify, mock.patch.object(
+                pathlib.Path,"read_bytes",side_effect=AssertionError("NO_LARGE_READ")):
+                with self.assertRaisesRegex(runner.PipelineBlocked,"CACHED_NATIVE_JSON2_INVALID_SIZE"):
+                    runner.execute_one(request,self.k,ROOT/"runner"/"pilot.py",root,
+                        {"native_attempts":1},cache_only=True)
+                exe.assert_not_called()
+                verify.assert_not_called()
     def test_tampered_native_receipt_not_reused(self):
         with tempfile.TemporaryDirectory() as d:
             root=pathlib.Path(d)

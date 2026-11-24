@@ -36,7 +36,7 @@ class PhysicalNativePartialRecovery(unittest.TestCase):
             {"native_attempts":1},recover_verified_partial=enabled)
 
     def test_default_partial_still_blocks_unchanged(self):
-        with mock.patch.object(bridge.evaluator,"ingest_native") as evaluate,\
+        with mock.patch.object(bridge.evaluator,"_ingest_parsed_native") as evaluate,\
              mock.patch.object(bridge.subprocess,"run") as exe:
             with self.assertRaisesRegex(bridge.PipelineBlocked,
                   "PARTIAL_NATIVE_OUTPUT_REQUIRES_EXPLICIT_RECOVERY"):
@@ -46,11 +46,13 @@ class PhysicalNativePartialRecovery(unittest.TestCase):
         self.assertFalse((self.root/"native_receipt.json").exists())
 
     def test_receipt_authorized_recovery_validates_original_json_and_no_native(self):
-        with mock.patch.object(bridge.evaluator,"ingest_native",
+        with mock.patch.object(bridge.evaluator,"_ingest_parsed_native",
                                return_value=self.verified) as evaluate,\
              mock.patch.object(bridge.subprocess,"run") as exe:
             result=self.call(True)
-            evaluate.assert_called_once()
+            evaluate.assert_called_once_with(
+                self.req,self.document,self.calib,
+                hashlib.sha256(self.native.read_bytes()).hexdigest())
             exe.assert_not_called()
         self.assertEqual(result["source"],"CACHED_VERIFIED_NATIVE")
         self.assertTrue(result["recovered_partial_validated_without_native"])
@@ -69,7 +71,7 @@ class PhysicalNativePartialRecovery(unittest.TestCase):
 
     def test_modified_existing_input_refused_even_when_opted_in(self):
         self.input.write_bytes(b"CHANGED!")
-        with mock.patch.object(bridge.evaluator,"ingest_native") as evaluate,\
+        with mock.patch.object(bridge.evaluator,"_ingest_parsed_native") as evaluate,\
              mock.patch.object(bridge.subprocess,"run") as exe:
             with self.assertRaisesRegex(bridge.PipelineBlocked,
                                         "PARTIAL_NATIVE_INPUT_IDENTITY_MISMATCH"):
@@ -80,7 +82,7 @@ class PhysicalNativePartialRecovery(unittest.TestCase):
 
     def test_invalid_partial_json_remains_unreceipted(self):
         self.native.write_bytes(b"{bad json")
-        with mock.patch.object(bridge.evaluator,"ingest_native") as evaluate,\
+        with mock.patch.object(bridge.evaluator,"_ingest_parsed_native") as evaluate,\
              mock.patch.object(bridge.subprocess,"run") as exe:
             with self.assertRaises(json.JSONDecodeError):
                 self.call(True)
@@ -89,7 +91,7 @@ class PhysicalNativePartialRecovery(unittest.TestCase):
         self.assertFalse((self.root/"native_receipt.json").exists())
 
     def test_existing_validator_rejection_cannot_be_recategorized_as_cache(self):
-        with mock.patch.object(bridge.evaluator,"ingest_native",
+        with mock.patch.object(bridge.evaluator,"_ingest_parsed_native",
                       side_effect=ValueError("NATIVE_RATING_OR_REVISION_DRIFT")) as evaluate,\
              mock.patch.object(bridge.subprocess,"run") as exe:
             with self.assertRaisesRegex(ValueError,

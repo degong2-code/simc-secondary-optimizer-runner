@@ -113,6 +113,8 @@ def execute_one(req,calibration,binary,case_folder,progress,cancel_file=None,
                                 "recovered_partial_validated_without_native":True}
         need(native_file.is_file() and receipt_file.is_file(),
              "PARTIAL_NATIVE_OUTPUT_REQUIRES_EXPLICIT_RECOVERY")
+        need(0<native_file.stat().st_size<50_000_000,
+             "CACHED_NATIVE_JSON2_INVALID_SIZE")
         expected=json.loads(receipt_file.read_text(encoding="utf8"))
         raw=native_file.read_bytes()
         validated=evaluator.verify_disk_cache(req,calibration,expected,raw)
