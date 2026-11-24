@@ -2130,6 +2130,9 @@ for(const id of ["trinket1","trinket2"]){
 nodes["season-gear-note"]={textContent:""};
 const $=id=>nodes[id];
 let redraw=0,requests=0,stale=false,mode="trinket",specialSlots=0;
+let roleStatus="TRINKET_LOOT_SPEC_SOURCE_OBSERVED",roleMetadata;
+const role={source:"SAME_BUILD_DB2_EXPLICIT_LOOT_SPEC_OVERRIDE",
+  status:"EXPLICIT_SHARED_WITH_DPS",roles:["DPS","HEALER"]};
 const refreshSpecialSlots=()=>{specialSlots++};
 const refreshEquipmentSelectionUI=()=>{redraw++};
 const fetch=async(url,opts)=>{
@@ -2147,6 +2150,7 @@ const fetch=async(url,opts)=>{
     installed_manifest_sha256:gear.installed_manifest_sha256,
     source_catalog_manifest_sha256:gear.source_catalog_manifest_sha256,
     supplementary_delve_status:"SUPPLEMENTARY_SOURCE_OBSERVED",
+    loot_spec_source_status:roleStatus,trinket_loot_spec_metadata:roleMetadata,
     native_calls_now:0,budget_rebuilt:false,
     new_trinkets:mode==="trinket"||mode==="mixed"?[
       {item_id:100,name:"Duplicate",inventory_type:12},
@@ -2159,13 +2163,20 @@ const fetch=async(url,opts)=>{
       {item_id:202,name:"Wrong slot",inventory_type:12}]:[]})})};
 };
 const api=load("async function api(","function markSession(");
+const mergeTrinketRoleMetadata=load("function mergeTrinketRoleMetadata(",
+  "function inlineEquipmentCard(");
+const trinketLootRoleLabel=load("function trinketLootRoleLabel(",
+  "function mergeTrinketRoleMetadata(");
 const refresh=load("async function refreshExistingSeasonTrinkets(",
                    "function installSeasonGearHints(");
 (async()=>{
   stale=true;
+  roleMetadata={"100":role};
   await refresh(gear,334);
   assert.strictEqual(redraw,0);
   assert.strictEqual(gear.choices.trinket.length,1);
+  assert.strictEqual(gear.choices.trinket[0].loot_spec_metadata,undefined);
+  roleMetadata=undefined;
   state.seasonGearTargetIlevel=334;
   stale=false;
   await refresh(gear,334);
@@ -2224,6 +2235,43 @@ const refresh=load("async function refreshExistingSeasonTrinkets(",
     await refresh(current,334);
     assert.strictEqual(requests,1);
   }
+  // Optional metadata failure must not block new choices; a later explicit
+  // refresh can update labels alone without resetting choices or budget.
+  const pending={...gear,trinket_source_refresh:undefined,
+    loot_spec_source_status:undefined,
+    choices:{trinket:[{item_id:100,name:"Original",inventory_type:12}],
+      special_effect_gear_candidate:[],selectable_stat_craft:[]}};
+  state.seasonGear=pending;
+  for(const id of ["trinket1","trinket2"]){
+    nodes[id]={value:"100",options:[option("100","Original")],
+      appendChild(x){this.options.push(x)}};
+  }
+  mode="trinket";requests=0;redraw=0;
+  roleStatus="TRINKET_LOOT_SPEC_SOURCE_PENDING";roleMetadata=[null];
+  await refresh(pending,334);
+  assert.deepStrictEqual(pending.choices.trinket.map(x=>x.item_id),[100,101]);
+  assert.strictEqual(pending.choices.trinket[0].loot_spec_metadata,undefined);
+  assert.strictEqual(pending.loot_spec_source_status,roleStatus);
+  assert.strictEqual(redraw,1);
+  mode="none";roleStatus="TRINKET_LOOT_SPEC_SOURCE_OBSERVED";
+  roleMetadata={"100":role,"101":{source:role.source,
+    status:"NO_EXPLICIT_OVERRIDE_UNKNOWN",roles:[]},"999":role};
+  await refresh(pending,334);
+  assert.strictEqual(requests,2);
+  assert.strictEqual(redraw,2);
+  assert.deepStrictEqual(pending.choices.trinket.map(x=>x.item_id),[100,101]);
+  assert.strictEqual(trinketLootRoleLabel(pending.choices.trinket[0]),"획득: 딜러·힐러");
+  assert.strictEqual(trinketLootRoleLabel(pending.choices.trinket[1]),"");
+  assert.strictEqual(pending.loot_spec_source_status,roleStatus);
+  assert.strictEqual(state.verifiedExistingBudget,budget);
+  assert.strictEqual(budget.T,3107);
+  for(const id of ["trinket1","trinket2"]){
+    assert.strictEqual(nodes[id].value,"100");
+    assert.deepStrictEqual(nodes[id].options.map(x=>x.value),["100","101"]);
+  }
+  await refresh(pending,334);
+  assert.strictEqual(requests,2);
+  assert.strictEqual(redraw,2);
 })().catch(e=>{console.error(e);process.exitCode=1});
 """
         result=subprocess.run([node,"-e",code,str(source)],capture_output=True,
