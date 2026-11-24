@@ -638,14 +638,14 @@ class LocalWebAPIOffline(unittest.TestCase):
         fresh_trinket={**row,"item_id":270000,"name":"New trinket"}
         fresh_special={**row,"item_id":270001,"category":"special_effect_gear_candidate",
                        "inventory_type":11,"name":"New special"}
-        candidate={"items":[row,fresh_trinket,fresh_special]}
+        candidate={"season_build":game_build,"items":[row,fresh_trinket,fresh_special]}
         refresh={"candidate":candidate,"source_generation_sha256":"d"*64,
                  "supplementary_delve_status":"SUPPLEMENTARY_SOURCE_OBSERVED",
                  "network_calls":1,"native_calls":0}
         url=("/api/v1/season-gear/refresh?game_build="+game_build+
              "&target_ilevel=334&installed_manifest_sha256="+digest)
         with (mock.patch.object(web.environment_manifest,"read_json",
-                 side_effect=[(doc,"source"),(catalog,catalog_sha)]*2),
+                 side_effect=[(doc,"source"),(catalog,catalog_sha)]*3),
               mock.patch.object(web.environment_manifest,
                  "verify_fresh_installed_environment",return_value=True),
               mock.patch.object(web.environment_build,
@@ -664,6 +664,17 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertEqual(self.client.post(url,headers=self.headers).status_code,415)
             first=self.client.post(url,headers=self.headers,json={})
             second=self.client.post(url,headers=self.headers,json={})
+            self.app.state.jobs.season_gear_refresh_cache.clear()
+            with mock.patch.object(web.environment_build,
+                    "read_sealed_selectable_gear_generation",
+                    return_value={**refresh,"network_calls":0}) as restore:
+                get=self.client.get(url.replace("/refresh",""),headers=self.headers)
+            restore.assert_called_once()
+        self.assertEqual(get.status_code,200,get.text)
+        self.assertEqual({r["item_id"] for r in get.json()["choices"]["trinket"]},
+                         {269999,270000})
+        self.assertEqual(get.json()["choices"]["special_effect_gear_candidate"],[])
+        self.assertEqual(get.json()["refreshed_trinket_count"],1)
         self.assertEqual(first.status_code,200,first.text)
         self.assertEqual(second.status_code,200,second.text)
         report=first.json()

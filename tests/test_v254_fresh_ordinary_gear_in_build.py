@@ -515,6 +515,27 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         second=build._fresh_ordinary_gear_source_stage(**args,transport=no_fetch)
         self.assertEqual(second["network_calls_by_stage"],0)
         self.assertEqual(second["mplus_trinket_coverage"],rows)
+        # Seal the same v163 bytes under the real parent stage path, then
+        # prove the derived catalog is readable after process restart.
+        parent_rel="source/v163_unapproved_candidates_token_provenance.json"
+        def write_parent():
+            (self.root/parent_rel).write_bytes(raw)
+        build.stage_engine.execute_stage(root=self.root,
+            stage_id="fresh-v163-token-provenance",stage_version="test",
+            inputs={"build":self.BUILD},outputs={"candidate":parent_rel},
+            execute=write_parent)
+        restored=build.read_sealed_selectable_gear_generation(
+            stage_root=self.root,build=self.BUILD)
+        self.assertIsNotNone(restored)
+        self.assertEqual(restored["candidate"],data)
+        self.assertEqual(restored["network_calls"],0)
+        self.assertEqual(restored["native_calls"],0)
+        self.assertEqual(restored["source_generation_sha256"],
+                         first["source_stage"]["receipt_sha256"])
+        # A tampered candidate must never be added by a read-only GET.
+        Path(first["candidate_path"]).write_bytes(b"{}")
+        self.assertIsNone(build.read_sealed_selectable_gear_generation(
+            stage_root=self.root,build=self.BUILD))
 
     def test_bonus_review_reuses_tier_raw_and_caches_missing_two_tables(self):
         linked=self.source()

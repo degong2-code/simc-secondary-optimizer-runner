@@ -3746,6 +3746,94 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
         return pending(str(exc).split(":",1)[0])
 
 
+def read_sealed_selectable_gear_generation(*,stage_root,build):
+    """Read an existing derived source plus its A7 proof; no HTTP or writes.
+
+    Never choose among conflicting generations. Current compiler identity is
+    checked against the sealed A7 stage. Original numeric installation is
+    authenticated separately by the caller. Return None for optional gaps.
+    """
+    root=pathlib.Path(stage_root)
+    receipts=root/".stage_receipts"
+    if not receipts.is_dir() or receipts.is_symlink():return None
+    try:
+        parent_rel="source/v163_unapproved_candidates_token_provenance.json"
+        files,p=stage_engine._safe_paths(root,"fresh-v163-token-provenance",
+                                         {"candidate":parent_rel})
+        parent=stage_engine._read_receipt(p)
+        need(parent.get("stage_id")=="fresh-v163-token-provenance" and
+             parent.get("status")=="COMPLETE" and
+             parent.get("output_paths")=={"candidate":parent_rel},
+             "SELECTABLE_REUSE_PARENT_STAGE_INVALID")
+        stage_engine._verify_outputs(parent,files)
+        parent_sha=parent["outputs"]["candidate"]["sha256"]
+        parent_doc=json.loads((root/parent_rel).read_text("utf8"))
+        need(parent_doc.get("schema")==season_join.SCHEMA and
+             parent_doc.get("build")==build,"SELECTABLE_REUSE_PARENT_BUILD_DRIFT")
+        a7_code=stage_engine.module_dependency_fingerprint([
+            pathlib.Path(a7_source_contract.__file__),
+            pathlib.Path(source_gear_pool.__file__),
+            pathlib.Path(product_gear_db.__file__),
+            pathlib.Path(stage_engine.__file__)])["sha256"]
+        found={}
+        candidates=sorted(receipts.glob("season-gear-catalog-*.json"))
+        if len(candidates)>64:return None
+        for path in candidates:
+            try:
+                stage=stage_engine._read_receipt(path)
+                sid=path.stem
+                if (stage.get("stage_id")!=sid or stage.get("status")!="COMPLETE"
+                        or stage.get("stage_version")!="derived-gear-catalog-v1"):continue
+                rel="source/"+sid+"/"
+                expected={"candidate":rel+"v167_candidates.json",
+                          "expanded_source":rel+"v163_selectable_extension.json",
+                          "delve":rel+"v162_delve.json"}
+                out=stage.get("output_paths",{})
+                if any(out.get(k)!=v for k,v in expected.items()):continue
+                files,_=stage_engine._safe_paths(root,sid,expected)
+                # No large DB2 scans. Only read the three consumed small
+                # outputs and compare their sealed byte identities.
+                if any(p.stat().st_size>12_000_000 for _,p in files.values()):continue
+                actual,_=stage_engine._snapshot(files)
+                if any(stage["outputs"].get(k)!=v for k,v in actual.items()):continue
+                source_sha=actual["expanded_source"]["sha256"]
+                candidate_sha=actual["candidate"]["sha256"]
+                audit_inputs={"game_build":build,"v163_sha256":source_sha,
+                    "v167_sha256":candidate_sha,"v254_receipt_sha256":stage["receipt_sha256"],
+                    "code_sha256":a7_code}
+                audit_id=_derived_source_generation("season-gear-provenance",audit_inputs)
+                audit_rel="source/"+audit_id+".json"
+                audit=stage_engine.verify_stage(root=root,stage_id=audit_id,
+                    stage_version="v405-source-choice-proof-v1",inputs=audit_inputs,
+                    outputs={"a7_provenance":audit_rel})
+                proof=json.loads((root/audit_rel).read_text("utf8"))
+                if (proof.get("schema")!=a7_source_contract.SCHEMA or
+                    proof.get("status")!="A7_PUBLIC_CANDIDATE_ORIGINS_AUTO_RECONCILED_SOURCE_ONLY" or
+                    proof.get("game_build")!=build or
+                    proof.get("parent_v163_sha256")!=parent_sha or
+                    proof.get("original_v163_sha256")!=source_sha or
+                    proof.get("v167_candidate_sha256")!=candidate_sha):continue
+                source=json.loads((root/expected["expanded_source"]).read_text("utf8"))
+                if source.get("parent_v163_sha256")!=parent_sha or source.get("build")!=build:continue
+                candidate=json.loads((root/expected["candidate"]).read_text("utf8"))
+                if candidate.get("season_build")!=build:continue
+                product_gear_db.validate(candidate)
+                delve=json.loads((root/expected["delve"]).read_text("utf8"))
+                report=delve.get("report") or {}
+                found[candidate_sha]={"candidate":candidate,
+                    "source_generation_sha256":stage["receipt_sha256"],
+                    "a7_source_receipt_sha256":audit["receipt_sha256"],
+                    "supplementary_delve_status":delve.get("status"),
+                    "supplementary_delve_unresolved_count":report.get("unresolved_count"),
+                    "selectable_source_extension":source.get("selectable_source_extension"),
+                    "network_calls":0,"native_calls":0}
+            except (stage_engine.StageExecutionBlocked,OSError,ValueError,TypeError,KeyError):
+                continue
+        return next(iter(found.values())) if len(found)==1 else None
+    except (stage_engine.StageExecutionBlocked,OSError,ValueError,TypeError,KeyError):
+        return None
+
+
 def refresh_existing_season_gear_source(*,stage_root,build,transport=None):
     """Recompile selectable loot from the original authenticated local source.
 
