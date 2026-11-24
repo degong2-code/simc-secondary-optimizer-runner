@@ -591,6 +591,14 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
                     need(type(codes) is list and
                          any(x in expected_primary for x in codes),
                          "CURRENT_SEASON_SPECIAL_WEAPON_WRONG_PRIMARY:"+slot)
+            elif group=="special":
+                # Match the existing public choice rule for non-weapon fixed
+                # gear, including armor, shields and frills. A positive
+                # incompatible primary stat is not a valid selected profile;
+                # absent primary evidence (e.g. jewelry) stays selectable.
+                compatibility=product_gear.equipment_primary_armor_compatibility(row)
+                need("/".join(key) in compatibility["compatible_dps_specs"],
+                     "CURRENT_SEASON_SPECIAL_ITEM_WRONG_PRIMARY:"+slot)
     # Use the same authenticated rows that passed slot validation,
     # whether already in the base source or from a sealed refresh.
     required_by_id={}

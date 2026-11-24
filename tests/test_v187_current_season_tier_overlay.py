@@ -140,6 +140,49 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
                 common.apply_user_equipment(("mage","frost"),rows,groups,user,334,require,
                     season_source_gear=source,selected_refresh_rows=refresh,**args)
 
+    def test_fixed_special_primary_consistency_in_base_and_refresh(self):
+        import v167_product_season_gear_adapter as product_gear
+        base=product_gear.read()
+        tier=season.load_tier()
+        require=lambda valid,why:self.fail(why) if not valid else None
+        args=dict(tier_override=self.map,
+            fifth_override=("chest",self.map["chest"],159257),
+            flexible_current_tier=True,season_source_tier=tier)
+        # Synthetic cloak: compare existing public eligibility to profile
+        # assembly, not a claim about a live item.
+        for codes,allowed in (([3],False),([4],False),([5],True),
+                              ([71],True),([73],True),([32],True),([],True)):
+            row={"item_id":999991,"name":"Synthetic fixed cloak",
+                 "category":"special_effect_gear_candidate","inventory_type":16,
+                 "class_id":4,"subclass_id":1,"allowed_class_mask":-1,
+                 "stat_modifier_codes":codes,"item_set_id":0,"slot_hint":"back",
+                 "source_kinds":["raid_journal"],
+                 "season_list_basis":"SEALED_CONTEXT_FREE_EFFECT_OPTION",
+                 "required_options":{"bonus_id":"987654"}}
+            merged=product_gear.merge_effect_option_rows(base,[row])
+            public=product_gear.public_options(merged)["choices"]["special_effect_gear_candidate"]
+            item=next(x for x in public if x["item_id"]==row["item_id"])
+            self.assertEqual("mage/frost" in item["compatible_dps_specs"],allowed)
+            for source,refresh in ((merged,None),(base,[row])):
+                with self.subTest(codes=codes,refresh=refresh is not None):
+                    user,rows,groups=self.setup_rows()
+                    user["special_items"]=[{"slot":"back","item_id":row["item_id"],"options":{}}]
+                    before=copy.deepcopy(rows)
+                    if not allowed:
+                        with self.assertRaisesRegex(AssertionError,
+                                "CURRENT_SEASON_SPECIAL_ITEM_WRONG_PRIMARY:back"):
+                            common.apply_user_equipment(("mage","frost"),rows,groups,
+                                user,334,require,season_source_gear=source,
+                                selected_refresh_rows=refresh,**args)
+                        self.assertEqual(rows,before)
+                    else:
+                        common.apply_user_equipment(("mage","frost"),rows,groups,
+                            user,334,require,season_source_gear=source,
+                            selected_refresh_rows=refresh,**args)
+                        self.assertEqual(rows["back"]["item_id"],row["item_id"])
+                        self.assertEqual(rows["back"]["options"]["bonus_id"],"987654")
+                        self.assert_four(rows,groups)
+
     def test_new_build_source_pair_and_build_mismatch_fail_closed(self):
         import v167_product_season_gear_adapter as product_gear
         gear=copy.deepcopy(product_gear.read())
