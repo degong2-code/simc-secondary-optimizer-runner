@@ -31,7 +31,8 @@ def main():
     out.mkdir(parents=True,exist_ok=True)
     receipt=out/"V691_NATIVE_PATH_COMPARISON.json"
     result={"schema":"v691_existing_v278_windows_path_comparison_v1",
-            "scope":"BASELINE_PATH_ONLY_NOT_SEASON_ADMISSION",
+            "scope":"BASELINE_PATH_REPAIR_ONLY_NOT_SEASON_ADMISSION",
+            "prior_control_receipt_artifact_id":14885606192,
             "simc_revision":REV,"binary_sha256":BIN_SHA,
             "season_collection_calls":0,"dps_optimizer_calls":0,
             "native_calls":0,"observations":[],"status":"PENDING"}
@@ -49,14 +50,13 @@ def main():
         extracted=base/"cli";extracted.mkdir()
         binary=pathlib.Path(updater.extract_py7zr_safe(inner,extracted))
         assert pair.file_sha(binary)==BIN_SHA
-        short=base/"short"
         # 197-character stage root is a reconstruction of the observed
         # v690 CI directory layout, not a captured historical absolute path.
         pad=197-len(str(base))-1
         assert 0<pad<200
         long=base/("p"*pad)
         assert len(str(long))==197
-        for label,stage in (("short",short),("long",long)):
+        for label,stage in (("long_fixed",long),):
             stage.mkdir()
             case=pair.run_case(stage_root=stage,profile=PROFILE,
                 source_identity=pair.sha(PROFILE.encode("utf8")),
@@ -71,19 +71,18 @@ def main():
                  "input_chars":len(str(folder/"input.simc")),
                  "json2_chars":len(str(folder/"native.json")),
                  "status":r["status"],"returncode":r["native_returncode"],
+                 "io_mode":r["identity"].get("io_mode"),
                  "error":r["error"],"simc_log":log,
                  "new_native_calls":case["new_native_calls"]}
             result["observations"].append(row)
             result["native_calls"]+=case["new_native_calls"]
             save()
-            if label=="short" and r["status"]!="NATIVE_JSON2_CAPTURED":
-                result["status"]="SHORT_CONTROL_FAILED_PATH_CAUSE_UNRESOLVED"
-                save()
-                return
-        result["status"]=("LONG_PATH_FAILURE_REPRODUCED_ON_CONTROLLED_INPUT"
-            if result["observations"][1]["status"]!="NATIVE_JSON2_CAPTURED"
-            else "LONG_PATH_FAILURE_NOT_REPRODUCED_ON_CONTROLLED_INPUT")
+        result["status"]=("LONG_PATH_RELATIVE_IO_REPAIR_PASS"
+            if result["observations"][0]["status"]=="NATIVE_JSON2_CAPTURED"
+            else "LONG_PATH_RELATIVE_IO_REPAIR_FAILED")
         save()
+        if result["status"]!="LONG_PATH_RELATIVE_IO_REPAIR_PASS":
+            raise SystemExit(2)
 
 if __name__=="__main__":
     main()

@@ -13,6 +13,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 import v269_simc_chmv_effect_snapshot as effect
 
@@ -75,8 +76,22 @@ def run_case(*,stage_root,profile,source_identity,binary,binary_sha256,
     }
     key=sha(canonical(identity))[:32]
     folder=stage_root/"source"/("v278_"+variant+"_"+key)
+    # Windows SimC can reject absolute input/report paths at MAX_PATH.
+    # Retain the existing identity and receipts for unaffected short paths.
+    # Only the corrected invocation gets a new content key, so a sealed
+    # failure of the old absolute-path invocation cannot poison the fix.
+    relative_io=(sys.platform=="win32" and
+                 max(len(str((folder/name).resolve()))
+                     for name in ("input.simc","native.json"))>=260)
+    if relative_io:
+        identity["io_mode"]="cwd_relative_v1"
+        key=sha(canonical(identity))[:32]
+        folder=stage_root/"source"/("v278_"+variant+"_"+key)
+    report_path=("native.json" if relative_io else
+                 str((folder/"native.json").resolve()))
+    input_arg=("input.simc" if relative_io else str(folder/"input.simc"))
     expected_input=(profile+"iterations=1\nthreads=1\n"+
-                    "json2="+str((folder/"native.json").resolve())+"\n")
+                    "json2="+report_path+"\n")
     inp=expected_input.encode("utf8")
     input_sha=sha(inp)
     manifest=folder/"receipt.json"
@@ -122,7 +137,7 @@ def run_case(*,stage_root,profile,source_identity,binary,binary_sha256,
     try:
         with (folder/"simc.log").open("wb") as log:
             try:
-                completed=subprocess.run([str(binary),str(folder/"input.simc")],
+                completed=subprocess.run([str(binary),input_arg],
                     cwd=folder,stdout=log,stderr=subprocess.STDOUT,
                     check=False,timeout=timeout_seconds)
                 code=completed.returncode

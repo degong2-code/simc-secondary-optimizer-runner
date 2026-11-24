@@ -115,6 +115,32 @@ class TwoNativeOptions(unittest.TestCase):
         self.assertIn("original diagnostic",one["native_log_excerpt"])
         self.assertEqual(two["native_log_excerpt"],one["native_log_excerpt"])
 
+    def test_windows_long_paths_use_relative_io_without_repeating_native(self):
+        # Simulate the real Windows CI path boundary without running SimC.
+        root=self.root/("p"*max(1,197-len(str(self.root))-1))
+        root.mkdir()
+        source=root/"source.simc"
+        source.write_text(PROFILE,encoding="utf8")
+        def execute_relative(cmd,*,cwd,stdout,stderr,check,timeout):
+            self.assertEqual(cmd[1],"input.simc")
+            raw=(pathlib.Path(cwd)/cmd[1]).read_text("utf8")
+            self.assertIn("\njson2=native.json\n",raw)
+            return self.execute([cmd[0],str(pathlib.Path(cwd)/cmd[1])],
+                                cwd=cwd,stdout=stdout,stderr=stderr,
+                                check=check,timeout=timeout)
+        kw=dict(stage_root=root,source_profile_path=source,binary=self.binary,
+                simc_revision=REV,kind="flask",token=FLASK)
+        with mock.patch.object(pair.sys,"platform","win32"),\
+             mock.patch.object(pair.subprocess,"run",side_effect=execute_relative) as run:
+            first=pair.measure(**kw)
+            again=pair.measure(**kw)
+        self.assertEqual(run.call_count,2)
+        self.assertEqual(first["F_candidate_unadmitted"],108)
+        self.assertEqual(again["new_native_calls"],0)
+        for case in again["native_case_receipts"]:
+            receipt=json.loads(pathlib.Path(case["receipt_path"]).read_text("utf8"))
+            self.assertEqual(receipt["identity"]["io_mode"],"cwd_relative_v1")
+
     def test_tamper_cached_json_fails_before_relaunch(self):
         with mock.patch.object(pair.subprocess,"run",side_effect=self.execute):
             one=self.measure()
