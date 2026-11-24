@@ -430,7 +430,11 @@ class FreshOrdinaryGearSource(unittest.TestCase):
                (299906,"Unregistered field boss trinket",12,11),
                (299907,"Unscoped ordinary",5,11),
                (299908,"Conflicting season trinket",12,7),
-               (299909,"Current dungeon special ring",11,11)]
+               (299909,"Current dungeon special ring",11,11),
+               (299910,"Unscoped direct cloak",16,7),
+               (299911,"Conflicting direct sword",17,7),
+               (299912,"Unscoped direct unsupported type",19,11),
+               (299913,"Unscoped plain armor",9,11)]
         with (self.wago/"Item.csv").open("a",encoding="utf8",newline="") as f:
             csv.writer(f).writerows([[iid,4,0,slot] for iid,_,slot,_ in extra])
         with (self.wago/"ItemSparse.csv").open("a",encoding="utf8",newline="") as f:
@@ -456,7 +460,9 @@ class FreshOrdinaryGearSource(unittest.TestCase):
             for i,(eid,iid,sid) in enumerate([
                 (402,299902,47),(402,299903,0),(402,299904,46),
                 (502,299905,47),(503,299906,47),(402,299907,0),
-                (402,299908,0),(402,299908,46),(402,299909,47)],1)])
+                (402,299908,0),(402,299908,46),(402,299909,47),
+                (402,299910,0),(402,299911,0),(402,299911,46),
+                (402,299912,0),(402,299913,0)],1)])
         self.write_csv("CraftingData.csv",["ID","CraftedItemID"],[])
         tables={p.stem:{"sha256":build.digest(p.read_bytes()),
                          "bytes":p.stat().st_size} for p in self.wago.glob("*.csv")}
@@ -482,7 +488,7 @@ class FreshOrdinaryGearSource(unittest.TestCase):
             if req.full_url==build.delve_provider.SOURCE_URL:
                 return Response(json.dumps({"items":[{"id":self.item_id,
                     "name":"Source plain sword"}]}).encode())
-            return Response(b"ID,ItemID,ItemEffectID\n1,299909,12345\n")
+            return Response(b"ID,ItemID,ItemEffectID\n1,299909,12345\n2,299910,12346\n3,299911,12347\n4,299912,12348\n")
         args=dict(stage_root=self.root,wago_folder=self.wago,build=self.BUILD,
                   linked=linked,include_delve=True)
         first=build._fresh_ordinary_gear_source_stage(**args,transport=transport)
@@ -492,7 +498,7 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertEqual(first["plain_candidate_count"],1)
         data=json.loads(Path(first["candidate_path"]).read_text("utf8"))
         self.assertEqual({x["item_id"] for x in data["items"]},
-                         {self.item_id,299902,299903,299905,299909})
+                         {self.item_id,299902,299903,299905,299909,299910})
         rows=first["mplus_trinket_coverage"]
         self.assertEqual(rows[0]["registered_current_trinket_ids"],[299902])
         self.assertEqual(rows[0]["unscoped_only_trinket_ids"],[299903,299908])
@@ -507,6 +513,14 @@ class FreshOrdinaryGearSource(unittest.TestCase):
             x["active_rotation_display_season_id"]==47 and
             x["season_evidence"]=="DB2_ACTIVE_ROTATION_UNSCOPED_TRINKET"
             for x in recovered["source_evidence"]))
+        special=next(x for x in data["items"] if x["item_id"]==299910)
+        self.assertEqual(special["category"],"special_effect_gear_candidate")
+        self.assertTrue(any(x["season_evidence"]=="DB2_ACTIVE_ROTATION_UNSCOPED_DIRECT_SPECIAL"
+            and x["display_season_id"]==0 and x["active_rotation_display_season_id"]==47
+            for x in special["source_evidence"]))
+        raw_rotation=first["selectable_source_extension"]["mplus_dungeon_review"][0]
+        self.assertEqual(raw_rotation["unscoped_direct_special_ids"],[299910,299911])
+        self.assertEqual(raw_rotation["rotation_unscoped_admitted_special_ids"],[299910])
         self.assertEqual(rows[0]["missing_current_trinket_ids"],[])
         self.assertEqual(rows[1]["status"],"DUNGEON_JOURNAL_UNRESOLVED")
         self.assertEqual(first["selectable_source_extension"][
@@ -535,11 +549,12 @@ class FreshOrdinaryGearSource(unittest.TestCase):
                          first["source_stage"]["receipt_sha256"])
         import v098_target_user_scenario_bootstrap as bootstrap
         base=dict(data)
-        base["items"]=[r for r in data["items"] if r["item_id"]!=299909]
-        user={"special_items":[{"slot":"finger1","item_id":299909,"options":{}}]}
+        base["items"]=[r for r in data["items"] if r["item_id"] not in (299909,299910)]
+        user={"special_items":[{"slot":"finger1","item_id":299909,"options":{}},
+                               {"slot":"back","item_id":299910,"options":{}}]}
         selected,binding=bootstrap._selected_refresh_special_source(
             user=user,gear=base,stage_root=self.root)
-        self.assertEqual([r["item_id"] for r in selected],[299909])
+        self.assertEqual([r["item_id"] for r in selected],[299909,299910])
         self.assertEqual(binding["source_generation_sha256"],
                          first["source_stage"]["receipt_sha256"])
         self.assertEqual(bootstrap._selected_refresh_special_source(

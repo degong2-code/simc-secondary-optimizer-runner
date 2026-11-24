@@ -166,6 +166,21 @@ def assess(*, source, catalog, expected_game_build, source_report_sha256,
                     eligible=True
                     break
                 continue
+            if pool._rotation_special_origin_current(src,season_id):
+                extension=source.get("selectable_source_extension") or {}
+                if (candidate["category"]=="special_effect_gear_candidate"
+                        and original.get("slot") in pool.SPECIAL_INVENTORY_TYPES
+                        and candidate.get("inventory_type")==original.get("slot")
+                        and extension.get("mplus_rotation_reviewed") is True
+                        and any(d.get("challenge_mode_id")==src["challenge_mode_id"]
+                            and d.get("journal_instance_id")==src["journal_instance_id"]
+                            and d.get("status")=="DUNGEON_JOURNAL_OBSERVED"
+                            and item_id in d.get("rotation_unscoped_admitted_special_ids",[])
+                            and item_id in d.get("unscoped_direct_special_ids",[])
+                            for d in extension.get("mplus_dungeon_review",[]))):
+                    eligible=True
+                    break
+                continue
             if not _eligible(src,season_id):
                 continue
             if src["source"] in ("selectable_stat_craft","crafted_fixed_gear"):

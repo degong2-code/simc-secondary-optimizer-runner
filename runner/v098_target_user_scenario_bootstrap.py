@@ -2400,10 +2400,11 @@ def refreshed_special_source_eligible(row,season_id):
     """
     import v165_current_season_gear_pool as pool
     return (row.get("category")=="special_effect_gear_candidate" and
-            row.get("inventory_type") in (1,2,3,5,6,7,8,9,10,11,13,14,15,16,17,20,23,26)
+            row.get("inventory_type") in pool.SPECIAL_INVENTORY_TYPES
             and any(
                 pool._journal_origin_current(x,season_id,raid=True)
                 or pool._journal_origin_current(x,season_id,raid=False)
+                or pool._rotation_special_origin_current(x,season_id)
                 or x.get("source")=="localbots_delve_pool"
                 for x in row.get("source_evidence",[])))
 

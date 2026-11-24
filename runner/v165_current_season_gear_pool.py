@@ -14,6 +14,8 @@ from pathlib import Path
 
 SCHEMA="v165_current_season_gear_pool_v1"
 TRINKET=12
+# Same physical inventory types supported by the selected-special runtime.
+SPECIAL_INVENTORY_TYPES=frozenset((1,2,3,5,6,7,8,9,10,11,13,14,15,16,17,20,23,26))
 # Exactly the inventory types of class tier pieces (v168).
 TIER_INVENTORY_TYPES=frozenset((1,3,5,20,10,7))
 MAX_SOURCE_BYTES=5_000_000
@@ -125,22 +127,31 @@ def _journal_origin_current(row, display_season, *, raid):
 
 
 ROTATION_TRINKET_EVIDENCE="DB2_ACTIVE_ROTATION_UNSCOPED_TRINKET"
+ROTATION_SPECIAL_EVIDENCE="DB2_ACTIVE_ROTATION_UNSCOPED_DIRECT_SPECIAL"
 
-def _rotation_trinket_origin_current(row, display_season):
+def _rotation_origin_current(row, display_season, evidence):
     """Only the derived, pinned active rotation may certify unscoped loot.
     
     The raw item DisplaySeasonID remains zero. Do not reinterpret arbitrary
-    season-0 rows or allow this trinket-only relation into ordinary G.
+    season-0 rows or allow these role-scoped relations into ordinary G.
     """
     return (type(row) is dict and type(display_season) is int
             and display_season>0 and row.get("source")=="mplus_journal"
             and type(row.get("display_season_id")) is int
             and row["display_season_id"]==0
-            and row.get("season_evidence")==ROTATION_TRINKET_EVIDENCE
+            and row.get("season_evidence")==evidence
             and type(row.get("active_rotation_display_season_id")) is int
             and row["active_rotation_display_season_id"]==display_season
             and all(type(row.get(k)) is int and row[k]>0 for k in
                 ("journal_encounter_id","journal_instance_id","challenge_mode_id")))
+
+
+def _rotation_trinket_origin_current(row, display_season):
+    return _rotation_origin_current(row,display_season,ROTATION_TRINKET_EVIDENCE)
+
+
+def _rotation_special_origin_current(row, display_season):
+    return _rotation_origin_current(row,display_season,ROTATION_SPECIAL_EVIDENCE)
 
 
 def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
@@ -206,7 +217,9 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
                     "journal_instance_id":None,"status":"DUNGEON_JOURNAL_UNRESOLVED",
                     "current_trinket_ids":[],"unscoped_trinket_ids":[],
                     "other_season_trinket_ids":[],"unresolved_loot_ids":[],
-                    "rotation_unscoped_admitted_trinket_ids":[]}
+                    "rotation_unscoped_admitted_trinket_ids":[],
+                    "unscoped_direct_special_ids":[],
+                    "rotation_unscoped_admitted_special_ids":[]}
             dungeon_rows[cid]=report
             if mode is None:continue
             options=[x for x in instance_rows if integer(x["MapID"])==
@@ -338,6 +351,21 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
                 src.append({**origin,"season_evidence":ROTATION_TRINKET_EVIDENCE,
                     "active_rotation_display_season_id":sid})
                 dungeon_rows[cid]["rotation_unscoped_admitted_trinket_ids"].append(iid)
+        # Same exact active rotation proof, but only direct-effect physical
+        # special equipment. No ordinary gear, ambiguous class tier, recipe
+        # or unsupported inventory type enters the public special source.
+        if (slot in SPECIAL_INVENTORY_TYPES and iid in linked
+                and not (integer(sp.get("ItemSet"),0)>0 and
+                         slot in TIER_INVENTORY_TYPES)):
+            for origin in unscoped_origins.get(iid,()):
+                cid=origin["challenge_mode_id"]
+                dungeon_rows[cid]["unscoped_direct_special_ids"].append(iid)
+                seasons={s for c,s in dungeon_loot[iid] if c==cid}
+                if any(s not in (0,sid) for s in seasons) and sid not in seasons:
+                    continue
+                src.append({**origin,"season_evidence":ROTATION_SPECIAL_EVIDENCE,
+                    "active_rotation_display_season_id":sid})
+                dungeon_rows[cid]["rotation_unscoped_admitted_special_ids"].append(iid)
         if not src:continue
         is_current_mplus=any(x["source"]=="mplus_journal" for x in src)
         if (integer(sp["ExpansionID"])!=original["db2_expansion_id"]
@@ -365,7 +393,9 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
     for report in dungeon_rows.values():
         for key in ("current_trinket_ids","unscoped_trinket_ids",
                     "other_season_trinket_ids","unresolved_loot_ids",
-                    "rotation_unscoped_admitted_trinket_ids"):
+                    "rotation_unscoped_admitted_trinket_ids",
+                    "unscoped_direct_special_ids",
+                    "rotation_unscoped_admitted_special_ids"):
             report[key]=sorted(set(report[key]))
     result["items"]=sorted([*result["items"],*added],key=lambda x:x["item_id"])
     result["selectable_source_extension"]={
@@ -480,6 +510,9 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
         # user-facing item membership proof, not the item's original era.
         # Scope this change to requested selectable loot; keep internal
         # representative equipment and crafting/tier policy unchanged.
+        if role=="special_effect_gear_candidate" and meta["slot"] in SPECIAL_INVENTORY_TYPES:
+            mplus_ok=mplus_ok or any(_rotation_special_origin_current(
+                x,db2["db2_display_season_id"]) for x in row["sources"])
         public_loot=role in ("trinket","special_effect_gear_candidate")
         # Supplemental Delve loot must not change ordinary G composition.
         if (delve_selectable_only and source_names=={"localbots_delve_pool"}
