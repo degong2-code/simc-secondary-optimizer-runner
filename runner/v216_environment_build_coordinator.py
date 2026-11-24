@@ -3385,8 +3385,9 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
                         build=build,expansion_id=source["db2_expansion_id"])
                 except (delve_provider.SourceBlocked,OSError,ValueError,TypeError,KeyError):
                     pass
-            note={"status":("SUPPLEMENTARY_SOURCE_OBSERVED" if delve is not None
-                            else "SUPPLEMENTARY_SOURCE_PENDING"),"report":delve}
+            note={"status":("SUPPLEMENTARY_SOURCE_PENDING" if delve is None else
+                            "SUPPLEMENTARY_SOURCE_PARTIAL" if delve["unresolved_count"]
+                            else "SUPPLEMENTARY_SOURCE_OBSERVED"),"report":delve}
             target=root/paths["delve"]
             target.parent.mkdir(parents=True,exist_ok=True)
             target.write_text(json.dumps(note,ensure_ascii=False,
@@ -3604,6 +3605,8 @@ def refresh_existing_season_gear_source(*,stage_root,build,transport=None):
     return {"candidate":candidate,"source_generation_sha256":
                 result["source_stage"]["receipt_sha256"],
             "supplementary_delve_status":result.get("supplementary_delve_status"),
+            "supplementary_delve_unresolved_count":
+                result.get("supplementary_delve_unresolved_count"),
             "network_calls":result["network_calls_by_stage"],"native_calls":0}
 
 

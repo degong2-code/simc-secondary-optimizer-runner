@@ -224,6 +224,38 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertEqual(reused["candidate_path"],upgraded["candidate_path"])
         self.assertEqual(reused["source_stage"]["status"],"REUSED_VERIFIED")
 
+    def test_partial_delve_keeps_resolved_choices_and_unresolved_count(self):
+        linked=self.source()
+        original=json.loads(Path(linked["candidate_path"]).read_text())
+        original["full_season_completeness_confirmed"]=False
+        Path(linked["candidate_path"]).write_text(json.dumps(original),"utf8")
+        with (self.wago/"Item.csv").open("a",encoding="utf8",newline="") as f:
+            csv.writer(f).writerow([299902,4,0,12])
+        with (self.wago/"ItemSparse.csv").open("a",encoding="utf8",newline="") as f:
+            csv.writer(f).writerow([299902,"Delve trinket",12,11,0,4,-1,4])
+        def transport(req,timeout):
+            if req.full_url==build.delve_provider.SOURCE_URL:
+                return Response(json.dumps({"items":[
+                    {"id":299902,"name":"Delve trinket"},
+                    {"id":299999,"name":"Unresolved item"}]}).encode("utf8"))
+            return Response(b"ID,ItemID,ItemEffectID\n")
+        args=dict(stage_root=self.root,wago_folder=self.wago,build=self.BUILD,
+                  linked=linked,include_delve=True)
+        result=build._fresh_ordinary_gear_source_stage(**args,transport=transport)
+        self.assertEqual(result["supplementary_delve_status"],
+                         "SUPPLEMENTARY_SOURCE_PARTIAL")
+        self.assertEqual(result["supplementary_delve_unresolved_count"],1)
+        self.assertTrue(result["a7_auto_source_choice_provenance"][
+                        "candidate_provenance_verified"],result)
+        data=json.loads(Path(result["candidate_path"]).read_text("utf8"))
+        self.assertIn(299902,{r["item_id"] for r in data["items"]})
+        def no_fetch(*args,**kwargs):
+            self.fail("NO_REPEAT_SOURCE_FETCH")
+        again=build._fresh_ordinary_gear_source_stage(**args,transport=no_fetch)
+        self.assertEqual(again["network_calls_by_stage"],0)
+        self.assertEqual(again["supplementary_delve_status"],
+                         "SUPPLEMENTARY_SOURCE_PARTIAL")
+
     def test_v697_optional_provider_failure_keeps_raid_mplus(self):
         linked=self.source()
         def transport(req,timeout):

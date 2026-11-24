@@ -3960,7 +3960,11 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     root=jobs.root/"_fresh_season_sources"/("wago_"+game_build)
                     refreshed=environment_build.refresh_existing_season_gear_source(
                         stage_root=root,build=game_build)
-                    if refreshed.get("supplementary_delve_status")=="SUPPLEMENTARY_SOURCE_OBSERVED":
+                    # A partial sealed source is reusable as-is; do not
+                    # repeat the same raw lookup or call it complete.
+                    if refreshed.get("supplementary_delve_status") in (
+                            "SUPPLEMENTARY_SOURCE_OBSERVED",
+                            "SUPPLEMENTARY_SOURCE_PARTIAL"):
                         jobs.season_gear_refresh_cache[game_build]={
                             **refreshed,"network_calls":0}
             result["network_calls_now"]=refreshed["network_calls"]
@@ -3973,6 +3977,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             result.update(status="SEASON_TRINKET_SOURCE_REFRESHED",
                 source_generation_sha256=refreshed["source_generation_sha256"],
                 supplementary_delve_status=refreshed["supplementary_delve_status"],
+                supplementary_delve_unresolved_count=refreshed.get(
+                    "supplementary_delve_unresolved_count"),
                 new_trinkets=[r for r in rows["trinket"] if r["item_id"] in new_ids],
                 new_special_pending_count=sum(r["item_id"] not in prior_ids
                     for r in rows["special_effect_gear_candidate"]))

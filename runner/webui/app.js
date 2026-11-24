@@ -864,7 +864,8 @@ async function refreshExistingSeasonTrinkets(gear,level) {
   // Called only by a current user environment preparation, not historical
   // session browsing. An optional list update never resets T or selection.
   if(!gear||gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"||
-     gear.trinket_source_refresh==="SUPPLEMENTARY_SOURCE_OBSERVED")return;
+     ["SUPPLEMENTARY_SOURCE_OBSERVED","SUPPLEMENTARY_SOURCE_PARTIAL"]
+       .includes(gear.trinket_source_refresh))return;
   try{
     const params=new URLSearchParams({game_build:gear.season_build,
       target_ilevel:String(level),installed_manifest_sha256:gear.installed_manifest_sha256});
@@ -888,7 +889,14 @@ async function refreshExistingSeasonTrinkets(gear,level) {
       ids.add(item.item_id);added.push(item);
     }
     gear.trinket_source_refresh=data.supplementary_delve_status;
-    if(!added.length)return;
+    const unresolved=data.supplementary_delve_unresolved_count;
+    const coverageNote=Number.isSafeInteger(unresolved)&&unresolved>0
+      ?" · 구렁 미확인 "+unresolved+"종":"";
+    if(!added.length){
+      if(coverageNote) $("season-gear-note").textContent=
+        "기존 예산·목록 유지"+coverageNote+" · 시즌 전체 목록 완전성 미확인";
+      return;
+    }
     gear.choices.trinket=[...gear.choices.trinket,...added];
     for(const fieldId of ["trinket1","trinket2"]){
       const select=$(fieldId);
@@ -901,7 +909,7 @@ async function refreshExistingSeasonTrinkets(gear,level) {
     }
     refreshEquipmentSelectionUI();
     $("season-gear-note").textContent="기존 예산 유지 · 검증 장신구 "+added.length+
-      "종 추가 · 시즌 전체 목록 완전성 미확인";
+      "종 추가"+coverageNote+" · 시즌 전체 목록 완전성 미확인";
   }catch{
     // Keep the original installed list usable if source refresh is pending.
   }

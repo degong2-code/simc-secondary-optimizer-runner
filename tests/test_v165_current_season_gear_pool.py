@@ -175,6 +175,41 @@ class Roles(unittest.TestCase):
                 if item["item_id"] in (1004,1006):
                     self.assertFalse(item["user_selectable_candidate"])
 
+    def test_direct_effect_set_outside_class_tier_not_discarded(self):
+        with tempfile.TemporaryDirectory() as d:
+            sparse,effect=self.make(Path(d))
+            w,l=fixture()
+            origin=w["items"][0]["acquisition_sources"][0]
+            w["items"].extend([
+                {"item_id":1010,"name":"Effect set ring","slot":11,
+                 "acquisition_sources":[dict(origin)]},
+                {"item_id":1011,"name":"Effect set chest","slot":5,
+                 "acquisition_sources":[dict(origin)]},
+                {"item_id":1012,"name":"Set without direct record","slot":11,
+                 "acquisition_sources":[dict(origin)]}])
+            with sparse.open("a",encoding="utf8",newline="") as f:
+                csv.writer(f).writerows([[1010,"Effect set ring",11,11,99,4],
+                    [1011,"Effect set chest",5,11,99,4],
+                    [1012,"Set without direct record",11,11,99,4]])
+            with effect.open("a",encoding="utf8",newline="") as f:
+                csv.writer(f).writerows([[2,1010,12346],[3,1011,12347]])
+            result=gear.compile_pool(w,l,sparse,effect,budget_source=None)
+            by_id={x["item_id"]:x for x in result["items"]}
+            self.assertEqual(by_id[1010]["category"],"special_effect_gear_candidate")
+            self.assertTrue(by_id[1010]["user_selectable_candidate"])
+            self.assertFalse(by_id[1011]["user_selectable_candidate"])
+            self.assertFalse(by_id[1012]["user_selectable_candidate"])
+            coverage=result["selectable_loot_coverage"]
+            self.assertIn({"item_id":1011,
+                "reason":"DIRECT_EFFECT_SET_ROLE_UNRESOLVED"},
+                coverage["pending_known_ids"])
+            self.assertIn({"item_id":1004,
+                "reason":"SEASON_MEMBERSHIP_UNRESOLVED"},
+                coverage["pending_known_ids"])
+            self.assertEqual(coverage["current_trinket_count"],1)
+            self.assertEqual(coverage["current_direct_special_count"],2)
+            self.assertFalse(coverage["indirect_effect_routes_reviewed"])
+
     def test_no_effect_table_does_not_assert_plain(self):
         with tempfile.TemporaryDirectory() as d:
             sparse,_=self.make(Path(d))

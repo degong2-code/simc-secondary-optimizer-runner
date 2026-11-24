@@ -2,7 +2,7 @@
 """v165: small CURRENT-season candidate catalog, from v163/v162 + same-build Retail DB2 ItemXItemEffect.
 
 No old item seed, SimC process, DPS query, or effect emulation.
-Effect presence comes from DB2 ItemEffect.ParentItemID; absence only proves
+Effect presence comes from Retail DB2 ItemXItemEffect; absence only proves
 NO_DIRECT_ITEM_EFFECT_RECORD, not absence of bonus-option or SimC effects.
 Only WCL-matched raid/current-expansion, explicit M+ display season, accepted
 Localbots, and current-expansion crafts are user-list eligible.
@@ -14,6 +14,8 @@ from pathlib import Path
 
 SCHEMA="v165_current_season_gear_pool_v1"
 TRINKET=12
+# Exactly the inventory types of class tier pieces (v168).
+TIER_INVENTORY_TYPES=frozenset((1,3,5,20,10,7))
 MAX_SOURCE_BYTES=5_000_000
 MAX_CSV_BYTES=210_000_000
 MAX_ROWS=1_000_000
@@ -182,6 +184,7 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
     need(ids<=set(sparse),"ITEMSPARSE_ID_MISSING")
     linked,fx_sha=effects(effect_path,ids)
     output=[]
+    pending_public=[]
     for iid,row in sorted(originals.items()):
         meta=sparse[iid]
         need(meta["slot"]==row["item_slot"] and
@@ -199,7 +202,11 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
         direct=(iid in linked) if linked is not None else None
         if meta["slot"]==TRINKET:role="trinket"
         elif craft:role="selectable_stat_craft"
-        elif meta["set_id"]>0:role="set_piece_unclassified"
+        # Non-tier inventory types cannot be one of v168's five class
+        # pieces. A set ID alone must not hide their direct item effects.
+        elif meta["set_id"]>0 and (
+                meta["slot"] in TIER_INVENTORY_TYPES or direct is not True):
+            role="set_piece_unclassified"
         elif direct is True:role="special_effect_gear_candidate"
         elif direct is False:role="plain_representative_candidate"
         else:role="effect_classification_pending"
@@ -212,6 +219,9 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
         # Supplemental Delve loot must not change ordinary G composition.
         if (delve_selectable_only and source_names=={"localbots_delve_pool"}
                 and not public_loot):
+            if direct is True and role=="set_piece_unclassified":
+                pending_public.append({"item_id":iid,
+                    "reason":"DIRECT_EFFECT_SET_ROLE_UNRESOLVED"})
             continue
         season_eligible=((meta["expansion"]==db2["db2_expansion_id"] and
                          (craft or raid or mplus_ok or
@@ -230,6 +240,12 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
                 ("effect_classification_pending","set_piece_unclassified"),
               "acquisition_sources":row["sources"]}
         output.append(item)
+        if public_loot and not season_eligible:
+            pending_public.append({"item_id":iid,
+                "reason":"SEASON_MEMBERSHIP_UNRESOLVED"})
+        elif direct is True and role=="set_piece_unclassified":
+            pending_public.append({"item_id":iid,
+                "reason":"DIRECT_EFFECT_SET_ROLE_UNRESOLVED"})
     count=Counter(x["category"] for x in output)
     selection=Counter(x["season_selection"] for x in output)
     return {"schema":SCHEMA,"status":("EFFECT_TABLE_OBSERVED_CANDIDATES"
@@ -242,6 +258,19 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
        "item_x_item_effect_csv_sha256":fx_sha,
        "effect_classification_meaning":"RETAIL_ITEMXITEMEFFECT_RELATION_ONLY_NOT_SIMC_PROC_CERTIFICATION",
        "supplementary_localbots_status":delve_status,
+       # Diagnostics from the same scan, not a completeness gate.
+       "selectable_loot_coverage":{
+           "known_source_item_count":len(originals),
+           "current_trinket_count":sum(x["category"]=="trinket" and
+               x["user_selectable_candidate"] for x in output),
+           "current_direct_special_count":sum(
+               x["category"]=="special_effect_gear_candidate" and
+               x["user_selectable_candidate"] for x in output),
+           "pending_known_ids":pending_public,
+           "delve_unresolved_count":(
+               delve.get("unresolved_count") if delve is not None else None),
+           "indirect_effect_routes_reviewed":False,
+           "full_season_completeness_confirmed":False},
        "usable_four_piece_roster_certified":False,
        "fully_implemented_special_item_list_certified":False,
        "full_season_completeness_confirmed":False,
