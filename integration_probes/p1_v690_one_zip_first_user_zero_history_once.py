@@ -284,6 +284,48 @@ def stage(args):
             wait_idle(driver,1650)
             environment=driver.execute_script("""const e=window.__v690_season;
               if(!e)return null;
+              function boundedJF(e) {
+                const p=e.zero_history_build||{}, c=e.source_compilation||{};
+                const get=k=>p[k]??c[k]??null;
+                const code=v=>typeof v==="string"&&/^[A-Z][A-Z0-9_]{1,119}$/.test(v.split(":")[0])?v.split(":")[0]:null;
+                const codes=v=>Array.isArray(v)?v.slice(0,32).map(code).filter(Boolean):[];
+                const num=v=>Number.isSafeInteger(v)&&v>=0?v:null;
+                const sha=v=>typeof v==="string"&&/^[a-f0-9]{64}$/.test(v)?v:null;
+                const stage=r=>r&&typeof r==="object"?{
+                  status:code(r.status),reason:code(r.reason),requires:codes(r.requires),
+                  missing:codes(r.missing),quality_source_status:code(r.quality_source_status),
+                  tier_source_status:code(r.tier_source_status),candidate_count:num(r.candidate_count),
+                  sample_count:num(r.sample_count),new_native_calls:num(r.new_native_calls),
+                  source_sha256:sha(r.source_sha256),v221_sha256:sha(r.v221_stage_receipt_sha256),
+                  v230_sha256:sha(r.v230_stage_receipt_sha256)
+                }:null;
+                const nativeRows=v=>Array.isArray(v)?v.slice(0,24).map(r=>({
+                  status:code(r.status),reason:code(r.reason),native_error_code:code(r.native_error),
+                  native_error_present:!!r.native_error,new_native_calls:num(r.new_native_calls),
+                  physical_item_id:num(r.physical_item_id??r.physical_item_native_source_unadmitted?.physical_item_id),
+                  J_candidate:num(r.simc_effective_two_stat_rating_unadmitted),
+                  F_candidate:num(r.F_candidate_unadmitted)
+                })):[];
+                const jNative=get("four_stat_simc_native_j_source_unadmitted");
+                const fNative=get("automatic_F_native_measurements_unadmitted");
+                const fSelected=get("automatic_default_F_source_selection_unadmitted");
+                const owners=get("selected_J_F_source_owner_numeric_unadmitted");
+                const core=get("required_core_source_owner_report");
+                return {
+                  J:{metadata:stage(get("ordinary_gem_v221_v230_source_candidates_unadmitted")),
+                     pinned_dbc:stage(get("four_stat_pinned_dbc_j_source_unadmitted")),
+                     native:stage(jNative),native_rows:nativeRows(jNative?.native_observations_unadmitted)},
+                  F:{selection:stage(fSelected),
+                     physical_item_id:num(fSelected?.selected_physical_items_unadmitted?.flask_item_id),
+                     native:stage(fNative),native_rows:nativeRows(fNative?.per_item),
+                     observations:nativeRows(e.native_effect_numeric_sources_unadmitted?.filter(r=>r.kind==="flask"))},
+                  numeric_owner:stage(owners),J_rating:num(owners?.J?.rating),F_rating:num(owners?.F?.rating),
+                  quality_owner:stage(get("selected_J_F_source_owner_quality_unadmitted")),
+                  selected_budget:stage(get("selected_auto_v222_numeric_preview_unadmitted")),
+                  verified_components:codes(get("original_J_F_verified_component_names")),
+                  missing_core_owners:codes(core?.original_source_owner_missing_for_selected_request)
+                };
+              }
               return {
                 ready:e.web_environment_scope?.environment_ready===true,
                 installed:e.web_environment_scope?.environment_installed===true,
@@ -294,7 +336,8 @@ def stage(args):
                     e.source_compilation?.verified_environment_install?.
                       manifest_sha256,
                 requires:e.zero_history_build?.requires||[],
-                status:e.source_compilation?.status};""")
+                status:e.source_compilation?.status,
+                jf_source_diagnostic:boundedJF(e)};""")
             record["last_completed_stage"]="REAL_ENVIRONMENT_RETURNED"
             record["first_real_environment_summary"]=environment
             if not isinstance(environment,dict) or not (

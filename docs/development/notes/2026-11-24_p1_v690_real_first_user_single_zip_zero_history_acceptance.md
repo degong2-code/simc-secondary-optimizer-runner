@@ -63,3 +63,9 @@ Windows [Actions #45231378708](https://github.com/degong2-code/simc-secondary-op
 ## v690.9 — focused 3건 테스트의 JS 개행 비교식만 수정
 
 [v690.8 Windows #45237038136](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45237038136)는 현재 원본 ZIP 생성/브라우저/Native 호출 이전 **추가한 선행 정적 회귀 3개 중 1개 FAIL**: 기대 문자열이 `getElementById('optimizer-oil-enabled').checked`로 한 줄이어야 한다고 잘못 가정. 실제 harness는 같은 객체의 `.checked`를 다음 줄에 표기한 올바른 JS이다. 나머지 HTML visible control/JS change wiring focused 2개 PASS. 테스트 문자열을 공백·줄바꿈을 허용하는 정확한 대상 정규식으로 변경. 제품 코드·harness 동작·원본/시즌 캐시/Native 변경 0. 실제 제로베이스 결과는 다음 GitHub Actions 영수증 이후에만 확정한다.
+
+## v691 — 원본 영수증에서 확인한 최초 진단 단절 (제품 J/F 원인 미확정)
+
+2026-11-24. v690.9 #45237310462 artifact #14849293119의 두 JSON 원본과 v689 #45227006628 artifact #14844787176의 두 JSON 원본을 직접 읽었다. 실패 requires에는 FOUR_ORDINARY_TYPES_SAME_BUILD_SOURCE_PENDING, SELECTED_AUTO_GJFO_V271_PHYSICAL_GEM_J_NUMERIC_PENDING 및 SELECTED_AUTO_GJFO_SELECTED_FLASK_NATIVE_RATING_PENDING이 존재한다. v690 환경 Native3, 사용자 DPS0. v689의 실제 G2850/J92/F165/O0와 G/J/F/O owner 모두 존재, 설치 성공 및 Native6은 다른 정확 revision의 역사 증거이다. v610 및 v690은 같은 v113.build_season_environment→v216 경로를 사용하며 70961 nominal JSON은 repo에 없고 70783만 존재. 신규 revision 자체, 파서, 보석 품질 순위, F 정적 delta 중 무엇이 원인인지는 단정하지 않는다.
+
+기존 v216은 이미 J metadata/DBC/Native preview, F source selection/pair 및 J/F numeric/quality owner 사유를 반환한다. 기존 v690 receipt는 requires 및 상태만 보존해 실제 내부 첫 결손을 구분할 수 없다. 따라서 기존 브라우저 response에서 boundedJF projection으로 그 필드만 추출한다. 원본 전문·경로·raw native log·인증정보는 보존하지 않는다. 기존 UI/제품 코드·예산/승인·캐시·Native 엔진 변경0. 실제 동일 JS projection에 J/F failure, 비밀/로그 제외, missing, numeric fixture를 적용해 확인(실제품 실증 아님). 원본 stage가 과거 bounded artifact에 없고 동일 공개 자동 설치 바이너리/작업공간도 보존되지 않았으므로 현재 기존 one-shot을 딱 1회만 재사용해 원래 결손을 특정한다. 새 workflow/수집기/독립 Gate 없음. 결과 전 J/F 복구 또는 제품 E2E PASS 선언 금지. 공식 15/78, B10, full_product_e2e=PENDING, 개인 PC 보류 및 권한 불변.
