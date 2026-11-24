@@ -151,6 +151,21 @@ def assess(*, source, catalog, expected_game_build, source_report_sha256,
                        ("trinket","special_effect_gear_candidate")):
                 eligible=True
                 break
+            if pool._rotation_trinket_origin_current(src,season_id):
+                # Require the exact derived rotation receipt row, not an
+                # arbitrary marker on an unscoped item or ordinary gear.
+                extension=source.get("selectable_source_extension") or {}
+                if (candidate["category"]=="trinket" and original.get("slot")==12
+                        and extension.get("mplus_rotation_reviewed") is True
+                        and any(d.get("challenge_mode_id")==src["challenge_mode_id"]
+                            and d.get("journal_instance_id")==src["journal_instance_id"]
+                            and d.get("status")=="DUNGEON_JOURNAL_OBSERVED"
+                            and item_id in d.get("rotation_unscoped_admitted_trinket_ids",[])
+                            and item_id in d.get("unscoped_trinket_ids",[])
+                            for d in extension.get("mplus_dungeon_review",[]))):
+                    eligible=True
+                    break
+                continue
             if not _eligible(src,season_id):
                 continue
             if src["source"] in ("selectable_stat_craft","crafted_fixed_gear"):

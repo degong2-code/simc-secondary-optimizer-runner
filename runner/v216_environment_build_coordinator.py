@@ -3576,11 +3576,17 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
         coverage=[]
         for row in extension.get("mplus_dungeon_review",[]):
             current=set(row["current_trinket_ids"])
+            eligible=current|set(row.get("rotation_unscoped_admitted_trinket_ids",[]))
             coverage.append({**row,
                 "registered_current_trinket_ids":sorted(current&public_trinkets),
                 "missing_current_trinket_ids":sorted(current-public_trinkets),
                 "unscoped_only_trinket_ids":sorted(
-                    set(row["unscoped_trinket_ids"])-current)})
+                    set(row["unscoped_trinket_ids"])-current),
+                "rotation_eligible_trinket_ids":sorted(eligible),
+                "registered_rotation_trinket_ids":sorted(eligible&public_trinkets),
+                "missing_rotation_trinket_ids":sorted(eligible-public_trinkets),
+                "unscoped_unresolved_trinket_ids":sorted(
+                    set(row["unscoped_trinket_ids"])-eligible)})
     plain=[r for r in result["items"]
            if r["category"]=="plain_representative_candidate"]
     internal=result.get("internal_conditional_mplus_plain_candidates",[])

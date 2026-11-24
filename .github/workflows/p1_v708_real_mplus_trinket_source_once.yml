@@ -7,12 +7,13 @@ on:
       - integration_probes/p1_v708_real_mplus_trinket_source_once.py
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: p1-v708-70961-trinket-source-once
   cancel-in-progress: false
 jobs:
   source-only:
-    if: ${{ contains(github.event.head_commit.message, '[v708-source-once]') }}
+    if: ${{ contains(github.event.head_commit.message, '[v708-source-once]') || contains(github.event.head_commit.message, '[v709-reuse-once]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 18
     env:
@@ -28,7 +29,18 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      - name: Reuse exact v708 public raw snapshot and sealed source receipts
+        if: ${{ contains(github.event.head_commit.message, '[v709-reuse-once]') }}
+        uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 45371957303
+          name: p1-v708-public-70961-db2-reuse
+          path: out/v708/runs/_fresh_season_sources/wago_12.1.5.70961
+          github-token: ${{ github.token }}
       - name: One original source-only observation
+        env:
+          V709_REUSE_REQUIRED: ${{ contains(github.event.head_commit.message, '[v709-reuse-once]') && '1' || '0' }}
         run: |
           python -m py_compile integration_probes/p1_v708_real_mplus_trinket_source_once.py
           python -u integration_probes/p1_v708_real_mplus_trinket_source_once.py --out out/v708
@@ -41,7 +53,7 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
       - name: Preserve only public same-build DB2 raw for reuse
-        if: always()
+        if: ${{ always() && contains(github.event.head_commit.message, '[v708-source-once]') }}
         uses: actions/upload-artifact@v6
         with:
           name: p1-v708-public-70961-db2-reuse

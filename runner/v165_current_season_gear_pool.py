@@ -124,6 +124,25 @@ def _journal_origin_current(row, display_season, *, raid):
                              "UNKNOWN_WORLD_STATE_EXPRESSION"))
 
 
+ROTATION_TRINKET_EVIDENCE="DB2_ACTIVE_ROTATION_UNSCOPED_TRINKET"
+
+def _rotation_trinket_origin_current(row, display_season):
+    """Only the derived, pinned active rotation may certify unscoped loot.
+    
+    The raw item DisplaySeasonID remains zero. Do not reinterpret arbitrary
+    season-0 rows or allow this trinket-only relation into ordinary G.
+    """
+    return (type(row) is dict and type(display_season) is int
+            and display_season>0 and row.get("source")=="mplus_journal"
+            and type(row.get("display_season_id")) is int
+            and row["display_season_id"]==0
+            and row.get("season_evidence")==ROTATION_TRINKET_EVIDENCE
+            and type(row.get("active_rotation_display_season_id")) is int
+            and row["active_rotation_display_season_id"]==display_season
+            and all(type(row.get(k)) is int and row[k]>0 for k in
+                ("journal_encounter_id","journal_instance_id","challenge_mode_id")))
+
+
 def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
     """Supplement only authenticated seasonal sources; preserve original v163/G."""
     import copy
@@ -186,7 +205,8 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
             report={"challenge_mode_id":cid,"name":mode["Name_lang"] if mode else None,
                     "journal_instance_id":None,"status":"DUNGEON_JOURNAL_UNRESOLVED",
                     "current_trinket_ids":[],"unscoped_trinket_ids":[],
-                    "other_season_trinket_ids":[],"unresolved_loot_ids":[]}
+                    "other_season_trinket_ids":[],"unresolved_loot_ids":[],
+                    "rotation_unscoped_admitted_trinket_ids":[]}
             dungeon_rows[cid]=report
             if mode is None:continue
             options=[x for x in instance_rows if integer(x["MapID"])==
@@ -234,6 +254,7 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
                                      "wcl_boss_name":boss["name"]}
     origins={}
     dungeon_loot=defaultdict(set)
+    unscoped_origins=defaultdict(list)
     world_pending=[]
     for row in read_csv(folder/"JournalEncounterItem.csv",(
             "ID","JournalEncounterID","ItemID","DisplaySeasonID")):
@@ -253,6 +274,9 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
             dungeon_loot[iid].add((cid,season))
             if season==sid:
                 origins.setdefault(iid,[]).append({
+                    **base,"source":"mplus_journal","challenge_mode_id":cid})
+            elif season==0:
+                unscoped_origins[iid].append({
                     **base,"source":"mplus_journal","challenge_mode_id":cid})
         if instance in instances and iid not in indexed and season in (0,sid):
             origins.setdefault(iid,[]).append({**base,"source":"raid_journal"})
@@ -301,6 +325,19 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
                 key=("current_trinket_ids" if season==sid else
                      "unscoped_trinket_ids" if season==0 else "other_season_trinket_ids")
                 dungeon_rows[cid][key].append(iid)
+        if slot==TRINKET:
+            # The authenticated rotation, exact map/instance/encounter and
+            # physical trinket slot establish candidate membership. Season
+            # 0 is unscoped, not "old season". Explicit other-season-only
+            # occurrences stay withheld, including contradictory zero rows.
+            for origin in unscoped_origins.get(iid,()):
+                cid=origin["challenge_mode_id"]
+                seasons={s for c,s in dungeon_loot[iid] if c==cid}
+                if any(s not in (0,sid) for s in seasons) and sid not in seasons:
+                    continue
+                src.append({**origin,"season_evidence":ROTATION_TRINKET_EVIDENCE,
+                    "active_rotation_display_season_id":sid})
+                dungeon_rows[cid]["rotation_unscoped_admitted_trinket_ids"].append(iid)
         if not src:continue
         is_current_mplus=any(x["source"]=="mplus_journal" for x in src)
         if (integer(sp["ExpansionID"])!=original["db2_expansion_id"]
@@ -312,11 +349,13 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
         old=indexed.get(iid)
         if old is not None:
             known={(x.get("source"),x.get("journal_encounter_id"),
-                    x.get("display_season_id"),x.get("challenge_mode_id"))
+                    x.get("display_season_id"),x.get("challenge_mode_id"),
+                    x.get("season_evidence"))
                    for x in old["acquisition_sources"]}
             for origin in src:
                 key=(origin.get("source"),origin.get("journal_encounter_id"),
-                     origin.get("display_season_id"),origin.get("challenge_mode_id"))
+                     origin.get("display_season_id"),origin.get("challenge_mode_id"),
+                     origin.get("season_evidence"))
                 if key not in known:
                     old["acquisition_sources"].append(origin);known.add(key)
             continue
@@ -325,7 +364,8 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
                       "acquisition_sources":[unique[k] for k in sorted(unique)]})
     for report in dungeon_rows.values():
         for key in ("current_trinket_ids","unscoped_trinket_ids",
-                    "other_season_trinket_ids","unresolved_loot_ids"):
+                    "other_season_trinket_ids","unresolved_loot_ids",
+                    "rotation_unscoped_admitted_trinket_ids"):
             report[key]=sorted(set(report[key]))
     result["items"]=sorted([*result["items"],*added],key=lambda x:x["item_id"])
     result["selectable_source_extension"]={
@@ -421,6 +461,8 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
         delve_ok="localbots_delve_pool" in source_names
         mplus_ok=any(_journal_origin_current(
                      x,db2["db2_display_season_id"],raid=False)
+                     or (meta["slot"]==TRINKET and
+                         _rotation_trinket_origin_current(x,db2["db2_display_season_id"]))
                      for x in row["sources"])
         direct=(iid in linked) if linked is not None else None
         if meta["slot"]==TRINKET:role="trinket"

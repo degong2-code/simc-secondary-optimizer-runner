@@ -299,7 +299,7 @@ def validate(payload):
                      "source","season_evidence","display_season_id",
                      "world_state_expression_id","journal_encounter_id",
                      "journal_instance_id","challenge_mode_id",
-                     "expansion_id") for k in r)
+                     "expansion_id","active_rotation_display_season_id") for k in r)
                  for r in evidence),
              "PRODUCT_SOURCE_EVIDENCE_INVALID")
         # Older already-sealed v166 catalogs contain source kinds but not

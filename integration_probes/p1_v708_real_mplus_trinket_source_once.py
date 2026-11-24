@@ -35,34 +35,50 @@ def project(source, gear, candidate):
     rows=[]
     for entry in gear.get("mplus_trinket_coverage") or []:
         current=set(entry["current_trinket_ids"])
+        eligible=set(entry.get("rotation_eligible_trinket_ids",current))
         prev=baseline.get(entry["challenge_mode_id"],set())
-        registered=current&set(visible)
+        registered=eligible&set(visible)
         rows.append({**entry,"original_v163_current_trinket_ids":sorted(prev),
                      "newly_recovered_current_ids":sorted(registered-prev),
                      "registered_current_trinkets":[{"item_id":i,"name":visible[i]}
+                                                     for i in sorted(current&registered)],
+                     "registered_rotation_trinkets":[{"item_id":i,"name":visible[i]}
                                                      for i in sorted(registered)],
-                     "missing_current_trinket_ids":sorted(current-registered)})
+                     "missing_current_trinket_ids":sorted(current-registered),
+                     "rotation_eligible_trinket_ids":sorted(eligible),
+                     "registered_rotation_trinket_ids":sorted(registered),
+                     "missing_rotation_trinket_ids":sorted(eligible-registered)})
     all_current={i for row in rows for i in row["current_trinket_ids"]}
     all_registered={i for row in rows for i in row["registered_current_trinket_ids"]}
+    all_eligible={i for row in rows for i in row["rotation_eligible_trinket_ids"]}
+    all_rotation_registered={i for row in rows for i in row["registered_rotation_trinket_ids"]}
     all_baseline={i for row in rows for i in row["original_v163_current_trinket_ids"]}
     missing=all_current-all_registered
     unmapped=[x["challenge_mode_id"] for x in rows if x["status"]!="DUNGEON_JOURNAL_OBSERVED"]
-    pending=sorted({i for row in rows for key in ("unscoped_only_trinket_ids",
+    pending=sorted({i for row in rows for key in ("unscoped_unresolved_trinket_ids",
                                                  "unresolved_loot_ids")
-                    for i in row[key]})
+                    for i in row.get(key,[])})
     expected=source.get("wcl_mplus_dungeons")
     # Even zero set difference is not proof if the rotation or any dungeon's
     # loot was not observed. Unknown season rows stay pending.
     explicit_ok=(type(expected) is int and expected>0 and len(rows)==expected
                  and not unmapped and all(r["current_trinket_ids"] for r in rows)
                  and not missing and all(not r["missing_current_trinket_ids"] for r in rows))
+    rotation_ok=(type(expected) is int and expected>0 and len(rows)==expected
+                 and not unmapped and all(r["rotation_eligible_trinket_ids"] for r in rows)
+                 and all(not r["missing_rotation_trinket_ids"] for r in rows)
+                 and not pending)
     return {"expected_wcl_dungeons":expected,"reviewed_dungeons":len(rows),
             "unmapped_challenge_mode_ids":unmapped,
             "original_mapped_dungeons":source.get("mapped_mplus_dungeons"),
             "current_trinket_count":len(all_current),
             "registered_current_trinket_count":len(all_registered),
             "original_v163_current_trinket_count":len(all_baseline),
-            "newly_recovered_current_ids":sorted(all_registered-all_baseline),
+            "newly_recovered_current_ids":sorted(all_rotation_registered-all_baseline),
+            "rotation_eligible_trinket_count":len(all_eligible),
+            "registered_rotation_trinket_count":len(all_rotation_registered),
+            "missing_rotation_trinket_ids":sorted(all_eligible-all_rotation_registered),
+            "authenticated_rotation_trinket_coverage_verified":bool(rotation_ok),
             "missing_current_trinket_ids":sorted(missing),
             "unscoped_or_unresolved_loot_ids":pending,
             "explicit_current_rotation_coverage_verified":bool(explicit_ok),
@@ -91,9 +107,19 @@ def observe(out):
             return 2
         root=dest/"runs"
         root.mkdir(exist_ok=True)
+        reuse=os.environ.get("V709_REUSE_REQUIRED")=="1"
+        folder=root/"_fresh_season_sources"/("wago_"+BUILD)
+        def forbid_db2(*args,**kwargs):
+            raise RuntimeError("V709_UNEXPECTED_DB2_REDOWNLOAD")
+        if reuse and not (folder/"wago/receipt.json").is_file():
+            raise RuntimeError("V709_REUSE_ARTIFACT_MISSING")
         collected=original.collect_wago_new_season_source(
             sessions_root=root,expected_game_build=BUILD,credentials=credentials,
-            myth_target_source_only=True)
+            myth_target_source_only=True,fetch=forbid_db2 if reuse else None)
+        state["wago_snapshot_executed"]=collected["source_stage"].get("executed")
+        state["raw_db2_reuse_required"]=reuse
+        if reuse and state["wago_snapshot_executed"] is not False:
+            raise RuntimeError("V709_RAW_SOURCE_REUSE_NOT_CONFIRMED")
         state["source_network_calls"]=collected["network_calls_by_stage"]
         state["wago_source_stage_sha256"]=collected["source_stage"]["receipt_sha256"]
         linked=collected["season_join"]
@@ -107,9 +133,13 @@ def observe(out):
         state["original_v163_sha256"]=original.digest(Path(linked["candidate_path"]).read_bytes())
         # The same stage used by existing-season refresh, without the
         # unrelated optional bonus/tier/SimC investigation.
+        def reuse_transport(req,timeout):
+            if "/ItemXItemEffect/" in req.full_url:
+                raise RuntimeError("V709_UNEXPECTED_EFFECT_REDOWNLOAD")
+            return original.urlopen(req,timeout=timeout)
         gear=original._fresh_ordinary_gear_source_stage(
             stage_root=folder,wago_folder=folder/"wago",build=BUILD,
-            linked=linked,include_delve=True)
+            linked=linked,include_delve=True,transport=reuse_transport if reuse else None)
         state["gear_network_calls"]=gear["network_calls_by_stage"]
         state["gear_status"]=gear["status"]
         a7=gear.get("a7_auto_source_choice_provenance") or {}
@@ -128,6 +158,8 @@ def observe(out):
             "supplementary_wcl_boss_review")
         if not state["source_provenance_verified"]:
             state.update(status="PENDING_SOURCE_PROVENANCE",first_blocker=a7.get("reason"))
+        elif state["authenticated_rotation_trinket_coverage_verified"]:
+            state["status"]="PASS_REAL_AUTHENTICATED_ROTATION_TRINKET_COVERAGE"
         elif not state["explicit_current_rotation_coverage_verified"]:
             state["status"]="OBSERVED_REAL_MPLUS_COVERAGE_GAPS"
         elif state["unscoped_or_unresolved_loot_ids"]:
@@ -148,6 +180,9 @@ def observe(out):
             "current_trinket_count","registered_current_trinket_count",
             "original_v163_current_trinket_count","newly_recovered_current_ids",
             "missing_current_trinket_ids","unmapped_challenge_mode_ids",
+            "rotation_eligible_trinket_count","registered_rotation_trinket_count",
+            "missing_rotation_trinket_ids","authenticated_rotation_trinket_coverage_verified",
+            "wago_snapshot_executed","source_network_calls","gear_network_calls",
             "explicit_current_rotation_coverage_verified","native_calls")},
             ensure_ascii=True,sort_keys=True),flush=True)
         # Small per-dungeon evidence in actual Actions logs, not raw sources.

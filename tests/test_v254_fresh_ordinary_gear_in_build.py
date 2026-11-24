@@ -427,7 +427,9 @@ class FreshOrdinaryGearSource(unittest.TestCase):
                (299903,"Unscoped trinket",12,7),
                (299904,"Other season trinket",12,7),
                (299905,"Registered boss trinket",12,11),
-               (299906,"Unregistered field boss trinket",12,11)]
+               (299906,"Unregistered field boss trinket",12,11),
+               (299907,"Unscoped ordinary",5,11),
+               (299908,"Conflicting season trinket",12,7)]
         with (self.wago/"Item.csv").open("a",encoding="utf8",newline="") as f:
             csv.writer(f).writerows([[iid,4,0,slot] for iid,_,slot,_ in extra])
         with (self.wago/"ItemSparse.csv").open("a",encoding="utf8",newline="") as f:
@@ -452,7 +454,8 @@ class FreshOrdinaryGearSource(unittest.TestCase):
             {"ID":i,"JournalEncounterID":eid,"ItemID":iid,"DisplaySeasonID":sid}
             for i,(eid,iid,sid) in enumerate([
                 (402,299902,47),(402,299903,0),(402,299904,46),
-                (502,299905,47),(503,299906,47)],1)])
+                (502,299905,47),(503,299906,47),(402,299907,0),
+                (402,299908,0),(402,299908,46)],1)])
         self.write_csv("CraftingData.csv",["ID","CraftedItemID"],[])
         tables={p.stem:{"sha256":build.digest(p.read_bytes()),
                          "bytes":p.stat().st_size} for p in self.wago.glob("*.csv")}
@@ -488,11 +491,21 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertEqual(first["plain_candidate_count"],1)
         data=json.loads(Path(first["candidate_path"]).read_text("utf8"))
         self.assertEqual({x["item_id"] for x in data["items"]},
-                         {self.item_id,299902,299905})
+                         {self.item_id,299902,299903,299905})
         rows=first["mplus_trinket_coverage"]
         self.assertEqual(rows[0]["registered_current_trinket_ids"],[299902])
-        self.assertEqual(rows[0]["unscoped_only_trinket_ids"],[299903])
-        self.assertEqual(rows[0]["other_season_trinket_ids"],[299904])
+        self.assertEqual(rows[0]["unscoped_only_trinket_ids"],[299903,299908])
+        self.assertEqual(rows[0]["other_season_trinket_ids"],[299904,299908])
+        self.assertEqual(rows[0]["rotation_unscoped_admitted_trinket_ids"],[299903])
+        self.assertEqual(rows[0]["registered_rotation_trinket_ids"],[299902,299903])
+        self.assertEqual(rows[0]["missing_rotation_trinket_ids"],[])
+        self.assertEqual(rows[0]["unscoped_unresolved_trinket_ids"],[299908])
+        recovered=next(x for x in data["items"] if x["item_id"]==299903)
+        self.assertTrue(any(
+            x["display_season_id"]==0 and
+            x["active_rotation_display_season_id"]==47 and
+            x["season_evidence"]=="DB2_ACTIVE_ROTATION_UNSCOPED_TRINKET"
+            for x in recovered["source_evidence"]))
         self.assertEqual(rows[0]["missing_current_trinket_ids"],[])
         self.assertEqual(rows[1]["status"],"DUNGEON_JOURNAL_UNRESOLVED")
         self.assertEqual(first["selectable_source_extension"][

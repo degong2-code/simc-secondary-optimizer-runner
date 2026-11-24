@@ -87,7 +87,7 @@ def build(pool,item_file,sparse_file):
                     "source","season_evidence","display_season_id",
                     "world_state_expression_id","journal_encounter_id",
                     "journal_instance_id","challenge_mode_id",
-                    "expansion_id") if key in src}
+                    "expansion_id","active_rotation_display_season_id") if key in src}
                 for src in v["acquisition_sources"]],
             "selection_evidence":v["season_selection"]}
         if v["user_selectable_candidate"]:
