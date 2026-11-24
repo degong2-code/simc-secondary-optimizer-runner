@@ -191,15 +191,18 @@ def _static_build():
     except (gear.GearBlocked,OSError,ValueError,KeyError):
         return None
 
-def _fetch_ids(ids,*,token=None):
+def _fetch_ids(ids,*,token=None,credentials=None):
     """No automatic auth call when the worklist is already fully cached."""
     need(len(ids)<=MAX_FETCH,"FETCH_LIMIT")
     if not ids:return [],[],0
     if not token:
         token=os.environ.get("BLIZZARD_ACCESS_TOKEN")
     if not token:
-        client=os.environ.get("BLIZZARD_CLIENT_ID")
-        secret=os.environ.get("BLIZZARD_CLIENT_SECRET")
+        # Production Windows credentials are passed in memory, not copied
+        # into process environment, the name cache, or API responses.
+        supplied=credentials if isinstance(credentials,dict) else {}
+        client=supplied.get("BLIZZARD_CLIENT_ID") or os.environ.get("BLIZZARD_CLIENT_ID")
+        secret=supplied.get("BLIZZARD_CLIENT_SECRET") or os.environ.get("BLIZZARD_CLIENT_SECRET")
         if not client or not secret:return [],[{"item_id":i,
                                "code":"CREDENTIALS_UNAVAILABLE"} for i in ids],0
         try:token=blizzard.oauth_token(blizzard.BLIZZARD_TOKEN_URL,
@@ -251,7 +254,7 @@ def _store(root,build,rows,requested,roles):
     return True
 
 def build_from_verified_install(root,installed,physical_layout=None,
-                                *,catalog=None,allow_network=True):
+                                *,catalog=None,allow_network=True,credentials=None):
     """Automatic Environment Build stage: never another item-admission gate."""
     game_build=installed["game_build"]
     roles=verified_environment_items(installed,physical_layout,catalog=catalog)
@@ -264,7 +267,9 @@ def build_from_verified_install(root,installed,physical_layout=None,
         old.setdefault(r["item_id"],r)
     needed=sorted(chosen-set(old))
     query=needed[:MAX_FETCH] if allow_network else []
-    collected,errors,network_calls=_fetch_ids(query) if query else ([],[],0)
+    collected,errors,network_calls=(
+        _fetch_ids(query,**({"credentials":credentials} if credentials is not None else {}))
+        if query else ([],[],0))
     for row in collected:old[row["item_id"]]=row
     if chosen or old:
         _store(root,game_build,list(old.values()),chosen,roles)
@@ -303,7 +308,7 @@ def cache_status(root,build):
                 "game_build":build,"verified_item_names":0,
                 "native_calls_now":0,"network_calls_now":0}
 
-def build_for_environment(root,game_build,result,*,target_ilevel):
+def build_for_environment(root,game_build,result,*,target_ilevel,credentials=None):
     """v113 bridge for an already verified v212 installation or reuse.
 
     Verifies the existing original v212 receipt again only to obtain its
@@ -336,5 +341,23 @@ def build_for_environment(root,game_build,result,*,target_ilevel):
     source=result.get("installed_manifest_sha256") or install.get("manifest_sha256")
     need(source==doc["manifest_sha256"],"V212_SOURCE_MANIFEST_DRIFT")
     physical=compilation.get("physical_gem_layout_unadmitted")
-    catalog=exact_product_catalog(game_build)
-    return build_from_verified_install(root,doc,physical,catalog=catalog)
+    # The packaged v167 catalogue is browsing/history, not the actual
+    # installed v213 choice list. Only use the original same-SHA catalogue
+    # belonging to this v212 receipt; the old static *names* may still seed
+    # the intersection of this exact current worklist.
+    catalog=None
+    catalog_path=path.parent/"v213_candidate_catalog.json"
+    if catalog_path.is_file() and not catalog_path.is_symlink():
+        try:
+            installed_catalog,raw_sha=manifests.read_json(catalog_path)
+            if (raw_sha==doc.get("source_catalog_artifact_sha256") and
+                installed_catalog.get("manifest_sha256")==
+                    doc.get("source_catalog_manifest_sha256") and
+                installed_catalog.get("game_build")==game_build):
+                catalog=gear.public_installed_v213_candidates(
+                    installed_catalog,installed_manifest_sha256=source)
+        except (OSError,ValueError,KeyError,TypeError):
+            # Optional translation must not invalidate core installation.
+            catalog=None
+    return build_from_verified_install(root,doc,physical,catalog=catalog,
+        **({"credentials":credentials} if credentials is not None else {}))

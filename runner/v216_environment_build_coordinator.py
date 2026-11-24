@@ -10234,7 +10234,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         "environment_installed":True,
                         "source_compilation":source_compilation},
                     target_ilevel=fresh_collection_inputs[
-                        "representative_request"]["target_ilevel"])
+                        "representative_request"]["target_ilevel"],
+                    credentials=fresh_collection_inputs.get("credentials"))
             except Exception:
                 # Missing network credentials or optional label source cannot
                 # revoke G/J/F/O, v212, or start unwanted Native retries.

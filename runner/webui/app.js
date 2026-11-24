@@ -832,9 +832,31 @@ async function refreshOfficialEquipmentIcons(gear){
          /^https:\/\/render\.worldofwarcraft\.com\/[a-z]{2}\/icons\/(?:18|36|56|64|128)\/[a-z0-9_/-]+\.(?:jpg|png|webp)$/.test(src))
         state.equipmentIconUrls.set(id,src);
     }
+    // Apply only names for the exact same displayed gear ItemIDs. Do not
+    // rebuild selectors, clear selected slots, or invalidate installed T.
+    const names=data.names_ko||{};
+    for(const role of ["trinket","special_effect_gear_candidate"]){
+      for(const item of state.seasonGear?.choices?.[role]||[]){
+        const name=names[String(item.item_id)];
+        if(legalIds.has(item.item_id)&&typeof name==="string"&&
+           name.trim()===name&&name.length>0&&name.length<=200)
+          item.name_ko=name;
+      }
+    }
+    const selectors=[$("trinket1"),$("trinket2"),
+      ...[...$("special-rows").querySelectorAll('select[data-field="item_id"]')]];
+    for(const select of selectors){
+      if(!select)continue;
+      for(const option of select.options){
+        const id=Number(option.value),name=names[String(id)];
+        if(legalIds.has(id)&&typeof name==="string"&&
+           name.trim()===name&&name.length>0&&name.length<=200)
+          option.textContent=name;
+      }
+    }
     drawInlineEquipment();
   }catch{
-    // Optional images never block item selection or query the game DB again.
+    // Optional presentation never blocks selection or simulation.
   }
 }
 
@@ -1280,8 +1302,20 @@ function renderInstalledFlaskChoices(data) {
     // An index identifies a choice, never a ranking or proof of superiority.
     // The original manifest SHA is kept in the option value, not its label.
     rows.forEach((item,i)=>{
-      const label="검증 환경 "+(i+1)+" · F "+item.F+" · J "+item.J+
-        " · "+item.socket_total+"소켓 · 기름 없음";
+      // Do not compare whole receipts, rank installations, or merge them.
+      // Show the already verified physical flask/revision as human-readable
+      // differentiators rather than requiring the user to inspect a hash.
+      const flaskRow=(data.verified_flasks||[]).find(
+        row=>row.physical_item_id===item.flask_item_id);
+      const flaskName=flaskRow?.official_name_ko||
+        (flaskRow?.simc_input_token||"").replace(/_/g," ")||
+        "영약 #"+item.flask_item_id;
+      const rev=typeof item.simc_revision==="string"?
+        item.simc_revision.slice(0,7):"";
+      const label="검증 환경 "+(i+1)+" · "+flaskName+
+        " · F "+item.F+" · J "+item.J+
+        " · "+item.socket_total+"소켓 · 기름 없음"+
+        (rev?" · SimC "+rev:"");
       const candidate=option(item.installed_manifest_sha256,label);
       candidate.title=label+" · 영약 #"+item.flask_item_id+
         " (품질 "+item.flask_quality+") · 보석 "+

@@ -105,3 +105,7 @@ v695 HEAD c77b7353의 12 workflow 모두 SUCCESS 확인 (v165 #45327255743, v113
 ## v697 — 기존 v162 구렁 공급원 제품 연결
 
 v696 14 Actions SUCCESS. 기존 사용자 승인 v162 Localbots 정책 및 #40839426417 79/79 원본 대조 재사용, 과거 79/18 개수를 새 시즌 고정값으로 쓰지 않음. Live v216 신규 환경 원본 구축에서 v162 public JSON 1회 + 이미 확보한 pinned ItemSparse; ItemXItemEffect는 기존 same-build v254 receipt/output hashes가 검증되면 재사용. 구렁 단독 ordinary/craft/tier는 보충 경로에서 G 후보를 바꾸지 않으며 사용자 장신구·직접 효과 장비만 확대. 기존 v405 source provenance가 보충 보고서를 별도로 검증. 신규 stage 이름/파일은 원래 immutable v254/v405와 구분, v212/v213 기존 설치본 미변경. 구렁 공급원 실패는 선택적 PENDING; 기본 raid/M+ 소스는 계속 구축. 신규 fixture: source-only 이전 효과 재사용, 추가 1회 HTTP, 재호출0, old bytes 보존, role/출처 정합 및 optional failure. 실제 신규 70961 목록·기존 설치본 갱신은 아직 미검증/미구현. Native0, 실제 DB2 수집0, 신규 CI PENDING, 공식 상태/권한 불변.
+
+## v698 — 실제 장비 선택지의 한국어 명칭과 기존 환경 표시
+
+v697 10 SUCCESS/1 opt-in SKIP, 신규 live source 결과는 미확인. v335 과거 packaged v167 catalogue 참조를 실제 v212에 일치하는 v213 artifact SHA/manifest/build public projection으로 교체. Windows credential을 기존 이름 수집기 in-memory에 전달; 기존 same-build cache/증분 API, display-only optional, G/J/F/O·profile·session 불변. 기존 optional icon endpoint에서 누락 ko_KR labels를 자동 갱신하고 UI exact scope 내 text만 갱신, 선택/예산 무효화 없음, exact gear/budget GET은 read-only 유지. 복수 FJ 표시에는 이미 보유한 영약명·원본 revision 추가(기존 개별 승인 방식 유지). v697 실제 신규 선택지가 이전 설치본 v212/v213/v113와 직접 연결되는 기능은 미구현. 기존 immutable source와 profile identity를 보존해야 하므로 UI에만 추가하거나 덮어쓰지 않음. 추가 Native0, DB2수집0, source live0, 신규 회귀 PENDING. 공식 상태/권한 불변.

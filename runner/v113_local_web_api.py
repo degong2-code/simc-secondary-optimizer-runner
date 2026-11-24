@@ -3955,12 +3955,37 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         with jobs.equipment_icon_lock:
             if scope in jobs.equipment_icon_cache:
                 doc=jobs.equipment_icon_cache[scope]
-                return {**doc,"network_calls_now":0,"cached":True}
+                return {**doc,"network_calls_now":0,
+                        "localization_network_calls_now":0,"cached":True}
             try:
                 credentials=jobs.source_credential_store.load()
             except (local_source_keys.CredentialBlocked,OSError):
                 credentials=None
             doc=official_item_icons.collect(ids,credentials)
+            # This existing optional presentation request is already scoped
+            # to the verified installed gear list. Complete missing Korean
+            # labels here using v335's same-build cache, not a new Build.
+            # The exact /season-gear and /installed-budget GETs remain
+            # strictly local, and name failures never block gear/SimC.
+            names=official_ko_env.read_names(jobs.root,game_build,ids)
+            if len(names)<len(ids) and credentials:
+                try:
+                    with jobs.locale_cache_lock:
+                        localization=official_ko_env.build_for_environment(
+                            jobs.root,game_build,{
+                                "environment_ready":True,
+                                "environment_installed":True,
+                                "installed_manifest_sha256":installed_manifest_sha256},
+                            target_ilevel=target_ilevel,credentials=credentials)
+                        names=official_ko_env.read_names(jobs.root,game_build,ids)
+                    doc={**doc,"localization_network_calls_now":
+                         localization.get("network_calls_now",0)}
+                except (official_ko_env.LocalizationBlocked,OSError,ValueError,
+                        TypeError,KeyError):
+                    pass
+            doc={**doc,"names_ko":{str(i):name for i,name in names.items()},
+                 "localization_network_calls_now":
+                     doc.get("localization_network_calls_now",0)}
             if doc["status"] in ("COMPLETE","PARTIAL"):
                 jobs.equipment_icon_cache[scope]=doc
             return {**doc,"cached":False}

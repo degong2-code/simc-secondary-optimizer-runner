@@ -140,6 +140,58 @@ class EnvironmentKoTests(unittest.TestCase):
         with self.assertRaises(loc.LocalizationBlocked):
             loc.build_from_verified_install(self.root,b,allow_network=False)
 
+    def test_v698_exact_installed_catalog_drives_names_not_packaged_catalog(self):
+        doc=install("12.1.5.70961")
+        doc["manifest_sha256"]="a"*64
+        catalog={"game_build":doc["game_build"],"manifest_sha256":"b"*64}
+        raw=json.dumps(catalog).encode("utf8")
+        doc["source_catalog_artifact_sha256"]=loc.sha(raw)
+        doc["source_catalog_manifest_sha256"]="b"*64
+        source=self.root/"v212_installed_fake.json"
+        source.write_text(json.dumps(doc),"utf8")
+        (self.root/"v213_candidate_catalog.json").write_bytes(raw)
+        result={"environment_ready":True,"environment_installed":True,
+                "source_compilation":{"verified_environment_install":{
+                    "stage_output_path":str(source),"manifest_sha256":"a"*64}}}
+        product={"status":"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+                 "season_build":doc["game_build"],
+                 "choices":{"trinket":[{"item_id":299001}],
+                     "special_effect_gear_candidate":[{"item_id":299002}],
+                     "selectable_stat_craft":[]}}
+        creds={"BLIZZARD_CLIENT_ID":"test-id","BLIZZARD_CLIENT_SECRET":"test-secret"}
+        with (mock.patch.object(loc.gear,"public_installed_v213_candidates",
+                                return_value=product) as projection,
+              mock.patch.object(loc,"exact_product_catalog",
+                                side_effect=AssertionError("NO_PACKAGED_SOURCE")),
+              mock.patch.dict("os.environ",{},clear=True),
+              mock.patch.object(loc.blizzard,"oauth_token",
+                                return_value="test-token") as oauth,
+              mock.patch.object(loc.blizzard,"request_json",
+                                side_effect=self.fake_get) as get):
+            first=loc.build_for_environment(self.root,doc["game_build"],result,
+                              target_ilevel=334,credentials=creds)
+            again=loc.build_for_environment(self.root,doc["game_build"],result,
+                              target_ilevel=334,credentials=creds)
+            self.assertEqual(first["selected_item_count"],3)
+            self.assertEqual(first["verified_names"],3)
+            self.assertEqual(first["network_calls_now"],4)
+            self.assertEqual(again["network_calls_now"],0)
+            self.assertEqual(again["native_calls_now"],0)
+            oauth.assert_called_once_with(loc.blizzard.BLIZZARD_TOKEN_URL,
+                                          "test-id","test-secret")
+            self.assertEqual(get.call_count,3)
+            projection.assert_called_with(catalog,installed_manifest_sha256="a"*64)
+            # Wrong bytes must not supply visible gear IDs.
+            (self.root/"v213_candidate_catalog.json").write_bytes(raw+b" ")
+            drift=loc.build_for_environment(self.root,doc["game_build"],result,
+                              target_ilevel=334,credentials=creds)
+            self.assertEqual(drift["selected_item_count"],1)
+            self.assertEqual(drift["network_calls_now"],0)
+            self.assertEqual(projection.call_count,2)
+        cache=loc._path(self.root,doc["game_build"]).read_text("utf8")
+        self.assertNotIn("test-secret",cache)
+        self.assertNotIn("test-token",cache)
+
     def test_sealed_v212_bridge_is_not_a_user_item_admission_endpoint(self):
         doc=install()
         doc["manifest_sha256"]="a"*64
