@@ -109,6 +109,133 @@ def project(source, gear, candidate):
             "total_catalog_special_effect_candidates":sum(x["category"]=="special_effect_gear_candidate"
                                                           for x in candidate["items"])}
 
+
+def observe_registered_boss_bonus_sources(folder, source):
+    """One bounded diagnostic, not a new admission path or effect engine.
+
+    Use the same authenticated WCL scope, exact pinned DB2 snapshot, original
+    v706 bonus discovery and v217 raw owner. Preserve all newly needed public
+    tables so a subsequent investigation need not fetch them again.
+    """
+    import csv
+    from collections import defaultdict
+    from urllib.parse import urlencode
+    from urllib.request import Request
+    pool=original.source_gear_pool
+    join=original.season_join
+    review=original.bonus_effect_review
+    stages=original.stage_engine
+    # The public raw artifact is reused; v155 is a fresh authenticated
+    # provider receipt in this job. Do not export provider bodies or keys.
+    files,receipt_path=stages._safe_paths(folder,"fresh-v155",
+        {"report":"source/season_api_report.json"})
+    receipt=stages._read_receipt(receipt_path)
+    assert receipt["status"]=="COMPLETE" and receipt["stage_id"]=="fresh-v155"
+    stages._verify_outputs(receipt,files)
+    report=json.loads(files["report"].read_text("utf8"))
+    assert report["mode"]=="LIVE_AUTHENTICATED_BOUNDED"
+    scope=source["auto_source_scope"]
+    season=source["db2_display_season_id"]
+    for kind in ("raid","mplus"):
+        zone=join.named_zone(report,scope[kind+"_zone"],
+                            wcl_expansion_id=scope["wcl_expansion_id"])
+        assert zone["zone_id"]==source["wcl_zone_ids"][kind]
+    journal=list(pool.read_csv(folder/"wago/JournalEncounter.csv",
+                               ("ID","JournalInstanceID","Name_lang")))
+    # Focus targets are diagnostics ONLY. Discovery is across all registered
+    # same-expansion active WCL encounters, not hardcoded production IDs.
+    targets={271874,271875,271876,271878,281235,281236,281238,281239}
+    matched=defaultdict(list)
+    for zone in join.wcl_zone_sources(report):
+        if zone.get("wcl_frozen") is not False or zone.get("expansion_id")!=scope["wcl_expansion_id"]:
+            continue
+        for boss in zone.get("encounters",[]):
+            row=join.uniquely_match(boss["name"],journal,"Name_lang")
+            if row is not None:
+                matched[int(row["ID"])].append({"wcl_zone_id":zone["zone_id"],
+                    "wcl_boss_name":boss["name"],"journal_encounter_id":int(row["ID"]),
+                    "journal_instance_id":int(row["JournalInstanceID"]),
+                    "journal_name":row["Name_lang"]})
+    journal_by_id={int(row["ID"]):row for row in journal}
+    loot=defaultdict(list)
+    target_journal=defaultdict(list)
+    for row in pool.read_csv(folder/"wago/JournalEncounterItem.csv",
+                ("ID","JournalEncounterID","ItemID","DisplaySeasonID")):
+        iid=int(row["ItemID"]); eid=int(row["JournalEncounterID"])
+        if iid<=0 or (eid not in matched and iid not in targets):continue
+        raw_season=join.exact_display_season_id(row["DisplaySeasonID"])
+        if iid in targets:
+            target_journal[iid].append({"journal_encounter_id":eid,
+                "journal_name":journal_by_id.get(eid,{}).get("Name_lang"),
+                "raw_display_season_id":raw_season,
+                "authenticated_wcl_matches":matched.get(eid,[])})
+        if eid in matched and raw_season in (0,season):
+            loot[iid].extend({**origin,"raw_display_season_id":raw_season}
+                             for origin in matched[eid])
+    wanted=set(loot)|targets
+    sparse={int(row["ID"]):row for row in pool.read_csv(
+        folder/"wago/ItemSparse.csv",("ID","InventoryType","Display_lang","ItemSet","ExpansionID"))
+        if int(row["ID"]) in wanted}
+    wanted={iid for iid in wanted if iid in sparse and
+            int(sparse[iid]["InventoryType"]) in pool.SPECIAL_INVENTORY_TYPES
+            and int(sparse[iid]["ExpansionID"])==source["db2_expansion_id"]}
+    direct,_=pool.effects(folder/"source/raw_gear_effect.csv",wanted)
+    attempted=[0]
+    table_paths={}; identities={}
+    for table in review.COLUMNS:
+        # Existing v250 sealed files, when available, take precedence.
+        existing=folder/("source/v250_bonus_"+table+".csv")
+        if table in original.raid_bonus.TABLES and existing.is_file():
+            raise RuntimeError("V716_EXISTING_V250_SOURCE_REQUIRES_RECEIPT_REUSE")
+        url="https://wago.tools/db2/"+table+"/csv?"+urlencode({"build":BUILD,"locale":"enUS"})
+        def obtain():
+            attempted[0]+=1
+            req=Request(url,headers={"User-Agent":"SIMC-Secondary-Bonus/1.0","Accept":"text/csv"})
+            with original.urlopen(req,timeout=75) as response:
+                assert response.status==200
+                data=bytearray()
+                while True:
+                    chunk=response.read(262144)
+                    if not chunk:break
+                    data.extend(chunk)
+                    assert len(data)<=review.MAX_BYTES[table]
+            return bytes(data)
+        def valid(raw):
+            header=raw.split(b"\\n",1)[0].decode("utf-8-sig")
+            return (0<len(raw)<=review.MAX_BYTES[table] and
+                    set(review.COLUMNS[table])<=set(next(csv.reader([header]))))
+        path,raw,seal=original._sealed_season_raw_source(root=folder,
+            source_id="season-bonus-raw-"+table,build=BUILD,url=url,
+            relative="source/raw_"+table+".csv",obtain=obtain,validate_bytes=valid)
+        table_paths[table]=path
+        identities[table]={"sha256":original.digest(raw),"receipt_sha256":seal}
+        del raw
+    result=review.discover(wanted,table_paths)
+    by_id={row["item_id"]:row for row in result["items"]}
+    # Retain source links, not an invented obtainable variant. No automatic
+    # attachment, source-season promotion, G update, or independent proc test.
+    def item_row(iid):
+        row=sparse.get(iid,{})
+        return {"item_id":iid,"name":row.get("Display_lang"),
+            "inventory_type":int(row["InventoryType"]) if row else None,
+            "direct_item_effect_record":iid in direct,
+            "registered_current_wcl_origins":loot.get(iid,[]),
+            "journal_occurrences":target_journal.get(iid,[]),
+            "bonus_effects":by_id.get(iid,{}).get("bonus_effects",[]),
+            "applicable_variant_verified":False}
+    focus=[item_row(iid) for iid in sorted(targets)]
+    all_indirect=[item_row(iid) for iid in sorted(set(by_id)-direct)]
+    return {"status":"OBSERVED_REGISTERED_BOSS_BONUS_SOURCE_ONLY",
+        "game_build":BUILD,"authenticated_wcl_expansion_id":scope["wcl_expansion_id"],
+        "active_display_season_id":season,"registered_journal_encounter_count":len(matched),
+        "reviewed_equipment_count":len(wanted),"raw_bonus_network_calls":attempted[0],
+        "raw_bonus_sources":identities,"focus_items":focus,
+        "registered_boss_indirect_candidates":all_indirect,
+        "focus_registered_count":sum(bool(x["registered_current_wcl_origins"]) for x in focus),
+        "focus_bonus_link_count":sum(bool(x["bonus_effects"]) for x in focus),
+        "native_calls":0,"budget_rebuilt":False,"automatic_registration":False,
+        "full_season_completeness_confirmed":False}
+
 def observe(out):
     dest=Path(out).resolve()
     dest.mkdir(parents=True,exist_ok=True)
@@ -152,6 +279,11 @@ def observe(out):
         folder=root/"_fresh_season_sources"/("wago_"+BUILD)
         source=json.loads(Path(linked["candidate_path"]).read_text("utf8"))
         state["original_v163_sha256"]=original.digest(Path(linked["candidate_path"]).read_bytes())
+        if os.environ.get("V716_BONUS_REVIEW")=="1":
+            state.update(observe_registered_boss_bonus_sources(folder,source))
+            print("V716_FOCUS "+json.dumps(state["focus_items"],ensure_ascii=False,sort_keys=True),flush=True)
+            print("V716_SUMMARY "+json.dumps({k:state[k] for k in ("focus_registered_count","focus_bonus_link_count","raw_bonus_network_calls","reviewed_equipment_count")},sort_keys=True),flush=True)
+            return 0
         # The same stage used by existing-season refresh, without the
         # unrelated optional bonus/tier/SimC investigation.
         def reuse_transport(req,timeout):

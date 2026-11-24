@@ -40,6 +40,7 @@ jobs:
           github-token: ${{ github.token }}
       - name: One original source-only observation
         env:
+          V716_BONUS_REVIEW: ${{ contains(github.event.head_commit.message, '[v716-bonus-review]') && '1' || '0' }}
           V709_REUSE_REQUIRED: ${{ contains(github.event.head_commit.message, '[v709-reuse-once]') && '1' || '0' }}
         run: |
           python -m py_compile integration_probes/p1_v708_real_mplus_trinket_source_once.py
@@ -63,6 +64,20 @@ jobs:
             out/v708/runs/_fresh_season_sources/wago_12.1.5.70961/source/raw_gear_effect.csv
             out/v708/runs/_fresh_season_sources/wago_12.1.5.70961/.stage_receipts/fresh-wago-db2.json
             out/v708/runs/_fresh_season_sources/wago_12.1.5.70961/.stage_receipts/season-gear-effect-raw.json
+          include-hidden-files: true
+          retention-days: 30
+          if-no-files-found: warn
+      - name: Preserve newly needed public bonus raw tables and sealed receipts
+        if: ${{ always() && contains(github.event.head_commit.message, '[v716-bonus-review]') }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v716-public-70961-bonus-source-reuse
+          path: |
+            out/v708/runs/_fresh_season_sources/wago_12.1.5.70961/source/raw_ItemXBonusTree.csv
+            out/v708/runs/_fresh_season_sources/wago_12.1.5.70961/source/raw_ItemBonusTreeNode.csv
+            out/v708/runs/_fresh_season_sources/wago_12.1.5.70961/source/raw_ItemBonusListGroupEntry.csv
+            out/v708/runs/_fresh_season_sources/wago_12.1.5.70961/source/raw_ItemBonus.csv
+            out/v708/runs/_fresh_season_sources/wago_12.1.5.70961/.stage_receipts/season-bonus-raw-*.json
           include-hidden-files: true
           retention-days: 30
           if-no-files-found: warn
