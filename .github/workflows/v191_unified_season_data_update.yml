@@ -1,8 +1,9 @@
-name: v191 → v211 → v213 → v196 Source-to-Catalog (Request Only, No Native)
+name: v191/v211/v213/v196 Offline Regression and Explicit Source Replay (No Native)
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
     paths:
+      - .github/workflows/v191_unified_season_data_update.yml
       - runner/v191_unified_season_data_update.py
       # v224/v225 offline contracts are validated by the v212 matrix.
       # Avoid re-fetching the entire pinned SimC source merely on validator edits.
@@ -35,17 +36,14 @@ on:
         description: Exact 40-hex SimC revision, matching the source receipt
         type: string
         required: true
-        default: 710c2408bfd3ae4df71b8cd55cdf01f63fd6c926
       source_run_id:
         description: Existing same-SimC v189+v190 artifact run ID
         type: string
-        required: true
-        default: '41017578894'
+        required: false
       source_artifact:
         description: Existing artifact name with matching v189/v190 source receipts
         type: string
         required: false
-        default: v192-updated-simc-catalog-41017578894
       season_bundle_run_id:
         description: New-season source bundle artifact run ID (season/expansion only; no defaults)
         type: string
@@ -80,13 +78,9 @@ concurrency:
   group: v191-v211-v213-v196-source-to-catalog
   cancel-in-progress: false
 jobs:
-  source-to-catalog:
-    if: github.event_name != 'workflow_dispatch' || inputs.event == 'mid_patch'
+  offline-contract:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    env:
-      SIMC_COMMIT: ${{ inputs.simc_commit || '710c2408bfd3ae4df71b8cd55cdf01f63fd6c926' }}
-      UPDATE_EVENT: ${{ inputs.event || 'mid_patch' }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
         with:
@@ -94,17 +88,57 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Offline source contracts and v191 quality reduction regression
+      - name: Install existing web test dependencies
+        run: python -m pip install -r requirements-web-test.txt
+      - name: Run source-to-catalog regression without historical artifacts or Native
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile runner/v191_unified_season_data_update.py
-          python -m unittest -v tests.test_v191_unified_season_data_update
+          python -m unittest -v \
+            tests.test_v191_unified_season_data_update \
+            tests.test_v211_enchant_source_effect_classification \
+            tests.test_v213_source_to_catalog \
+            tests.test_v196_current_season_ui_catalog \
+            tests.test_v197_enchant_effect_families \
+            tests.test_v208_special_L_hydration_offline \
+            tests.test_v224_season_gjfo_evidence_inventory \
+            tests.test_v225_season_source_bundle_intake \
+            tests.test_v240_v211_v213_fresh_catalog_handoff
+
+  source-to-catalog:
+    # This is the historical mid-patch artifact replay, not the normal
+    # product Environment Build. Never request old snapshots on a push.
+    if: github.event_name == 'workflow_dispatch' && inputs.event == 'mid_patch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SIMC_COMMIT: ${{ inputs.simc_commit }}
+      UPDATE_EVENT: ${{ inputs.event }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Require an explicit source artifact identity for historical replay
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_ARTIFACT: ${{ inputs.source_artifact }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os,re
+          assert re.fullmatch(r'[a-f0-9]{40}',os.environ['SIMC_COMMIT']), 'EXACT_SIMC_COMMIT_REQUIRED'
+          assert re.fullmatch(r'[1-9][0-9]{6,16}',os.environ['SOURCE_RUN_ID']), 'EXACT_SOURCE_RUN_ID_REQUIRED'
+          assert re.fullmatch(r'[A-Za-z0-9_.-]{5,160}',os.environ['SOURCE_ARTIFACT']), 'EXACT_SOURCE_ARTIFACT_REQUIRED'
+          PY
       - name: Reuse exact existing SimC + DB2 source receipts (no new DB snapshot)
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.source_artifact || 'v192-updated-simc-catalog-41017578894' }}
-          run-id: ${{ inputs.source_run_id || '41017578894' }}
+          name: ${{ inputs.source_artifact }}
+          run-id: ${{ inputs.source_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: source
       - name: Fetch exact immutable SimC generated enchant + gem tables (no Native)
