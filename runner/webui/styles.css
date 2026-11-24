@@ -324,7 +324,7 @@ body::before{display:none}
 .result-workspace{display:grid;gap:16px}
 .result-workspace .run-card,.result-workspace .results{width:100%}
 .result-workspace .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
-.result-workspace .stat-bars{max-width:880px}
+.result-workspace .stat-bars{width:100%;max-width:none;min-width:0}
 .simc-settings-panel{margin-top:15px}
 .simc-settings-panel .simc-technical-panel{margin-bottom:0}
 .equipment-dialog{width:min(94vw,870px);max-height:86vh;overflow:auto;
@@ -424,7 +424,7 @@ body::before{display:none}
 .alt-metric{display:grid;gap:3px;border:1px solid #4E463C;border-radius:7px;padding:10px;min-width:0}
 .alt-metric span{color:var(--muted);font-size:10px}
 .alt-metric strong{font-size:13px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.alt-stat-summary{color:#D7D0C5;font-size:11px;line-height:1.7;border-top:1px solid #514A40;padding-top:10px;margin:12px 0 0}
+.alt-stat-summary{color:#D7D0C5;font-size:13px;line-height:1.7;border-top:1px solid #514A40;padding-top:10px;margin:12px 0 0}
 @media(max-width:800px){.alt-row-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:540px){.alt-row-head{align-items:flex-start;flex-direction:column;gap:6px}}
 
@@ -889,8 +889,7 @@ body{background:#24252B;color:var(--ink)}
 #optimizer-form .gear-section .gear-row{padding:6px 0;margin:0 0 6px}
 #optimizer-form .gear-section #crafted-rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 15px}
 #optimizer-form .gear-embellishments .gear-fields{gap:6px}
-#optimizer-form .gear-special-details{margin:7px 0 0}
-#optimizer-form .gear-special-details>summary{color:#BFB1A0;font-size:10px}
+#optimizer-form .gear-special-details[hidden]{display:none!important}
 #optimizer-form .gear-embellishments #craft-compatibility-note{margin:1px 0 6px}
 #optimizer-form .submit-panel{display:flex;align-items:center}
 #optimizer-form .submit-panel>.actions{min-width:0}

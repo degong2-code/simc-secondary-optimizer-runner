@@ -320,7 +320,7 @@ function drawInlineEquipment(){
     trinketGrid.appendChild(b);
   }
   $("equipment-trinket-status").textContent=state.seasonGear?
-    "장신구 "+(field("trinket1")?1:0)+(field("trinket2")?1:0)+"/2 선택"+
+    "장신구 "+((field("trinket1")?1:0)+(field("trinket2")?1:0))+"/2 선택"+
     (tFiltered.length>80?" · 검색하여 나머지 확인":""):
     "시즌 선택지 미확인";
 

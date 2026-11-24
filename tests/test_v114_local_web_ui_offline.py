@@ -2050,6 +2050,19 @@ assert.strictEqual(fn(assert),true);
         self.assertIn('input.type="number";input.min="1";input.max="999999999";',
                       source.read_text(encoding="utf8"))
 
+    def test_v695_inline_equipment_only_and_full_width_result(self):
+        page=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        css=self.client.get("/assets/styles.css").text
+        self.assertIn('<div hidden class="gear-special-details" aria-hidden="true">',page)
+        self.assertIn('id="special-rows"',page)
+        self.assertNotIn('<summary>부위별 상세 설정</summary>',page)
+        self.assertIn('const limit=isSpecial?8:2;',js)
+        self.assertIn('((field("trinket1")?1:0)+(field("trinket2")?1:0))+"/2 선택"',js)
+        self.assertIn('.result-workspace .stat-bars{width:100%;max-width:none;min-width:0}',css)
+        self.assertIn('.alt-stat-summary{color:#D7D0C5;font-size:13px;',css)
+        self.assertIn('.alt-metric strong{font-size:13px;',css)
+
     def test_special_effect_gear_has_eight_dynamic_rows_not_two(self):
         js=self.client.get("/assets/app.js").text
         self.assertIn('const limit=isSpecial?8:2;',js)

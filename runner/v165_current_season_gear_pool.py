@@ -195,8 +195,6 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
         mplus_ok=any(_journal_origin_current(
                      x,db2["db2_display_season_id"],raid=False)
                      for x in row["sources"])
-        season_eligible=(meta["expansion"]==db2["db2_expansion_id"] and
-             (craft or raid or delve_ok or mplus_ok))
         direct=(iid in linked) if linked is not None else None
         if meta["slot"]==TRINKET:role="trinket"
         elif craft:role="selectable_stat_craft"
@@ -204,6 +202,15 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
         elif direct is True:role="special_effect_gear_candidate"
         elif direct is False:role="plain_representative_candidate"
         else:role="effect_classification_pending"
+        # Active-season M+ can rotate in older expansion instances. A
+        # verified current DisplaySeasonID + Journal occurrence is the
+        # user-facing item membership proof, not the item's original era.
+        # Scope this change to requested selectable loot; keep internal
+        # representative equipment and crafting/tier policy unchanged.
+        season_eligible=((meta["expansion"]==db2["db2_expansion_id"] and
+                         (craft or raid or delve_ok or mplus_ok))
+                         or (mplus_ok and role in
+                             ("trinket","special_effect_gear_candidate")))
         # No hidden effect mechanism certification; exact SimC item variant
         # remains authoritative when this candidate is used in a session.
         item={"item_id":iid,"name":meta["name"],

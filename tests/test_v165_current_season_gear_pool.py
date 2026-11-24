@@ -134,6 +134,47 @@ class Roles(unittest.TestCase):
             self.assertFalse(gear._journal_origin_current(
                 future,42,raid=True))
 
+    def test_current_mplus_old_expansion_user_loot_not_excluded(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            sparse,effect=self.make(root)
+            w,l=fixture()
+            active={"source":"mplus_journal",
+                    "season_evidence":"DB2_DISPLAY_SEASON_MATCH",
+                    "display_season_id":37,"journal_encounter_id":81,
+                    "journal_instance_id":82,"challenge_mode_id":83,
+                    "world_state_expression_id":0}
+            w["items"][3]["acquisition_sources"]=[dict(active)]
+            # Use a separate older-expansion effect weapon and a plain
+            # item to ensure the change cannot expand internal G inventory.
+            w["items"].extend([
+                {"item_id":1006,"name":"Rotated effect sword","slot":13,
+                 "acquisition_sources":[dict(active)]},
+                {"item_id":1007,"name":"Rotated plain armor","slot":5,
+                 "acquisition_sources":[dict(active)]}])
+            with sparse.open("a",encoding="utf8",newline="") as f:
+                writer=csv.writer(f)
+                writer.writerows([[1006,"Rotated effect sword",13,7,0,4],
+                                  [1007,"Rotated plain armor",5,7,0,4]])
+            with effect.open("a",encoding="utf8",newline="") as f:
+                csv.writer(f).writerow([2,1006,12346])
+            current=gear.compile_pool(w,l,sparse,effect,budget_source=None)
+            by_id={x["item_id"]:x for x in current["items"]}
+            self.assertTrue(by_id[1004]["user_selectable_candidate"])
+            self.assertEqual(by_id[1004]["category"],"trinket")
+            self.assertTrue(by_id[1006]["user_selectable_candidate"])
+            self.assertEqual(by_id[1006]["category"],"special_effect_gear_candidate")
+            self.assertFalse(by_id[1007]["user_selectable_candidate"])
+            self.assertFalse(current["full_season_completeness_confirmed"])
+            for item in (w["items"][3],w["items"][4]):
+                item["acquisition_sources"][0].update(
+                    display_season_id=36,
+                    season_evidence="UNKNOWN_OTHER_DISPLAY_SEASON")
+            prior=gear.compile_pool(w,l,sparse,effect,budget_source=None)
+            for item in prior["items"]:
+                if item["item_id"] in (1004,1006):
+                    self.assertFalse(item["user_selectable_candidate"])
+
     def test_no_effect_table_does_not_assert_plain(self):
         with tempfile.TemporaryDirectory() as d:
             sparse,_=self.make(Path(d))
