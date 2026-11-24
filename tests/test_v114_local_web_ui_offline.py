@@ -1845,6 +1845,54 @@ console.log("V477_PINNED_TRINKET_GEAR_PREFLIGHT_PASS");
         self.assertIn('throw err;',js)
         self.assertNotIn('require_unique_unqualified=false',js)
 
+    def test_v696_ambiguous_live_build_recovers_existing_selection_without_native(self):
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node is not installed")
+        source=ROOT/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const start=raw.indexOf("async function recoverVerifiedFjSelection(");
+const end=raw.indexOf("async function buildSeasonEnvironment(",start);
+assert(start>=0 && end>start);
+let values={"season-game-build":"","ilevel":"334"},scope="scope",
+    reads=0,focused=false,view="",notice="";
+const state={verifiedInstalledBuildFromThisPage:null,
+  verifiedExistingBudget:{},seasonGearTargetIlevel:334,
+  verifiedBaseFlaskInstalls:[]};
+const field=id=>values[id]||"";
+const seasonBuildInputScope=()=>scope;
+const refreshInstalledOilLoadouts=async()=>{
+  reads++;
+  assert.strictEqual(state.verifiedInstalledBuildFromThisPage,"12.1.5.70961");
+  state.verifiedBaseFlaskInstalls=[{},{}];
+};
+const updateBudgetPreview=()=>{};
+const switchView=x=>{view=x;};
+const $=id=>({focus:()=>{focused=id==="season-verified-budget";}});
+const setNotice=x=>{notice=x;};
+const recover=eval("("+raw.slice(start,end).trim()+")");
+(async()=>{
+  const err={message:"V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA",
+    verifiedRetailSelectionBuild:"12.1.5.70961",verifiedRetailSelectionLevel:334};
+  assert.strictEqual(await recover({message:err.message},334,scope,false),false);
+  assert.strictEqual(await recover(err,335,scope,false),false);
+  assert.strictEqual(await recover(err,334,"stale",false),false);
+  assert.strictEqual(reads,0);
+  assert.strictEqual(await recover(err,334,scope,false),true);
+  assert.strictEqual(reads,1);
+  assert.strictEqual(values["season-game-build"],"");
+  assert.strictEqual(state.verifiedExistingBudget,null);
+  assert.strictEqual(state.seasonGearTargetIlevel,null);
+  assert.strictEqual(view,"optimizer");
+  assert(focused&&notice.includes("새 측정은 시작하지 않았습니다"));
+})().catch(e=>{console.error(e);process.exitCode=1;});
+"""
+        result=subprocess.run([node,"-e",code,str(source)],
+                              capture_output=True,text=True,timeout=20)
+        self.assertEqual(result.returncode,0,result.stderr)
+
     def test_environment_build_surface_is_not_optimizer_plan(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text

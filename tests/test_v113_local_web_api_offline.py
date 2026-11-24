@@ -1784,6 +1784,31 @@ class LocalWebAPIOffline(unittest.TestCase):
             required_reference_G_track="general")
         builder.assert_not_called()
 
+    def test_v696_live_build_identity_survives_multiple_fj_selection(self):
+        code="V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA"
+        with (mock.patch.object(web.retail_build_source,"discover",
+                  return_value={"game_build":"12.1.5.70961",
+                                "source_sha256":"a"*64}) as live,
+              mock.patch.object(web.environment_build,
+                  "find_verified_installed_season_environment",
+                  side_effect=web.environment_build.EnvironmentBuildBlocked(code)) as finder,
+              mock.patch.object(web.environment_build,"build_environment",
+                  side_effect=AssertionError("NO_RECOLLECT_OR_NATIVE")) as build):
+            response=self.post("/api/v1/environment/season-build",{
+                "target_ilevel":334,"auto_initial_core_build":True,
+                "auto_initial_core_simc_binary":str(self.binary)})
+        self.assertEqual(response.status_code,422,response.text)
+        detail=response.json()["detail"]
+        self.assertEqual(detail["code"],code)
+        self.assertEqual(detail["verified_retail_game_build"],"12.1.5.70961")
+        self.assertEqual(detail["retail_build_source_sha256"],"a"*64)
+        self.assertEqual(detail["target_ilevel"],334)
+        self.assertFalse(detail["environment_ready"])
+        self.assertNotIn("installed_manifest_sha256",detail)
+        live.assert_called_once_with(region="KR")
+        finder.assert_called_once()
+        build.assert_not_called()
+
     def test_p1_first_install_core_reuses_original_g_f_stages(self):
         """Automatic cold-start selection calls original Build, not a new engine."""
         payload={"game_build":"12.2.0.99999","target_ilevel":334,

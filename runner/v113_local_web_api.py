@@ -681,12 +681,30 @@ def _v680_preflight_optional_consumables(root,params,user):
         user,installed_environment=doc)
 
 
+class InstalledFjSelectionRequired(environment_manifest.EnvironmentBlocked):
+    """A verified live build may be known before a budget is selected."""
+    def __init__(self, game_build, source_sha256, target_ilevel):
+        super().__init__("V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA")
+        self.game_build=game_build
+        self.source_sha256=source_sha256
+        self.target_ilevel=target_ilevel
+
+
 def blocked(exc, *, stage=None):
     """Return stable codes, not private absolute paths, talent strings, or tracebacks.
 
     A fixed stage is diagnostic only. It does not change admission, receipts,
     or reveal the actual exception message on a generic HTTP 409.
     """
+    if isinstance(exc, InstalledFjSelectionRequired):
+        # Only the already-discovered public build, never a source path,
+        # session identity or permission to use an unselected environment.
+        return HTTPException(422,detail={
+            "code":str(exc),"stage":"SEASON_ENVIRONMENT_BUILD",
+            "verified_retail_game_build":exc.game_build,
+            "retail_build_source_sha256":exc.source_sha256,
+            "target_ilevel":exc.target_ilevel,
+            "environment_ready":False})
     if isinstance(exc, (longrun_sessions.LocalLongRunBlocked,
                          sessions.SessionBlocked, bootstrap.UserScenarioBlocked,
                         sessions.nonchmv_enchant.EnchantChoiceBlocked,
@@ -1424,11 +1442,23 @@ class LocalJobs:
             selected_flask_item_id is None and not selected_oils and
             not auto_select_observed_F_no_oil and
             existing_special_gem_id is None):
-            with self.season_source_lock:
-                prior=environment_build.find_verified_installed_season_environment(
-                    self.root,target_ilevel,expected_game_build=game_build,
-                    require_unique_unqualified=True,
-                    required_reference_G_track=reference_G_track)
+            try:
+                with self.season_source_lock:
+                    prior=environment_build.find_verified_installed_season_environment(
+                        self.root,target_ilevel,expected_game_build=game_build,
+                        require_unique_unqualified=True,
+                        required_reference_G_track=reference_G_track)
+            except environment_build.EnvironmentBuildBlocked as exc:
+                if (str(exc)=="V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA"
+                    and discovered_build is not None
+                    and re.fullmatch(r"[a-f0-9]{64}",
+                        discovered_build.get("source_sha256","")) is not None):
+                    # The selection failure does not invalidate the
+                    # independently authenticated live Retail build.
+                    raise InstalledFjSelectionRequired(
+                        game_build,discovered_build["source_sha256"],
+                        target_ilevel) from exc
+                raise
             if prior is not None:
                 # A true original v212 receipt carries its installed SHA.
                 # Previous API mocks/legacy reuse results retain old behavior.

@@ -2418,6 +2418,15 @@ async function api(path,{method="GET",payload=null,publicRoute=false}={}) {
     const check=data?.detail?.check;
     if(typeof check==="string"&&/^[A-Z][A-Z0-9_]{2,60}$/.test(check))
       error.safeCheck=check;
+    if(code==="V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA" &&
+       stage==="SEASON_ENVIRONMENT_BUILD" &&
+       /^\d+(?:\.\d+){3}$/.test(data?.detail?.verified_retail_game_build||"") &&
+       /^[a-f0-9]{64}$/.test(data?.detail?.retail_build_source_sha256||"") &&
+       Number.isSafeInteger(data?.detail?.target_ilevel) &&
+       data.detail.environment_ready===false) {
+      error.verifiedRetailSelectionBuild=data.detail.verified_retail_game_build;
+      error.verifiedRetailSelectionLevel=data.detail.target_ilevel;
+    }
     error.httpStatus=response.status;
     throw error;
   }
@@ -2923,7 +2932,8 @@ function performSeasonBuildRecovery() {
     $("source-blizzard-id").focus();
   }else if(seasonBuildRemedyAction==="optimizer"){
     switchView("optimizer");
-    $("season-verified-flask").focus();
+    const selection=$("season-verified-budget-group");
+    $(selection&&!selection.hidden?"season-verified-budget":"season-verified-flask").focus();
   }else if(seasonBuildRemedyAction==="retry"){
     $("season-build-btn").focus();
     // User explicitly clicks the original build button to retry; no
@@ -3344,6 +3354,34 @@ function seasonBuildInputScope(forUserVariant=false) {
     ["referenceGSpec",field("spec")],["referenceGManualT",field("final_T")]
   ]);
 }
+// A live-build receipt is separate from an installed F/J budget receipt.
+// Recover a read-only selection list from the original failed request,
+// never set environment READY or substitute an arbitrary installed SHA.
+async function recoverVerifiedFjSelection(err,targetLevel,scope,forUserVariant) {
+  const explicit=field("season-game-build");
+  const build=explicit||err.verifiedRetailSelectionBuild;
+  if(err.message!=="V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA" ||
+     !/^\d+(?:\.\d+){3}$/.test(build||"") ||
+     (!explicit && err.verifiedRetailSelectionLevel!==targetLevel) ||
+     Number(field("ilevel"))!==targetLevel ||
+     seasonBuildInputScope(forUserVariant)!==scope)return false;
+  // This remembers only the verified build, NOT a chosen install. All
+  // run-level gates still require exact v212 SHA and the saved v113 profile.
+  if(!explicit)state.verifiedInstalledBuildFromThisPage=build;
+  state.verifiedExistingBudget=null;
+  state.seasonGearTargetIlevel=null;
+  try{await refreshInstalledOilLoadouts();}
+  catch(error){return false;}
+  if(seasonBuildInputScope(forUserVariant)!==scope ||
+     Number(field("ilevel"))!==targetLevel ||
+     (field("season-game-build")||state.verifiedInstalledBuildFromThisPage)!==build ||
+     state.verifiedBaseFlaskInstalls.length<2)return false;
+  updateBudgetPreview();
+  switchView("optimizer");
+  $("season-verified-budget").focus();
+  setNotice("검증된 기존 환경이 여러 개 있습니다. 사용할 환경을 선택한 뒤 ‘선택 환경 검증·준비’를 눌러 주세요. 새 측정은 시작하지 않았습니다.");
+  return true;
+}
 async function buildSeasonEnvironment(forUserVariant=false) {
   const supplied_build=field("season-game-build");
   if(supplied_build&&!/^\d+(?:\.\d+){3}$/.test(supplied_build))
@@ -3738,6 +3776,15 @@ async function buildSeasonEnvironment(forUserVariant=false) {
         "근본 원인을 확정하거나 시즌 원본을 수정하지 않습니다.",
       action:"diagnostic",button:"진단 영수증 복사"
     });
+    if(multipleInstalledBudgets &&
+       await recoverVerifiedFjSelection(
+         err,target_ilevel,requestedInputScope,forUserVariant)){
+      displaySeasonEnvironmentAttempt("pending","기존 검증 환경 선택 필요",
+        field("season-game-build")||state.verifiedInstalledBuildFromThisPage,
+        target_ilevel,"정확한 설치 환경을 선택하면 기존 원본을 연결합니다.");
+      $("season-build-stage").textContent="게임 빌드 확인 완료 · 기존 환경 선택 대기 · 재측정 없음";
+      return null;
+    }
     throw err;
   } finally {
     stopSeasonActivity();
