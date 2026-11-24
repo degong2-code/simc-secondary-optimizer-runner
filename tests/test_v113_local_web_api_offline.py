@@ -659,8 +659,11 @@ class LocalWebAPIOffline(unittest.TestCase):
                   "trinket":[row,fresh_trinket],
                   "special_effect_gear_candidate":[fresh_special],
                   "selectable_stat_craft":[]}})):
-            first=self.client.post(url,headers=self.headers)
-            second=self.client.post(url,headers=self.headers)
+            # The actual browser uses api(..., {method:"POST",payload:{}}).
+            # Keep the production JSON-only middleware unchanged.
+            self.assertEqual(self.client.post(url,headers=self.headers).status_code,415)
+            first=self.client.post(url,headers=self.headers,json={})
+            second=self.client.post(url,headers=self.headers,json={})
         self.assertEqual(first.status_code,200,first.text)
         self.assertEqual(second.status_code,200,second.text)
         report=first.json()
@@ -674,7 +677,7 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(report["installed_manifest_sha256"],digest)
         self.assertEqual(install_path.read_text(),"{}")
         collect.assert_called_once()
-        self.assertEqual(self.client.post(url).status_code,403)
+        self.assertEqual(self.client.post(url,json={}).status_code,403)
 
     def test_verified_installed_oil_loadouts_are_read_only_and_empty(self):
         got=self.client.get("/api/v1/verified-oil-loadouts?ilevel=334",

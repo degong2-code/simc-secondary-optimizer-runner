@@ -2098,6 +2098,85 @@ assert.strictEqual(fn(assert),true);
         self.assertIn('input.type="number";input.min="1";input.max="999999999";',
                       source.read_text(encoding="utf8"))
 
+    def test_v7002_real_browser_refresh_posts_json_and_preserves_budget(self):
+        """Execute the production refresh AND api transport, not a mocked api."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node is not installed")
+        source=ROOT/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+function load(start,end){
+  const i=raw.indexOf(start),j=raw.indexOf(end,i);
+  assert(i>=0&&j>i);
+  return eval("("+raw.slice(i,j).trim()+")");
+}
+const gear={source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
+  season_build:"12.2.0.99999",installed_manifest_sha256:"a".repeat(64),
+  source_catalog_manifest_sha256:"b".repeat(64),
+  choices:{trinket:[{item_id:100,name:"Original",inventory_type:12}],
+    special_effect_gear_candidate:[],selectable_stat_craft:[]}};
+const budget={T:3107};
+const state={token:"offline-test",seasonGear:gear,seasonGearTargetIlevel:334,
+  verifiedExistingBudget:budget};
+const field=id=>id==="ilevel"?"334":"";
+function option(value,text){return {value:String(value),textContent:text,dataset:{}}}
+const nodes={};
+for(const id of ["trinket1","trinket2"]){
+  nodes[id]={value:"100",options:[option("100","Original")],
+    appendChild(x){this.options.push(x)}};
+}
+nodes["season-gear-note"]={textContent:""};
+const $=id=>nodes[id];
+let redraw=0,requests=0,stale=false;
+const refreshEquipmentSelectionUI=()=>{redraw++};
+const fetch=async(url,opts)=>{
+  requests++;
+  assert(url.startsWith("/api/v1/season-gear/refresh?"));
+  assert(url.includes("target_ilevel=334"));
+  assert.strictEqual(opts.method,"POST");
+  assert.strictEqual(opts.headers["Content-Type"],"application/json");
+  assert.strictEqual(opts.headers["x-simc-local-token"],"offline-test");
+  assert.strictEqual(opts.body,"{}");
+  if(stale)state.seasonGearTargetIlevel=335;
+  return {ok:true,json:async()=>({
+    schema:"season_selectable_gear_refresh_v1",status:"SEASON_TRINKET_SOURCE_REFRESHED",
+    season_build:gear.season_build,target_ilevel:334,
+    installed_manifest_sha256:gear.installed_manifest_sha256,
+    source_catalog_manifest_sha256:gear.source_catalog_manifest_sha256,
+    supplementary_delve_status:"SUPPLEMENTARY_SOURCE_OBSERVED",
+    native_calls_now:0,budget_rebuilt:false,
+    new_trinkets:[{item_id:100,name:"Duplicate",inventory_type:12},
+      {item_id:101,name:"New",inventory_type:12},
+      {item_id:102,name:"Wrong slot",inventory_type:11}]})};
+};
+const api=load("async function api(","function markSession(");
+const refresh=load("async function refreshExistingSeasonTrinkets(",
+                   "function installSeasonGearHints(");
+(async()=>{
+  stale=true;
+  await refresh(gear,334);
+  assert.strictEqual(redraw,0);
+  assert.strictEqual(gear.choices.trinket.length,1);
+  state.seasonGearTargetIlevel=334;
+  stale=false;
+  await refresh(gear,334);
+  assert.deepStrictEqual(gear.choices.trinket.map(x=>x.item_id),[100,101]);
+  assert.strictEqual(state.verifiedExistingBudget,budget);
+  assert.strictEqual(state.verifiedExistingBudget.T,3107);
+  assert.strictEqual(nodes.trinket1.value,"100");
+  assert.strictEqual(nodes.trinket2.value,"100");
+  assert.strictEqual(nodes.trinket1.options.length,2);
+  assert.strictEqual(redraw,1);
+  await refresh(gear,334);
+  assert.strictEqual(requests,2);
+})().catch(e=>{console.error(e);process.exitCode=1});
+"""
+        result=subprocess.run([node,"-e",code,str(source)],capture_output=True,
+                              text=True,timeout=20)
+        self.assertEqual(result.returncode,0,result.stderr)
+
     def test_v695_inline_equipment_only_and_full_width_result(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text

@@ -868,7 +868,8 @@ async function refreshExistingSeasonTrinkets(gear,level) {
   try{
     const params=new URLSearchParams({game_build:gear.season_build,
       target_ilevel:String(level),installed_manifest_sha256:gear.installed_manifest_sha256});
-    const data=await api("/api/v1/season-gear/refresh?"+params.toString(),{method:"POST"});
+    const data=await api("/api/v1/season-gear/refresh?"+params.toString(),
+      {method:"POST",payload:{}});
     if(state.seasonGear!==gear||Number(field("ilevel"))!==level||
        state.seasonGearTargetIlevel!==level||
        data?.schema!=="season_selectable_gear_refresh_v1"||

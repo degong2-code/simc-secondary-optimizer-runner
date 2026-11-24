@@ -121,3 +121,7 @@ v699 9 SUCCESS/1 opt-in SKIP. 범용 same-build v217 원본 검증된 두 DB2 �
 ## v700.1 — 신규 목록 갱신 실패 복구 우선
 
 v700 15 SUCCESS/2 FAIL/1 SKIP. #45341705318 및 #45341705137 Windows/Ubuntu 같은 신규 fixture에서 v405 original source full_season_completeness_confirmed=False 누락 확인; 시험 입력 보완 및 원래 first source error 안전 전달. 기존 검증 조건 유지. 실제 POST refresh scope/dedup/cache/특수 pending/budget 불변 fixture 추가. UI 80개 제한 제거 및 품목 수 명시. 신규 CI PENDING. 특수효과 runtime 연결은 미구현. Native0, 실제 DB2/원본 수집0; 공식 상태 불변.
+
+## v700.2 — 실제 HTTP 연결 수정
+
+v700.1 11 SUCCESS/6 FAIL/1 SKIP. 원본 refresh fixture 및 v212 통과, 6 FAIL 동일 POST 415 JSON_CONTENT_TYPE_REQUIRED. Browser와 API fixture가 모두 빈 POST를 보냄. 기존 api helper payload:{} 및 test JSON body, 415 보안 계약 보존, 실제 JS transport+refresh Node 회귀 추가. 새 CI PENDING. 특수 장비 v208/v101/v098/v096 연결 아직 미구현. Native0/실제 원본 수집0, 설치본 변경0, 공식 상태 불변.
