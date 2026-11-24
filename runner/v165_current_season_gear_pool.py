@@ -270,6 +270,7 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
     unscoped_origins=defaultdict(list)
     world_pending=[]
     registered_unscoped=defaultdict(list)
+    indexed_raid_review=defaultdict(list)
     registered_seasons=defaultdict(set)
     for row in read_csv(folder/"JournalEncounterItem.csv",(
             "ID","JournalEncounterID","ItemID","DisplaySeasonID")):
@@ -293,8 +294,21 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
             elif season==0:
                 unscoped_origins[iid].append({
                     **base,"source":"mplus_journal","challenge_mode_id":cid})
-        if instance in instances and iid not in indexed and season in (0,sid):
-            origins.setdefault(iid,[]).append({**base,"source":"raid_journal"})
+        if instance in instances:
+            if iid in indexed:
+                # Already collected raid equipment can still carry an
+                # indirect effect. Preserve its exact original authenticated
+                # occurrence for review, without changing the base catalog.
+                registered_seasons[(eid,iid)].add(season)
+                if season in (0,sid):
+                    for origin in indexed[iid]["acquisition_sources"]:
+                        if (_journal_origin_current(origin,sid,raid=True)
+                                and origin["journal_encounter_id"]==eid
+                                and origin["journal_instance_id"]==instance
+                                and origin["display_season_id"]==season):
+                            indexed_raid_review[iid].append(origin)
+            elif season in (0,sid):
+                origins.setdefault(iid,[]).append({**base,"source":"raid_journal"})
         if eid in registered:
             registered_seasons[(eid,iid)].add(season)
             if season==sid:
@@ -312,7 +326,7 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
                 "source":"crafted_fixed_gear",
                 "expansion_id":original["db2_expansion_id"],
                 "classification":"SAME_EXPANSION_CRAFTED_PHYSICAL_CANDIDATE"})
-    ids=set(origins)|set(dungeon_loot)|set(registered_unscoped)
+    ids=set(origins)|set(dungeon_loot)|set(registered_unscoped)|set(indexed_raid_review)
     item={integer(x["ID"]):x for x in read_csv(
         folder/"Item.csv",("ID","ClassID","InventoryType"))
         if integer(x["ID"]) in ids}
@@ -386,7 +400,7 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
                     conflicts.append(origin)
                 else:
                     review_origins.append(origin)
-            for origin in registered_unscoped.get(iid,()):
+            for origin in (*registered_unscoped.get(iid,()),*indexed_raid_review.get(iid,())):
                 seasons=registered_seasons[(origin["journal_encounter_id"],iid)]
                 if any(s not in (0,sid) for s in seasons) and sid not in seasons:
                     conflicts.append(origin)

@@ -318,11 +318,13 @@ def verify_product_effect_registration(folder,gear,candidate):
     assert replay is not None and replay["candidate"]==sealed["candidate"]
     assert json.loads(Path(gear["candidate_path"]).read_text("utf8"))==candidate
     unbound=sorted(set(expected)-set(selected))
-    result={"status":"PASS_REAL_EFFECT_OPTION_CATALOG_AND_SELECTED_SOURCE" if not missing and not unbound
+    missing_physical=sorted(set(expected)-set(scope_rows))
+    result={"status":"PASS_REAL_EFFECT_OPTION_CATALOG_AND_SELECTED_SOURCE" if not missing and not unbound and not missing_physical
             else "PENDING_REAL_EFFECT_OPTION_CATALOG_OR_SELECTED_SOURCE",
             "game_build":BUILD,"registered_effect_option_count":len(registered),
             "registered_effect_options":[registered[i] for i in sorted(registered)],
             "expected_regression_count":len(expected),"missing_or_wrong_option_ids":missing,
+            "missing_physical_review_ids":missing_physical,
             "selected_source_bound_ids":selected,"selected_source_unbound_ids":unbound,
             "source_generation_sha256":sealed["source_generation_sha256"],
             "bonus_source_network_calls":0,"native_calls":0,"budget_rebuilt":False,

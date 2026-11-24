@@ -650,6 +650,64 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         with self.assertRaisesRegex(review.BonusReviewBlocked,"DUPLICATE"):
             review.reconcile_effect_options(observed,[row(1),row(1)],season_id=47)
 
+    def test_indexed_raid_indirect_effect_keeps_original_physical_scope(self):
+        linked=self.source(inventory=1)
+        self.write_csv("Item.csv",["ID","ClassID","SubclassID","InventoryType"],
+            [{"ID":self.item_id,"ClassID":4,"SubclassID":1,"InventoryType":1}])
+        original=json.loads(Path(linked["candidate_path"]).read_text("utf8"))
+        origin=original["items"][0]["acquisition_sources"][0]
+        self.write_csv("JournalEncounter.csv",["ID","JournalInstanceID","Name_lang"],
+            [{"ID":302,"JournalInstanceID":301,"Name_lang":"Active raid boss"},
+             {"ID":303,"JournalInstanceID":301,"Name_lang":"Unmatched encounter"}])
+        self.write_csv("CraftingData.csv",["ID","CraftedItemID"],[])
+        effect=self.root/"effects.csv"
+        effect.write_text("ID,ItemID,ItemEffectID\n","utf8")
+        for season,conflict in ((47,False),(0,False),(0,True)):
+            with self.subTest(season=season,conflict=conflict):
+                origin.update(display_season_id=season,season_evidence=(
+                    "DB2_DISPLAY_SEASON_MATCH" if season else "UNKNOWN_UNSCOPED_JOURNAL"))
+                occurrences=[(302,season),(303,0)]
+                if conflict:occurrences.append((302,46))
+                self.write_csv("JournalEncounterItem.csv",
+                    ["ID","JournalEncounterID","ItemID","DisplaySeasonID"],
+                    [{"ID":i,"JournalEncounterID":eid,"ItemID":self.item_id,
+                      "DisplaySeasonID":sid} for i,(eid,sid) in enumerate(occurrences,1)])
+                tables={p.stem:{"sha256":build.digest(p.read_bytes()),
+                                 "bytes":p.stat().st_size} for p in self.wago.glob("*.csv")}
+                receipt=json.dumps({"build":self.BUILD,"locale":"enUS","tables":tables}).encode()
+                (self.wago/"receipt.json").write_bytes(receipt)
+                original["snapshot_receipt_sha256"]=build.digest(receipt)
+                before=json.dumps(original,sort_keys=True)
+                expanded=build.source_gear_pool.expand_selectable_source(
+                    original,self.wago,effect)
+                self.assertEqual(json.dumps(original,sort_keys=True),before)
+                self.assertEqual(expanded["items"],original["items"])
+                ext=expanded["selectable_source_extension"]
+                self.assertEqual(ext["additional_candidate_ids"],[])
+                self.assertEqual(ext["indirect_review_item_ids"],
+                    [] if conflict else [self.item_id])
+                rows=ext["effect_review_rows"]
+                self.assertEqual(len(rows),1)
+                row=rows[0]
+                self.assertEqual(row["item_id"],self.item_id)
+                self.assertEqual(row["physical_metadata"]["class_id"],4)
+                self.assertEqual(row["acquisition_sources"],[] if conflict else [origin])
+                self.assertEqual(bool(row["conflicting_source_occurrences"]),conflict)
+                observed={"schema":build.bonus_effect_review.SCHEMA,
+                    "items":[{"item_id":self.item_id}],
+                    "context_free_effect_bonus_candidates":[{
+                        "item_id":self.item_id,"bonus_ids":[101],
+                        "bonus_effects":[{"bonus_id":101,"item_effect_ids":[91]}]}]}
+                resolved=build.bonus_effect_review.reconcile_effect_options(
+                    observed,rows,season_id=47)
+                self.assertEqual(resolved["effect_option_candidate_count"],0 if conflict else 1)
+                if conflict:
+                    self.assertEqual(resolved["effect_option_pending"],[
+                        {"item_id":self.item_id,"reason":"NO_SCOPED_JOURNAL_ORIGIN"}])
+                else:
+                    self.assertEqual(resolved["effect_option_candidates"][0]["required_options"],
+                        {"bonus_id":"101"})
+
     def test_effect_option_overlay_reclassifies_only_selected_view(self):
         linked=self.source(inventory=1)
         # Match real armor metadata (fixture defaults to weapon otherwise).
