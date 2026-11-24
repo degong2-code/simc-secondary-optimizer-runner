@@ -3915,7 +3915,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     source,installed_manifest_sha256=installed_manifest_sha256,
                     official_names=names)
                 if not include_refresh:return base
-                # Restore verified source-only trinket additions on GET,
+                # Restore verified source-only selectable additions on GET,
                 # including after server restart. Never mutate v213/v212.
                 # A missing or ambiguous derived source leaves base intact.
                 try:
@@ -3925,6 +3925,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                             refreshed=environment_build.read_sealed_selectable_gear_generation(
                                 stage_root=docs.parent,build=game_build)
                             if refreshed is not None:
+                                refreshed={**refreshed,"special_generation_verified":True}
                                 jobs.season_gear_refresh_cache[game_build]=refreshed
                     if refreshed is None:return base
                     candidate=refreshed["candidate"]
@@ -3932,16 +3933,21 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     old_ids={r["item_id"] for rows in groups.values() for r in rows}
                     additions={r["item_id"] for r in candidate["items"]
                         if r["category"]=="trinket" and r["item_id"] not in old_ids}
-                    new_names=official_ko_env.read_names(jobs.root,game_build,additions)
+                    special_ids=_refreshed_special_ids(refreshed,old_ids)
+                    new_names=official_ko_env.read_names(jobs.root,game_build,
+                                                         additions|special_ids)
                     rows=season_gear.public_options(candidate,official_names=new_names)["choices"]
-                    new=[r for r in rows["trinket"] if r["item_id"] in additions]
-                    base["choices"]["trinket"]=sorted(
-                        base["choices"]["trinket"]+new,
-                        key=lambda r:(r["name"].casefold(),r["item_id"]))
-                    base["count"]+=len(new)
-                    base["refreshed_trinket_count"]=len(new)
+                    for role,ids,count_key in (
+                        ("trinket",additions,"refreshed_trinket_count"),
+                        ("special_effect_gear_candidate",special_ids,"refreshed_special_count")):
+                        new=[r for r in rows[role] if r["item_id"] in ids]
+                        base["choices"][role]=sorted(
+                            base["choices"][role]+new,
+                            key=lambda r:(r["name"].casefold(),r["item_id"]))
+                        base["count"]+=len(new)
+                        base[count_key]=len(new)
+                        base["verified_ko_item_names"]+=sum("name_ko" in r for r in new)
                     base["source_generation_sha256"]=refreshed["source_generation_sha256"]
-                    base["verified_ko_item_names"]+=sum("name_ko" in r for r in new)
                 except (OSError,ValueError,TypeError,KeyError):
                     pass
                 return base
@@ -3968,14 +3974,22 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     "full_season_completeness_confirmed":False,
                     "native_calls_now":0}
 
+    def _refreshed_special_ids(refreshed,old_ids):
+        if not refreshed.get("special_generation_verified"):return set()
+        candidate=refreshed["candidate"]
+        return {r["item_id"] for r in candidate["items"]
+                if r["item_id"] not in old_ids and
+                bootstrap.refreshed_special_source_eligible(
+                    r,candidate.get("db2_display_season_id"))}
+
     @app.post("/api/v1/season-gear/refresh")
     def refresh_installed_season_gear(game_build: str,target_ilevel: int,
                                       installed_manifest_sha256: str):
         """Refresh choices without re-installing the verified numeric scope.
 
-        Only trinkets are independently consumable by the existing exact-ID
-        profile path. Special replacements still need their original
-        slot/static-budget/tier source connection; do not expose them yet.
+        Trinkets use the existing exact-ID profile path. Special choices
+        require the same unique sealed generation used by v098's selected
+        source connection; no provisional crafted/bonus-only promotion.
         """
         base=_current_season_gear(game_build,target_ilevel,installed_manifest_sha256,
                                   include_refresh=False)
@@ -3984,7 +3998,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 "season_build":game_build,"target_ilevel":target_ilevel,
                 "installed_manifest_sha256":installed_manifest_sha256,
                 "source_catalog_manifest_sha256":base.get("source_catalog_manifest_sha256"),
-                "new_trinkets":[],"new_special_pending_count":None,
+                "new_trinkets":[],"new_special_items":[],"new_special_pending_count":None,
                 "native_calls_now":0,"network_calls_now":0,
                 "budget_rebuilt":False,"full_season_completeness_confirmed":False}
         if (base.get("source_scope")!="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"
@@ -3997,6 +4011,18 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     root=jobs.root/"_fresh_season_sources"/("wago_"+game_build)
                     refreshed=environment_build.refresh_existing_season_gear_source(
                         stage_root=root,build=game_build)
+                    # Confirm the same unambiguous generation v098 will
+                    # resolve on selection. Only small sealed files, not
+                    # another raw acquisition or numeric environment Build.
+                    sealed=None
+                    if any(bootstrap.refreshed_special_source_eligible(
+                            r,refreshed["candidate"].get("db2_display_season_id"))
+                           for r in refreshed["candidate"]["items"]):
+                        sealed=environment_build.read_sealed_selectable_gear_generation(
+                            stage_root=root,build=game_build)
+                    refreshed={**refreshed,"special_generation_verified":(
+                        sealed is not None and
+                        sealed["source_generation_sha256"]==refreshed["source_generation_sha256"])}
                     # A partial sealed source is reusable as-is; do not
                     # repeat the same raw lookup or call it complete.
                     if refreshed.get("supplementary_delve_status") in (
@@ -4009,7 +4035,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             prior_ids={r["item_id"] for rows in base["choices"].values() for r in rows}
             new_ids={r["item_id"] for r in source["items"]
                      if r["category"]=="trinket" and r["item_id"] not in prior_ids}
-            names=official_ko_env.read_names(jobs.root,game_build,new_ids)
+            special_ids=_refreshed_special_ids(refreshed,prior_ids)
+            names=official_ko_env.read_names(jobs.root,game_build,new_ids|special_ids)
             rows=season_gear.public_options(source,official_names=names)["choices"]
             result.update(status="SEASON_TRINKET_SOURCE_REFRESHED",
                 source_generation_sha256=refreshed["source_generation_sha256"],
@@ -4018,7 +4045,9 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     "supplementary_delve_unresolved_count"),
                 new_trinkets=[r for r in rows["trinket"] if r["item_id"] in new_ids],
                 mplus_trinket_coverage=refreshed.get("mplus_trinket_coverage"),
-                new_special_pending_count=sum(r["item_id"] not in prior_ids
+                new_special_items=[r for r in rows["special_effect_gear_candidate"]
+                                   if r["item_id"] in special_ids],
+                new_special_pending_count=sum(r["item_id"] not in prior_ids|special_ids
                     for r in rows["special_effect_gear_candidate"]))
         except (stage_engine.StageExecutionBlocked,environment_build.EnvironmentBuildBlocked,
                 OSError,ValueError,TypeError,KeyError) as exc:

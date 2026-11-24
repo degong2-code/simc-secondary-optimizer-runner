@@ -888,11 +888,18 @@ async function refreshExistingSeasonTrinkets(gear,level) {
          typeof item.name!=="string"||!item.name)continue;
       ids.add(item.item_id);added.push(item);
     }
+    const specialAdded=[];
+    for(const item of data.new_special_items||[]){
+      if(!Number.isSafeInteger(item.item_id)||item.item_id<=0||ids.has(item.item_id)||
+         !Number.isSafeInteger(item.inventory_type)||item.inventory_type===12||
+         typeof item.name!=="string"||!item.name)continue;
+      ids.add(item.item_id);specialAdded.push(item);
+    }
     gear.trinket_source_refresh=data.supplementary_delve_status;
     const unresolved=data.supplementary_delve_unresolved_count;
     const coverageNote=Number.isSafeInteger(unresolved)&&unresolved>0
       ?" · 구렁 미확인 "+unresolved+"종":"";
-    if(!added.length){
+    if(!added.length&&!specialAdded.length){
       if(coverageNote) $("season-gear-note").textContent=
         "기존 예산·목록 유지"+coverageNote+" · 시즌 전체 목록 완전성 미확인";
       return;
@@ -907,9 +914,22 @@ async function refreshExistingSeasonTrinkets(gear,level) {
         else select.appendChild(option(id,item.name_ko||item.name));
       }
     }
+    gear.choices.special_effect_gear_candidate=[
+      ...gear.choices.special_effect_gear_candidate,...specialAdded];
+    for(const row of $("special-rows").querySelectorAll(".gear-row")){
+      const select=row.querySelector('select[data-field="item_id"]');
+      for(const item of specialAdded){
+        const id=String(item.item_id);
+        const old=[...select.options].find(opt=>opt.value===id);
+        if(old){old.textContent=item.name_ko||item.name;delete old.dataset.historic;}
+        else select.appendChild(option(id,item.name_ko||item.name));
+      }
+    }
+    refreshSpecialSlots();
     refreshEquipmentSelectionUI();
-    $("season-gear-note").textContent="기존 예산 유지 · 검증 장신구 "+added.length+
-      "종 추가"+coverageNote+" · 시즌 전체 목록 완전성 미확인";
+    $("season-gear-note").textContent="기존 예산 유지 · 장신구 "+added.length+
+      "종, 특수효과 장비 "+specialAdded.length+"종 추가"+
+      coverageNote+" · 시즌 전체 목록 완전성 미확인";
   }catch{
     // Keep the original installed list usable if source refresh is pending.
   }

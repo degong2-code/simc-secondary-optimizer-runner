@@ -2392,6 +2392,22 @@ def _attach_selected_future_session_identity_unadmitted(
             "v435_isolated_selected_dps_cache_identity_preview_only":True}
 
 
+def refreshed_special_source_eligible(row,season_id):
+    """Shared menu/runtime rule for an already A7-verified candidate.
+
+    No AI or new effect evaluation. A provisional crafted-only row, or
+    an unrelated old-season journal occurrence, cannot qualify.
+    """
+    import v165_current_season_gear_pool as pool
+    return (row.get("category")=="special_effect_gear_candidate" and
+            row.get("inventory_type") in (1,2,3,5,6,7,8,9,10,11,13,14,15,16,17,20,23,26)
+            and any(
+                pool._journal_origin_current(x,season_id,raid=True)
+                or pool._journal_origin_current(x,season_id,raid=False)
+                or x.get("source")=="localbots_delve_pool"
+                for x in row.get("source_evidence",[])))
+
+
 def _selected_refresh_special_source(*,user,gear,stage_root,pinned=None):
     """Resolve only missing explicitly selected special IDs from sealed A7.
 
@@ -2428,10 +2444,7 @@ def _selected_refresh_special_source(*,user,gear,stage_root,pinned=None):
     # proof of a current recipe. Do not expand that provisional path here.
     found=[r for r in candidate["items"]
            if r["item_id"] in selected and
-           r["category"]=="special_effect_gear_candidate" and
-           any(x.get("source") in ("raid_journal","mplus_journal",
-                                    "localbots_delve_pool")
-               for x in r.get("source_evidence",[]))]
+           refreshed_special_source_eligible(r,gear["db2_display_season_id"])]
     if {r["item_id"] for r in found}!=selected:
         need(pinned is None,"SELECTED_REFRESH_PINNED_ITEM_UNAVAILABLE")
         return [],None

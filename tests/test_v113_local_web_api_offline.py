@@ -617,7 +617,7 @@ class LocalWebAPIOffline(unittest.TestCase):
             headers=self.headers).status_code,422)
         self.assertEqual(self.client.get(url).status_code,403)
 
-    def test_existing_gear_refresh_keeps_exact_installed_scope_and_only_adds_trinkets(self):
+    def test_existing_gear_refresh_keeps_exact_installed_scope_and_adds_verified_specials(self):
         game_build="12.2.0.99999"
         digest="b"*64
         catalog_sha="c"*64
@@ -637,8 +637,14 @@ class LocalWebAPIOffline(unittest.TestCase):
                  "catalog":{"gear":{"count":1,"slot_groups":{"trinket":[row]}}}}
         fresh_trinket={**row,"item_id":270000,"name":"New trinket"}
         fresh_special={**row,"item_id":270001,"category":"special_effect_gear_candidate",
-                       "inventory_type":11,"name":"New special"}
-        candidate={"season_build":game_build,"items":[row,fresh_trinket,fresh_special]}
+                       "inventory_type":11,"name":"New special",
+                       "source_evidence":[{"source":"mplus_journal",
+                         "display_season_id":47,"season_evidence":"DB2_DISPLAY_SEASON_MATCH",
+                         "journal_encounter_id":123,"journal_instance_id":456}]}
+        pending_special={**fresh_special,"item_id":270002,"name":"Provisional crafted",
+                         "source_evidence":[{"source":"crafted_fixed_gear"}]}
+        candidate={"season_build":game_build,"db2_display_season_id":47,
+                   "items":[row,fresh_trinket,fresh_special,pending_special]}
         refresh={"candidate":candidate,"source_generation_sha256":"d"*64,
                  "supplementary_delve_status":"SUPPLEMENTARY_SOURCE_OBSERVED",
                  "network_calls":1,"native_calls":0}
@@ -655,9 +661,11 @@ class LocalWebAPIOffline(unittest.TestCase):
               mock.patch.object(web.official_ko_env,"read_names",return_value={}),
               mock.patch.object(web.environment_build,"refresh_existing_season_gear_source",
                  return_value=refresh) as collect,
+              mock.patch.object(web.environment_build,"read_sealed_selectable_gear_generation",
+                 return_value={**refresh,"network_calls":0}) as sealed,
               mock.patch.object(web.season_gear,"public_options",return_value={"choices":{
                   "trinket":[row,fresh_trinket],
-                  "special_effect_gear_candidate":[fresh_special],
+                  "special_effect_gear_candidate":[fresh_special,pending_special],
                   "selectable_stat_craft":[]}})):
             # The actual browser uses api(..., {method:"POST",payload:{}}).
             # Keep the production JSON-only middleware unchanged.
@@ -665,21 +673,21 @@ class LocalWebAPIOffline(unittest.TestCase):
             first=self.client.post(url,headers=self.headers,json={})
             second=self.client.post(url,headers=self.headers,json={})
             self.app.state.jobs.season_gear_refresh_cache.clear()
-            with mock.patch.object(web.environment_build,
-                    "read_sealed_selectable_gear_generation",
-                    return_value={**refresh,"network_calls":0}) as restore:
-                get=self.client.get(url.replace("/refresh",""),headers=self.headers)
-            restore.assert_called_once()
+            get=self.client.get(url.replace("/refresh",""),headers=self.headers)
+            self.assertEqual(sealed.call_count,2)
         self.assertEqual(get.status_code,200,get.text)
         self.assertEqual({r["item_id"] for r in get.json()["choices"]["trinket"]},
                          {269999,270000})
-        self.assertEqual(get.json()["choices"]["special_effect_gear_candidate"],[])
+        self.assertEqual([r["item_id"] for r in get.json()["choices"]["special_effect_gear_candidate"]],
+                         [270001])
         self.assertEqual(get.json()["refreshed_trinket_count"],1)
+        self.assertEqual(get.json()["refreshed_special_count"],1)
         self.assertEqual(first.status_code,200,first.text)
         self.assertEqual(second.status_code,200,second.text)
         report=first.json()
         self.assertEqual(report["status"],"SEASON_TRINKET_SOURCE_REFRESHED")
         self.assertEqual([r["item_id"] for r in report["new_trinkets"]],[270000])
+        self.assertEqual([r["item_id"] for r in report["new_special_items"]],[270001])
         self.assertEqual(report["new_special_pending_count"],1)
         self.assertFalse(report["budget_rebuilt"])
         self.assertEqual(report["native_calls_now"],0)
