@@ -403,6 +403,8 @@ def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
         "installed_v212_manifest_sha256":doc["manifest_sha256"],
         "original_v191_raw_gear_tier_sha256":
             original_v191_link["raw_source_sha256"],
+        **({"selected_refresh_binding":original_v191_link["selected_refresh_binding"]}
+           if "selected_refresh_binding" in original_v191_link else {}),
         "selected_v232_receipt_sha256":candidate["receipt_sha256"],
         "selected_profile_sha256":profile_sha,
         "static_cache_content_sha256":hashlib.sha256(raw).hexdigest(),
@@ -1261,7 +1263,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
           season_physical_one_spec_candidate=None,
           season_selected_static_cache_path=None,
           exploration_policy=None,
-          selected_user_enchant_source_consumer=None):
+          selected_user_enchant_source_consumer=None,
+          selected_refresh_rows=None,selected_refresh_binding=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
                    FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
@@ -1491,6 +1494,16 @@ def build(user,folder,binary,revision,static_cache_path=None,
     linked_originals=(_v191_raw_gear_tier_link(
         season_source_bundle,season_original_source_paths,revision)
         if season_original_source_paths is not None else None)
+    if selected_refresh_rows:
+        need(linked_originals is not None and
+             fresh_installed_environment_path is not None and
+             type(selected_refresh_binding) is dict and
+             selected_refresh_binding.get("selected_rows_sha256")==
+                 hashlib.sha256(canonical(selected_refresh_rows).encode("utf8")).hexdigest(),
+             "SELECTED_REFRESH_REQUIRES_ORIGINAL_INSTALLED_SOURCE")
+        linked_originals["selected_refresh_binding"]=copy.deepcopy(selected_refresh_binding)
+    else:
+        need(selected_refresh_binding is None,"SELECTED_REFRESH_BINDING_WITHOUT_ROWS")
     # Source-independent P1 production specs compile from the season catalog.
     # Existing 24 source-backed default paths remain unchanged; explicit
     # pure_stage=True preserves the older v140 witness-only pilot contract.
@@ -1635,7 +1648,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
             season_source_gear=(season_source_bundle["gear"]
                                 if season_source_bundle is not None else None),
             season_source_tier=(season_source_bundle["tier"]
-                                if season_source_bundle is not None else None))
+                                if season_source_bundle is not None else None),
+            **({"selected_refresh_rows":selected_refresh_rows}
+               if selected_refresh_rows else {}))
     else:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need)
@@ -2377,6 +2392,57 @@ def _attach_selected_future_session_identity_unadmitted(
             "v435_isolated_selected_dps_cache_identity_preview_only":True}
 
 
+def _selected_refresh_special_source(*,user,gear,stage_root,pinned=None):
+    """Resolve only missing explicitly selected special IDs from sealed A7.
+
+    No ordinary, crafted or tier rows enter the representative source.
+    The exact generation is pinned in v436; no discovery/HTTP on replay.
+    """
+    known={r["item_id"] for r in gear["items"]}
+    selected=set()
+    for row in user.get("special_items",[]):
+        origin=row.get("options",{}).get("redirected_base_stats")
+        iid=int(origin) if origin is not None and str(origin).isdigit() else row["item_id"]
+        if iid not in known:selected.add(iid)
+    if not selected:
+        need(pinned is None,"SELECTED_REFRESH_SOURCE_UNEXPECTED")
+        return [],None
+    import v216_environment_build_coordinator as owner
+    if pinned is not None:
+        need(type(pinned) is dict and set(pinned)=={
+             "source_generation_sha256","selected_rows_sha256"} and
+             all(type(x) is str and len(x)==64 for x in pinned.values()),
+             "SELECTED_REFRESH_BINDING_INVALID")
+    refreshed=owner.read_sealed_selectable_gear_generation(
+        stage_root=stage_root,build=gear["season_build"],
+        generation_sha256=(pinned["source_generation_sha256"] if pinned else None))
+    if refreshed is None:
+        need(pinned is None,"SELECTED_REFRESH_PINNED_SOURCE_UNAVAILABLE")
+        return [],None
+    candidate=refreshed["candidate"]
+    need(candidate["season_build"]==gear["season_build"] and
+         candidate["db2_display_season_id"]==gear["db2_display_season_id"] and
+         candidate["expansion_id"]==gear["expansion_id"],
+         "SELECTED_REFRESH_SEASON_SCOPE_DRIFT")
+    # A newly discovered crafted-only physical ID is not by itself
+    # proof of a current recipe. Do not expand that provisional path here.
+    found=[r for r in candidate["items"]
+           if r["item_id"] in selected and
+           r["category"]=="special_effect_gear_candidate" and
+           any(x.get("source") in ("raid_journal","mplus_journal",
+                                    "localbots_delve_pool")
+               for x in r.get("source_evidence",[]))]
+    if {r["item_id"] for r in found}!=selected:
+        need(pinned is None,"SELECTED_REFRESH_PINNED_ITEM_UNAVAILABLE")
+        return [],None
+    found.sort(key=lambda x:x["item_id"])
+    binding={"source_generation_sha256":refreshed["source_generation_sha256"],
+             "selected_rows_sha256":hashlib.sha256(
+                 canonical(found).encode("utf8")).hexdigest()}
+    need(pinned is None or pinned==binding,"SELECTED_REFRESH_PINNED_ROW_DRIFT")
+    return found,binding
+
+
 def preview_from_environment_build(user,folder,binary,revision,*,
                                    environment_result,season_settings=None,
                                    season_controls=None,
@@ -2594,7 +2660,15 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                 collected=environment_result,compilation=compilation,
                 selected_user_item={"slot":slot,"item_id":item_id},
                 selected_enchant_id=enchant_id)
+    refresh_rows,refresh_binding=([],None)
+    if installed_path is not None and user.get("special_items"):
+        refresh_rows,refresh_binding=_selected_refresh_special_source(
+            user=user,gear=docs["gear"],
+            stage_root=pathlib.Path(originals["catalog"]).resolve().parent.parent,
+            pinned=environment_result.get("selected_refresh_binding"))
     result=build(user,folder,binary,revision,
+                 **({"selected_refresh_rows":refresh_rows,
+                     "selected_refresh_binding":refresh_binding} if refresh_rows else {}),
                  selected_user_enchant_source_consumer=selected_enchant_consumer,
                  current_season_product=True,
                  # The v529 selected permanent enchant must read only the
@@ -2616,6 +2690,8 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                  exploration_policy=exploration_policy,
                  **({"static_special_probe_only":True}
                     if static_special_probe_only else {}))
+    if refresh_binding is not None:
+        result["selected_refresh_binding"]=refresh_binding
     if static_special_probe_only:
         return result
     # The selected v434 profile+budget must never inherit the old v106
@@ -2706,10 +2782,14 @@ def materialize_selected_verified_environment(*,user,folder,binary,revision,
          "B8_SELECTED_V436_INSTALLED_AND_G_BUDGET_SHA_DRIFT")
     selected_inputs=environment_result["source_compilation"][
         "v098_source_only_profile_inputs_unadmitted"]
+    replay_environment=environment_result
+    if result.get("selected_refresh_binding") is not None:
+        replay_environment={**environment_result,
+            "selected_refresh_binding":copy.deepcopy(result["selected_refresh_binding"])}
     raw_replay={
         "schema":"v436_selected_fresh_v098_replay_v1",
         "user":user,
-        "environment_result":environment_result,
+        "environment_result":replay_environment,
         "season_controls":season_controls,
         "selected_final_source_sha256":
             result["final_source_identity_sha256"],

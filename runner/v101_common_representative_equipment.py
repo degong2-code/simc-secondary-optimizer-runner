@@ -484,7 +484,8 @@ def reconcile_current_season_five_tier(key,rows,groups,taken,ilevel,
 
 def validate_current_season_selected_slots(key,user,tier_map,need,*,
                                            season_source_gear=None,
-                                           season_source_tier=None):
+                                           season_source_tier=None,
+                                           selected_refresh_rows=None):
     """Source catalog item/slot consistency; not proc/effect certification."""
     if not user["special_items"] and not user["embellishments"]:
         return
@@ -496,6 +497,18 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
         key,tier_map,need,season_source_gear=season_source_gear,
         season_source_tier=season_source_tier)
     indexed={x["item_id"]:x for x in db["items"]}
+    if selected_refresh_rows:
+        need(season_source_gear is not None and
+             type(selected_refresh_rows) is list and
+             all(type(r) is dict and type(r.get("item_id")) is int
+                 and r["item_id"] not in indexed
+                 and r.get("category")=="special_effect_gear_candidate"
+                 for r in selected_refresh_rows) and
+             len({r["item_id"] for r in selected_refresh_rows})==len(selected_refresh_rows),
+             "CURRENT_SEASON_SELECTED_REFRESH_ROWS_INVALID")
+        # v098 authenticates the separate A7 generation. Only selected
+        # slot validation sees these rows; tier/G selection uses original db.
+        indexed.update({r["item_id"]:r for r in selected_refresh_rows})
     spec=contracts.lookup(*key)
     need(spec is not None,"CURRENT_SEASON_EQUIPMENT_SPEC_REQUIRED")
     armor_type=product_gear.ARMOR_SUBCLASS[spec["family"]]
@@ -594,7 +607,8 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
 def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
                          tier_override=None,fifth_override=None,
                          flexible_current_tier=False,
-                         season_source_gear=None,season_source_tier=None):
+                         season_source_gear=None,season_source_tier=None,
+                         selected_refresh_rows=None):
     """Overlay selected items and reassign tier 4pc without item-combo search.
 
     Mutates only its private rows/groups objects. Selected catalyst specials
@@ -604,7 +618,8 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
     need(not flexible_current_tier or tier_override is not None,
          "CURRENT_SEASON_TIER_SOURCE_REQUIRED")
     need(flexible_current_tier or
-         (season_source_gear is None and season_source_tier is None),
+         (season_source_gear is None and season_source_tier is None
+          and selected_refresh_rows is None),
          "CURRENT_SEASON_SELECTED_SOURCE_WITHOUT_CURRENT_MODE")
     tier_map=(CLASS_TIER_ITEMS[key[0]] if tier_override is None
               else tier_override)
@@ -613,7 +628,8 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
     if flexible_current_tier:
         validate_current_season_selected_slots(
             key,user,tier_map,need,season_source_gear=season_source_gear,
-            season_source_tier=season_source_tier)
+            season_source_tier=season_source_tier,
+            selected_refresh_rows=selected_refresh_rows)
     taken=set()
     for group,selection in (("trinkets",user["trinkets"]),
                             ("special",user["special_items"]),

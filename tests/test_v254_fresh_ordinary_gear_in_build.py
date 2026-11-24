@@ -429,7 +429,8 @@ class FreshOrdinaryGearSource(unittest.TestCase):
                (299905,"Registered boss trinket",12,11),
                (299906,"Unregistered field boss trinket",12,11),
                (299907,"Unscoped ordinary",5,11),
-               (299908,"Conflicting season trinket",12,7)]
+               (299908,"Conflicting season trinket",12,7),
+               (299909,"Current dungeon special ring",11,11)]
         with (self.wago/"Item.csv").open("a",encoding="utf8",newline="") as f:
             csv.writer(f).writerows([[iid,4,0,slot] for iid,_,slot,_ in extra])
         with (self.wago/"ItemSparse.csv").open("a",encoding="utf8",newline="") as f:
@@ -455,7 +456,7 @@ class FreshOrdinaryGearSource(unittest.TestCase):
             for i,(eid,iid,sid) in enumerate([
                 (402,299902,47),(402,299903,0),(402,299904,46),
                 (502,299905,47),(503,299906,47),(402,299907,0),
-                (402,299908,0),(402,299908,46)],1)])
+                (402,299908,0),(402,299908,46),(402,299909,47)],1)])
         self.write_csv("CraftingData.csv",["ID","CraftedItemID"],[])
         tables={p.stem:{"sha256":build.digest(p.read_bytes()),
                          "bytes":p.stat().st_size} for p in self.wago.glob("*.csv")}
@@ -481,7 +482,7 @@ class FreshOrdinaryGearSource(unittest.TestCase):
             if req.full_url==build.delve_provider.SOURCE_URL:
                 return Response(json.dumps({"items":[{"id":self.item_id,
                     "name":"Source plain sword"}]}).encode())
-            return Response(b"ID,ItemID,ItemEffectID\n")
+            return Response(b"ID,ItemID,ItemEffectID\n1,299909,12345\n")
         args=dict(stage_root=self.root,wago_folder=self.wago,build=self.BUILD,
                   linked=linked,include_delve=True)
         first=build._fresh_ordinary_gear_source_stage(**args,transport=transport)
@@ -491,7 +492,7 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertEqual(first["plain_candidate_count"],1)
         data=json.loads(Path(first["candidate_path"]).read_text("utf8"))
         self.assertEqual({x["item_id"] for x in data["items"]},
-                         {self.item_id,299902,299903,299905})
+                         {self.item_id,299902,299903,299905,299909})
         rows=first["mplus_trinket_coverage"]
         self.assertEqual(rows[0]["registered_current_trinket_ids"],[299902])
         self.assertEqual(rows[0]["unscoped_only_trinket_ids"],[299903,299908])
@@ -532,8 +533,25 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertEqual(restored["native_calls"],0)
         self.assertEqual(restored["source_generation_sha256"],
                          first["source_stage"]["receipt_sha256"])
+        import v098_target_user_scenario_bootstrap as bootstrap
+        base=dict(data)
+        base["items"]=[r for r in data["items"] if r["item_id"]!=299909]
+        user={"special_items":[{"slot":"finger1","item_id":299909,"options":{}}]}
+        selected,binding=bootstrap._selected_refresh_special_source(
+            user=user,gear=base,stage_root=self.root)
+        self.assertEqual([r["item_id"] for r in selected],[299909])
+        self.assertEqual(binding["source_generation_sha256"],
+                         first["source_stage"]["receipt_sha256"])
+        self.assertEqual(bootstrap._selected_refresh_special_source(
+            user=user,gear=base,stage_root=self.root,pinned=binding),(selected,binding))
+        self.assertEqual(bootstrap._selected_refresh_special_source(
+            user={"special_items":[]},gear=base,stage_root=self.root),([],None))
         # A tampered candidate must never be added by a read-only GET.
         Path(first["candidate_path"]).write_bytes(b"{}")
+        with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
+                                    "SELECTED_REFRESH_PINNED_SOURCE_UNAVAILABLE"):
+            bootstrap._selected_refresh_special_source(
+                user=user,gear=base,stage_root=self.root,pinned=binding)
         self.assertIsNone(build.read_sealed_selectable_gear_generation(
             stage_root=self.root,build=self.BUILD))
 

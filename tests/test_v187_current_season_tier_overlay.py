@@ -76,6 +76,38 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
         self.assertEqual(rows["head"]["item_id"],939652)
         self.assert_four(rows,groups)
 
+    def test_refresh_special_validation_only_does_not_change_original_four_tier(self):
+        import v167_product_season_gear_adapter as product_gear
+        gear=product_gear.read()
+        tier=season.load_tier()
+        snapshot=copy.deepcopy(gear)
+        u,rows,groups=self.setup_rows()
+        original=copy.deepcopy(rows)
+        new_id=999991
+        extra={"item_id":new_id,"category":"special_effect_gear_candidate",
+               "inventory_type":11,"class_id":4,"subclass_id":0,
+               "allowed_class_mask":None}
+        u["special_items"]=[{"slot":"finger1","item_id":new_id,"options":{}}]
+        require=lambda valid,why:self.fail(why) if not valid else None
+        args=dict(tier_override=self.map,
+            fifth_override=("chest",self.map["chest"],159257),
+            flexible_current_tier=True,season_source_gear=gear,
+            season_source_tier=tier)
+        with self.assertRaisesRegex(AssertionError,"CURRENT_SEASON_SELECTED_ITEM_NOT_IN_APPROVED_ROLE"):
+            common.apply_user_equipment(("mage","frost"),copy.deepcopy(rows),
+                dict(groups),u,334,require,**args)
+        with self.assertRaisesRegex(AssertionError,"CURRENT_SEASON_SELECTED_ITEM_WRONG_PHYSICAL_SLOT"):
+            common.apply_user_equipment(("mage","frost"),copy.deepcopy(rows),
+                dict(groups),u,334,require,**args,
+                selected_refresh_rows=[{**extra,"inventory_type":2}])
+        common.apply_user_equipment(("mage","frost"),rows,groups,u,334,require,
+                                    **args,selected_refresh_rows=[extra])
+        self.assertEqual(rows["finger1"]["item_id"],new_id)
+        self.assertEqual(gear,snapshot)
+        self.assertEqual({s:r for s,r in rows.items() if s!="finger1"},
+                         {s:r for s,r in original.items() if s!="finger1"})
+        self.assert_four(rows,groups)
+
     def test_new_build_source_pair_and_build_mismatch_fail_closed(self):
         import v167_product_season_gear_adapter as product_gear
         gear=copy.deepcopy(product_gear.read())

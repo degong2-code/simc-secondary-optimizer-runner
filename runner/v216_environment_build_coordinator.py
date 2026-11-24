@@ -3746,7 +3746,7 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
         return pending(str(exc).split(":",1)[0])
 
 
-def read_sealed_selectable_gear_generation(*,stage_root,build):
+def read_sealed_selectable_gear_generation(*,stage_root,build,generation_sha256=None):
     """Read an existing derived source plus its A7 proof; no HTTP or writes.
 
     Never choose among conflicting generations. Current compiler identity is
@@ -3783,7 +3783,9 @@ def read_sealed_selectable_gear_generation(*,stage_root,build):
                 stage=stage_engine._read_receipt(path)
                 sid=path.stem
                 if (stage.get("stage_id")!=sid or stage.get("status")!="COMPLETE"
-                        or stage.get("stage_version")!="derived-gear-catalog-v1"):continue
+                        or stage.get("stage_version")!="derived-gear-catalog-v1"
+                        or (generation_sha256 is not None and
+                            stage.get("receipt_sha256")!=generation_sha256)):continue
                 rel="source/"+sid+"/"
                 expected={"candidate":rel+"v167_candidates.json",
                           "expanded_source":rel+"v163_selectable_extension.json",
