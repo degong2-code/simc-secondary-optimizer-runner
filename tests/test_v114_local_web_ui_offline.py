@@ -2129,7 +2129,8 @@ for(const id of ["trinket1","trinket2"]){
 }
 nodes["season-gear-note"]={textContent:""};
 const $=id=>nodes[id];
-let redraw=0,requests=0,stale=false;
+let redraw=0,requests=0,stale=false,mode="trinket",specialSlots=0;
+const refreshSpecialSlots=()=>{specialSlots++};
 const refreshEquipmentSelectionUI=()=>{redraw++};
 const fetch=async(url,opts)=>{
   requests++;
@@ -2147,9 +2148,15 @@ const fetch=async(url,opts)=>{
     source_catalog_manifest_sha256:gear.source_catalog_manifest_sha256,
     supplementary_delve_status:"SUPPLEMENTARY_SOURCE_OBSERVED",
     native_calls_now:0,budget_rebuilt:false,
-    new_trinkets:[{item_id:100,name:"Duplicate",inventory_type:12},
+    new_trinkets:mode==="trinket"||mode==="mixed"?[
+      {item_id:100,name:"Duplicate",inventory_type:12},
       {item_id:101,name:"New",inventory_type:12},
-      {item_id:102,name:"Wrong slot",inventory_type:11}]})};
+      {item_id:102,name:"Wrong slot",inventory_type:11}]:[],
+    ...(mode==="trinket"?{}:{new_special_items:mode==="special"||mode==="mixed"?[
+      {item_id:200,name:"Duplicate special",inventory_type:11},
+      {item_id:201,name:"New special",name_ko:"신규 특수장비",inventory_type:11},
+      {item_id:201,name:"Repeated special",inventory_type:11},
+      {item_id:202,name:"Wrong slot",inventory_type:12}]:[]})})};
 };
 const api=load("async function api(","function markSession(");
 const refresh=load("async function refreshExistingSeasonTrinkets(",
@@ -2171,6 +2178,52 @@ const refresh=load("async function refreshExistingSeasonTrinkets(",
   assert.strictEqual(redraw,1);
   await refresh(gear,334);
   assert.strictEqual(requests,2);
+  assert.strictEqual(specialSlots,0);
+  // Keep the original trinket-only fixture without special DOM. Then exercise
+  // the remaining categories independently using the same production transport.
+  for(const kind of ["special","mixed","none"]){
+    mode=kind;redraw=0;specialSlots=0;requests=0;
+    const current={...gear,trinket_source_refresh:undefined,
+      choices:{trinket:[{item_id:100,name:"Original",inventory_type:12}],
+        special_effect_gear_candidate:[{item_id:200,name:"Original special",inventory_type:11}],
+        selectable_stat_craft:[]}};
+    state.seasonGear=current;
+    for(const id of ["trinket1","trinket2"]){
+      delete nodes[id];
+      if(kind==="mixed")nodes[id]={value:"100",options:[option("100","Original")],
+        appendChild(x){this.options.push(x)}};
+    }
+    const special={value:"200",options:[option("200","Original special")],
+      appendChild(x){this.options.push(x)}};
+    delete nodes["special-rows"];
+    if(kind!=="none")nodes["special-rows"]={querySelectorAll(selector){
+      assert.strictEqual(selector,".gear-row");
+      return [{querySelector(selector){
+        assert.strictEqual(selector,'select[data-field="item_id"]');
+        return special;
+      }}];
+    }};
+    await refresh(current,334);
+    assert.deepStrictEqual(current.choices.trinket.map(x=>x.item_id),
+      kind==="mixed"?[100,101]:[100]);
+    assert.deepStrictEqual(current.choices.special_effect_gear_candidate.map(x=>x.item_id),
+      kind==="none"?[200]:[200,201]);
+    assert.strictEqual(specialSlots,kind==="none"?0:1);
+    assert.strictEqual(redraw,kind==="none"?0:1);
+    assert.strictEqual(special.value,"200");
+    assert.deepStrictEqual(special.options.map(x=>x.value),kind==="none"?["200"]:["200","201"]);
+    if(kind!=="none")assert.strictEqual(special.options[1].textContent,"신규 특수장비");
+    if(kind==="mixed")for(const id of ["trinket1","trinket2"]){
+      assert.strictEqual(nodes[id].value,"100");
+      assert.strictEqual(nodes[id].options.length,2);
+    }
+    assert.strictEqual(state.verifiedExistingBudget,budget);
+    assert.strictEqual(budget.T,3107);
+    assert.strictEqual(current.installed_manifest_sha256,gear.installed_manifest_sha256);
+    assert.strictEqual(current.source_catalog_manifest_sha256,gear.source_catalog_manifest_sha256);
+    await refresh(current,334);
+    assert.strictEqual(requests,1);
+  }
 })().catch(e=>{console.error(e);process.exitCode=1});
 """
         result=subprocess.run([node,"-e",code,str(source)],capture_output=True,

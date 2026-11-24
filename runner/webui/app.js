@@ -904,28 +904,33 @@ async function refreshExistingSeasonTrinkets(gear,level) {
         "기존 예산·목록 유지"+coverageNote+" · 시즌 전체 목록 완전성 미확인";
       return;
     }
-    gear.choices.trinket=[...gear.choices.trinket,...added];
-    for(const fieldId of ["trinket1","trinket2"]){
-      const select=$(fieldId);
-      for(const item of added){
-        const id=String(item.item_id);
-        const old=[...select.options].find(opt=>opt.value===id);
-        if(old){old.textContent=item.name_ko||item.name;delete old.dataset.historic;}
-        else select.appendChild(option(id,item.name_ko||item.name));
+    // Only touch the selection controls for categories that actually changed.
+    if(added.length){
+      gear.choices.trinket=[...gear.choices.trinket,...added];
+      for(const fieldId of ["trinket1","trinket2"]){
+        const select=$(fieldId);
+        for(const item of added){
+          const id=String(item.item_id);
+          const old=[...select.options].find(opt=>opt.value===id);
+          if(old){old.textContent=item.name_ko||item.name;delete old.dataset.historic;}
+          else select.appendChild(option(id,item.name_ko||item.name));
+        }
       }
     }
-    gear.choices.special_effect_gear_candidate=[
-      ...gear.choices.special_effect_gear_candidate,...specialAdded];
-    for(const row of $("special-rows").querySelectorAll(".gear-row")){
-      const select=row.querySelector('select[data-field="item_id"]');
-      for(const item of specialAdded){
-        const id=String(item.item_id);
-        const old=[...select.options].find(opt=>opt.value===id);
-        if(old){old.textContent=item.name_ko||item.name;delete old.dataset.historic;}
-        else select.appendChild(option(id,item.name_ko||item.name));
+    if(specialAdded.length){
+      gear.choices.special_effect_gear_candidate=[
+        ...gear.choices.special_effect_gear_candidate,...specialAdded];
+      for(const row of $("special-rows").querySelectorAll(".gear-row")){
+        const select=row.querySelector('select[data-field="item_id"]');
+        for(const item of specialAdded){
+          const id=String(item.item_id);
+          const old=[...select.options].find(opt=>opt.value===id);
+          if(old){old.textContent=item.name_ko||item.name;delete old.dataset.historic;}
+          else select.appendChild(option(id,item.name_ko||item.name));
+        }
       }
+      refreshSpecialSlots();
     }
-    refreshSpecialSlots();
     refreshEquipmentSelectionUI();
     $("season-gear-note").textContent="기존 예산 유지 · 장신구 "+added.length+
       "종, 특수효과 장비 "+specialAdded.length+"종 추가"+
