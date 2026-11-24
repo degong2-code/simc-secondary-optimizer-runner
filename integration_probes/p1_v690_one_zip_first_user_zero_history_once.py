@@ -302,7 +302,14 @@ def stage(args):
                 const nativeRows=v=>Array.isArray(v)?v.slice(0,24).map(r=>({
                   status:code(r.status),reason:code(r.reason),native_error_code:code(r.native_error),
                   native_error_present:!!r.native_error,new_native_calls:num(r.new_native_calls),
-                  physical_item_id:num(r.physical_item_id??r.physical_item_native_source_unadmitted?.physical_item_id),
+                  failed_variant:["baseline","active"].includes(r.failed_variant)?r.failed_variant:null,
+                  native_status:code(r.native_status),
+                  native_returncode:Number.isSafeInteger(r.native_returncode)?r.native_returncode:null,
+                  simc_error_lines:typeof r.native_log_excerpt==="string"?
+                    r.native_log_excerpt.split(String.fromCharCode(10))
+                      .map(s=>s.trim()).filter(s=>s.startsWith("Error:"))
+                      .slice(0,2).map(s=>s.slice(0,500)):[],
+                  physical_item_id:num(r.physical_item_id??r.ordinary_gem_id??r.physical_item_native_source_unadmitted?.physical_item_id),
                   J_candidate:num(r.simc_effective_two_stat_rating_unadmitted),
                   F_candidate:num(r.F_candidate_unadmitted)
                 })):[];
@@ -338,6 +345,24 @@ def stage(args):
                 requires:e.zero_history_build?.requires||[],
                 status:e.source_compilation?.status,
                 jf_source_diagnostic:boundedJF(e)};""")
+            # These are bounded SimC error lines from the internal public
+            # representative source profiles, not a full user profile/log.
+            # Remove local roots and credentials before storing any receipt.
+            if isinstance(environment,dict):
+                diag=environment.get("jf_source_diagnostic") or {}
+                sensitive=[env.get(key,"") for key in SECRETS]
+                sensitive.extend((str(work),str(root),env.get("HOME",""),
+                                  env.get("LOCALAPPDATA",""),str(exe)))
+                sensitive=sorted({v for v in sensitive if v},key=len,reverse=True)
+                for rows in ((diag.get("J") or {}).get("native_rows",[]),
+                             (diag.get("F") or {}).get("native_rows",[]),
+                             (diag.get("F") or {}).get("observations",[])):
+                    for row in rows:
+                        lines=row.get("simc_error_lines",[])
+                        for i,line in enumerate(lines):
+                            for value in sensitive:
+                                line=line.replace(value,"<redacted>")
+                            lines[i]=line
             record["last_completed_stage"]="REAL_ENVIRONMENT_RETURNED"
             record["first_real_environment_summary"]=environment
             if not isinstance(environment,dict) or not (

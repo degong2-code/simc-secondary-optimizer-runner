@@ -9,11 +9,14 @@ or user admission. No assumed season stats or independent effect engine.
 """
 from __future__ import annotations
 
+from contextlib import nullcontext
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
+import tempfile
 
 import v269_simc_chmv_effect_snapshot as effect
 
@@ -76,20 +79,19 @@ def run_case(*,stage_root,profile,source_identity,binary,binary_sha256,
     }
     key=sha(canonical(identity))[:32]
     folder=stage_root/"source"/("v278_"+variant+"_"+key)
-    # Windows SimC can reject absolute input/report paths at MAX_PATH.
-    # Retain the existing identity and receipts for unaffected short paths.
-    # Only the corrected invocation gets a new content key, so a sealed
-    # failure of the old absolute-path invocation cannot poison the fix.
-    relative_io=(sys.platform=="win32" and
-                 max(len(str((folder/name).resolve()))
-                     for name in ("input.simc","native.json"))>=260)
-    if relative_io:
-        identity["io_mode"]="cwd_relative_v1"
+    # The actual Windows SimC opens a canonical path even when passed a
+    # relative name. Its process directory, not just argv, must be short.
+    # Keep the original sealed folder and normal short-path cache identity.
+    short_io=(sys.platform=="win32" and
+              max(len(str((folder/name).resolve()))
+                  for name in ("input.simc","native.json"))>=260)
+    if short_io:
+        identity["io_mode"]="short_temp_cwd_v2"
         key=sha(canonical(identity))[:32]
         folder=stage_root/"source"/("v278_"+variant+"_"+key)
-    report_path=("native.json" if relative_io else
+    # Stable input bytes independent of the ephemeral scratch directory.
+    report_path=("native.json" if short_io else
                  str((folder/"native.json").resolve()))
-    input_arg=("input.simc" if relative_io else str(folder/"input.simc"))
     expected_input=(profile+"iterations=1\nthreads=1\n"+
                     "json2="+report_path+"\n")
     inp=expected_input.encode("utf8")
@@ -127,43 +129,67 @@ def run_case(*,stage_root,profile,source_identity,binary,binary_sha256,
              "V278_CACHED_NATIVE_COMPLETION_NOT_TRUSTED")
         return {"receipt":prior,"folder":folder,
                 "new_native_calls":0,"cache_reused":True}
-    # mkdir(exist_ok=False) is an attempt-lock: if a process crashes before
-    # receipt publication, future calls fail closed rather than rerun.
-    folder.mkdir(parents=True,exist_ok=False)
-    (folder/"input.simc").write_bytes(inp)
-    status="NATIVE_FAILED"
-    code=None
-    error=None
-    try:
-        with (folder/"simc.log").open("wb") as log:
-            try:
-                completed=subprocess.run([str(binary),input_arg],
-                    cwd=folder,stdout=log,stderr=subprocess.STDOUT,
-                    check=False,timeout=timeout_seconds)
-                code=completed.returncode
-                status=("NATIVE_JSON2_CAPTURED" if code==0 and
-                        (folder/"native.json").is_file()
-                        else "NATIVE_JSON2_MISSING" if code==0
-                        else "NATIVE_FAILED")
-            except subprocess.TimeoutExpired:
-                status="NATIVE_TIMEOUT"
-                error="SimC timed out"
-            except OSError as exc:
-                status="NATIVE_FAILED"
-                error=type(exc).__name__+":"+str(exc)
-    finally:
-        data={
-            "schema":SCHEMA,"identity":identity,"input_sha256":input_sha,
-            "native_json2_sha256":(
-                file_sha(folder/"native.json")
-                if (folder/"native.json").is_file() else None),
-            "log_sha256":(
-                file_sha(folder/"simc.log")
-                if (folder/"simc.log").is_file() else None),
-            "status":status,"native_returncode":code,
-            "error":error,"new_native_calls":1,
-        }
-        manifest.write_bytes(canonical(data)+b"\n")
+    # Create scratch only on cache miss, before acquiring the immutable
+    # attempt lock. A too-long TEMP is an actionable setup failure, not a
+    # SimC call. No global cwd, alias drive, or persistent temp cache.
+    scratch=(tempfile.TemporaryDirectory(prefix="simc-v278-") if short_io
+             else nullcontext(folder))
+    with scratch as run_dir:
+        run_folder=Path(run_dir)
+        if short_io:
+            run_folder=run_folder.resolve()
+            need(all(len(str(run_folder/name))<260
+                     for name in ("input.simc","native.json")),
+                 "V278_SHORT_TEMP_PATH_UNAVAILABLE")
+            (run_folder/"input.simc").write_bytes(inp)
+        # mkdir(exist_ok=False) is an attempt-lock: if a process crashes
+        # before receipt publication, future calls fail closed.
+        folder.mkdir(parents=True,exist_ok=False)
+        (folder/"input.simc").write_bytes(inp)
+        status="NATIVE_FAILED"
+        code=None
+        error=None
+        try:
+            with (folder/"simc.log").open("wb") as log:
+                try:
+                    completed=subprocess.run(
+                        [str(binary),str(run_folder/"input.simc")],
+                        cwd=run_folder,stdout=log,stderr=subprocess.STDOUT,
+                        check=False,timeout=timeout_seconds)
+                    code=completed.returncode
+                    status=("NATIVE_JSON2_CAPTURED" if code==0 and
+                            (run_folder/"native.json").is_file()
+                            else "NATIVE_JSON2_MISSING" if code==0
+                            else "NATIVE_FAILED")
+                except subprocess.TimeoutExpired:
+                    status="NATIVE_TIMEOUT"
+                    error="SimC timed out"
+                except OSError as exc:
+                    status="NATIVE_FAILED"
+                    error=type(exc).__name__+":"+str(exc)
+                finally:
+                    # Preserve the exact original output in its canonical
+                    # owner folder, even if SimC failed after producing it.
+                    if short_io and (run_folder/"native.json").is_file():
+                        try:
+                            shutil.copyfile(run_folder/"native.json",
+                                            folder/"native.json")
+                        except OSError as exc:
+                            status="NATIVE_FAILED"
+                            error=type(exc).__name__+":"+str(exc)
+        finally:
+            data={
+                "schema":SCHEMA,"identity":identity,"input_sha256":input_sha,
+                "native_json2_sha256":(
+                    file_sha(folder/"native.json")
+                    if (folder/"native.json").is_file() else None),
+                "log_sha256":(
+                    file_sha(folder/"simc.log")
+                    if (folder/"simc.log").is_file() else None),
+                "status":status,"native_returncode":code,
+                "error":error,"new_native_calls":1,
+            }
+            manifest.write_bytes(canonical(data)+b"\n")
     return {"receipt":data,"folder":folder,
             "new_native_calls":1,"cache_reused":False}
 

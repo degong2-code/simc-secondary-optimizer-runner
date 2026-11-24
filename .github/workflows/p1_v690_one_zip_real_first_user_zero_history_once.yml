@@ -67,6 +67,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'V690_SYNTAX' }
           python -m unittest discover -s tests -p test_v690_visible_oil_user_contract.py -v
           if ($LASTEXITCODE -ne 0) { throw 'V690_VISIBLE_OIL_CONTRACT_PRECHECK' }
+          python -m unittest -v tests.test_v278_sealed_simc_consumable_native_pair.TwoNativeOptions.test_windows_long_paths_use_short_temp_without_repeating_native
+          if ($LASTEXITCODE -ne 0) { throw 'V693_SHORT_TEMP_CONTRACT_PRECHECK' }
           New-Item -ItemType Directory -Force out/v690 | Out-Null
           python integration_probes/v181_windows_beta_packager.py --out out/v690/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
           if ($LASTEXITCODE -ne 0) { throw 'V690_CURRENT_HEAD_ZIP_PACKAGER' }
@@ -105,7 +107,7 @@ jobs:
         run: |
           python -m pip install "py7zr>=1.0"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python -m unittest -v tests.test_v278_sealed_simc_consumable_native_pair.TwoNativeOptions.test_windows_long_paths_use_relative_io_without_repeating_native
+          python -m unittest -v tests.test_v278_sealed_simc_consumable_native_pair.TwoNativeOptions.test_windows_long_paths_use_short_temp_without_repeating_native
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python integration_probes/p1_v691_existing_v278_windows_path_once.py out/v691-path
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
