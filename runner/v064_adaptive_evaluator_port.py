@@ -238,6 +238,24 @@ def ingest_native(request,native_doc,calibration,raw_native_bytes=None):
         need(type(raw_native_bytes) is bytes,"RAW_NATIVE_JSON_BYTES")
         need(json.loads(raw_native_bytes)==native_doc,
              "NATIVE_BYTES_AND_PARSED_JSON_DIFFER")
+    native_sha=hashlib.sha256(
+        raw_native_bytes if raw_native_bytes is not None
+        else cache.canonical(native_doc).encode("utf8")).hexdigest()
+    return _ingest_parsed_native(request,native_doc,calibration,native_sha)
+
+
+def ingest_native_bytes(request,raw_native_bytes,calibration):
+    """Parse original JSON2 exactly once; return receipt and its own document."""
+    need(type(raw_native_bytes) is bytes,"RAW_NATIVE_JSON_BYTES")
+    native=json.loads(raw_native_bytes)
+    native_sha=hashlib.sha256(raw_native_bytes).hexdigest()
+    return _ingest_parsed_native(request,native,calibration,native_sha),native
+
+
+def _ingest_parsed_native(request,native_doc,calibration,native_sha):
+    # Private common numeric validator. Only the raw-byte reader or the
+    # public document+bytes parity check may call this with a byte digest.
+    need(request.get("schema")==SCHEMA,"PORT_REQUEST_SCHEMA")
     if request.get("rating_semantics")=="STATIC_CHMV_C_V1":
         output=numerical.validate_static_native(native_doc,{
           "raw_gear_override":request["raw_gear_override"],
@@ -251,9 +269,7 @@ def ingest_native(request,native_doc,calibration,raw_native_bytes=None):
           "input_sha256":request["input_sha256"],
           "simc_binary_sha256":request["simc_binary_sha256"],
           "scenario_digest":request["scenario_digest"],
-          "native_json_sha256":hashlib.sha256(
-              raw_native_bytes if raw_native_bytes is not None
-              else cache.canonical(native_doc).encode("utf8")).hexdigest(),
+          "native_json_sha256":native_sha,
           "native_revision":output["native_revision"],
           "static_rating_verified":output["verified_static_CHMV_c"],
           "rating_actual":output["actual_buffed_stats_rating"],
@@ -273,9 +289,7 @@ def ingest_native(request,native_doc,calibration,raw_native_bytes=None):
       "input_sha256":request["input_sha256"],
       "simc_binary_sha256":request["simc_binary_sha256"],
       "scenario_digest":request["scenario_digest"],
-      "native_json_sha256":hashlib.sha256(
-          raw_native_bytes if raw_native_bytes is not None
-          else cache.canonical(native_doc).encode("utf8")).hexdigest(),
+      "native_json_sha256":native_sha,
       "native_revision":result["native_revision"],
       "rating_actual":result["actual_buffed_stats_rating"],
       "dps_mean":result["dps_mean"],"dps_sem":result["dps_sem"],
@@ -292,11 +306,12 @@ def verify_disk_cache(request,calibration,receipt,raw_native_bytes):
     for key in ("case_key","target","iterations","input_sha256",
                 "simc_binary_sha256","scenario_digest"):
         need(receipt.get(key)==request[key],"CACHE_IDENTITY_MISMATCH:"+key)
-    need(type(raw_native_bytes) is bytes and
-         hashlib.sha256(raw_native_bytes).hexdigest()==receipt.get("native_json_sha256"),
+    need(type(raw_native_bytes) is bytes,"CACHE_NATIVE_BYTES_DIGEST_MISMATCH")
+    native_sha=hashlib.sha256(raw_native_bytes).hexdigest()
+    need(native_sha==receipt.get("native_json_sha256"),
          "CACHE_NATIVE_BYTES_DIGEST_MISMATCH")
     native=json.loads(raw_native_bytes)
-    new=ingest_native(request,native,calibration,raw_native_bytes)
+    new=_ingest_parsed_native(request,native,calibration,native_sha)
     need(all(receipt.get(k)==new[k] for k in new),"CACHE_RESULT_CHANGED")
     return new
 

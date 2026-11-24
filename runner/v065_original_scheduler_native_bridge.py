@@ -98,15 +98,15 @@ def execute_one(req,calibration,binary,case_folder,progress,cancel_file=None,
             # Salvage a previously executed SimC output by applying ALL normal
             # Native validators to unchanged input bytes + original JSON2.
             # No subprocess, JSON2 rewriting or fabricated SimC observation.
-            need(source_file.is_file() and
-                 hashlib.sha256(source_file.read_bytes()).hexdigest()==req["input_sha256"]
-                 and source_file.read_bytes()==req["input"].encode("utf8"),
+            need(source_file.is_file(),"PARTIAL_NATIVE_INPUT_IDENTITY_MISMATCH")
+            source_bytes=source_file.read_bytes()
+            need(hashlib.sha256(source_bytes).hexdigest()==req["input_sha256"]
+                 and source_bytes==req["input"].encode("utf8"),
                  "PARTIAL_NATIVE_INPUT_IDENTITY_MISMATCH")
             need(0<native_file.stat().st_size<50_000_000,
                  "PARTIAL_NATIVE_JSON2_INVALID_SIZE")
             raw=native_file.read_bytes()
-            parsed=json.loads(raw)
-            validated=evaluator.ingest_native(req,parsed,calibration,raw)
+            validated,parsed=evaluator.ingest_native_bytes(req,raw,calibration)
             validated["simc_seed"]=(parsed.get("sim") or {}).get("options",{}).get("seed")
             write_atomic(receipt_file,validated)
             return validated | {"source":"CACHED_VERIFIED_NATIVE",
@@ -147,8 +147,8 @@ def execute_one(req,calibration,binary,case_folder,progress,cancel_file=None,
          "SIMC_NATIVE_EXIT_"+str(proc.returncode)+"_SEE_UNMODIFIED_STDERR")
     need(native_file.is_file() and 0<native_file.stat().st_size<50_000_000,
          "SIMC_JSON2_ABSENT_OR_TOO_LARGE")
-    raw=native_file.read_bytes();doc=json.loads(raw)
-    checked=evaluator.ingest_native(req,doc,calibration,raw)
+    raw=native_file.read_bytes()
+    checked,doc=evaluator.ingest_native_bytes(req,raw,calibration)
     checked["simc_seed"]=(doc.get("sim") or {}).get("options",{}).get("seed")
     write_atomic(receipt_file,checked)
     return checked | {"source":"NEW_NATIVE"}

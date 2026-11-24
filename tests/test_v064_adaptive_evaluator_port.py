@@ -1,5 +1,6 @@
 """v064: scheduler-neutral SimC candidate port / real JSON2 replay contract."""
 import copy,json,pathlib,sys,tempfile,unittest
+from unittest import mock
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0]=[str(ROOT/"runner"),str(ROOT/"tests")]
@@ -72,6 +73,25 @@ class AdaptivePort(unittest.TestCase):
             self.assertEqual(observed["rating_actual"],CHMV1)
             self.assertTrue(observed["no_simc_effect_independent_validation"])
             self.assertEqual(port.verify_disk_cache(req,self.k,observed,raw),observed)
+    def test_raw_ingestion_and_cache_parse_and_hash_once(self):
+        with tempfile.TemporaryDirectory() as folder:
+            req=port.make_request(self.c,self.b,self.k,self.profile,SIMC_SHA,
+                                  CHMV1,60,pathlib.Path(folder)/"json2.json")
+            doc=fake_doc(req["input"])
+            raw=json.dumps(doc,sort_keys=True).encode()
+            expected=port.ingest_native(req,doc,self.k,raw)
+            for read in (lambda:port.ingest_native_bytes(req,raw,self.k),
+                         lambda:port.verify_disk_cache(req,self.k,expected,raw)):
+                with mock.patch.object(port.json,"loads",wraps=port.json.loads) as loads, mock.patch.object(
+                    port.hashlib,"sha256",wraps=port.hashlib.sha256) as sha:
+                    observed=read()
+                self.assertEqual(loads.call_count,1)
+                self.assertEqual(sum(c.args==(raw,) for c in sha.call_args_list),1)
+                self.assertEqual(observed[0] if isinstance(observed,tuple) else observed,expected)
+            wrong=copy.deepcopy(doc)
+            wrong["sim"]["players"][0]["collected_data"]["dps"]["mean"]+=1
+            with self.assertRaisesRegex(port.PortBlocked,"NATIVE_BYTES_AND_PARSED_JSON_DIFFER"):
+                port.ingest_native(req,wrong,self.k,raw)
     def test_forged_cache_or_changed_json2_digest_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
             req=port.make_request(self.c,self.b,self.k,self.profile,SIMC_SHA,

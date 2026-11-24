@@ -1,5 +1,6 @@
 """New v065 pipeline controls. No original tests or SimC are invoked here."""
 import copy,hashlib,json,pathlib,sys,tempfile,unittest
+from unittest import mock
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0]=[str(ROOT/"runner"),str(ROOT/"tests")]
 import v065_original_scheduler_native_bridge as runner
@@ -67,6 +68,25 @@ class BoundedPipeline(unittest.TestCase):
                                progress)
             self.assertEqual(observed["source"],"CACHED_VERIFIED_NATIVE")
             self.assertEqual(progress["native_attempts"],4)
+    def test_partial_recovery_reads_exact_native_once_and_does_not_run_simc(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            request=self.request(root)
+            (root/"input.simc").write_bytes(request["input"].encode("utf8"))
+            doc=fake_doc(request["input"])
+            raw=json.dumps(doc,sort_keys=True).encode()
+            (root/"result.json").write_bytes(raw)
+            progress={"native_attempts":1}
+            expected=evaluation.ingest_native(request,doc,self.k,raw)
+            with mock.patch.object(runner.subprocess,"run",side_effect=AssertionError("NO_NATIVE")), mock.patch.object(
+                evaluation.json,"loads",wraps=evaluation.json.loads) as loads:
+                observed=runner.execute_one(request,self.k,ROOT/"runner"/"pilot.py",root,
+                    progress,recover_verified_partial=True)
+            self.assertEqual(sum(c.args==(raw,) for c in loads.call_args_list),1)
+            self.assertEqual({k:observed[k] for k in expected},expected)
+            self.assertEqual(progress["native_attempts"],1)
+            self.assertTrue(observed["recovered_partial_validated_without_native"])
+            self.assertEqual((root/"result.json").read_bytes(),raw)
     def test_tampered_native_receipt_not_reused(self):
         with tempfile.TemporaryDirectory() as d:
             root=pathlib.Path(d)
