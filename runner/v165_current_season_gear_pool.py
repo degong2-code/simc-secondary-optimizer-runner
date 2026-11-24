@@ -139,12 +139,14 @@ def expand_selectable_source(original, folder, effect_path):
         meta=receipt.get("tables",{}).get(table,{})
         need(path.is_file() and not path.is_symlink() and
              path.stat().st_size==meta.get("bytes") and
-             path.stat().st_size<=MAX_CSV_BYTES,"SELECTABLE_SOURCE_TABLE_SIZE")
+             path.stat().st_size<=MAX_CSV_BYTES,
+             "SELECTABLE_SOURCE_TABLE_SIZE:"+table)
         h=hashlib.sha256()
         with path.open("rb") as stream:
             for chunk in iter(lambda:stream.read(1024*1024),b""):
                 h.update(chunk)
-        need(h.hexdigest()==meta.get("sha256"),"SELECTABLE_SOURCE_TABLE_SHA")
+        need(h.hexdigest()==meta.get("sha256"),
+             "SELECTABLE_SOURCE_TABLE_SHA:"+table)
     result=copy.deepcopy(original)
     indexed={x["item_id"]:x for x in result["items"]}
     sid=original["db2_display_season_id"]

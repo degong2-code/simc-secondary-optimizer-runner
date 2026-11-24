@@ -362,19 +362,21 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         with (self.wago/"ItemSparse.csv").open("a",encoding="utf8",newline="") as f:
             csv.writer(f).writerows([[iid,name,slot,11,0,4,-1,4]
                                     for iid,name,slot in extra])
-        self.write_csv("JournalEncounter",["ID","JournalInstanceID","Name_lang"],[
+        self.write_csv("JournalEncounter.csv",["ID","JournalInstanceID","Name_lang"],[
             {"ID":303,"JournalInstanceID":301,"Name_lang":"Extra journal"},
             {"ID":403,"JournalInstanceID":401,"Name_lang":"Other raid"}])
-        self.write_csv("JournalEncounterItem",[
+        self.write_csv("JournalEncounterItem.csv",[
             "ID","JournalEncounterID","ItemID","DisplaySeasonID"],[
             {"ID":1,"JournalEncounterID":303,"ItemID":299902,"DisplaySeasonID":47},
             {"ID":2,"JournalEncounterID":403,"ItemID":299905,"DisplaySeasonID":47},
             {"ID":3,"JournalEncounterID":303,"ItemID":299999,"DisplaySeasonID":47}])
-        self.write_csv("CraftingData",["ID","CraftedItemID"],[
+        self.write_csv("CraftingData.csv",["ID","CraftedItemID"],[
             {"ID":i,"CraftedItemID":iid} for i,iid in enumerate(
                 (299903,299904,299906),1)])
         tables={p.stem:{"sha256":build.digest(p.read_bytes()),
                          "bytes":p.stat().st_size} for p in self.wago.glob("*.csv")}
+        self.assertEqual(set(tables),{"JournalEncounter","JournalEncounterItem",
+                                     "CraftingData","Item","ItemSparse"})
         receipt=json.dumps({"build":self.BUILD,"locale":"enUS","tables":tables}).encode()
         (self.wago/"receipt.json").write_bytes(receipt)
         original["snapshot_receipt_sha256"]=build.digest(receipt)
