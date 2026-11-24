@@ -243,6 +243,25 @@ class SourceToCatalogTests(unittest.TestCase):
         self.assertEqual(ui["native_calls_now"], 0)
         self.assertFalse(ui["optimizer_or_cache_mutated"])
 
+    def test_required_effect_option_survives_installed_candidate_projection(self):
+        import v167_product_season_gear_adapter as gear
+        season,classification=self.build_inputs()
+        row=next(x for x in season["gear"]["candidates"]
+                 if x["category"]=="special_effect_gear_candidate")
+        row.update(season_list_basis="SEALED_CONTEXT_FREE_EFFECT_OPTION",
+                   required_options={"bonus_id":"987654"})
+        result=self.compile(season,classification)
+        self.assertTrue(v213.verify_catalog(result))
+        public=gear.public_installed_v213_candidates(
+            result,installed_manifest_sha256="c"*64)
+        selected=next(x for x in public["choices"]["special_effect_gear_candidate"]
+                      if x["item_id"]==row["item_id"])
+        self.assertEqual(selected["required_options"],{"bonus_id":"987654"})
+        self.assertEqual(public["count"],season["gear"]["count"])
+        del row["required_options"]
+        with self.assertRaisesRegex(ValueError,"PRODUCT_REQUIRED_EFFECT_OPTION_INVALID"):
+            self.compile(season,classification)
+
     def test_join_audit_reports_source_proof_vs_missing_item_links(self):
         result = self.compile()
         audit = result["source_join_audit"]

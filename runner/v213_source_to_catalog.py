@@ -113,6 +113,7 @@ def _compile_gear(season):
     ids = set()
     categories = {}
     unresolved = []
+    import v167_product_season_gear_adapter as product_gear
     for source in rows:
         need(type(source) is dict and
              type(source.get("item_id")) is int and source["item_id"] > 0 and
@@ -123,8 +124,10 @@ def _compile_gear(season):
                     "allowed_class_mask"):
             need(type(source.get(key)) is int,
                  "GEAR_SOURCE_MASK_FIELD_MISSING:" + key)
+        required=product_gear.required_effect_options(source)
         group, status = _slot_group_for_gear(source)
         item = dict(source)
+        if required:item["required_options"]=required
         item["slot_group"] = group
         item["slot_resolution_status"] = status
         item["user_selectable"] = False

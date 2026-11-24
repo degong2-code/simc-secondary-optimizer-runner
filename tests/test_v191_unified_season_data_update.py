@@ -138,6 +138,22 @@ class UnifiedCatalogTest(unittest.TestCase):
                    "gem_property":u.parse_generated("gem_property",GEMS)}
         result=u.compile_catalog(gear,tier,budget,effects,consumables,
                                  generated,event="mid_patch")
+        # Already verified variant metadata must survive the season compiler.
+        option_gear=copy.deepcopy(gear)
+        candidate=next(x for x in option_gear["items"]
+                       if x["category"]=="special_effect_gear_candidate")
+        candidate.update(season_list_basis="SEALED_CONTEXT_FREE_EFFECT_OPTION",
+                         required_options={"bonus_id":"987654"})
+        projected=u.compile_catalog(option_gear,tier,budget,effects,consumables,
+                                    generated,event="mid_patch")
+        row=next(x for x in projected["gear"]["candidates"]
+                 if x["item_id"]==candidate["item_id"])
+        self.assertEqual(row["required_options"],{"bonus_id":"987654"})
+        self.assertIsNot(row["required_options"],candidate["required_options"])
+        del candidate["required_options"]
+        with self.assertRaisesRegex(ValueError,"PRODUCT_REQUIRED_EFFECT_OPTION_INVALID"):
+            u.compile_catalog(option_gear,tier,budget,effects,consumables,
+                              generated,event="mid_patch")
         # The *same* merger on a new season must assemble equipment and
         # exact SimC candidates without reading existing J=138/F=165.
         fresh_gear=copy.deepcopy(gear)

@@ -488,7 +488,7 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
                                            selected_refresh_rows=None):
     """Source catalog item/slot consistency; not proc/effect certification."""
     if not user["special_items"] and not user["embellishments"]:
-        return
+        return {}
     import v143_specialization_contracts as contracts
     import v167_product_season_gear_adapter as product_gear
     import v169_source_first_representative_stage as source_stage
@@ -591,6 +591,14 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
                     need(type(codes) is list and
                          any(x in expected_primary for x in codes),
                          "CURRENT_SEASON_SPECIAL_WEAPON_WRONG_PRIMARY:"+slot)
+    # Use the same authenticated rows that passed slot validation,
+    # whether already in the base source or from a sealed refresh.
+    required_by_id={}
+    for raw in user["special_items"]:
+        iid=int(raw["options"].get("redirected_base_stats",raw["item_id"]))
+        required=product_gear.required_effect_options(indexed[iid])
+        if required:required_by_id[iid]=required
+    return required_by_id
 
 
 def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
@@ -614,14 +622,12 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
               else tier_override)
     fifth_data=(FIFTH_TIER[key] if fifth_override is None
                 else fifth_override)
+    required_by_id={}
     if flexible_current_tier:
-        validate_current_season_selected_slots(
+        required_by_id=validate_current_season_selected_slots(
             key,user,tier_map,need,season_source_gear=season_source_gear,
             season_source_tier=season_source_tier,
             selected_refresh_rows=selected_refresh_rows)
-    # Only selected sealed rows supply mandatory bonus options.
-    required_by_id={r["item_id"]:r["required_options"]
-        for r in (selected_refresh_rows or []) if "required_options" in r}
     taken=set()
     for group,selection in (("trinkets",user["trinkets"]),
                             ("special",user["special_items"]),

@@ -233,13 +233,18 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
         warnings.append("SIMC_COMPILED_DBC_AND_GAME_DB2_BUILDS_DIFFER_REVIEW")
     if budget_pending:
         warnings.append("NEW_SEASON_J_F_UNKNOWN_NO_PREVIOUS_SEASON_BUDGET_INPUT")
-    gear_candidates=[
-      {k:x.get(k) for k in (
-        "item_id","name","category","class_id","subclass_id","inventory_type",
-        "allowed_class_mask","item_set_id","slot_hint","source_kinds",
-        "season_list_basis","stat_modifier_codes")}
-      for x in sorted(gear["items"],key=lambda row:row["item_id"])
-    ]
+    # Preserve the exact option of an already verified variant. This is
+    # a projection only; it must not merge selectable overlays into G.
+    import v167_product_season_gear_adapter as product_gear
+    gear_candidates=[]
+    for x in sorted(gear["items"],key=lambda row:row["item_id"]):
+        required=product_gear.required_effect_options(x)
+        projected={k:x.get(k) for k in (
+            "item_id","name","category","class_id","subclass_id","inventory_type",
+            "allowed_class_mask","item_set_id","slot_hint","source_kinds",
+            "season_list_basis","stat_modifier_codes")}
+        if required:projected["required_options"]=required
+        gear_candidates.append(projected)
     tier_classes={
       cl:{
         "allowed_class_mask":data["allowed_class_mask"],

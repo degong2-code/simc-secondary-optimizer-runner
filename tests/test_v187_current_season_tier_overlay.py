@@ -108,6 +108,38 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
                          {s:r for s,r in original.items() if s!="finger1"})
         self.assert_four(rows,groups)
 
+    def test_exact_effect_option_applies_from_base_or_refresh_and_preserves_four_tier(self):
+        import v167_product_season_gear_adapter as product_gear
+        base=product_gear.read()
+        tier=season.load_tier()
+        # Synthetic fixture: an unused ID and a typed source option, not
+        # evidence of any actual new effect, budget or item.
+        row={"item_id":999991,"name":"Synthetic option ring",
+             "category":"special_effect_gear_candidate","inventory_type":11,
+             "class_id":4,"subclass_id":0,"allowed_class_mask":-1,
+             "stat_modifier_codes":[32],"item_set_id":0,"slot_hint":None,
+             "source_kinds":["raid_journal"],
+             "season_list_basis":"SEALED_CONTEXT_FREE_EFFECT_OPTION",
+             "required_options":{"bonus_id":"987654"}}
+        merged=product_gear.merge_effect_option_rows(base,[row])
+        args=dict(tier_override=self.map,
+            fifth_override=("chest",self.map["chest"],159257),
+            flexible_current_tier=True,season_source_tier=tier)
+        require=lambda valid,why:self.fail(why) if not valid else None
+        for source,refresh in ((merged,None),(base,[row])):
+            user,rows,groups=self.setup_rows()
+            user["special_items"]=[{"slot":"finger1","item_id":row["item_id"],"options":{}}]
+            common.apply_user_equipment(("mage","frost"),rows,groups,user,334,require,
+                season_source_gear=source,selected_refresh_rows=refresh,**args)
+            self.assertEqual(rows["finger1"]["options"]["bonus_id"],"987654")
+            self.assert_four(rows,groups)
+            user,rows,groups=self.setup_rows()
+            user["special_items"]=[{"slot":"finger1","item_id":row["item_id"],
+                                    "options":{"bonus_id":"987655"}}]
+            with self.assertRaisesRegex(AssertionError,"SELECTED_EFFECT_BONUS_OPTION_CONFLICT"):
+                common.apply_user_equipment(("mage","frost"),rows,groups,user,334,require,
+                    season_source_gear=source,selected_refresh_rows=refresh,**args)
+
     def test_new_build_source_pair_and_build_mismatch_fail_closed(self):
         import v167_product_season_gear_adapter as product_gear
         gear=copy.deepcopy(product_gear.read())

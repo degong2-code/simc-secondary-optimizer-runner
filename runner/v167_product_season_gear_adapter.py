@@ -45,6 +45,25 @@ def need(condition, reason):
     if not condition:
         raise GearBlocked(reason)
 
+def required_effect_options(row):
+    """Validate and copy the already proven option, never discover an effect.
+
+    A context-free option marker without its exact option is not a usable
+    variant. Untagged ordinary/direct rows keep their existing shape.
+    """
+    import re
+    tagged=row.get("season_list_basis")=="SEALED_CONTEXT_FREE_EFFECT_OPTION"
+    if not tagged and "required_options" not in row:
+        return {}
+    options=row.get("required_options")
+    need(tagged and row.get("category")=="special_effect_gear_candidate" and
+         type(options) is dict and set(options)=={"bonus_id"} and
+         type(options["bonus_id"]) is str and
+         re.fullmatch(r"[1-9][0-9]{0,9}",options["bonus_id"]) is not None,
+         "PRODUCT_REQUIRED_EFFECT_OPTION_INVALID")
+    return dict(options)
+
+
 def read(path=DEFAULT):
     path = Path(path)
     need(path.is_file() and 0 < path.stat().st_size <= MAX_BYTES,
@@ -287,15 +306,7 @@ def validate(payload):
              and type(x.get("inventory_type")) is int,
              "PRODUCT_SEASON_ITEM_INVALID")
         ids.add(x["item_id"])
-        if "required_options" in x:
-            import re
-            options=x["required_options"]
-            need(x["category"]=="special_effect_gear_candidate" and
-                 x.get("season_list_basis")=="SEALED_CONTEXT_FREE_EFFECT_OPTION" and
-                 type(options) is dict and set(options)=={"bonus_id"} and
-                 type(options["bonus_id"]) is str and
-                 re.fullmatch(r"[1-9][0-9]{0,9}",options["bonus_id"]) is not None,
-                 "PRODUCT_REQUIRED_EFFECT_OPTION_INVALID")
+        required_effect_options(x)
         evidence=x.get("source_evidence",[])
         need(type(evidence) is list and len(evidence)<=64 and
              all(type(r) is dict and
@@ -634,6 +645,7 @@ def public_installed_v213_candidates(catalog, *, installed_manifest_sha256,
                  type(entry.get("subclass_id")) is int and
                  ((kind=="trinket")==(entry["inventory_type"]==12)),
                  "INSTALLED_V213_VISIBLE_GEAR_METADATA_INVALID")
+            required=required_effect_options(entry)
             choices[kind].append({
                 "item_id":iid,"name":entry["name"],
                 "inventory_type":entry["inventory_type"],
@@ -641,6 +653,7 @@ def public_installed_v213_candidates(catalog, *, installed_manifest_sha256,
                 "class_id":entry["class_id"],
                 "subclass_id":entry["subclass_id"],
                 "season_list_basis":entry.get("season_list_basis"),
+                **({"required_options":required} if required else {}),
                 **equipment_primary_armor_compatibility(entry)})
     need(len(ids)==gear["count"],"INSTALLED_V213_GEAR_COUNT_DRIFT")
     official=official_names if official_names is not None else {}
