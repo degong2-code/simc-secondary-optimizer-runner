@@ -319,7 +319,9 @@ def write_start_receipt(session_folder,receipt):
             "receipt_sha256":receipt["receipt_sha256"],
             "path":path.relative_to(pathlib.Path(session_folder).resolve()).as_posix(),
             "native_calls_this_start":receipt["native_calls_this_start"],
-            "selected_special_count":receipt["selected_special_count"]}
+            "selected_special_count":receipt["selected_special_count"],
+            **({"selected_G_delta":receipt["selected_G_delta"]}
+               if "selected_G_delta" in receipt else {})}
 
 def snapshot(root,cache):
     """Append-only immutable content-addressed snapshots, old session files stable."""
@@ -345,48 +347,45 @@ def snapshot(root,cache):
         if os.path.exists(temp):os.unlink(temp)
     return target
 
-def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
-            source_catalog_path=None,environment_result=None,
-            season_controls=None):
-    """Return snapshot path and Native count; NEVER mutate earlier cache bytes."""
-    root=pathlib.Path(root).expanduser().resolve()
-    binary=pathlib.Path(binary).expanduser().resolve()
-    need(type(user) is dict and bool(user.get("special_items")),
-         "EXPLICIT_SELECTED_SPECIAL_REQUIRED")
-    need(binary.is_file(),"SIMC_BINARY_NOT_PRESENT")
-    need(type(revision) is str and len(revision)>=7,"SIMC_REVISION_REQUIRED")
-    need(type(timeout) is int and 1<=timeout<=MAX_SECONDS,"STATIC_NATIVE_TIMEOUT_BOUND")
-    if environment_result is None:
-        staged=bootstrap.build(user,root.parent/"static-item-prebudget-no-write",
-                               binary,revision,static_special_probe_only=True,
-                               current_season_product=True,
-                               source_catalog_path=source_catalog_path)
-    else:
-        staged=bootstrap.preview_from_environment_build(
-            user,root.parent/"static-item-prebudget-no-write",binary,revision,
-            environment_result=environment_result,season_controls=season_controls,
-            static_special_probe_only=True)
-    initial=item_cache.load(pathlib.Path(existing)) if existing else item_cache.empty_cache()
-    missing=missing_specials(initial,staged)
+def _missing_rows(cache,rows):
+    """Same exact bare identity as v432, deduplicated across equivalent slots."""
+    missing={}
+    for row in rows:
+        bare=budget.undecorated_special(row)
+        if budget.get_native_secondary(cache,bare) is None:
+            missing.setdefault(item_cache.digest(budget.exact_identity(bare)),bare)
+    return list(missing.values())
+
+
+def _baseline_profile(profile,before):
+    """Replace only changed slots with the original representative variants."""
+    by_slot={row["slot"]:row for row in before}
+    seen=set();out=[]
+    for line in profile.splitlines():
+        slot=line.split("=",1)[0]
+        if slot in by_slot:
+            need(slot not in seen,"DUPLICATE_BASELINE_STATIC_SLOT")
+            row=by_slot[slot]
+            line=selector.equipment_line(slot,row["item_id"],row["ilevel"],
+                                         row["options"])
+            seen.add(slot)
+        out.append(line)
+    need(seen==set(by_slot),"BASELINE_STATIC_SLOT_NOT_IN_PROFILE")
+    return "\n".join(out)+"\n"
+
+
+def _native_batch(root,binary,revision,timeout,profile,source_rows,missing):
+    """Existing exact v208 physical query, one batch for all missing slots."""
     if not missing:
-        # Reuse proven historical file path/content, not gratuitous snapshot.
-        need(existing is not None,"NATIVE_L_CACHE_HIT_PATH_REQUIRED")
-        result={"static_cache_path":str(pathlib.Path(existing).resolve()),
-                "native_new_calls":0,"cache_reused":len(staged["special_rows"]),
-                "source":"EXACT_STATIC_CACHE_REUSED"}
-        result["start_receipt"]=build_start_receipt(
-            staged,initial,initial,result,existing,binary,revision,
-            source_catalog_path)
-        return result
+        return [],0,None
     ident={"schema":SCHEMA,
-           "source_profile_sha256":staged["source_profile_sha256"],
+           "source_profile_sha256":sha(profile.encode("utf8")),
            "binary_sha256":sha_file(binary),"revision":revision,
            "missing":[budget.exact_identity(r) for r in missing]}
     probe_dir=root.parent/"static-item-probes"/sha(canonical(ident))[:24]
     probe_dir.mkdir(parents=True,exist_ok=True)
     case=probe_dir/"native.json"
-    native_input=physical_input(staged["profile"],case,
-                                staged["special_rows"],missing)
+    native_input=physical_input(profile,case,source_rows,missing)
     source_file=probe_dir/"physical.simc"
     if source_file.is_file():
         need(source_file.read_bytes()==native_input.encode("utf8"),
@@ -410,16 +409,95 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
     raw=case.read_bytes()
     need(0<len(raw)<=item_cache.MAX_NATIVE_BYTES,
          "ONE_NATIVE_STATIC_L_JSON_SIZE")
-    records=selected_records(raw,missing,revision)
-    merged=copy.deepcopy(initial)
-    item_cache.merge_native(merged,records)
-    target=snapshot(root,merged)
-    result={"static_cache_path":str(target),"native_new_calls":calls,
-            "cache_reused":len(staged["special_rows"])-len(missing),
-            "native_json2_sha256":sha(raw),
-            "observed_selected_variants":len(records),
-            "source":"EXACT_SIMC_NATIVE_L_RESOLVED_WITHOUT_USER_CACHE"}
-    result["start_receipt"]=build_start_receipt(
-        staged,initial,merged,result,target,binary,revision,
-        source_catalog_path)
+    return selected_records(raw,missing,revision),calls,sha(raw)
+
+def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
+            source_catalog_path=None,environment_result=None,
+            season_controls=None):
+    """Return snapshot path and Native count; NEVER mutate earlier cache bytes."""
+    root=pathlib.Path(root).expanduser().resolve()
+    binary=pathlib.Path(binary).expanduser().resolve()
+    need(type(user) is dict and bool(user.get("special_items")),
+         "EXPLICIT_SELECTED_SPECIAL_REQUIRED")
+    need(binary.is_file(),"SIMC_BINARY_NOT_PRESENT")
+    need(type(revision) is str and len(revision)>=7,"SIMC_REVISION_REQUIRED")
+    need(type(timeout) is int and 1<=timeout<=MAX_SECONDS,"STATIC_NATIVE_TIMEOUT_BOUND")
+    if environment_result is None:
+        staged=bootstrap.build(user,root.parent/"static-item-prebudget-no-write",
+                               binary,revision,static_special_probe_only=True,
+                               current_season_product=True,
+                               source_catalog_path=source_catalog_path)
+    else:
+        staged=bootstrap.preview_from_environment_build(
+            user,root.parent/"static-item-prebudget-no-write",binary,revision,
+            environment_result=environment_result,season_controls=season_controls,
+            static_special_probe_only=True)
+    initial=item_cache.load(pathlib.Path(existing)) if existing else item_cache.empty_cache()
+    special_missing=missing_specials(initial,staged)
+    specials=staged["special_rows"]
+    delta=staged.get("changed_G_rows")
+    before=[];after=[]
+    if delta is not None:
+        need(type(delta) is dict and set(delta)=={"before","after"} and
+             type(delta["before"]) is list and type(delta["after"]) is list,
+             "SELECTED_G_CHANGED_ROWS_INVALID")
+        before,after=delta["before"],delta["after"]
+        need(len(before)==len(after) and
+             len({row["slot"] for row in before})==len(before) and
+             {row["slot"] for row in before}=={row["slot"] for row in after},
+             "SELECTED_G_CHANGED_SLOT_MISMATCH")
+    final_by_slot={row["slot"]:row for row in specials}
+    for row in after:
+        prior=final_by_slot.get(row["slot"])
+        need(prior is None or prior==row,"SELECTED_G_FINAL_SPECIAL_DRIFT")
+        final_by_slot[row["slot"]]=row
+    final_rows=list(final_by_slot.values())
+    final_missing=_missing_rows(initial,final_rows)
+    merged=initial
+    final_calls=before_calls=0
+    final_hash=before_hash=None
+    if final_missing:
+        records,final_calls,final_hash=_native_batch(
+            root,binary,revision,timeout,staged["profile"],final_rows,final_missing)
+        merged=copy.deepcopy(initial)
+        item_cache.merge_native(merged,records)
+    # Final first: a shared bare variant can satisfy a previous slot without
+    # another call. Query the original representative only on actual misses.
+    before_missing=_missing_rows(merged,before)
+    if before_missing:
+        baseline=_baseline_profile(staged["profile"],before)
+        records,before_calls,before_hash=_native_batch(
+            root,binary,revision,timeout,baseline,before,before_missing)
+        if merged is initial:merged=copy.deepcopy(initial)
+        item_cache.merge_native(merged,records)
+    if merged is initial:
+        need(existing is not None,"NATIVE_L_CACHE_HIT_PATH_REQUIRED")
+        target=pathlib.Path(existing).resolve()
+    else:
+        target=snapshot(root,merged)
+    # Preserve the existing L receipt's 0/1 count and selected-only hash.
+    # Extra G-delta queries are explicitly accounted for, not called L/DPS.
+    L_calls=final_calls if special_missing else 0
+    result={"static_cache_path":str(target),"native_new_calls":L_calls,
+            "cache_reused":len(specials)-len(special_missing),
+            "source":("EXACT_STATIC_CACHE_REUSED" if merged is initial else
+                      "EXACT_SIMC_NATIVE_L_RESOLVED_WITHOUT_USER_CACHE")}
+    if special_missing:
+        result.update(native_json2_sha256=final_hash,
+                      observed_selected_variants=len({
+                          item_cache.digest(budget.exact_identity(row))
+                          for row in special_missing}))
+    receipt=build_start_receipt(
+        staged,initial,merged,result,target,binary,revision,source_catalog_path)
+    if delta is not None:
+        result["selected_G_delta_native_calls"]=before_calls+final_calls-L_calls
+        result["selected_static_native_calls"]=before_calls+final_calls
+        receipt["selected_G_delta"]={
+            "native_calls_this_start":result["selected_G_delta_native_calls"],
+            "total_static_native_calls_this_start":result["selected_static_native_calls"],
+            "changed_slots":sorted(row["slot"] for row in before),
+            "native_json2_sha256s":sorted({x for x in (final_hash,before_hash) if x})}
+        receipt["receipt_sha256"]=sha(canonical({
+            k:v for k,v in receipt.items() if k!="receipt_sha256"}))
+    result["start_receipt"]=receipt
     return result

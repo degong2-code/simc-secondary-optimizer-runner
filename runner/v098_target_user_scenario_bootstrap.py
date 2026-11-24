@@ -1624,7 +1624,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
         sum(season_socket_plan["socket_counts"].values())>4
         else None)
     original_selected_baseline_rows=(copy.deepcopy(rows)
-        if season_selected_static_cache_path is not None else None)
+        if (season_selected_static_cache_path is not None or
+            (static_special_probe_only and season_source_bundle is not None))
+        else None)
     if pure_stage or source_free:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need,
@@ -1829,8 +1831,20 @@ def build(user,folder,binary,revision,static_cache_path=None,
         need(chosen_slots and
              chosen_slots=={r["slot"] for r in user["special_items"]},
              "STATIC_SPECIAL_PROBE_SLOTS_NOT_SOURCE_BOUND")
+        delta={}
+        if original_selected_baseline_rows is not None:
+            # The existing v432 budget needs exactly these before/after
+            # variants. Keep original G and the final user rows unchanged.
+            changed=sorted(slot for slot in original_selected_baseline_rows
+                if not slot.startswith("trinket") and
+                selected_budget._bare(original_selected_baseline_rows[slot],cache_mod.SEASON)!=
+                    selected_budget._bare(rows[slot],cache_mod.SEASON))
+            delta={"changed_G_rows":{
+                "before":[copy.deepcopy(original_selected_baseline_rows[slot])
+                          for slot in changed],
+                "after":[copy.deepcopy(rows[slot]) for slot in changed]}}
         return {"schema":"v208_exact_current_special_static_source_v1",
-                "profile":probe_profile,
+                **delta,"profile":probe_profile,
                 "special_rows":[copy.deepcopy(rows[s]) for s in sorted(chosen_slots)],
                 "source_profile_sha256":hashlib.sha256(
                     probe_profile.encode("utf8")).hexdigest(),

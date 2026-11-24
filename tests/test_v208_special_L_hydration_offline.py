@@ -123,6 +123,48 @@ class OneExactSpecialHydration(unittest.TestCase):
         self.assertIs(preview.call_args.kwargs["season_controls"],controls)
         self.assertTrue(preview.call_args.kwargs["static_special_probe_only"])
 
+    def test_verified_changed_G_variants_share_two_batches_then_zero(self):
+        staged=hydrate.bootstrap.build(
+            self.user,self.root/"unwritten",self.binary,"710c2408bf",
+            static_special_probe_only=True,current_season_product=True)
+        final=staged["special_rows"][0]
+        before={**final,"item_id":271876,"options":{}}
+        staged["changed_G_rows"]={"before":[before],"after":[final]}
+        observed=[]
+        def native(cmd,**kwargs):
+            physical=pathlib.Path(cmd[1]).read_text("utf8")
+            line=next(x for x in physical.splitlines() if x.startswith("chest="))
+            encoded=line.split("=",1)[1]
+            _,opts=cache.parse_encoded(encoded)
+            iid=int(opts["id"]);observed.append(iid)
+            self.assertIn(iid,(271486,271876))
+            self.assertNotIn("gear_crit_rating=",physical)
+            target=pathlib.Path(next(x.split("=",1)[1] for x in
+                physical.splitlines() if x.startswith("json2=")))
+            target.write_text(json.dumps({"report_version":"2.0.0",
+                "git_revision":"710c2408bf","sim":{"players":[{"gear":{
+                    "chest":{"ilevel":331,"encoded_item":encoded,
+                    "haste_rating":175 if iid==271486 else 130}}}]}}),encoding="utf8")
+            return FakeNativeCompleted()
+        env={"normal_build_entry":True,"zero_history_build":{"environment_ready":True}}
+        with (mock.patch.object(hydrate.bootstrap,"preview_from_environment_build",
+                                return_value=staged),
+              mock.patch.object(hydrate.subprocess,"run",side_effect=native)):
+            first=hydrate.hydrate(self.user,self.root/"runs",self.binary,
+                "710c2408bf",environment_result=env)
+            path=pathlib.Path(first["static_cache_path"]);oldbytes=path.read_bytes()
+            again=hydrate.hydrate(self.user,self.root/"runs",self.binary,
+                "710c2408bf",existing=path,environment_result=env)
+        self.assertEqual(observed,[271486,271876])
+        self.assertEqual(first["native_new_calls"],1)
+        self.assertEqual(first["selected_G_delta_native_calls"],1)
+        self.assertEqual(first["selected_static_native_calls"],2)
+        self.assertEqual(again["selected_static_native_calls"],0)
+        self.assertEqual(again["cache_reused"],1)
+        self.assertEqual(again["static_cache_path"],str(path))
+        self.assertEqual(path.read_bytes(),oldbytes)
+        self.assertEqual(len(cache.load(path)["variants"]),2)
+
     def test_verified_probe_without_install_never_falls_back(self):
         env={"normal_build_entry":True,
              "zero_history_build":{"environment_ready":False},

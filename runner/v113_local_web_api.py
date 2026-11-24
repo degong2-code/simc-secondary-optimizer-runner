@@ -2827,6 +2827,11 @@ class LocalJobs:
         response=self.launch(folder)
         if hydrated:
             response["static_L_start_receipt"]=receipt_info
+            if "selected_static_native_calls" in hydrated:
+                response["selected_static_native_calls_this_start"]=(
+                    hydrated["selected_static_native_calls"])
+                response["selected_G_delta_native_calls_this_start"]=(
+                    hydrated["selected_G_delta_native_calls"])
         response["environment_manifest"]=environment
         response["static_L_native_calls_this_start"]=(
             hydrated["native_new_calls"] if hydrated else 0)
@@ -3231,6 +3236,11 @@ class LocalJobs:
                       hydrated["cache_reused"] if hydrated else 0)}
         if hydrated:
             response["static_L_start_receipt"]=receipt_info
+            if "selected_static_native_calls" in hydrated:
+                response["selected_static_native_calls_this_start"]=(
+                    hydrated["selected_static_native_calls"])
+                response["selected_G_delta_native_calls_this_start"]=(
+                    hydrated["selected_G_delta_native_calls"])
         return response
 
     def longrun_start(self, request):
