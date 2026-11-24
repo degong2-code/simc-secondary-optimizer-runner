@@ -363,7 +363,55 @@ def observe(out):
         for row in state.get("dungeons",[]):
             print("V708_DUNGEON "+json.dumps(row,ensure_ascii=True,sort_keys=True),flush=True)
 
+def replay_context_free_bonus(out):
+    """Re-evaluate the actual prior public source only, no network or Native.
+
+    The prior receipt is a diagnostic reference, not new season admission.
+    """
+    dest=Path(out).resolve()
+    folder=dest/"runs/_fresh_season_sources"/("wago_"+BUILD)
+    prior=json.loads((dest/"prior/V708_REAL_MPLUS_TRINKET_COVERAGE.json").read_text("utf8"))
+    assert prior["game_build"]==BUILD
+    assert prior["status"]=="OBSERVED_REGISTERED_BOSS_BONUS_SOURCE_ONLY"
+    assert not prior["focus_product_review_missing_ids"]
+    review=original.bonus_effect_review
+    stages=original.stage_engine
+    paths={}
+    for name in review.COLUMNS:
+        sid="season-bonus-raw-"+name
+        relative="source/raw_"+name+".csv"
+        files,receipt_path=stages._safe_paths(folder,sid,{"raw":relative})
+        receipt=stages._read_receipt(receipt_path)
+        assert receipt["status"]=="COMPLETE" and receipt["stage_id"]==sid
+        assert receipt["inputs"]["game_build"]==BUILD
+        assert receipt["receipt_sha256"]==prior["raw_bonus_sources"][name]["receipt_sha256"]
+        stages._verify_outputs(receipt,files)
+        paths[name]=folder/relative
+    # Actual previous source scope, not the 8 focus IDs as the resolver input.
+    # Reuse all prior discovered indirect candidates (and the focal IDs).
+    ids={x["item_id"] for x in prior["registered_boss_indirect_candidates"]}
+    ids.update(x["item_id"] for x in prior["focus_items"])
+    result=review.discover(ids,paths)
+    resolved={x["item_id"]:x for x in result["context_free_effect_bonus_candidates"]}
+    focus={x["item_id"]:{b["bonus_id"] for b in x["bonus_effects"]}
+           for x in prior["focus_items"]}
+    missing=sorted(i for i,b in focus.items() if i not in resolved
+                   or set(resolved[i]["bonus_ids"])!=b)
+    verdict={"status":"PASS_CONTEXT_FREE_BONUS_SOURCE_REPLAY" if not missing else
+        "PENDING_CONTEXT_FREE_BONUS_SOURCE_REPLAY","game_build":BUILD,
+        "focus_resolved_count":len(focus)-len(missing),"focus_missing_ids":missing,
+        "resolved":result["context_free_effect_bonus_candidates"],
+        "reviewed_item_count":len(ids),"native_calls":0,"network_calls":0,
+        "automatic_bonus_attachment":False}
+    (dest/"V719_CONTEXT_FREE_BONUS_REPLAY.json").write_text(
+        json.dumps(verdict,ensure_ascii=False,sort_keys=True,indent=2)+"\n","utf8")
+    print("V719_REPLAY "+json.dumps(verdict,sort_keys=True),flush=True)
+    return int(bool(missing))
+
+
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--out",required=True)
-    raise SystemExit(observe(parser.parse_args().out))
+    parser.add_argument("--replay-context-free",action="store_true")
+    args=parser.parse_args()
+    raise SystemExit(replay_context_free_bonus(args.out) if args.replay_context_free else observe(args.out))

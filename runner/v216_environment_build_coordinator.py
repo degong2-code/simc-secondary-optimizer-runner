@@ -3732,6 +3732,8 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
         result=json.loads((root/relative).read_text("utf8"))
         return {"status":result["status"],"candidate_item_count":result["candidate_item_count"],
                 "reviewed_item_count":result["reviewed_item_count"],
+                "context_free_effect_bonus_candidate_count":result.get("context_free_effect_bonus_candidate_count",0),
+                "conditional_or_mixed_bonus_candidate_count":result.get("conditional_or_mixed_bonus_candidate_count",0),
                 "candidate_path":str((root/relative).resolve()),
                 "source_stage":{k:v for k,v in stage.items() if k!="result"},
                 "network_calls_by_stage":attempted[0],"native_calls":0,

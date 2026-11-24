@@ -591,6 +591,36 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertFalse(validator(b"ID,Unknown\n1,2\n","ItemXBonusTree"))
         self.assertFalse(validator(b"","ItemXBonusTree"))
 
+    def test_context_free_effect_lists_and_conditional_alternatives(self):
+        review=build.bonus_effect_review
+        node_header=("ID,ParentItemBonusTreeID,ChildItemBonusTreeID,ChildItemBonusListID,"
+            "ChildItemBonusListGroupID,"+",".join(review.NODE_CONTEXT_FIELDS)+"\n")
+        def leaf(n,tree,bonus,context=0,child=0,group=0):
+            return ",".join(map(str,[n,tree,child,bonus,group,context,0,0,0,0,0,0]))+"\n"
+        raw={
+            "ItemXBonusTree":"ItemID,ItemBonusTreeID\n1,100\n2,200\n3,300\n4,400\n5,500\n6,600\n7,700\n",
+            "ItemBonusTreeNode":node_header+leaf(1,100,701)+leaf(2,200,701,context=3)
+                +leaf(3,300,702)+leaf(4,400,703)+leaf(5,500,701)+leaf(6,500,702)
+                +leaf(7,600,0,child=100)+leaf(8,700,0,group=88),
+            "ItemBonusListGroupEntry":"ItemBonusListGroupID,ItemBonusListID\n88,701\n",
+            "ItemBonus":"ParentItemBonusListID,Type,Value_0\n701,4,33\n701,23,81\n"
+                "702,23,82\n702,1,5\n703,50,701\n"}
+        paths={}
+        for name,data in raw.items():
+            paths[name]=self.root/(name+".csv")
+            paths[name].write_text(data,"utf8")
+        out=review.discover(set(range(1,8)),paths)
+        self.assertEqual(out["candidate_item_count"],7)
+        self.assertEqual(out["context_free_effect_bonus_candidate_count"],1)
+        self.assertEqual(out["conditional_or_mixed_bonus_candidate_count"],6)
+        self.assertEqual(out["context_free_effect_bonus_candidates"][0]["item_id"],1)
+        self.assertEqual(out["context_free_effect_bonus_candidates"][0]["bonus_ids"],[701])
+        self.assertEqual(out["context_free_effect_bonus_candidates"][0]["bonus_effects"][0]["roots"],[
+            {"root_tree_id":100,"node_ids":[1]}])
+        self.assertEqual(out["items"][3]["bonus_effects"],[{"bonus_id":703,"item_effect_ids":[81]}])
+        self.assertFalse(out["automatic_bonus_attachment"])
+        self.assertFalse(out["itemlevel_and_acquisition_admission_verified"])
+
     def test_bonus_review_reuses_tier_raw_and_caches_missing_two_tables(self):
         linked=self.source()
         original=json.loads(Path(linked["candidate_path"]).read_text("utf8"))
