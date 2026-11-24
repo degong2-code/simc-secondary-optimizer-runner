@@ -387,9 +387,18 @@ class FreshOrdinaryGearSource(unittest.TestCase):
             return Response(b"ID,ItemID,ItemEffectID\n1,299903,12345\n")
         args=dict(stage_root=self.root,wago_folder=self.wago,build=self.BUILD,
                   linked=linked,include_delve=True)
+        # Exercise the actual extension directly first; any source/parser
+        # failure should report its exception, not a later missing dict key.
+        effect=self.root/"direct_effect_fixture.csv"
+        effect.write_bytes(b"ID,ItemID,ItemEffectID\n1,299903,12345\n")
+        direct=build.source_gear_pool.expand_selectable_source(
+            original,self.wago,effect)
+        self.assertEqual(direct["selectable_source_extension"]["additional_candidate_ids"],
+                         [299902,299903,299904])
         first=build._fresh_ordinary_gear_source_stage(**args,transport=transport)
-        self.assertTrue(first["a7_auto_source_choice_provenance"][
-            "candidate_provenance_verified"],first)
+        self.assertTrue(first.get("candidate_path"),first)
+        self.assertTrue(first.get("a7_auto_source_choice_provenance",{}).get(
+            "candidate_provenance_verified"),first)
         self.assertEqual(first["plain_candidate_count"],1)
         data=json.loads(Path(first["candidate_path"]).read_text("utf8"))
         self.assertEqual({x["item_id"]:x["category"] for x in data["items"]},
