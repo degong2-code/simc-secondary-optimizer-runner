@@ -11,7 +11,7 @@
 
 World of Warcraft **26개 DPS 전문화만** 지원한다(증강 기원사·탱커·힐러 제외). 목표는 현재 착용 장비를 재분배하는 것이 아니라, **미래 목표 ilvl(기본 334) 또는 사용자의 수동 최종 CHMV T**에서 SimulationCraft DPS를 최대화하는 **치명·가속·특화·유연의 절대 rating**을 찾는 Windows 제품이다. 비율은 보조 정보이며, DPS·SEM·**95%만** 사용하는 통계 판정·관측 1순위·실질적으로 다른 근접 대안·캐시·중단/재개·저장/재열람을 제공한다. 전역 최적해와 단순 관측 1순위를 혼동하지 않는다.
 
-사용자에게 전체 장비/내부 원본 SimC 프로필/후보 벡터/SHA를 요구하지 않는다. 사용자 입력은 캐릭터(직업·전문화·종족·특성), 목표 ilvl 또는 수동 최종 T, 장신구 2개, 선택 특수장비/장식 0`2, 보석·영약·음식·물약·무기 기름·전투조건 등이다. 프로그램이 대표 일반 장비·무기·티어 4세트와 시즌 원본 예산을 구성한다. 프로필 업로드는 캐릭터·특성 추출 선택 편의 기능이며 현재 장비 총량이 최적화 기준이 아니다.
+사용자에게 전체 장비/내부 원본 SimC 프로필/후보 벡터/SHA를 요구하지 않는다. 사용자 입력은 캐릭터(직업·전문화·종족·특성), 목표 ilvl 또는 수동 최종 T, 장신구 2개, 선택 특수장비/장식 0~2, 보석·영약·음식·물약·무기 기름·전투조건 등이다. 프로그램이 대표 일반 장비·무기·티어 4세트와 시즌 원본 예산을 구성한다. 프로필 업로드는 캐릭터·특성 추출 선택 편의 기능이며 현재 장비 총량이 최적화 기준이 아니다.
 
 예산 회계: `G` 대표 장비, `J` 검증된 기본 보석, `F` 최고 품질 영약, `O` 무기 기름 고정치, `B=G+J+F`, `T=B+O`, `c_final=c_base+o`. 수동 최종 T가 자동 총량보다 우선하며, `B=T-O`로 변환한다. L은 G 내부의 정확한 특수장비 하한, E는 승인 회계에 따라 한 번만 반영, O는 자유 재분배·중복 가산 금지. 장신구 정적 stats는 자유 G 밖, gear record 미관측을 0이라고 단정하지 않는다. 새 시즌 G/J/F/O 모두 시즌 원본에서 자동 산출하며 과거 시즌 숫자를 새 시즌 수치로 복사하지 않는다.
 
@@ -34,7 +34,7 @@ Wago DB2는 물리 item ID·품질·사용 조건의 원본, SimC는 입력·APL
 - v567: 동일 시즌 ZERO-SOURCE 환경 자동 구축 역사 실증; 이전 영수증의 대상·시즌·SimC 조건에 한함.
 - v611/v629`v633: 실제 70961 G/J/F/O 및 영구 마부 38종. 일반화 증거 아님.
 - v570: Windows 실제 Chrome에서 빈 세션→시즌→생존 사냥꾼 Native64 DPS·95% 결과.
-- v572/v624/v639 및 관련 v636`638: 중단/복원/재개·장신구·수동/자동 T·캐시·ZIP Native·최적 rating/DPS/SEM/95%·대안·재열람 성공(각 기존 조건 한정).
+- v572/v624/v639 및 관련 v636~638: 중단/복원/재개·장신구·수동/자동 T·캐시·ZIP Native·최적 rating/DPS/SEM/95%·대안·재열람 성공(각 기존 조건 한정).
 - v684: 70961 실제 Wago/SimC source-owned food42/potion17 연결 중 시즌 source projection food35/potion1.
 - v688 [Actions #45223542078](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45223542078): 실제 같은 실행의 v212 설치 food35/potion1/마부38, 설치 SHA→사용자 API→SimC `food=blooming_feast` 프로필 PASS.
 - v689 [Actions #45227006628](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/45227006628): 실제 70961 징벌 성기사+Blooming Feast, 기존 Native6/6, CHMV (736,736,735,900), T=3107, 관측 DPS 158317.4831, SEM 247.27365, 95% 우위 방향 미확정, 근접 대안2, 결과 재열람 PASS. 이 사례는 **같은 실행에서의 Native 제품 1시나리오 성공**이며 모든 전문화/다음 시즌/완전 첫 설치 성공 증명이 아니다.
@@ -50,7 +50,7 @@ Wago DB2는 물리 item ID·품질·사용 조건의 원본, SimC는 입력·APL
 - 실제 first-blocker: **`HIGHEST_QUALITY_GEM_J_SOURCE_PENDING`**. 함께 `HIGHEST_QUALITY_FLASK_F_SOURCE_PENDING`, 동일 시즌 G/J/F/O B/T 및 v212 설치 PENDING, 추가 소켓/물리 보석 J·영약 F 원본/수치 정합 PENDING 등이 requires로 기록됐다. 실제 내부 stage는 `FRESH_V191_V211_V213_COMPILED_UNADMITTED`.
 - 동일 한 실행의 UI 결과: class/spec `warlock/destruction`, oil `off`, 목표 ilvl334, 게임 `12.1.5.70961`. 소모품/예산 원본 설치 **실패**: `environment_ready=false`, `environment_installed=false`, 설치 SHA 없음, `B/T=null`.
 - **환경 준비 Native 3회**, 사용자 DPS Native **0회**. 따라서 이 사례에 DPS·SEM·95% 결과 없음. 개인 PC 시험도 아님.
-- 이는 제품의 실 제로베이스 환경 구축에서 확인한 **첫 필수 J/F 원본 미충족**이다. v690.6`.8의 Selenium 기름 selector 오류를 여전히 첫 P1 결손으로 다루면 안 된다. 그러나 J/F 결손의 **근본 원인이 반드시 특정 파서·SimC revision에 있다**고 증거 없이 단정하지 말 것.
+- 이는 제품의 실 제로베이스 환경 구축에서 확인한 **첫 필수 J/F 원본 미충족**이다. v690.6~.8의 Selenium 기름 selector 오류를 여전히 첫 P1 결손으로 다루면 안 된다. 그러나 J/F 결손의 **근본 원인이 반드시 특정 파서·SimC revision에 있다**고 증거 없이 단정하지 말 것.
 
 ## 5. 가장 비용이 낮은 다음 작업 단 하나
 
