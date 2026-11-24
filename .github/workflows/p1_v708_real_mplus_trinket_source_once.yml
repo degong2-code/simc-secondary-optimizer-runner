@@ -60,7 +60,9 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: p1-v708-real-mplus-trinket-coverage
-          path: out/v708/V708_REAL_MPLUS_TRINKET_COVERAGE.json
+          path: |
+            out/v708/V708_REAL_MPLUS_TRINKET_COVERAGE.json
+            out/v708/V723_EFFECT_STAGE_DIAGNOSTICS.json
           retention-days: 30
           if-no-files-found: warn
       - name: Preserve only public same-build DB2 raw for reuse

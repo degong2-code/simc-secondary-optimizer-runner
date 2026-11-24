@@ -3747,8 +3747,10 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
                 result,extension.get("effect_review_rows",[]),
                 season_id=pool["db2_display_season_id"]))
             base=json.loads((root/out["candidate"]).read_text("utf8"))
+            pending_options=[]
             result["selected_effect_option_rows"]=product_gear_db.effect_option_rows(
-                base,result,extension.get("effect_review_rows",[]))
+                base,result,extension.get("effect_review_rows",[]),pending=pending_options)
+            result["selected_effect_option_pending"]=pending_options
             stage_engine._atomic_write(root/relative,
                 (canonical(result)+"\n").encode("utf8"))
         def validate(outputs):
@@ -3778,7 +3780,7 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
         return pending(str(exc).split(":",1)[0])
 
 
-def _read_sealed_effect_option_overlay(root,build,stage,candidate):
+def _read_sealed_effect_option_overlay(root,build,stage,candidate,*,diagnostics=None):
     """Read selected-only rows for this exact authenticated gear generation."""
     code=stage_engine.module_dependency_fingerprint([
         pathlib.Path(bonus_effect_review.__file__),
@@ -3788,6 +3790,8 @@ def _read_sealed_effect_option_overlay(root,build,stage,candidate):
     found={}
     receipts=sorted((root/".stage_receipts").glob("season-bonus-effect-review-*.json"))
     if len(receipts)>64:return None
+    def report(sid,reason):
+        if diagnostics is not None:diagnostics.append({"review_stage":sid,"reason":reason})
     for path in receipts:
         try:
             sid=path.stem
@@ -3800,16 +3804,23 @@ def _read_sealed_effect_option_overlay(root,build,stage,candidate):
                     review.get("game_build")!=build or inputs.get("game_build")!=build or
                     inputs.get("gear_receipt_sha256")!=stage["receipt_sha256"] or
                     inputs.get("code_sha256")!=code or
-                    sid!=_derived_source_generation("season-bonus-effect-review",inputs)):continue
+                    sid!=_derived_source_generation("season-bonus-effect-review",inputs)):
+                report(sid,"REVIEW_IDENTITY_MISMATCH");continue
             receipt=stage_engine.verify_stage(root=root,stage_id=sid,
                 stage_version="bonus-effect-source-only-v1",inputs=inputs,outputs={"review":rel})
             rows=review.get("selected_effect_option_rows",[])
-            if not rows:continue
+            if not rows:
+                report(sid,"NO_SELECTED_EFFECT_OPTION_ROWS");continue
             merged=product_gear_db.merge_effect_option_rows(candidate,rows)
             identity=digest(canonical({"gear":stage["receipt_sha256"],
                 "effect_review":receipt["receipt_sha256"]}).encode("utf8"))
             found[identity]=(merged,identity)
-        except (OSError,ValueError,TypeError,KeyError):continue
+            report(sid,"MERGED")
+        except (OSError,ValueError,TypeError,KeyError) as exc:
+            code=str(exc)
+            report(path.stem,code if re.fullmatch(r"[A-Z][A-Z0-9_]{0,119}",code)
+                   else type(exc).__name__)
+            continue
     return next(iter(found.values())) if len(found)==1 else None
 
 

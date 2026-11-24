@@ -258,6 +258,37 @@ def verify_product_effect_registration(folder,gear,candidate):
         stage_root=folder,build=BUILD,gear=gear,transport=no_fetch)
     assert review.get("candidate_path"),review.get("reason")
     assert review["network_calls_by_stage"]==0
+    detail=json.loads(Path(review["candidate_path"]).read_text("utf8"))
+    diagnostics=[]
+    overlay=original._read_sealed_effect_option_overlay(
+        folder,BUILD,gear["source_stage"],candidate,diagnostics=diagnostics)
+    # Preserve compact public DB2-derived intermediate results, not provider
+    # responses, secrets or local paths. No more API calls to diagnose a
+    # downstream classifier rejection.
+    ext=gear.get("selectable_source_extension") or {}
+    focus_ids={271874,271875,271876,271878,281235,281236,281238,281239,
+               268202,268207,268215}
+    scope_rows={r["item_id"]:r for r in ext.get("effect_review_rows",[])}
+    report={"reviewed_count":detail.get("reviewed_item_count"),
+            "context_free_count":detail.get("context_free_effect_bonus_candidate_count"),
+            "option_count":detail.get("effect_option_candidate_count"),
+            "selected_option_count":len(detail.get("selected_effect_option_rows",[])),
+            "focus_scope_ids":sorted(focus_ids&set(scope_rows)),
+            "focus_scope_rows":[scope_rows[i] for i in sorted(focus_ids&set(scope_rows))],
+            "focus_discovered_ids":sorted(focus_ids&{r["item_id"] for r in detail["items"]}),
+            "focus_resolved_ids":sorted(focus_ids&{r["item_id"] for r in detail.get("context_free_effect_bonus_candidates",[])}),
+            "focus_option_ids":sorted(focus_ids&{r["item_id"] for r in detail.get("effect_option_candidates",[])}),
+            "focus_selected_rows":[r for r in detail.get("selected_effect_option_rows",[]) if r["item_id"] in focus_ids],
+            "focus_pending":[r for k in ("effect_option_pending","selected_effect_option_pending")
+                             for r in detail.get(k,[]) if r["item_id"] in focus_ids],
+            "overlay_diagnostics":diagnostics,"overlay_available":overlay is not None,
+            "registered_boss_scope":(ext.get("supplementary_wcl_boss_review") or {}).get("status")}
+    print("V723_EFFECT_STAGES "+json.dumps(report,ensure_ascii=False,sort_keys=True),flush=True)
+    # Save independently before assertions, including negative evidence.
+    # The artifact is a diagnostic projection only, not production authority.
+    dest=folder.parent.parent.parent
+    (dest/"V723_EFFECT_STAGE_DIAGNOSTICS.json").write_text(
+        json.dumps(report,ensure_ascii=False,sort_keys=True,indent=2)+"\n","utf8")
     sealed=original.read_sealed_selectable_gear_generation(
         stage_root=folder,build=BUILD)
     assert sealed is not None,"V722_SELECTABLE_GENERATION_UNAVAILABLE"

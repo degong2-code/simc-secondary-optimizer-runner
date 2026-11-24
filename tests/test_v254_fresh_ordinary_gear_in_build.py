@@ -671,7 +671,9 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         review={"effect_option_candidates":[{"item_id":i,"required_options":{"bonus_id":"101"},
                  "bonus_effects":[{"bonus_id":101,"item_effect_ids":[91]}]}
                  for i in (self.item_id,299999,299998)]}
-        selected=build.product_gear_db.effect_option_rows(base,review,rows)
+        pending=[]
+        selected=build.product_gear_db.effect_option_rows(base,review,rows,pending=pending)
+        self.assertEqual(pending,[{"item_id":299998,"reason":"CONFLICTING_SEASON_OCCURRENCES"}])
         self.assertEqual([r["item_id"] for r in selected],[self.item_id,299999])
         merged=build.product_gear_db.merge_effect_option_rows(base,selected)
         self.assertEqual(json.dumps(base,sort_keys=True),original)

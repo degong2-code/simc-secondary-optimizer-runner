@@ -410,7 +410,7 @@ def validate(payload):
          "PRODUCT_EFFECT_OR_TIER_OVERCLAIM")
     return payload
 
-def effect_option_rows(base,review,source_rows):
+def effect_option_rows(base,review,source_rows,*,pending=None):
     """Derive selected-only rows from sealed source review, not ordinary G.
 
     Single unconditional effect-only list, physical source and exact journal
@@ -422,33 +422,42 @@ def effect_option_rows(base,review,source_rows):
     old={r["item_id"]:r for r in base["items"]}
     rows={r["item_id"]:r for r in source_rows}
     result=[]
+    def defer(iid,reason):
+        if pending is not None:pending.append({"item_id":iid,"reason":reason})
     for option in review.get("effect_option_candidates",[]):
         iid=option["item_id"]
         row=rows.get(iid)
-        if row is None or row.get("direct_item_effect_record") is not False:continue
+        if row is None or row.get("direct_item_effect_record") is not False:
+            defer(iid,"NO_SCOPED_INDIRECT_PHYSICAL_ROW");continue
         meta=row.get("physical_metadata") or {}
         required=option.get("required_options") or {}
         if (set(required)!={"bonus_id"} or
                 type(required["bonus_id"]) is not str or
                 re.fullmatch(r"[1-9][0-9]{0,9}",required["bonus_id"]) is None or
                 len(option.get("bonus_effects",[]))!=1 or
-                option["bonus_effects"][0].get("bonus_id")!=int(required["bonus_id"])):continue
+                option["bonus_effects"][0].get("bonus_id")!=int(required["bonus_id"])):
+            defer(iid,"EFFECT_OPTION_NOT_SINGLE_EXACT_LIST");continue
         if (meta.get("class_id") not in (2,4) or
                 type(meta.get("subclass_id")) is not int or meta["subclass_id"]<0 or
                 type(meta.get("allowed_class_mask")) is not int or
                 meta["allowed_class_mask"]==0 or
                 type(meta.get("stat_modifier_codes")) is not list or
                 meta.get("item_set_id")!=0 or
-                row.get("slot") not in pool.SPECIAL_INVENTORY_TYPES or
-                row.get("conflicting_source_occurrences")):continue
-        if iid in old and old[iid]["category"]!="plain_representative_candidate":continue
-        if iid in old and old[iid]["inventory_type"]!=row["slot"]:continue
+                row.get("slot") not in pool.SPECIAL_INVENTORY_TYPES):
+            defer(iid,"PHYSICAL_METADATA_OR_SET_ROLE_UNRESOLVED");continue
+        if row.get("conflicting_source_occurrences"):
+            defer(iid,"CONFLICTING_SEASON_OCCURRENCES");continue
+        if iid in old and old[iid]["category"]!="plain_representative_candidate":
+            defer(iid,"EXISTING_ROLE_REQUIRES_MERGE");continue
+        if iid in old and old[iid]["inventory_type"]!=row["slot"]:
+            defer(iid,"EXISTING_PHYSICAL_SLOT_CONFLICT");continue
         sid=base["db2_display_season_id"]
         origins=[o for o in row.get("acquisition_sources",[])
                  if (pool._journal_origin_current(o,sid,raid=True)
                      and meta.get("expansion_id")==base["expansion_id"])
                  or pool._journal_origin_current(o,sid,raid=False)]
-        if not origins:continue
+        if not origins:
+            defer(iid,"CURRENT_JOURNAL_MEMBERSHIP_UNRESOLVED");continue
         evidence=[{k:o[k] for k in ("source","season_evidence","display_season_id",
             "world_state_expression_id","journal_encounter_id","journal_instance_id",
             "challenge_mode_id","expansion_id","active_rotation_display_season_id")
