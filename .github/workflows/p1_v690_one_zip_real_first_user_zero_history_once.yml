@@ -7,6 +7,7 @@ on:
       - integration_probes/p1_v690_one_zip_first_user_zero_history_once.py
       - integration_probes/p1_v573_windows_zip_cold_web_setup_consent_once.py
       - tests/test_v690_visible_oil_user_contract.py
+      - tests/test_v278_sealed_simc_consumable_native_pair.py
 permissions:
   contents: read
   actions: read

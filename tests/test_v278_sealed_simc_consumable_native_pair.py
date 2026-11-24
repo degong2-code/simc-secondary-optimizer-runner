@@ -146,7 +146,9 @@ class TwoNativeOptions(unittest.TestCase):
             path=pathlib.Path(case["receipt_path"])
             receipt=json.loads(path.read_text("utf8"))
             self.assertEqual(receipt["identity"]["io_mode"],"short_temp_cwd_v2")
-            self.assertTrue(path.is_relative_to(root))
+            # Windows TEMP may be spelled through a short-name alias.
+            # The original engine resolves the stage root before sealing.
+            self.assertTrue(path.resolve().is_relative_to(root.resolve()))
             self.assertEqual(pair.file_sha(path.parent/"native.json"),
                              receipt["native_json2_sha256"])
             self.assertEqual(pair.file_sha(path.parent/"input.simc"),
