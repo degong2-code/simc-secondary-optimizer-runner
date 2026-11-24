@@ -350,6 +350,61 @@ class FreshOrdinaryGearSource(unittest.TestCase):
                     build=self.BUILD,transport=transport)
         self.assertEqual(len(calls),2)
 
+    def test_pinned_raid_extra_loot_and_fixed_craft_are_public_only(self):
+        linked=self.source()
+        original=json.loads(Path(linked["candidate_path"]).read_text("utf8"))
+        original["full_season_completeness_confirmed"]=False
+        extra=[(299902,"Extra raid trinket",12),(299903,"Fixed craft ring",11),
+               (299904,"Craft trinket",12),(299905,"Other raid",12),
+               (299906,"Craft ordinary",5)]
+        with (self.wago/"Item.csv").open("a",encoding="utf8",newline="") as f:
+            csv.writer(f).writerows([[iid,4,0,slot] for iid,_,slot in extra])
+        with (self.wago/"ItemSparse.csv").open("a",encoding="utf8",newline="") as f:
+            csv.writer(f).writerows([[iid,name,slot,11,0,4,-1,4]
+                                    for iid,name,slot in extra])
+        self.write_csv("JournalEncounter",["ID","JournalInstanceID","Name_lang"],[
+            {"ID":303,"JournalInstanceID":301,"Name_lang":"Extra journal"},
+            {"ID":403,"JournalInstanceID":401,"Name_lang":"Other raid"}])
+        self.write_csv("JournalEncounterItem",[
+            "ID","JournalEncounterID","ItemID","DisplaySeasonID"],[
+            {"ID":1,"JournalEncounterID":303,"ItemID":299902,"DisplaySeasonID":47},
+            {"ID":2,"JournalEncounterID":403,"ItemID":299905,"DisplaySeasonID":47},
+            {"ID":3,"JournalEncounterID":303,"ItemID":299999,"DisplaySeasonID":47}])
+        self.write_csv("CraftingData",["ID","CraftedItemID"],[
+            {"ID":i,"CraftedItemID":iid} for i,iid in enumerate(
+                (299903,299904,299906),1)])
+        tables={p.stem:{"sha256":build.digest(p.read_bytes()),
+                         "bytes":p.stat().st_size} for p in self.wago.glob("*.csv")}
+        receipt=json.dumps({"build":self.BUILD,"locale":"enUS","tables":tables}).encode()
+        (self.wago/"receipt.json").write_bytes(receipt)
+        original["snapshot_receipt_sha256"]=build.digest(receipt)
+        raw=json.dumps(original).encode()
+        Path(linked["candidate_path"]).write_bytes(raw)
+        def transport(req,timeout):
+            if req.full_url==build.delve_provider.SOURCE_URL:
+                return Response(json.dumps({"items":[{"id":self.item_id,
+                    "name":"Source plain sword"}]}).encode())
+            return Response(b"ID,ItemID,ItemEffectID\n1,299903,12345\n")
+        args=dict(stage_root=self.root,wago_folder=self.wago,build=self.BUILD,
+                  linked=linked,include_delve=True)
+        first=build._fresh_ordinary_gear_source_stage(**args,transport=transport)
+        self.assertTrue(first["a7_auto_source_choice_provenance"][
+            "candidate_provenance_verified"],first)
+        self.assertEqual(first["plain_candidate_count"],1)
+        data=json.loads(Path(first["candidate_path"]).read_text("utf8"))
+        self.assertEqual({x["item_id"]:x["category"] for x in data["items"]},
+            {self.item_id:"plain_representative_candidate",299902:"trinket",
+             299903:"special_effect_gear_candidate",299904:"trinket"})
+        extension=first["selectable_source_extension"]
+        self.assertEqual(extension["additional_candidate_ids"],[299902,299903,299904])
+        self.assertEqual(extension["unresolved_join_rows"][0]["item_id"],299999)
+        self.assertEqual(Path(linked["candidate_path"]).read_bytes(),raw)
+        def no_fetch(*args,**kwargs):self.fail("NO_REPEAT_SOURCE_FETCH")
+        second=build._fresh_ordinary_gear_source_stage(**args,transport=no_fetch)
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(second["candidate_path"],first["candidate_path"])
+        self.assertEqual(second["selectable_source_extension"],extension)
+
     def test_unauthenticated_join_has_zero_network(self):
         result=build._fresh_ordinary_gear_source_stage(
             stage_root=self.root,wago_folder=self.wago,

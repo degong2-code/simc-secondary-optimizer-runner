@@ -293,7 +293,8 @@ def validate(payload):
                  type(r.get("source")) is str and
                  r["source"] in (
                      "raid_journal","mplus_journal",
-                     "selectable_stat_craft","localbots_delve_pool")
+                     "selectable_stat_craft","localbots_delve_pool",
+                     "crafted_fixed_gear")
                  and all(k in (
                      "source","season_evidence","display_season_id",
                      "world_state_expression_id","journal_encounter_id",

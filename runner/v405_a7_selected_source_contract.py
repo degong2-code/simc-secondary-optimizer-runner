@@ -42,6 +42,11 @@ def _eligible(source,season_id):
         return pool._journal_origin_current(source,season_id,raid=True)
     if kind=="mplus_journal":
         return pool._journal_origin_current(source,season_id,raid=False)
+    if kind=="crafted_fixed_gear":
+        return (source.get("classification")==
+                    "SAME_EXPANSION_CRAFTED_PHYSICAL_CANDIDATE"
+                and type(source.get("expansion_id")) is int
+                and source["expansion_id"]>0)
     if kind=="selectable_stat_craft":
         return (source.get("classification")=="PROVISIONAL_SIMC_BATCH_REVIEW"
                 and type(source.get("expansion_id")) is int
@@ -148,8 +153,11 @@ def assess(*, source, catalog, expected_game_build, source_report_sha256,
                 break
             if not _eligible(src,season_id):
                 continue
-            if src["source"]=="selectable_stat_craft":
+            if src["source"] in ("selectable_stat_craft","crafted_fixed_gear"):
                 if src["expansion_id"]!=expansion:
+                    continue
+                if (src["source"]=="crafted_fixed_gear" and candidate["category"]
+                        not in ("trinket","special_effect_gear_candidate")):
                     continue
             eligible=True
             break
@@ -183,6 +191,8 @@ def assess(*, source, catalog, expected_game_build, source_report_sha256,
         "db2_expansion_id":expansion,
         "db2_display_season_id":season_id,
         "original_v163_sha256":source_report_sha256,
+        **({"parent_v163_sha256":source["parent_v163_sha256"]}
+           if "parent_v163_sha256" in source else {}),
         "v167_candidate_sha256":candidate_sha256,
         "supplementary_delve_source_sha256":(
             delve.get("source_content_sha256") if delve is not None else None),

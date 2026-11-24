@@ -124,6 +124,96 @@ def _journal_origin_current(row, display_season, *, raid):
                              "UNKNOWN_WORLD_STATE_EXPRESSION"))
 
 
+def expand_selectable_source(original, folder, effect_path):
+    """Supplement the known raid and craft sources; preserve original v163/G."""
+    import copy
+    folder=Path(folder)
+    raw=(folder/"receipt.json").read_bytes()
+    receipt=json.loads(raw)
+    need(hashlib.sha256(raw).hexdigest()==original.get("snapshot_receipt_sha256")
+         and receipt.get("build")==original["build"]
+         and receipt.get("locale")=="enUS","SELECTABLE_SOURCE_SNAPSHOT_DRIFT")
+    for table in ("JournalEncounter","JournalEncounterItem","CraftingData",
+                  "Item","ItemSparse"):
+        path=folder/(table+".csv")
+        meta=receipt.get("tables",{}).get(table,{})
+        need(path.is_file() and not path.is_symlink() and
+             path.stat().st_size==meta.get("bytes") and
+             path.stat().st_size<=MAX_CSV_BYTES,"SELECTABLE_SOURCE_TABLE_SIZE")
+        h=hashlib.sha256()
+        with path.open("rb") as stream:
+            for chunk in iter(lambda:stream.read(1024*1024),b""):
+                h.update(chunk)
+        need(h.hexdigest()==meta.get("sha256"),"SELECTABLE_SOURCE_TABLE_SHA")
+    result=copy.deepcopy(original)
+    indexed={x["item_id"]:x for x in result["items"]}
+    sid=original["db2_display_season_id"]
+    instances={src["journal_instance_id"] for row in original["items"]
+        for src in row["acquisition_sources"] if src.get("source")=="raid_journal"
+        and _journal_origin_current(src,sid,raid=True)}
+    encounters={integer(x["ID"]):x for x in read_csv(
+        folder/"JournalEncounter.csv",("ID","JournalInstanceID","Name_lang"))
+        if integer(x["JournalInstanceID"]) in instances}
+    origins={}
+    for row in read_csv(folder/"JournalEncounterItem.csv",(
+            "ID","JournalEncounterID","ItemID","DisplaySeasonID")):
+        eid=integer(row["JournalEncounterID"]);iid=integer(row["ItemID"],0)
+        if eid not in encounters or iid<=0 or iid in indexed:continue
+        season=integer(row["DisplaySeasonID"])
+        if season not in (0,sid):continue
+        encounter=encounters[eid]
+        origins.setdefault(iid,[]).append({
+            "source":"raid_journal","name":encounter["Name_lang"],
+            "journal_encounter_id":eid,
+            "journal_instance_id":integer(encounter["JournalInstanceID"]),
+            "display_season_id":season,
+            "world_state_expression_id":integer(row.get("WorldStateExpressionID")),
+            "season_evidence":("DB2_DISPLAY_SEASON_MATCH" if season==sid
+                               else "UNKNOWN_UNSCOPED_JOURNAL")})
+    for row in read_csv(folder/"CraftingData.csv",("ID","CraftedItemID")):
+        iid=integer(row["CraftedItemID"],0)
+        if iid>0 and iid not in indexed:
+            origins.setdefault(iid,[]).append({
+                "source":"crafted_fixed_gear",
+                "expansion_id":original["db2_expansion_id"],
+                "classification":"SAME_EXPANSION_CRAFTED_PHYSICAL_CANDIDATE"})
+    ids=set(origins)
+    item={integer(x["ID"]):x for x in read_csv(
+        folder/"Item.csv",("ID","ClassID","InventoryType"))
+        if integer(x["ID"]) in ids}
+    equipment={i for i,x in item.items() if integer(x["ClassID"]) in (2,4)}
+    wanted=equipment|(ids-set(item))
+    sparse={integer(x["ID"]):x for x in read_csv(folder/"ItemSparse.csv",
+        ("ID","Display_lang","InventoryType","ExpansionID"))
+        if integer(x["ID"]) in wanted}
+    linked,_=effects(effect_path,equipment)
+    pending=[];added=[]
+    for iid in sorted(wanted):
+        src=origins[iid]
+        it=item.get(iid);sp=sparse.get(iid)
+        if it is None or sp is None:
+            pending.append({"item_id":iid,"reason":"ITEM_OR_ITEMSPARSE_MISSING",
+                            "source_kinds":sorted({x["source"] for x in src})})
+            continue
+        slot=integer(it["InventoryType"],0)
+        if slot<=0 or slot!=integer(sp["InventoryType"]):
+            pending.append({"item_id":iid,"reason":"EQUIPMENT_SLOT_UNRESOLVED"})
+            continue
+        if integer(sp["ExpansionID"])!=original["db2_expansion_id"]:continue
+        if slot!=TRINKET and iid not in linked:continue
+        unique={json.dumps(x,sort_keys=True):x for x in src}
+        added.append({"item_id":iid,"name":sp["Display_lang"],"slot":slot,
+                      "acquisition_sources":[unique[k] for k in sorted(unique)]})
+    result["items"]=sorted([*result["items"],*added],key=lambda x:x["item_id"])
+    result["selectable_source_extension"]={
+        "source_basis":"PINNED_MATCHED_RAID_INSTANCES_AND_CRAFTINGDATA",
+        "additional_candidate_ids":[x["item_id"] for x in added],
+        "unresolved_join_rows":pending,
+        "ordinary_G_candidates_added":False,
+        "full_season_completeness_confirmed":False}
+    return result
+
+
 def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALLED,
                  delve_selectable_only=False):
     need(db2.get("schema")=="v163_zero_seed_db2_join_v1"
@@ -192,6 +282,7 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
              "SLOT_MISMATCH_OR_NOT_EQUIPMENT")
         source_names={x["source"] for x in row["sources"]}
         craft="selectable_stat_craft" in source_names
+        fixed_craft="crafted_fixed_gear" in source_names
         raid=any(_journal_origin_current(
                  x,db2["db2_display_season_id"],raid=True)
                  for x in row["sources"])
@@ -225,6 +316,7 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
             continue
         season_eligible=((meta["expansion"]==db2["db2_expansion_id"] and
                          (craft or raid or mplus_ok or
+                          (fixed_craft and public_loot) or
                           (delve_ok and (not delve_selectable_only or public_loot))))
                          or (mplus_ok and role in
                              ("trinket","special_effect_gear_candidate")))

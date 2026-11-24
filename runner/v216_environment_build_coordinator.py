@@ -3371,6 +3371,8 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
         paths={"pool":rel+"v165_pool.json","compact":rel+"v166_compact.json",
                "candidate":rel+"v167_candidates.json","delve":rel+"v162_delve.json"}
         stage_version="derived-gear-catalog-v1"
+    extend=include_delve and bool(source.get("snapshot_receipt_sha256"))
+    if extend:paths["expanded_source"]=rel+"v163_selectable_extension.json"
     def execute():
         effect_path=effect
         if not include_delve:
@@ -3393,8 +3395,17 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
             target.write_text(json.dumps(note,ensure_ascii=False,
                 sort_keys=True,indent=2)+"\n","utf8")
         # No installed J/F numbers are inputs to a catalogue derivation.
+        effective_source=source
+        if extend:
+            effective_source=source_gear_pool.expand_selectable_source(
+                source,pathlib.Path(wago_folder),effect_path)
+            effective_source["parent_v163_sha256"]=digest(raw_source)
+            target=root/paths["expanded_source"]
+            target.parent.mkdir(parents=True,exist_ok=True)
+            target.write_text(json.dumps(effective_source,sort_keys=True,
+                ensure_ascii=False,indent=2,allow_nan=False)+"\n","utf8")
         pool=source_gear_pool.compile_pool(
-            source,delve,sparse,effect_path,budget_source=None,
+            effective_source,delve,sparse,effect_path,budget_source=None,
             delve_selectable_only=include_delve)
         compact=compact_gear_db.build(pool,item,sparse)
         candidate=product_gear_db.from_v166(compact)
@@ -3458,7 +3469,13 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
                 if include_delve else {})
     delve=delve_note.get("report")
     candidate_bytes=(root/paths["candidate"]).read_bytes()
-    source_sha=digest(raw_source)
+    effective_source_raw=((root/paths["expanded_source"]).read_bytes()
+                          if extend else raw_source)
+    effective_source=json.loads(effective_source_raw) if extend else source
+    if extend:
+        need(effective_source.get("parent_v163_sha256")==digest(raw_source),
+             "SELECTABLE_EXTENSION_PARENT_DRIFT")
+    source_sha=digest(effective_source_raw)
     candidate_sha=digest(candidate_bytes)
     a7_code=stage_engine.module_dependency_fingerprint([
         pathlib.Path(a7_source_contract.__file__),
@@ -3475,7 +3492,7 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
     a7_target=root/a7_path
     def audit_execute():
         report=a7_source_contract.assess(
-            source=source,catalog=result,expected_game_build=build,
+            source=effective_source,catalog=result,expected_game_build=build,
             source_report_sha256=source_sha,candidate_sha256=candidate_sha,
             delve=delve)
         a7_target.parent.mkdir(parents=True,exist_ok=True)
@@ -3542,6 +3559,8 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
             "network_calls_by_stage":attempted[0],
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
             "a7_auto_source_choice_provenance":a7_info,
+            "selectable_source_extension":effective_source.get(
+                "selectable_source_extension"),
             "supplementary_delve_status":delve_note.get("status","NOT_REQUESTED"),
             "supplementary_delve_resolved_count":(
                 delve.get("resolved_count") if delve is not None else None),
@@ -3604,6 +3623,7 @@ def refresh_existing_season_gear_source(*,stage_root,build,transport=None):
     product_gear_db.validate(candidate)
     return {"candidate":candidate,"source_generation_sha256":
                 result["source_stage"]["receipt_sha256"],
+            "selectable_source_extension":result.get("selectable_source_extension"),
             "supplementary_delve_status":result.get("supplementary_delve_status"),
             "supplementary_delve_unresolved_count":
                 result.get("supplementary_delve_unresolved_count"),
