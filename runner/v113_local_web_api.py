@@ -3933,7 +3933,9 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     old_ids={r["item_id"] for rows in groups.values() for r in rows}
                     additions={r["item_id"] for r in candidate["items"]
                         if r["category"]=="trinket" and r["item_id"] not in old_ids}
-                    special_ids=_refreshed_special_ids(refreshed,old_ids)
+                    old_special_ids={r["item_id"] for r in base["choices"]["special_effect_gear_candidate"]}
+                    special_ids=_refreshed_special_ids(refreshed,old_ids,
+                        existing_special_ids=old_special_ids)
                     new_names=official_ko_env.read_names(jobs.root,game_build,
                                                          additions|special_ids)
                     rows=season_gear.public_options(candidate,official_names=new_names)["choices"]
@@ -3974,11 +3976,13 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     "full_season_completeness_confirmed":False,
                     "native_calls_now":0}
 
-    def _refreshed_special_ids(refreshed,old_ids):
+    def _refreshed_special_ids(refreshed,old_ids,*,existing_special_ids=None):
         if not refreshed.get("special_generation_verified"):return set()
         candidate=refreshed["candidate"]
         return {r["item_id"] for r in candidate["items"]
-                if r["item_id"] not in old_ids and
+                if (r["item_id"] not in old_ids or
+                    (existing_special_ids is not None and r["item_id"] not in existing_special_ids and
+                     r.get("season_list_basis")=="SEALED_CONTEXT_FREE_EFFECT_OPTION")) and
                 bootstrap.refreshed_special_source_eligible(
                     r,candidate.get("db2_display_season_id"))}
 
@@ -4035,7 +4039,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             prior_ids={r["item_id"] for rows in base["choices"].values() for r in rows}
             new_ids={r["item_id"] for r in source["items"]
                      if r["category"]=="trinket" and r["item_id"] not in prior_ids}
-            special_ids=_refreshed_special_ids(refreshed,prior_ids)
+            special_ids=_refreshed_special_ids(refreshed,prior_ids,
+                existing_special_ids={r["item_id"] for r in base["choices"]["special_effect_gear_candidate"]})
             names=official_ko_env.read_names(jobs.root,game_build,new_ids|special_ids)
             rows=season_gear.public_options(source,official_names=names)["choices"]
             result.update(status="SEASON_TRINKET_SOURCE_REFRESHED",

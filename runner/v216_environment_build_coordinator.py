@@ -3663,7 +3663,7 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
              and gear_receipt.get("output_paths")==out,
              "BONUS_GEAR_SOURCE_DRIFT")
         # Recheck only small inputs used here, not any large CSV.
-        subset={k:paths[k] for k in ("pool","delve","expanded_source") if k in paths}
+        subset={k:paths[k] for k in ("pool","delve","expanded_source","candidate") if k in paths}
         actual,_=stage_engine._snapshot(subset)
         need(all(gear_receipt["outputs"].get(k)==v for k,v in actual.items()),
              "BONUS_GEAR_OUTPUT_DRIFT")
@@ -3689,6 +3689,8 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
             "review_ids_sha256":digest(canonical(sorted(ids)).encode("utf8")),
             "code_sha256":stage_engine.module_dependency_fingerprint(
                 [pathlib.Path(bonus_effect_review.__file__),
+                 pathlib.Path(product_gear_db.__file__),
+                 pathlib.Path(source_gear_pool.__file__),
                  pathlib.Path(stage_engine.__file__)])["sha256"]}
         for table in ("ItemBonusListGroupEntry","ItemBonus"):
             url="https://wago.tools/db2/"+table+"/csv?"+urlencode(
@@ -3726,6 +3728,9 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
             result.update(bonus_effect_review.reconcile_effect_options(
                 result,extension.get("effect_review_rows",[]),
                 season_id=pool["db2_display_season_id"]))
+            base=json.loads((root/out["candidate"]).read_text("utf8"))
+            result["selected_effect_option_rows"]=product_gear_db.effect_option_rows(
+                base,result,extension.get("effect_review_rows",[]))
             stage_engine._atomic_write(root/relative,
                 (canonical(result)+"\n").encode("utf8"))
         def validate(outputs):
@@ -3744,6 +3749,7 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
                 "context_free_effect_bonus_candidate_count":result.get("context_free_effect_bonus_candidate_count",0),
                 "conditional_or_mixed_bonus_candidate_count":result.get("conditional_or_mixed_bonus_candidate_count",0),
                 "effect_option_candidate_count":result.get("effect_option_candidate_count",0),
+                "selected_effect_option_count":len(result.get("selected_effect_option_rows",[])),
                 "candidate_path":str((root/relative).resolve()),
                 "source_stage":{k:v for k,v in stage.items() if k!="result"},
                 "network_calls_by_stage":attempted[0],"native_calls":0,
@@ -3752,6 +3758,41 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
             bonus_effect_review.BonusReviewBlocked,OSError,ValueError,
             KeyError,TypeError) as exc:
         return pending(str(exc).split(":",1)[0])
+
+
+def _read_sealed_effect_option_overlay(root,build,stage,candidate):
+    """Read selected-only rows for this exact authenticated gear generation."""
+    code=stage_engine.module_dependency_fingerprint([
+        pathlib.Path(bonus_effect_review.__file__),
+        pathlib.Path(product_gear_db.__file__),
+        pathlib.Path(source_gear_pool.__file__),
+        pathlib.Path(stage_engine.__file__)])["sha256"]
+    found={}
+    receipts=sorted((root/".stage_receipts").glob("season-bonus-effect-review-*.json"))
+    if len(receipts)>64:return None
+    for path in receipts:
+        try:
+            sid=path.stem
+            rel="source/"+sid+".json"
+            target=root/rel
+            if not target.is_file() or target.is_symlink() or target.stat().st_size>12_000_000:continue
+            review=json.loads(target.read_text("utf8"))
+            inputs=review.get("source_identity") or {}
+            if (review.get("schema")!=bonus_effect_review.SCHEMA or
+                    review.get("game_build")!=build or inputs.get("game_build")!=build or
+                    inputs.get("gear_receipt_sha256")!=stage["receipt_sha256"] or
+                    inputs.get("code_sha256")!=code or
+                    sid!=_derived_source_generation("season-bonus-effect-review",inputs)):continue
+            receipt=stage_engine.verify_stage(root=root,stage_id=sid,
+                stage_version="bonus-effect-source-only-v1",inputs=inputs,outputs={"review":rel})
+            rows=review.get("selected_effect_option_rows",[])
+            if not rows:continue
+            merged=product_gear_db.merge_effect_option_rows(candidate,rows)
+            identity=digest(canonical({"gear":stage["receipt_sha256"],
+                "effect_review":receipt["receipt_sha256"]}).encode("utf8"))
+            found[identity]=(merged,identity)
+        except (OSError,ValueError,TypeError,KeyError):continue
+    return next(iter(found.values())) if len(found)==1 else None
 
 
 def read_sealed_selectable_gear_generation(*,stage_root,build,generation_sha256=None):
@@ -3791,9 +3832,7 @@ def read_sealed_selectable_gear_generation(*,stage_root,build,generation_sha256=
                 stage=stage_engine._read_receipt(path)
                 sid=path.stem
                 if (stage.get("stage_id")!=sid or stage.get("status")!="COMPLETE"
-                        or stage.get("stage_version")!="derived-gear-catalog-v1"
-                        or (generation_sha256 is not None and
-                            stage.get("receipt_sha256")!=generation_sha256)):continue
+                        or stage.get("stage_version")!="derived-gear-catalog-v1"):continue
                 rel="source/"+sid+"/"
                 expected={"candidate":rel+"v167_candidates.json",
                           "expanded_source":rel+"v163_selectable_extension.json",
@@ -3828,10 +3867,18 @@ def read_sealed_selectable_gear_generation(*,stage_root,build,generation_sha256=
                 candidate=json.loads((root/expected["candidate"]).read_text("utf8"))
                 if candidate.get("season_build")!=build:continue
                 product_gear_db.validate(candidate)
+                generation=stage["receipt_sha256"]
+                # Explicit old pinned sessions retain their original generation.
+                if generation_sha256!=generation:
+                    overlay=_read_sealed_effect_option_overlay(root,build,stage,candidate)
+                    if overlay is not None:
+                        candidate,generation=overlay
+                        candidate_sha=digest(canonical(candidate).encode("utf8"))
+                if generation_sha256 is not None and generation_sha256!=generation:continue
                 delve=json.loads((root/expected["delve"]).read_text("utf8"))
                 report=delve.get("report") or {}
                 found[candidate_sha]={"candidate":candidate,
-                    "source_generation_sha256":stage["receipt_sha256"],
+                    "source_generation_sha256":generation,
                     "a7_source_receipt_sha256":audit["receipt_sha256"],
                     "supplementary_delve_status":delve.get("status"),
                     "supplementary_delve_unresolved_count":report.get("unresolved_count"),
@@ -3897,8 +3944,11 @@ def refresh_existing_season_gear_source(*,stage_root,build,transport=None):
     product_gear_db.validate(candidate)
     bonus_review=_review_selectable_bonus_effects(
         stage_root=root,build=build,gear=result,transport=transport)
+    generation=result["source_stage"]["receipt_sha256"]
+    overlay=_read_sealed_effect_option_overlay(root,build,result["source_stage"],candidate)
+    if overlay is not None:candidate,generation=overlay
     return {"candidate":candidate,"bonus_effect_review":bonus_review,"source_generation_sha256":
-                result["source_stage"]["receipt_sha256"],
+                generation,
             "selectable_source_extension":result.get("selectable_source_extension"),
             "mplus_trinket_coverage":result.get("mplus_trinket_coverage"),
             "supplementary_delve_status":result.get("supplementary_delve_status"),

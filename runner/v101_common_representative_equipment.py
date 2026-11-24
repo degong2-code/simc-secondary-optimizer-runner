@@ -501,7 +501,9 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
         need(season_source_gear is not None and
              type(selected_refresh_rows) is list and
              all(type(r) is dict and type(r.get("item_id")) is int
-                 and r["item_id"] not in indexed
+                 and (r["item_id"] not in indexed or
+                      (indexed[r["item_id"]]["category"]=="plain_representative_candidate" and
+                       r.get("season_list_basis")=="SEALED_CONTEXT_FREE_EFFECT_OPTION"))
                  and r.get("category")=="special_effect_gear_candidate"
                  for r in selected_refresh_rows) and
              len({r["item_id"] for r in selected_refresh_rows})==len(selected_refresh_rows),
@@ -630,6 +632,9 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
             key,user,tier_map,need,season_source_gear=season_source_gear,
             season_source_tier=season_source_tier,
             selected_refresh_rows=selected_refresh_rows)
+    # Only selected sealed rows supply mandatory bonus options.
+    required_by_id={r["item_id"]:r["required_options"]
+        for r in (selected_refresh_rows or []) if "required_options" in r}
     taken=set()
     for group,selection in (("trinkets",user["trinkets"]),
                             ("special",user["special_items"]),
@@ -642,6 +647,15 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
                  "SELECTED_SLOT_INVALID_OR_DUPLICATE")
             taken.add(slot)
             opts=items.checked_options(raw["options"])
+            if group=="special":
+                origin=int(opts.get("redirected_base_stats",raw["item_id"]))
+                required=required_by_id.get(origin,{})
+                if "bonus_id" in required:
+                    token=required["bonus_id"]
+                    existing=opts.get("bonus_id")
+                    need(existing is None or existing==token,
+                         "SELECTED_EFFECT_BONUS_OPTION_CONFLICT")
+                    opts["bonus_id"]=token
             items.checked_id(raw["item_id"])
             # Retain the existing representative socket layout when a user
             # swaps special/crafted gear. SimC must still accept the exact item.

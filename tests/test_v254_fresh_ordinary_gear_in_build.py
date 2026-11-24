@@ -650,6 +650,40 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         with self.assertRaisesRegex(review.BonusReviewBlocked,"DUPLICATE"):
             review.reconcile_effect_options(observed,[row(1),row(1)],season_id=47)
 
+    def test_effect_option_overlay_reclassifies_only_selected_view(self):
+        linked=self.source(inventory=1)
+        # Match real armor metadata (fixture defaults to weapon otherwise).
+        self.write_csv("Item.csv",["ID","ClassID","SubclassID","InventoryType"],
+            [{"ID":self.item_id,"ClassID":4,"SubclassID":1,"InventoryType":1}])
+        gear=build._fresh_ordinary_gear_source_stage(
+            stage_root=self.root,wago_folder=self.wago,build=self.BUILD,linked=linked,
+            transport=lambda *args,**kw:Response(b"ID,ItemID,ItemEffectID\n"))
+        base=json.loads(Path(gear["candidate_path"]).read_text("utf8"))
+        original=json.dumps(base,sort_keys=True)
+        origin={"source":"raid_journal","season_evidence":"UNKNOWN_UNSCOPED_JOURNAL",
+                "journal_encounter_id":12,"journal_instance_id":34,"display_season_id":0}
+        physical={"class_id":4,"subclass_id":1,"allowed_class_mask":-1,
+                  "stat_modifier_codes":[5],"item_set_id":0,"expansion_id":11}
+        rows=[{"item_id":i,"name":"Effect head","slot":1,
+               "direct_item_effect_record":False,"physical_metadata":physical,
+               "acquisition_sources":[origin]} for i in (self.item_id,299999,299998)]
+        rows[-1]["conflicting_source_occurrences"]=[dict(origin,display_season_id=46)]
+        review={"effect_option_candidates":[{"item_id":i,"required_options":{"bonus_id":"101"},
+                 "bonus_effects":[{"bonus_id":101,"item_effect_ids":[91]}]}
+                 for i in (self.item_id,299999,299998)]}
+        selected=build.product_gear_db.effect_option_rows(base,review,rows)
+        self.assertEqual([r["item_id"] for r in selected],[self.item_id,299999])
+        merged=build.product_gear_db.merge_effect_option_rows(base,selected)
+        self.assertEqual(json.dumps(base,sort_keys=True),original)
+        self.assertEqual(base["items"][0]["category"],"plain_representative_candidate")
+        self.assertEqual(merged["role_counts"],{"special_effect_gear_candidate":2})
+        public=build.product_gear_db.public_options(merged)["choices"]["special_effect_gear_candidate"]
+        self.assertEqual(public[0]["required_options"],{"bonus_id":"101"})
+        self.assertIn("mage/fire",public[0]["compatible_dps_specs"])
+        self.assertNotIn("warrior/fury",public[0]["compatible_dps_specs"])
+        import v098_target_user_scenario_bootstrap as bootstrap
+        self.assertTrue(all(bootstrap.refreshed_special_source_eligible(r,47) for r in selected))
+
     def test_bonus_review_reuses_tier_raw_and_caches_missing_two_tables(self):
         linked=self.source()
         original=json.loads(Path(linked["candidate_path"]).read_text("utf8"))

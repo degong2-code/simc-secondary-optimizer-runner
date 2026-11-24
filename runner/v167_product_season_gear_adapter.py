@@ -287,6 +287,15 @@ def validate(payload):
              and type(x.get("inventory_type")) is int,
              "PRODUCT_SEASON_ITEM_INVALID")
         ids.add(x["item_id"])
+        if "required_options" in x:
+            import re
+            options=x["required_options"]
+            need(x["category"]=="special_effect_gear_candidate" and
+                 x.get("season_list_basis")=="SEALED_CONTEXT_FREE_EFFECT_OPTION" and
+                 type(options) is dict and set(options)=={"bonus_id"} and
+                 type(options["bonus_id"]) is str and
+                 re.fullmatch(r"[1-9][0-9]{0,9}",options["bonus_id"]) is not None,
+                 "PRODUCT_REQUIRED_EFFECT_OPTION_INVALID")
         evidence=x.get("source_evidence",[])
         need(type(evidence) is list and len(evidence)<=64 and
              all(type(r) is dict and
@@ -401,6 +410,87 @@ def validate(payload):
          "PRODUCT_EFFECT_OR_TIER_OVERCLAIM")
     return payload
 
+def effect_option_rows(base,review,source_rows):
+    """Derive selected-only rows from sealed source review, not ordinary G.
+
+    Single unconditional effect-only list, physical source and exact journal
+    membership are required. Unresolved alternatives remain pending.
+    """
+    import re
+    import v165_current_season_gear_pool as pool
+    validate(base)
+    old={r["item_id"]:r for r in base["items"]}
+    rows={r["item_id"]:r for r in source_rows}
+    result=[]
+    for option in review.get("effect_option_candidates",[]):
+        iid=option["item_id"]
+        row=rows.get(iid)
+        if row is None or row.get("direct_item_effect_record") is not False:continue
+        meta=row.get("physical_metadata") or {}
+        required=option.get("required_options") or {}
+        if (set(required)!={"bonus_id"} or
+                type(required["bonus_id"]) is not str or
+                re.fullmatch(r"[1-9][0-9]{0,9}",required["bonus_id"]) is None or
+                len(option.get("bonus_effects",[]))!=1 or
+                option["bonus_effects"][0].get("bonus_id")!=int(required["bonus_id"])):continue
+        if (meta.get("class_id") not in (2,4) or
+                type(meta.get("subclass_id")) is not int or meta["subclass_id"]<0 or
+                type(meta.get("allowed_class_mask")) is not int or
+                meta["allowed_class_mask"]==0 or
+                type(meta.get("stat_modifier_codes")) is not list or
+                meta.get("item_set_id")!=0 or
+                row.get("slot") not in pool.SPECIAL_INVENTORY_TYPES or
+                row.get("conflicting_source_occurrences")):continue
+        if iid in old and old[iid]["category"]!="plain_representative_candidate":continue
+        if iid in old and old[iid]["inventory_type"]!=row["slot"]:continue
+        sid=base["db2_display_season_id"]
+        origins=[o for o in row.get("acquisition_sources",[])
+                 if (pool._journal_origin_current(o,sid,raid=True)
+                     and meta.get("expansion_id")==base["expansion_id"])
+                 or pool._journal_origin_current(o,sid,raid=False)]
+        if not origins:continue
+        evidence=[{k:o[k] for k in ("source","season_evidence","display_season_id",
+            "world_state_expression_id","journal_encounter_id","journal_instance_id",
+            "challenge_mode_id","expansion_id","active_rotation_display_season_id")
+            if k in o} for o in origins]
+        result.append({"item_id":iid,"name":row["name"],
+            "category":"special_effect_gear_candidate","inventory_type":row["slot"],
+            "class_id":meta["class_id"],"subclass_id":meta["subclass_id"],
+            "allowed_class_mask":meta["allowed_class_mask"],
+            "stat_modifier_codes":meta["stat_modifier_codes"],"item_set_id":0,
+            "slot_hint":SLOTS.get(row["slot"]),
+            "source_kinds":sorted({o["source"] for o in evidence}),
+            "source_evidence":evidence,"required_options":dict(required),
+            "season_list_basis":"SEALED_CONTEXT_FREE_EFFECT_OPTION"})
+    return sorted(result,key=lambda r:r["item_id"])
+
+
+def merge_effect_option_rows(base,rows):
+    """Create a selectable view; keep original installed catalog immutable."""
+    import copy
+    validate(base)
+    merged=copy.deepcopy(base)
+    indexed={r["item_id"]:r for r in merged["items"]}
+    for row in rows:
+        iid=row["item_id"]
+        need(row.get("season_list_basis")=="SEALED_CONTEXT_FREE_EFFECT_OPTION" and
+             row.get("category")=="special_effect_gear_candidate" and
+             (iid not in indexed or indexed[iid]["category"]=="plain_representative_candidate"),
+             "EFFECT_OPTION_OVERLAY_ROLE_CONFLICT")
+        indexed[iid]=copy.deepcopy(row)
+    merged["items"]=sorted(indexed.values(),key=lambda r:r["item_id"])
+    merged["item_count"]=len(indexed)
+    merged["role_counts"]=dict(sorted(Counter(r["category"] for r in merged["items"]).items()))
+    ids={r["item_id"] for r in rows}
+    for key,count in (("internal_conditional_mplus_plain_candidates","internal_conditional_mplus_plain_count"),
+                      ("internal_source_only_plain_neck_candidates","internal_source_only_plain_neck_count"),
+                      ("internal_source_only_plain_ring_candidates","internal_source_only_plain_ring_count")):
+        if key in merged:
+            merged[key]=[r for r in merged[key] if r["item_id"] not in ids]
+            merged[count]=len(merged[key])
+    return validate(merged)
+
+
 def equipment_primary_armor_compatibility(row):
     """Display-only exclusion on positive source evidence, not BiS ranking.
 
@@ -471,6 +561,7 @@ def public_options(payload, *, official_names=None):
             "class_id": x["class_id"],
             "subclass_id": x["subclass_id"],
             "season_list_basis": x.get("season_list_basis"),
+            **({"required_options":dict(x["required_options"])} if "required_options" in x else {}),
             **equipment_primary_armor_compatibility(x)
         })
     for rows in choices.values():

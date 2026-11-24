@@ -404,6 +404,13 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
                     effect_review_rows.append({
                         "item_id":iid,"name":sp["Display_lang"],"slot":slot,
                         "direct_item_effect_record":iid in linked,
+                        "physical_metadata":{"class_id":integer(it["ClassID"]),
+                            "subclass_id":integer(it.get("SubclassID"),-1),
+                            "allowed_class_mask":integer(sp.get("AllowableClass"),0),
+                            "stat_modifier_codes":[integer(sp.get(f"StatModifier_bonusStat_{i}"),0)
+                                for i in range(10) if integer(sp.get(f"StatModifier_bonusStat_{i}"),0)!=0],
+                            "item_set_id":integer(sp.get("ItemSet"),-1),
+                            "expansion_id":integer(sp["ExpansionID"])},
                         "acquisition_sources":[unique[k] for k in sorted(unique)],
                         "conflicting_source_occurrences":conflicts,
                         "variant_applicability_verified":False,

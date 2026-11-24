@@ -2415,13 +2415,14 @@ def _selected_refresh_special_source(*,user,gear,stage_root,pinned=None):
     No ordinary, crafted or tier rows enter the representative source.
     The exact generation is pinned in v436; no discovery/HTTP on replay.
     """
-    known={r["item_id"] for r in gear["items"]}
-    selected=set()
+    known={r["item_id"]:r for r in gear["items"]}
+    selected=set();plain_selected=set()
     for row in user.get("special_items",[]):
         origin=row.get("options",{}).get("redirected_base_stats")
         iid=int(origin) if origin is not None and str(origin).isdigit() else row["item_id"]
         if iid not in known:selected.add(iid)
-    if not selected:
+        elif known[iid]["category"]=="plain_representative_candidate":plain_selected.add(iid)
+    if not selected and not plain_selected:
         need(pinned is None,"SELECTED_REFRESH_SOURCE_UNEXPECTED")
         return [],None
     import v216_environment_build_coordinator as owner
@@ -2444,9 +2445,15 @@ def _selected_refresh_special_source(*,user,gear,stage_root,pinned=None):
     # A newly discovered crafted-only physical ID is not by itself
     # proof of a current recipe. Do not expand that provisional path here.
     found=[r for r in candidate["items"]
-           if r["item_id"] in selected and
-           refreshed_special_source_eligible(r,gear["db2_display_season_id"])]
-    if {r["item_id"] for r in found}!=selected:
+           if (r["item_id"] in selected or
+               (r["item_id"] in plain_selected and
+                r.get("season_list_basis")=="SEALED_CONTEXT_FREE_EFFECT_OPTION"))
+           and refreshed_special_source_eligible(r,gear["db2_display_season_id"])]
+    found_ids={r["item_id"] for r in found}
+    if not found:
+        need(pinned is None,"SELECTED_REFRESH_PINNED_ITEM_UNAVAILABLE")
+        return [],None
+    if not selected<=found_ids:
         need(pinned is None,"SELECTED_REFRESH_PINNED_ITEM_UNAVAILABLE")
         return [],None
     found.sort(key=lambda x:x["item_id"])
