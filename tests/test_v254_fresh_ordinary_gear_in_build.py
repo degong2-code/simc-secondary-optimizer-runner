@@ -416,6 +416,60 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertEqual(second["candidate_path"],first["candidate_path"])
         self.assertEqual(second["selectable_source_extension"],extension)
 
+    def test_bonus_review_reuses_tier_raw_and_caches_missing_two_tables(self):
+        linked=self.source()
+        original=json.loads(Path(linked["candidate_path"]).read_text("utf8"))
+        original["full_season_completeness_confirmed"]=False
+        Path(linked["candidate_path"]).write_text(json.dumps(original),"utf8")
+        def transport(req,timeout):
+            if req.full_url==build.delve_provider.SOURCE_URL:
+                return Response(json.dumps({"items":[{"id":self.item_id,
+                    "name":"Source plain sword"}]}).encode())
+            return Response(b"ID,ItemID,ItemEffectID\n")
+        gear=build._fresh_ordinary_gear_source_stage(
+            stage_root=self.root,wago_folder=self.wago,build=self.BUILD,
+            linked=linked,transport=transport,include_delve=True)
+        self.assertTrue(gear.get("candidate_path"),gear)
+        # Use a real v217 receipt and same-build v250 raw bytes, not a
+        # mock bypass of source identity checks.
+        raw={"ItemXBonusTree":(
+            "ItemID,ItemBonusTreeID\n"+str(self.item_id)+",100\n999999,100\n").encode(),
+            "ItemBonusTreeNode":b"ParentItemBonusTreeID,ChildItemBonusTreeID,ChildItemBonusListID,ChildItemBonusListGroupID\n100,200,0,0\n200,100,701,88\n"}
+        output={k:"source/v250_bonus_"+k+".csv" for k in raw}
+        output["result"]="source/v250_raid_bonus_corroboration.json"
+        def write_tier_raw():
+            for k,v in raw.items():(self.root/output[k]).write_bytes(v)
+            (self.root/output["result"]).write_text(json.dumps({
+                "schema":build.raid_bonus.SCHEMA,"game_build":self.BUILD,
+                "source_evidence":{k+"_sha256":build.digest(v) for k,v in raw.items()}}),"utf8")
+        build.stage_engine.execute_stage(root=self.root,
+            stage_id="fresh-v250-raid-bonus-corroboration",stage_version="test",
+            inputs={"game_build":self.BUILD},outputs=output,execute=write_tier_raw)
+        calls=[]
+        def bonus_transport(req,timeout):
+            calls.append(req.full_url)
+            if "/ItemBonusListGroupEntry/" in req.full_url:
+                return Response(b"ItemBonusListGroupID,ItemBonusListID\n88,702\n88,703\n")
+            self.assertIn("/ItemBonus/",req.full_url)
+            return Response(b"ParentItemBonusListID,Type,Value_0\n701,23,81\n702,23,82\n703,1,83\n")
+        args=dict(stage_root=self.root,build=self.BUILD,gear=gear,
+                  transport=bonus_transport)
+        first=build._review_selectable_bonus_effects(**args)
+        self.assertEqual(first["status"],"POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED",first)
+        self.assertEqual(first["network_calls_by_stage"],2)
+        self.assertEqual(first["candidate_item_count"],1)
+        data=json.loads(Path(first["candidate_path"]).read_text("utf8"))
+        self.assertEqual(data["items"],[{"item_id":self.item_id,
+            "bonus_effects":[{"bonus_id":701,"item_effect_ids":[81]},
+                             {"bonus_id":702,"item_effect_ids":[82]}],
+            "applicable_variant_verified":False}])
+        self.assertFalse(data["automatic_bonus_attachment"])
+        second=build._review_selectable_bonus_effects(**args)
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(second["candidate_path"],first["candidate_path"])
+        self.assertEqual(len(calls),2)
+        for k,v in raw.items():self.assertEqual((self.root/output[k]).read_bytes(),v)
+
     def test_unauthenticated_join_has_zero_network(self):
         result=build._fresh_ordinary_gear_source_stage(
             stage_root=self.root,wago_folder=self.wago,

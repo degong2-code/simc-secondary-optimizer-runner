@@ -49,6 +49,7 @@ import v167_product_season_gear_adapter as product_gear_db
 import v405_a7_selected_source_contract as a7_source_contract
 import v245_db2_first_tier_discovery as tier_db
 import v250_raid_tier_bonus_corroboration as raid_bonus
+import v706_selectable_bonus_effect_candidates as bonus_effect_review
 import v251_db2_raid_tier_simc_bridge as tier_simc_bridge
 import v261_tier_source_evidence_reuse as tier_evidence_reuse
 import v229_simc_only_source_seed as simc_source
@@ -3570,6 +3571,132 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
             "seasonal_G_verified":False,"native_calls":0}
 
 
+def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
+    """Reuse v250 raw relations and fetch only missing two tables once.
+    
+    This optional source inspection is not a new admission or G gate.
+    It runs after the existing gear derivation and v250 acquisition.
+    """
+    root=pathlib.Path(stage_root)
+    attempted=[0]
+    def pending(reason):
+        return {"status":"BONUS_EFFECT_SOURCE_PENDING","reason":reason,
+                "candidate_item_count":None,"network_calls_by_stage":attempted[0],
+                "native_calls":0,"automatic_bonus_attachment":False}
+    if not gear.get("candidate_path"):return pending("GEAR_SOURCE_NOT_READY")
+    # v250 may not yet have a complete tier corroboration source. Never
+    # launch an independent duplicate download of its two raw tables.
+    stage_id="fresh-v250-raid-bonus-corroboration"
+    expected={name:"source/v250_bonus_"+name+".csv" for name in raid_bonus.TABLES}
+    expected["result"]="source/v250_raid_bonus_corroboration.json"
+    try:
+        files,receipt_path=stage_engine._safe_paths(root,stage_id,expected)
+        if not receipt_path.is_file():return pending("V250_RAW_SOURCE_NOT_READY")
+        receipt=stage_engine._read_receipt(receipt_path)
+        if receipt.get("status")!="COMPLETE":return pending("V250_RAW_SOURCE_NOT_READY")
+        need(receipt.get("stage_id")==stage_id and
+             receipt.get("output_paths")==expected,"BONUS_V250_SCOPE_DRIFT")
+        stage_engine._verify_outputs(receipt,files)
+        v250_doc=json.loads((root/expected["result"]).read_text("utf8"))
+        need(v250_doc.get("game_build")==build and
+             v250_doc.get("schema")==raid_bonus.SCHEMA and all(
+             v250_doc.get("source_evidence",{}).get(t+"_sha256")==
+                 receipt["outputs"][t]["sha256"] for t in raid_bonus.TABLES),
+             "BONUS_V250_BUILD_OR_SHA_DRIFT")
+        # Gear stage outputs have already been sealed/verified by v217.
+        gear_stage=gear["source_stage"]
+        out=gear_stage["output_paths"]
+        paths,gear_receipt_path=stage_engine._safe_paths(
+            root,gear_stage["stage_id"],out)
+        gear_receipt=stage_engine._read_receipt(gear_receipt_path)
+        need(gear_receipt.get("receipt_sha256")==gear_stage["receipt_sha256"]
+             and gear_receipt.get("status")=="COMPLETE"
+             and gear_receipt.get("output_paths")==out,
+             "BONUS_GEAR_SOURCE_DRIFT")
+        # Recheck only small inputs used here, not any large CSV.
+        subset={k:paths[k] for k in ("pool","delve") if k in paths}
+        actual,_=stage_engine._snapshot(subset)
+        need(all(gear_receipt["outputs"].get(k)==v for k,v in actual.items()),
+             "BONUS_GEAR_OUTPUT_DRIFT")
+        pool=json.loads((root/out["pool"]).read_text("utf8"))
+        need(pool.get("build")==build,"BONUS_GEAR_BUILD_DRIFT")
+        ids={x["item_id"] for x in pool["items"]
+             if x["season_selection"]=="CURRENT_CANDIDATE"}
+        ids.update((gear.get("selectable_source_extension") or {}).get(
+                   "indirect_review_item_ids",[]))
+        if "delve" in out:
+            delve=json.loads((root/out["delve"]).read_text("utf8")).get("report")
+            if delve is not None:ids.update(x["item_id"] for x in delve["items"])
+        if not ids:return pending("NO_SOURCE_SCOPED_ITEM_IDS")
+        table_paths={t:root/expected[t] for t in raid_bonus.TABLES}
+        inputs={"game_build":build,"v250_receipt_sha256":receipt["receipt_sha256"],
+            "gear_receipt_sha256":gear_stage["receipt_sha256"],
+            "review_ids_sha256":digest(canonical(sorted(ids)).encode("utf8")),
+            "code_sha256":stage_engine.module_dependency_fingerprint(
+                [pathlib.Path(bonus_effect_review.__file__),
+                 pathlib.Path(stage_engine.__file__)])["sha256"]}
+        for table in ("ItemBonusListGroupEntry","ItemBonus"):
+            url="https://wago.tools/db2/"+table+"/csv?"+urlencode(
+                {"build":build,"locale":"enUS"})
+            def obtain():
+                req=Request(url,headers={"User-Agent":"SIMC-Secondary-Bonus/1.0",
+                                         "Accept":"text/csv"})
+                attempted[0]+=1
+                data=bytearray()
+                with (urlopen if transport is None else transport)(req,timeout=75) as response:
+                    need(response.status==200,"BONUS_SOURCE_HTTP_NON_200")
+                    while True:
+                        chunk=response.read(262144)
+                        if not chunk:break
+                        data.extend(chunk)
+                        need(len(data)<=bonus_effect_review.MAX_BYTES[table],
+                             "BONUS_SOURCE_HTTP_SIZE_LIMIT")
+                return bytes(data)
+            def valid(raw):
+                header=raw.split(b"\n",1)[0].decode("utf-8-sig")
+                import csv
+                return (0<len(raw)<=bonus_effect_review.MAX_BYTES[table]
+                        and set(bonus_effect_review.COLUMNS[table])<=
+                            set(next(csv.reader([header]))))
+            target,raw,sealed=_sealed_season_raw_source(
+                root=root,source_id="season-bonus-raw-"+table,
+                build=build,url=url,relative="source/raw_"+table+".csv",
+                obtain=obtain,validate_bytes=valid)
+            table_paths[table]=target
+            inputs[table+"_sha256"]=digest(raw)
+            inputs[table+"_receipt_sha256"]=sealed
+            del raw
+        generation=_derived_source_generation("season-bonus-effect-review",inputs)
+        relative="source/"+generation+".json"
+        def execute():
+            result=bonus_effect_review.discover(ids,table_paths)
+            result["game_build"]=build
+            result["source_identity"]=inputs
+            stage_engine._atomic_write(root/relative,
+                (canonical(result)+"\n").encode("utf8"))
+        def validate(outputs):
+            result=json.loads(outputs["review"].read_text("utf8"))
+            return (result.get("schema")==bonus_effect_review.SCHEMA
+                    and result.get("game_build")==build
+                    and result.get("source_identity")==inputs
+                    and result.get("automatic_bonus_attachment") is False
+                    and result.get("native_calls")==0)
+        stage=stage_engine.execute_stage(root=root,stage_id=generation,
+            stage_version="bonus-effect-source-only-v1",inputs=inputs,
+            outputs={"review":relative},execute=execute,validate=validate)
+        result=json.loads((root/relative).read_text("utf8"))
+        return {"status":result["status"],"candidate_item_count":result["candidate_item_count"],
+                "reviewed_item_count":result["reviewed_item_count"],
+                "candidate_path":str((root/relative).resolve()),
+                "source_stage":{k:v for k,v in stage.items() if k!="result"},
+                "network_calls_by_stage":attempted[0],"native_calls":0,
+                "automatic_bonus_attachment":False}
+    except (stage_engine.StageExecutionBlocked,EnvironmentBuildBlocked,
+            bonus_effect_review.BonusReviewBlocked,OSError,ValueError,
+            KeyError,TypeError) as exc:
+        return pending(str(exc).split(":",1)[0])
+
+
 def refresh_existing_season_gear_source(*,stage_root,build,transport=None):
     """Recompile selectable loot from the original authenticated local source.
 
@@ -3621,13 +3748,16 @@ def refresh_existing_season_gear_source(*,stage_root,build,transport=None):
     need(candidate.get("season_build")==build,
          "SEASON_GEAR_REFRESH_CANDIDATE_BUILD_DRIFT")
     product_gear_db.validate(candidate)
-    return {"candidate":candidate,"source_generation_sha256":
+    bonus_review=_review_selectable_bonus_effects(
+        stage_root=root,build=build,gear=result,transport=transport)
+    return {"candidate":candidate,"bonus_effect_review":bonus_review,"source_generation_sha256":
                 result["source_stage"]["receipt_sha256"],
             "selectable_source_extension":result.get("selectable_source_extension"),
             "supplementary_delve_status":result.get("supplementary_delve_status"),
             "supplementary_delve_unresolved_count":
                 result.get("supplementary_delve_unresolved_count"),
-            "network_calls":result["network_calls_by_stage"],"native_calls":0}
+            "network_calls":result["network_calls_by_stage"]+
+                bonus_review["network_calls_by_stage"],"native_calls":0}
 
 
 def _db2_first_tier_stage(*,stage_root,wago_folder,build,linked,
@@ -4965,6 +5095,11 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     tier_bonus=_raid_correlated_tier_stage(
         stage_root=stage_root,build=expected_game_build,
         linked=linked,fresh_tier=fresh_tier,transport=bonus_transport)
+    bonus_review=(_review_selectable_bonus_effects(
+        stage_root=stage_root,build=expected_game_build,gear=fresh_gear)
+        if fetch is None and gear_transport is None and bonus_transport is None
+        else {"status":"BONUS_EFFECT_INJECTED_SOURCE_NOT_REQUESTED",
+              "network_calls_by_stage":0,"native_calls":0})
     tier_bridge=_physical_tier_to_simc_candidate(
         stage_root=stage_root,fresh_tier=fresh_tier,tier_bonus=tier_bonus)
     resolved_simc=_resolve_one_spec_simc_commit_stage(
@@ -5148,6 +5283,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             "SIMC_COMPILED_DEFAULT_MAX_LEVEL",
         "fresh_tier":fresh_tier,
         "fresh_tier_raid_bonus_corroboration":tier_bonus,
+        "fresh_selectable_bonus_effect_review":bonus_review,
         "fresh_tier_simc_candidate_bridge":tier_bridge,
         "fresh_tier_first_party_simc_options":first_party,
         "fresh_tier_selected_from_existing_evidence":selected_tier,
@@ -5164,6 +5300,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             fresh_gear["network_calls_by_stage"]+
             fresh_tier["network_calls_by_stage"]+
             tier_bonus["network_calls_by_stage"]+
+            bonus_review["network_calls_by_stage"]+
             pinned_simc["network_calls_by_stage"]+
             resolved_simc["network_calls_by_stage"]+
             full_seed["network_calls_by_stage"]+

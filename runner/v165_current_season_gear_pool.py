@@ -189,7 +189,7 @@ def expand_selectable_source(original, folder, effect_path):
         ("ID","Display_lang","InventoryType","ExpansionID"))
         if integer(x["ID"]) in wanted}
     linked,_=effects(effect_path,equipment)
-    pending=[];added=[]
+    pending=[];added=[];indirect_review=[]
     for iid in sorted(wanted):
         src=origins[iid]
         it=item.get(iid);sp=sparse.get(iid)
@@ -202,7 +202,11 @@ def expand_selectable_source(original, folder, effect_path):
             pending.append({"item_id":iid,"reason":"EQUIPMENT_SLOT_UNRESOLVED"})
             continue
         if integer(sp["ExpansionID"])!=original["db2_expansion_id"]:continue
-        if slot!=TRINKET and iid not in linked:continue
+        if slot!=TRINKET and iid not in linked:
+            # Preserve the source-scoped ID for bonus-effect discovery.
+            # It is not an ordinary representative or a public choice.
+            indirect_review.append(iid)
+            continue
         unique={json.dumps(x,sort_keys=True):x for x in src}
         added.append({"item_id":iid,"name":sp["Display_lang"],"slot":slot,
                       "acquisition_sources":[unique[k] for k in sorted(unique)]})
@@ -210,6 +214,7 @@ def expand_selectable_source(original, folder, effect_path):
     result["selectable_source_extension"]={
         "source_basis":"PINNED_MATCHED_RAID_INSTANCES_AND_CRAFTINGDATA",
         "additional_candidate_ids":[x["item_id"] for x in added],
+        "indirect_review_item_ids":indirect_review,
         "unresolved_join_rows":pending,
         "ordinary_G_candidates_added":False,
         "full_season_completeness_confirmed":False}
