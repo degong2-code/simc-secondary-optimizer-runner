@@ -3785,7 +3785,8 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
         return pending(str(exc).split(":",1)[0])
 
 
-def _read_sealed_effect_option_overlay(root,build,stage,candidate,*,diagnostics=None):
+def _read_sealed_effect_option_overlay(root,build,stage,candidate,*,diagnostics=None,
+                                       generation_sha256=None):
     """Read selected-only rows for this exact authenticated gear generation."""
     code=stage_engine.module_dependency_fingerprint([
         pathlib.Path(bonus_effect_review.__file__),
@@ -3819,11 +3820,21 @@ def _read_sealed_effect_option_overlay(root,build,stage,candidate,*,diagnostics=
             merged=product_gear_db.merge_effect_option_rows(candidate,rows)
             identity=digest(canonical({"gear":stage["receipt_sha256"],
                 "effect_review":receipt["receipt_sha256"]}).encode("utf8"))
-            found[identity]=(merged,identity)
+            if generation_sha256 is not None:
+                if identity==generation_sha256:
+                    report(sid,"MERGED_PINNED")
+                    return merged,identity
+                continue
+            # Different receipt lineage can produce the exact same public
+            # catalogue (e.g. legacy tier raw vs shared raw). Equivalent
+            # results are not ambiguous; actual differing rows still are.
+            key=digest(canonical(merged).encode("utf8"))
+            prior=found.get(key)
+            if prior is None or identity<prior[1]:found[key]=(merged,identity)
             report(sid,"MERGED")
         except (OSError,ValueError,TypeError,KeyError) as exc:
-            code=str(exc)
-            report(path.stem,code if re.fullmatch(r"[A-Z][A-Z0-9_]{0,119}",code)
+            reason=str(exc)
+            report(path.stem,reason if re.fullmatch(r"[A-Z][A-Z0-9_]{0,119}",reason)
                    else type(exc).__name__)
             continue
     return next(iter(found.values())) if len(found)==1 else None
@@ -3904,7 +3915,8 @@ def read_sealed_selectable_gear_generation(*,stage_root,build,generation_sha256=
                 generation=stage["receipt_sha256"]
                 # Explicit old pinned sessions retain their original generation.
                 if generation_sha256!=generation:
-                    overlay=_read_sealed_effect_option_overlay(root,build,stage,candidate)
+                    overlay=_read_sealed_effect_option_overlay(root,build,stage,candidate,
+                        generation_sha256=generation_sha256)
                     if overlay is not None:
                         candidate,generation=overlay
                         candidate_sha=digest(canonical(candidate).encode("utf8"))

@@ -325,22 +325,42 @@ class FreshOrdinaryGearSource(unittest.TestCase):
             outputs={"receipt":"wago/receipt.json","Item":"wago/Item.csv",
                      "ItemSparse":"wago/ItemSparse.csv"},execute=write_wago)
         calls=[]
+        raw_bonus={
+            "ItemXBonusTree":("ItemID,ItemBonusTreeID\n"+str(self.item_id)+",100\n").encode(),
+            "ItemBonusTreeNode":b"ParentItemBonusTreeID,ChildItemBonusTreeID,ChildItemBonusListID,ChildItemBonusListGroupID\n100,0,701,0\n",
+            "ItemBonusListGroupEntry":b"ItemBonusListGroupID,ItemBonusListID\n",
+            "ItemBonus":b"ParentItemBonusListID,Type,Value_0\n701,23,81\n"}
+        fail_bonus=[True]
         def transport(req,timeout):
             calls.append(req.full_url)
             if req.full_url==build.delve_provider.SOURCE_URL:
                 return Response(json.dumps({"items":[{"id":self.item_id,
                     "name":"Source plain sword"}]}).encode("utf8"))
-            return Response(b"ID,ItemID,ItemEffectID\n")
+            table=req.full_url.split("/db2/")[1].split("/")[0]
+            if table=="ItemXItemEffect":return Response(b"ID,ItemID,ItemEffectID\n")
+            if table=="ItemBonusTreeNode" and fail_bonus[0]:
+                return Response(b"invalid optional bonus source")
+            return Response(raw_bonus[table])
         first=build.refresh_existing_season_gear_source(stage_root=self.root,
                     build=self.BUILD,transport=transport)
-        self.assertEqual(first["network_calls"],2)
+        self.assertEqual(first["network_calls"],4)
         self.assertEqual(first["native_calls"],0)
+        self.assertEqual(first["bonus_effect_review"]["status"],"BONUS_EFFECT_SOURCE_PENDING")
+        self.assertEqual(first["candidate"]["item_count"],1)
+        fail_bonus[0]=False
         second=build.refresh_existing_season_gear_source(stage_root=self.root,
                     build=self.BUILD,transport=transport)
-        self.assertEqual(second["network_calls"],0)
+        self.assertEqual(second["network_calls"],3)
+        self.assertEqual(second["bonus_effect_review"]["candidate_item_count"],1)
         self.assertEqual(second["source_generation_sha256"],
                          first["source_generation_sha256"])
-        self.assertEqual(len(calls),2)
+        self.assertEqual(len(calls),7)
+        third=build.refresh_existing_season_gear_source(stage_root=self.root,
+                    build=self.BUILD,transport=transport)
+        self.assertEqual(third["network_calls"],0)
+        self.assertEqual(third["source_generation_sha256"],
+                         second["source_generation_sha256"])
+        self.assertEqual(len(calls),7)
         self.assertEqual(budget.read_bytes(),b"original budget bytes")
         self.assertEqual(target.read_bytes(),raw)
         (self.wago/"ItemSparse.csv").write_bytes(b"changed")
@@ -348,7 +368,7 @@ class FreshOrdinaryGearSource(unittest.TestCase):
                                    "SEASON_GEAR_REFRESH_ORIGINAL_SOURCE_DRIFT"):
             build.refresh_existing_season_gear_source(stage_root=self.root,
                     build=self.BUILD,transport=transport)
-        self.assertEqual(len(calls),2)
+        self.assertEqual(len(calls),7)
 
     def test_pinned_raid_extra_loot_and_fixed_craft_are_public_only(self):
         linked=self.source()
@@ -743,6 +763,65 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertNotIn("warrior/fury",public[0]["compatible_dps_specs"])
         import v098_target_user_scenario_bootstrap as bootstrap
         self.assertTrue(all(bootstrap.refreshed_special_source_eligible(r,47) for r in selected))
+
+    def test_equivalent_effect_receipts_do_not_hide_options_or_pinned_sessions(self):
+        linked=self.source(inventory=1)
+        self.write_csv("Item.csv",["ID","ClassID","SubclassID","InventoryType"],
+            [{"ID":self.item_id,"ClassID":4,"SubclassID":1,"InventoryType":1}])
+        gear=build._fresh_ordinary_gear_source_stage(
+            stage_root=self.root,wago_folder=self.wago,build=self.BUILD,linked=linked,
+            transport=lambda *args,**kw:Response(b"ID,ItemID,ItemEffectID\n"))
+        base=json.loads(Path(gear["candidate_path"]).read_text("utf8"))
+        origin={"source":"raid_journal","season_evidence":"UNKNOWN_UNSCOPED_JOURNAL",
+                "journal_encounter_id":12,"journal_instance_id":34,"display_season_id":0}
+        physical={"class_id":4,"subclass_id":1,"allowed_class_mask":-1,
+                  "stat_modifier_codes":[5],"item_set_id":0,"expansion_id":11}
+        source_rows=[{"item_id":self.item_id,"name":"Effect head","slot":1,
+            "direct_item_effect_record":False,"physical_metadata":physical,
+            "acquisition_sources":[origin]}]
+        stage=gear["source_stage"]
+        code=build.stage_engine.module_dependency_fingerprint([
+            Path(build.bonus_effect_review.__file__),Path(build.product_gear_db.__file__),
+            Path(build.source_gear_pool.__file__),Path(build.stage_engine.__file__)])["sha256"]
+        def seal(tag,bonus):
+            options={"effect_option_candidates":[{"item_id":self.item_id,
+                "required_options":{"bonus_id":str(bonus)},
+                "bonus_effects":[{"bonus_id":bonus,"item_effect_ids":[91]}]}]}
+            rows=build.product_gear_db.effect_option_rows(base,options,source_rows)
+            self.assertEqual(len(rows),1)
+            inputs={"game_build":self.BUILD,"gear_receipt_sha256":stage["receipt_sha256"],
+                    "code_sha256":code,"fixture_lineage":tag}
+            sid=build._derived_source_generation("season-bonus-effect-review",inputs)
+            rel="source/"+sid+".json"
+            def execute():
+                (self.root/rel).write_text(json.dumps({
+                    "schema":build.bonus_effect_review.SCHEMA,"game_build":self.BUILD,
+                    "source_identity":inputs,"selected_effect_option_rows":rows}),"utf8")
+            receipt=build.stage_engine.execute_stage(root=self.root,stage_id=sid,
+                stage_version="bonus-effect-source-only-v1",inputs=inputs,
+                outputs={"review":rel},execute=execute)
+            return build.digest(build.canonical({"gear":stage["receipt_sha256"],
+                "effect_review":receipt["receipt_sha256"]}).encode("utf8"))
+        one=seal("legacy",101)
+        two=seal("shared",101)
+        args=(self.root,self.BUILD,stage,base)
+        chosen=build._read_sealed_effect_option_overlay(*args)
+        self.assertEqual(chosen[1],min(one,two))
+        for identity in (one,two):
+            pinned=build._read_sealed_effect_option_overlay(*args,generation_sha256=identity)
+            self.assertEqual(pinned,(chosen[0],identity))
+        # A corrupt earlier receipt must not poison the compiler identity
+        # used when reading the remaining valid receipts.
+        broken="season-bonus-effect-review-000000000000000000000000"
+        (self.root/".stage_receipts"/(broken+".json")).write_text("{}","utf8")
+        (self.root/"source"/(broken+".json")).write_text("invalid json","utf8")
+        self.assertEqual(build._read_sealed_effect_option_overlay(*args),chosen)
+        three=seal("different",102)
+        self.assertIsNone(build._read_sealed_effect_option_overlay(*args))
+        self.assertEqual(build._read_sealed_effect_option_overlay(
+            *args,generation_sha256=one),(chosen[0],one))
+        self.assertEqual(build._read_sealed_effect_option_overlay(
+            *args,generation_sha256=three)[0]["items"][0]["required_options"],{"bonus_id":"102"})
 
     def test_bonus_review_reuses_tier_raw_and_caches_missing_two_tables(self):
         linked=self.source()
