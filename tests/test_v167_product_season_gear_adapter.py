@@ -48,6 +48,33 @@ class ProductAdapterTests(unittest.TestCase):
         self.assertEqual(c["conditional_ids_excluded"],2)
         self.assertEqual(c["new_native_calls"],0)
 
+    def test_optional_loot_spec_metadata_never_filters_or_changes_catalog(self):
+        from v737_trinket_loot_spec_source import classify
+        c=adapter.from_v166(source())
+        snapshot=copy.deepcopy(c)
+        specs=b"ID,ClassID,Role,Name_lang\n1,1,0,Protection\n2,8,2,Fire\n3,5,1,Holy\n"
+        overrides=b"ID,ItemID,SpecID\n1,104,1\n2,105,2\n3,106,1\n4,106,2\n5,107,999\n6,108,3\n"
+        raw={"ChrSpecialization":specs,"ItemSpecOverride":overrides}
+        rows=classify({i:str(i) for i in range(104,110)},raw)
+        self.assertEqual([r["status"] for r in rows],[
+            "EXPLICIT_NON_DPS_ROLES_ONLY","EXPLICIT_DPS_ROLE_ONLY",
+            "EXPLICIT_SHARED_WITH_DPS","OVERRIDE_REFERENCE_OR_ROLE_PENDING",
+            "EXPLICIT_NON_DPS_ROLES_ONLY","NO_EXPLICIT_OVERRIDE_UNKNOWN"])
+        default=adapter.public_options(c)
+        enriched=adapter.public_options(c,loot_spec_sources={
+            "game_build":c["season_build"],"tables":raw})
+        self.assertEqual(c,snapshot)
+        self.assertEqual(enriched["count"],default["count"])
+        row=enriched["choices"]["trinket"][0]
+        metadata=row.pop("loot_spec_metadata")
+        self.assertEqual(metadata["roles"],["TANK"])
+        self.assertFalse(metadata["equipment_eligibility_proven"])
+        self.assertFalse(metadata["dps_effect_usefulness_proven"])
+        self.assertEqual(enriched,default)
+        with self.assertRaisesRegex(ValueError,"ROLE_SOURCE_BUILD_DRIFT"):
+            adapter.public_options(c,loot_spec_sources={
+                "game_build":"99.1.1.12345","tables":raw})
+
     def test_plain_representative_is_nonmutating_and_class_family_filtered(self):
         c=adapter.from_v166(source())
         plate=adapter.ordinary_candidates(c,"plate")

@@ -548,7 +548,7 @@ def equipment_primary_armor_compatibility(row):
             "primary_source_observed":bool(observed)}
 
 
-def public_options(payload, *, official_names=None):
+def public_options(payload, *, official_names=None, loot_spec_sources=None):
     """Selection-only public roles. Plain equipment remains an internal DB input."""
     db = validate(payload)
     visible = ("trinket","special_effect_gear_candidate","selectable_stat_craft")
@@ -586,6 +586,9 @@ def public_options(payload, *, official_names=None):
         })
     for rows in choices.values():
         rows.sort(key=lambda x:(x["name"].casefold(), x["item_id"]))
+    if loot_spec_sources is not None:
+        from v737_trinket_loot_spec_source import annotate_trinkets
+        annotate_trinkets(choices["trinket"],db["season_build"],loot_spec_sources)
     # Stable contract metadata, not a new equipment recommendation.
     import v143_specialization_contracts as specs
     weapon_forms={"/".join(key.split("/")):specs.lookup(*key.split("/"))["weapon_form"]
@@ -608,7 +611,7 @@ def public_options(payload, *, official_names=None):
 
 
 def public_installed_v213_candidates(catalog, *, installed_manifest_sha256,
-                                     official_names=None):
+                                     official_names=None, loot_spec_sources=None):
     """Candidate-only projection from a SHA-bound installed v212/v213 source.
 
     Caller verifies the v212 install, source bytes, and linked stage receipts.
@@ -666,6 +669,9 @@ def public_installed_v213_candidates(catalog, *, installed_manifest_sha256,
             if row["item_id"] in official:
                 row["name_ko"]=official[row["item_id"]]
         choices[kind].sort(key=lambda x:(x["name"].casefold(),x["item_id"]))
+    if loot_spec_sources is not None:
+        from v737_trinket_loot_spec_source import annotate_trinkets
+        annotate_trinkets(choices["trinket"],catalog["game_build"],loot_spec_sources)
     weapon_forms={"/".join(key.split("/")):
                   specs.lookup(*key.split("/"))["weapon_form"]
                   for key in sorted(specs.CONTRACTS)}

@@ -6,41 +6,15 @@ from its receipt. Missing override rows are UNKNOWN, not exclusion evidence.
 """
 from __future__ import annotations
 import argparse
-import csv
-from collections import defaultdict, Counter
-import hashlib
-import io
+from collections import Counter
 import json
 from pathlib import Path
 import re
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-# Stable DB2 role enum: TrinityCore DBCEnums.h ChrSpecializationRole.
-ROLES={0:"TANK",1:"HEALER",2:"DPS"}
-TABLES={"ChrSpecialization":(5_000_000,{"ID","ClassID","Role","Name_lang"}),
-        "ItemSpecOverride":(32_000_000,{"ID","ItemID","SpecID"})}
+from v737_trinket_loot_spec_source import TABLES,need,sha,classify
 
-def need(ok,code):
-    if not ok:raise ValueError(code)
-
-def sha(raw):
-    return hashlib.sha256(raw).hexdigest()
-
-def read_rows(raw,table):
-    bound,columns=TABLES[table]
-    need(type(raw) is bytes and 0<len(raw)<=bound,"ROLE_SOURCE_SIZE:"+table)
-    reader=csv.DictReader(io.StringIO(raw.decode("utf-8-sig")))
-    need(reader.fieldnames and len(set(reader.fieldnames))==len(reader.fieldnames)
-         and columns<=set(reader.fieldnames),"ROLE_SOURCE_COLUMNS:"+table)
-    seen=set()
-    for n,row in enumerate(reader):
-        need(n<1_000_000 and None not in row,"ROLE_SOURCE_ROW_LIMIT_OR_SHAPE:"+table)
-        rid=int(row["ID"])
-        need(rid>0 and rid not in seen,"ROLE_SOURCE_ROW_ID:"+table)
-        seen.add(rid)
-        yield row
-    need(bool(seen),"ROLE_SOURCE_EMPTY:"+table)
 
 def fetch(table,build,root):
     bound,_=TABLES[table]
@@ -112,32 +86,7 @@ def observe(prior,out):
             result["new_network_attempts"]+=1
             save()
             sources[table],result["sources"][table]=fetch(table,build,raw_dir)
-        specs={}
-        for row in read_rows(sources["ChrSpecialization"],"ChrSpecialization"):
-            sid=int(row["ID"]);cid=int(row["ClassID"]);role=int(row["Role"])
-            specs[sid]={"spec_id":sid,"class_id":cid,"name":row["Name_lang"],
-                        "role_code":role,"role":ROLES.get(role,"UNKNOWN")}
-        links=defaultdict(set)
-        for row in read_rows(sources["ItemSpecOverride"],"ItemSpecOverride"):
-            iid=int(row["ItemID"])
-            if iid in cohort:
-                links[iid].add(int(row["SpecID"]))
-        rows=[]
-        for iid,name in sorted(cohort.items()):
-            spec_ids=sorted(links.get(iid,()))
-            known=[specs[s] for s in spec_ids if s in specs]
-            unresolved=sorted(set(spec_ids)-set(specs))
-            roles=sorted({s["role"] for s in known if 1<=s["class_id"]<=13})
-            incomplete=(bool(unresolved) or any(s["class_id"] not in range(1,14)
-                                             or s["role"]=="UNKNOWN" for s in known))
-            if not spec_ids:status="NO_EXPLICIT_OVERRIDE_UNKNOWN"
-            elif incomplete:status="OVERRIDE_REFERENCE_OR_ROLE_PENDING"
-            elif roles==["DPS"]:status="EXPLICIT_DPS_ROLE_ONLY"
-            elif "DPS" in roles:status="EXPLICIT_SHARED_WITH_DPS"
-            else:status="EXPLICIT_NON_DPS_ROLES_ONLY"
-            rows.append({"item_id":iid,"name":name,"spec_ids":spec_ids,
-                         "observed_specs":known,"unknown_spec_ids":unresolved,
-                         "observed_roles":roles,"status":status})
+        rows=classify(cohort,sources)
         result.update(status="OBSERVED_EXPLICIT_LOOT_SPEC_METADATA",
                       rows=rows,counts=dict(sorted(Counter(r["status"] for r in rows).items())))
         save()
@@ -152,9 +101,39 @@ def observe(prior,out):
         print("V735_PENDING",result["error"],flush=True)
         return 3
 
+def replay(folder):
+    """Use exact v736 raw evidence without additional network acquisition."""
+    receipt=json.loads((folder/"V735_TRINKET_ROLE_SOURCE.json").read_text("utf8"))
+    need(receipt.get("status")=="OBSERVED_EXPLICIT_LOOT_SPEC_METADATA"
+         and receipt.get("native_calls")==0,"ROLE_REPLAY_RECEIPT_INVALID")
+    build=receipt["game_build"]
+    sources={}
+    for table in TABLES:
+        raw=(folder/"raw"/(table+".csv")).read_bytes()
+        evidence=receipt["sources"][table]
+        expected="https://wago.tools/db2/"+table+"/csv?"+urlencode({"build":build,"locale":"enUS"})
+        need(evidence=={"url":expected,"bytes":len(raw),"sha256":sha(raw)},
+             "ROLE_REPLAY_RAW_DRIFT:"+table)
+        sources[table]=raw
+    cohort={x["item_id"]:x["name"] for x in receipt["rows"]}
+    need(len(cohort)==len(receipt["rows"])==receipt["item_count"],"ROLE_REPLAY_COHORT_DRIFT")
+    rows=classify(cohort,sources)
+    need(rows==receipt["rows"],"ROLE_REPLAY_CLASSIFICATION_DRIFT")
+    counts=dict(sorted(Counter(r["status"] for r in rows).items()))
+    need(counts==receipt["counts"],"ROLE_REPLAY_COUNTS_DRIFT")
+    print("V737_ROLE_REPLAY",json.dumps({"game_build":build,"item_count":len(rows),
+          "counts":counts,"new_network_calls":0,"native_calls":0},sort_keys=True))
+    return 0
+
+
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
-    parser.add_argument("--prior",type=Path,required=True)
-    parser.add_argument("--out",type=Path,required=True)
+    parser.add_argument("--prior",type=Path)
+    parser.add_argument("--out",type=Path)
+    parser.add_argument("--replay",type=Path)
     args=parser.parse_args()
+    if args.replay is not None:
+        need(args.prior is None and args.out is None,"ROLE_REPLAY_EXCLUSIVE")
+        raise SystemExit(replay(args.replay))
+    need(args.prior is not None and args.out is not None,"ROLE_OBSERVATION_INPUT_REQUIRED")
     raise SystemExit(observe(args.prior,args.out))

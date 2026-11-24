@@ -129,6 +129,28 @@ jobs:
             out/v735/raw/*.csv
           retention-days: 30
           if-no-files-found: warn
+  trinket-role-replay:
+    if: ${{ contains(github.event.head_commit.message, '[v737-role-replay]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PYTHONPATH: runner:.
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 45449185029
+          name: p1-v735-trinket-role-source
+          path: out/v737
+          github-token: ${{ github.token }}
+      - run: |
+          python -m unittest -v tests.test_v167_product_season_gear_adapter
+          python -u integration_probes/p1_v735_trinket_role_source_once.py --replay out/v737
   context-free-replay:
     if: ${{ contains(github.event.head_commit.message, '[v719-bonus-replay]') }}
     runs-on: ubuntu-24.04
