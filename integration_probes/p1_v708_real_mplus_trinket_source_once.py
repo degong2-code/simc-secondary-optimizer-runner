@@ -68,7 +68,28 @@ def project(source, gear, candidate):
                  and not unmapped and all(r["rotation_eligible_trinket_ids"] for r in rows)
                  and all(not r["missing_rotation_trinket_ids"] for r in rows)
                  and not pending)
+    # v715: use the SAME authenticated derived gear source and A7 proof.
+    # The two independent sets are source membership and final product rows.
+    direct_rows=(gear.get("selectable_source_extension") or {}).get(
+        "mplus_dungeon_review",[])
+    eligible_special={i for row in direct_rows for i in
+                      row.get("rotation_unscoped_admitted_special_ids",[])}
+    observed_special={i for row in direct_rows for i in
+                      row.get("unscoped_direct_special_ids",[])}
+    special={x["item_id"]:x for x in candidate["items"]
+             if x["category"]=="special_effect_gear_candidate" and
+             any(original.source_gear_pool._rotation_special_origin_current(
+                 origin,season) for origin in x["source_evidence"])}
+    registered_special=eligible_special&set(special)
     return {"expected_wcl_dungeons":expected,"reviewed_dungeons":len(rows),
+            "rotation_unscoped_direct_special_observed_ids":sorted(observed_special),
+            "rotation_direct_special_eligible_ids":sorted(eligible_special),
+            "rotation_direct_special_registered_ids":sorted(registered_special),
+            "rotation_direct_special_missing_ids":sorted(eligible_special-registered_special),
+            "rotation_direct_special_conflict_or_pending_ids":sorted(observed_special-eligible_special),
+            "rotation_direct_special_registered_items":[
+                {"item_id":i,"name":special[i]["name"],
+                 "inventory_type":special[i]["inventory_type"]} for i in sorted(registered_special)],
             "unmapped_challenge_mode_ids":unmapped,
             "original_mapped_dungeons":source.get("mapped_mplus_dungeons"),
             "current_trinket_count":len(all_current),
@@ -154,6 +175,14 @@ def observe(out):
         state["candidate_sha256"]=original.digest(candidate_path.read_bytes())
         state["gear_source_stage_sha256"]=gear["source_stage"]["receipt_sha256"]
         state.update(project(source,gear,candidate))
+        print("V715_DIRECT_SPECIAL_SOURCE "+json.dumps({k:v for k,v in state.items()
+            if k.startswith("rotation_direct_special_") or
+               k=="rotation_unscoped_direct_special_observed_ids"},
+            sort_keys=True,ensure_ascii=False))
+        if state["rotation_direct_special_missing_ids"]:
+            state.update(status="PENDING_DIRECT_SPECIAL_SOURCE_JOIN",
+                         first_blocker="V715_DIRECT_SPECIAL_ELIGIBLE_ID_MISSING")
+            return 2
         state["registered_boss_review"]=(gear.get("selectable_source_extension") or {}).get(
             "supplementary_wcl_boss_review")
         if not state["source_provenance_verified"]:
