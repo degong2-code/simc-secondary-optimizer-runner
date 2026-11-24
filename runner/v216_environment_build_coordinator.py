@@ -3335,10 +3335,40 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
         "v163_stage_receipt":(linked.get("stage") or {}).get("receipt_sha256"),
         "code_sha256":source_identity["sha256"]}
     raw_delve=None
+    wcl_report=None
     effect=None
     stage_id="fresh-ordinary-gear-source-candidates"
     stage_version="v165-v167-wago-no-legacy-budget-v1"
     if include_delve:
+        # Use the existing sealed authenticated WCL report only. No new
+        # API search and no scan of unregistered world/field bosses.
+        if source.get("auto_source_scope"):
+            try:
+                f,p=stage_engine._safe_paths(root,"fresh-v155",
+                    {"report":"source/season_api_report.json"})
+                receipt=stage_engine._read_receipt(p)
+                need(receipt.get("stage_id")=="fresh-v155" and
+                     receipt.get("status")=="COMPLETE" and
+                     receipt.get("output_paths")=={"report":"source/season_api_report.json"},
+                     "WCL_SUPPLEMENTARY_SOURCE_NOT_SEALED")
+                stage_engine._verify_outputs(receipt,f)
+                raw=(root/"source/season_api_report.json").read_bytes()
+                report=json.loads(raw)
+                need(report.get("schema")=="v155_season_discovery_provider_probe_v1"
+                     and report.get("mode")=="LIVE_AUTHENTICATED_BOUNDED",
+                     "WCL_SUPPLEMENTARY_SCOPE_INVALID")
+                scope=source["auto_source_scope"]
+                zones=source["wcl_zone_ids"]
+                for key in ("raid","mplus"):
+                    zone=season_join.named_zone(report,scope[key+"_zone"],
+                        wcl_expansion_id=scope.get("wcl_expansion_id"))
+                    need(zone.get("zone_id")==zones[key],"WCL_SUPPLEMENTARY_ZONE_DRIFT")
+                wcl_report=report
+                generation_inputs["wcl_report_sha256"]=digest(raw)
+                generation_inputs["wcl_source_receipt"]=receipt["receipt_sha256"]
+            except (stage_engine.StageExecutionBlocked,EnvironmentBuildBlocked,
+                    OSError,ValueError,KeyError,TypeError):
+                wcl_report=None
         try:
             effect,raw,effect_receipt=_sealed_season_raw_source(
                 root=root,source_id="season-gear-effect-raw",build=build,url=url,
@@ -3399,7 +3429,7 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
         effective_source=source
         if extend:
             effective_source=source_gear_pool.expand_selectable_source(
-                source,pathlib.Path(wago_folder),effect_path)
+                source,pathlib.Path(wago_folder),effect_path,wcl_report=wcl_report)
             effective_source["parent_v163_sha256"]=digest(raw_source)
             target=root/paths["expanded_source"]
             target.parent.mkdir(parents=True,exist_ok=True)
@@ -3538,6 +3568,19 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
             "receipt_path":None,
             "additional_network_calls":0,"native_calls":0,
             "final_user_e2e_verified":False}
+    extension=effective_source.get("selectable_source_extension")
+    coverage=None
+    if extension is not None:
+        public_trinkets={r["item_id"] for r in result["items"]
+                         if r["category"]=="trinket"}
+        coverage=[]
+        for row in extension.get("mplus_dungeon_review",[]):
+            current=set(row["current_trinket_ids"])
+            coverage.append({**row,
+                "registered_current_trinket_ids":sorted(current&public_trinkets),
+                "missing_current_trinket_ids":sorted(current-public_trinkets),
+                "unscoped_only_trinket_ids":sorted(
+                    set(row["unscoped_trinket_ids"])-current)})
     plain=[r for r in result["items"]
            if r["category"]=="plain_representative_candidate"]
     internal=result.get("internal_conditional_mplus_plain_candidates",[])
@@ -3560,8 +3603,8 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
             "network_calls_by_stage":attempted[0],
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
             "a7_auto_source_choice_provenance":a7_info,
-            "selectable_source_extension":effective_source.get(
-                "selectable_source_extension"),
+            "selectable_source_extension":extension,
+            "mplus_trinket_coverage":coverage,
             "supplementary_delve_status":delve_note.get("status","NOT_REQUESTED"),
             "supplementary_delve_resolved_count":(
                 delve.get("resolved_count") if delve is not None else None),
@@ -3753,6 +3796,7 @@ def refresh_existing_season_gear_source(*,stage_root,build,transport=None):
     return {"candidate":candidate,"bonus_effect_review":bonus_review,"source_generation_sha256":
                 result["source_stage"]["receipt_sha256"],
             "selectable_source_extension":result.get("selectable_source_extension"),
+            "mplus_trinket_coverage":result.get("mplus_trinket_coverage"),
             "supplementary_delve_status":result.get("supplementary_delve_status"),
             "supplementary_delve_unresolved_count":
                 result.get("supplementary_delve_unresolved_count"),

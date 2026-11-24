@@ -124,17 +124,24 @@ def _journal_origin_current(row, display_season, *, raid):
                              "UNKNOWN_WORLD_STATE_EXPRESSION"))
 
 
-def expand_selectable_source(original, folder, effect_path):
-    """Supplement the known raid and craft sources; preserve original v163/G."""
+def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
+    """Supplement only authenticated seasonal sources; preserve original v163/G."""
     import copy
+    import v163_zero_seed_db2_join as join
+    from collections import defaultdict
     folder=Path(folder)
     raw=(folder/"receipt.json").read_bytes()
     receipt=json.loads(raw)
     need(hashlib.sha256(raw).hexdigest()==original.get("snapshot_receipt_sha256")
          and receipt.get("build")==original["build"]
          and receipt.get("locale")=="enUS","SELECTABLE_SOURCE_SNAPSHOT_DRIFT")
-    for table in ("JournalEncounter","JournalEncounterItem","CraftingData",
-                  "Item","ItemSparse"):
+    # Old minimal fixture/exports do not assert a full rotation. Actual
+    # authenticated v163 reports always carry the exact auto_source_scope.
+    rotation=bool(original.get("auto_source_scope"))
+    tables=["JournalEncounter","JournalEncounterItem","CraftingData",
+            "Item","ItemSparse"]
+    if rotation:tables+=["JournalInstance","MapChallengeMode","MythicPlusSeasonTrackedMap"]
+    for table in tables:
         path=folder/(table+".csv")
         meta=receipt.get("tables",{}).get(table,{})
         need(path.is_file() and not path.is_symlink() and
@@ -153,25 +160,109 @@ def expand_selectable_source(original, folder, effect_path):
     instances={src["journal_instance_id"] for row in original["items"]
         for src in row["acquisition_sources"] if src.get("source")=="raid_journal"
         and _journal_origin_current(src,sid,raid=True)}
-    encounters={integer(x["ID"]):x for x in read_csv(
-        folder/"JournalEncounter.csv",("ID","JournalInstanceID","Name_lang"))
-        if integer(x["JournalInstanceID"]) in instances}
+    journal=list(read_csv(folder/"JournalEncounter.csv",
+                          ("ID","JournalInstanceID","Name_lang")))
+    encounters={integer(x["ID"]):x for x in journal}
+    # Resolve every active challenge from the exact previously authenticated
+    # DisplaySeasonID. Prefer existing WCL/DB2 match, then unique map ID;
+    # name mismatch alone must not erase a dungeon.
+    dungeon_by_instance={}
+    dungeon_rows={}
+    if rotation:
+        active={integer(x["MapChallengeModeID"]) for x in read_csv(
+            folder/"MythicPlusSeasonTrackedMap.csv",("DisplaySeasonID","MapChallengeModeID"))
+            if join.exact_display_season_id(x["DisplaySeasonID"])==sid}
+        modes={integer(x["ID"]):x for x in read_csv(folder/"MapChallengeMode.csv",
+            ("ID","Name_lang","MapID")) if integer(x["ID"]) in active}
+        instance_rows=list(read_csv(folder/"JournalInstance.csv",
+                                    ("ID","MapID","Name_lang")))
+        prior=defaultdict(set)
+        for row in original["items"]:
+            for origin in row["acquisition_sources"]:
+                if origin.get("source")=="mplus_journal":
+                    prior[origin.get("challenge_mode_id")].add(origin["journal_instance_id"])
+        for cid in sorted(active):
+            mode=modes.get(cid)
+            report={"challenge_mode_id":cid,"name":mode["Name_lang"] if mode else None,
+                    "journal_instance_id":None,"status":"DUNGEON_JOURNAL_UNRESOLVED",
+                    "current_trinket_ids":[],"unscoped_trinket_ids":[],
+                    "other_season_trinket_ids":[],"unresolved_loot_ids":[]}
+            dungeon_rows[cid]=report
+            if mode is None:continue
+            options=[x for x in instance_rows if integer(x["MapID"])==
+                     integer(mode["MapID"])]
+            exact=[x for x in options if integer(x["ID"]) in prior[cid]]
+            if len(exact)!=1:
+                exact=[x for x in options if join.norm(x["Name_lang"])==
+                       join.norm(mode["Name_lang"])]
+            chosen=(exact[0] if len(exact)==1 else
+                    options[0] if len(options)==1 else None)
+            if chosen is None:continue
+            instance=integer(chosen["ID"])
+            if instance in dungeon_by_instance:
+                previous=dungeon_by_instance.pop(instance)
+                dungeon_rows[previous]["status"]="DUNGEON_SHARED_INSTANCE_UNRESOLVED"
+                dungeon_rows[previous]["journal_instance_id"]=None
+                report["status"]="DUNGEON_SHARED_INSTANCE_UNRESOLVED"
+                continue
+            dungeon_by_instance[instance]=cid
+            report.update(journal_instance_id=instance,status="DUNGEON_JOURNAL_OBSERVED")
+    # Supplement only exact WCL-registered bosses from other active zones
+    # in the same WCL expansion. A non-frozen zone alone is not season proof.
+    # No field boss enumeration or sibling encounter expansion.
+    registered={}
+    unmatched=[]
+    if wcl_report is not None:
+        scope=original.get("auto_source_scope") or {}
+        zone_ids=original.get("wcl_zone_ids") or {}
+        zones=join.wcl_zone_sources(wcl_report)
+        exp=scope.get("wcl_expansion_id")
+        if type(exp) is int:
+            for zone in zones:
+                if (zone.get("wcl_frozen") is not False or
+                    zone.get("expansion_id")!=exp or
+                    zone.get("zone_id") in zone_ids.values()):continue
+                for boss in zone.get("encounters",[]):
+                    match=join.uniquely_match(boss["name"],journal,"Name_lang")
+                    if match is None:
+                        unmatched.append({"zone_id":zone["zone_id"],"name":boss["name"]})
+                        continue
+                    eid=integer(match["ID"])
+                    instance=integer(match["JournalInstanceID"])
+                    if instance in instances or instance in dungeon_by_instance:continue
+                    registered[eid]={"wcl_zone_id":zone["zone_id"],
+                                     "wcl_boss_name":boss["name"]}
     origins={}
+    dungeon_loot=defaultdict(set)
+    world_pending=[]
     for row in read_csv(folder/"JournalEncounterItem.csv",(
             "ID","JournalEncounterID","ItemID","DisplaySeasonID")):
         eid=integer(row["JournalEncounterID"]);iid=integer(row["ItemID"],0)
-        if eid not in encounters or iid<=0 or iid in indexed:continue
-        season=integer(row["DisplaySeasonID"])
-        if season not in (0,sid):continue
-        encounter=encounters[eid]
-        origins.setdefault(iid,[]).append({
-            "source":"raid_journal","name":encounter["Name_lang"],
-            "journal_encounter_id":eid,
-            "journal_instance_id":integer(encounter["JournalInstanceID"]),
-            "display_season_id":season,
-            "world_state_expression_id":integer(row.get("WorldStateExpressionID")),
-            "season_evidence":("DB2_DISPLAY_SEASON_MATCH" if season==sid
-                               else "UNKNOWN_UNSCOPED_JOURNAL")})
+        encounter=encounters.get(eid)
+        if encounter is None or iid<=0:continue
+        instance=integer(encounter["JournalInstanceID"])
+        cid=dungeon_by_instance.get(instance)
+        if instance not in instances and cid is None and eid not in registered:continue
+        season=join.exact_display_season_id(row["DisplaySeasonID"])
+        base={"name":encounter["Name_lang"],"journal_encounter_id":eid,
+            "journal_instance_id":instance,"display_season_id":season,
+            "world_state_expression_id":join.exact_world_state_expression_id(
+                row.get("WorldStateExpressionID")),
+            "season_evidence":join.classify_era(season,None,sid)}
+        if cid is not None:
+            dungeon_loot[iid].add((cid,season))
+            if season==sid:
+                origins.setdefault(iid,[]).append({
+                    **base,"source":"mplus_journal","challenge_mode_id":cid})
+        if instance in instances and iid not in indexed and season in (0,sid):
+            origins.setdefault(iid,[]).append({**base,"source":"raid_journal"})
+        if eid in registered:
+            if season==sid:
+                origins.setdefault(iid,[]).append({
+                    **base,"source":"raid_journal",**registered[eid]})
+            elif season==0:
+                world_pending.append({"item_id":iid,"journal_encounter_id":eid})
+
     for row in read_csv(folder/"CraftingData.csv",("ID","CraftedItemID")):
         iid=integer(row["CraftedItemID"],0)
         if iid>0 and iid not in indexed:
@@ -179,7 +270,7 @@ def expand_selectable_source(original, folder, effect_path):
                 "source":"crafted_fixed_gear",
                 "expansion_id":original["db2_expansion_id"],
                 "classification":"SAME_EXPANSION_CRAFTED_PHYSICAL_CANDIDATE"})
-    ids=set(origins)
+    ids=set(origins)|set(dungeon_loot)
     item={integer(x["ID"]):x for x in read_csv(
         folder/"Item.csv",("ID","ClassID","InventoryType"))
         if integer(x["ID"]) in ids}
@@ -191,31 +282,65 @@ def expand_selectable_source(original, folder, effect_path):
     linked,_=effects(effect_path,equipment)
     pending=[];added=[];indirect_review=[]
     for iid in sorted(wanted):
-        src=origins[iid]
+        src=origins.get(iid,[])
         it=item.get(iid);sp=sparse.get(iid)
         if it is None or sp is None:
+            for cid,_ in dungeon_loot.get(iid,()):
+                dungeon_rows[cid]["unresolved_loot_ids"].append(iid)
             pending.append({"item_id":iid,"reason":"ITEM_OR_ITEMSPARSE_MISSING",
                             "source_kinds":sorted({x["source"] for x in src})})
             continue
         slot=integer(it["InventoryType"],0)
         if slot<=0 or slot!=integer(sp["InventoryType"]):
+            for cid,_ in dungeon_loot.get(iid,()):
+                dungeon_rows[cid]["unresolved_loot_ids"].append(iid)
             pending.append({"item_id":iid,"reason":"EQUIPMENT_SLOT_UNRESOLVED"})
             continue
-        if integer(sp["ExpansionID"])!=original["db2_expansion_id"]:continue
+        if slot==TRINKET:
+            for cid,season in dungeon_loot.get(iid,()):
+                key=("current_trinket_ids" if season==sid else
+                     "unscoped_trinket_ids" if season==0 else "other_season_trinket_ids")
+                dungeon_rows[cid][key].append(iid)
+        if not src:continue
+        is_current_mplus=any(x["source"]=="mplus_journal" for x in src)
+        if (integer(sp["ExpansionID"])!=original["db2_expansion_id"]
+                and not is_current_mplus):continue
         if slot!=TRINKET and iid not in linked:
-            # Preserve the source-scoped ID for bonus-effect discovery.
-            # It is not an ordinary representative or a public choice.
-            indirect_review.append(iid)
+            if iid not in indexed:indirect_review.append(iid)
+            continue
+        # Update existing public IDs only, never add new representative G.
+        old=indexed.get(iid)
+        if old is not None:
+            known={(x.get("source"),x.get("journal_encounter_id"),
+                    x.get("display_season_id"),x.get("challenge_mode_id"))
+                   for x in old["acquisition_sources"]}
+            for origin in src:
+                key=(origin.get("source"),origin.get("journal_encounter_id"),
+                     origin.get("display_season_id"),origin.get("challenge_mode_id"))
+                if key not in known:
+                    old["acquisition_sources"].append(origin);known.add(key)
             continue
         unique={json.dumps(x,sort_keys=True):x for x in src}
         added.append({"item_id":iid,"name":sp["Display_lang"],"slot":slot,
                       "acquisition_sources":[unique[k] for k in sorted(unique)]})
+    for report in dungeon_rows.values():
+        for key in ("current_trinket_ids","unscoped_trinket_ids",
+                    "other_season_trinket_ids","unresolved_loot_ids"):
+            report[key]=sorted(set(report[key]))
     result["items"]=sorted([*result["items"],*added],key=lambda x:x["item_id"])
     result["selectable_source_extension"]={
         "source_basis":"PINNED_MATCHED_RAID_INSTANCES_AND_CRAFTINGDATA",
         "additional_candidate_ids":[x["item_id"] for x in added],
         "indirect_review_item_ids":indirect_review,
         "unresolved_join_rows":pending,
+        "mplus_dungeon_review":list(dungeon_rows.values()),
+        "mplus_rotation_reviewed":rotation,
+        "supplementary_wcl_boss_review":{
+            "status":"WCL_REGISTERED_ONLY" if wcl_report is not None else "WCL_SOURCE_NOT_AVAILABLE",
+            "registered_extra_encounters":len(registered),
+            "unmatched_registered_bosses":unmatched,
+            "unscoped_loot_pending":world_pending,
+            "unregistered_field_boss_search":False},
         "ordinary_G_candidates_added":False,
         "full_season_completeness_confirmed":False}
     return result

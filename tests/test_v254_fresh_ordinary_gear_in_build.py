@@ -416,6 +416,93 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertEqual(second["candidate_path"],first["candidate_path"])
         self.assertEqual(second["selectable_source_extension"],extension)
 
+    def test_rotation_trinkets_and_registered_extra_bosses_only(self):
+        linked=self.source()
+        original=json.loads(Path(linked["candidate_path"]).read_text("utf8"))
+        original.update(full_season_completeness_confirmed=False,
+            auto_source_scope={"wcl_expansion_id":15,"raid_zone":"Raid",
+                               "mplus_zone":"Rotation"},
+            wcl_zone_ids={"raid":1,"mplus":2})
+        extra=[(299902,"Rotated old-expansion trinket",12,7),
+               (299903,"Unscoped trinket",12,7),
+               (299904,"Other season trinket",12,7),
+               (299905,"Registered boss trinket",12,11),
+               (299906,"Unregistered field boss trinket",12,11)]
+        with (self.wago/"Item.csv").open("a",encoding="utf8",newline="") as f:
+            csv.writer(f).writerows([[iid,4,0,slot] for iid,_,slot,_ in extra])
+        with (self.wago/"ItemSparse.csv").open("a",encoding="utf8",newline="") as f:
+            csv.writer(f).writerows([[iid,name,slot,exp,0,4,-1,4]
+                                    for iid,name,slot,exp in extra])
+        self.write_csv("JournalInstance.csv",["ID","MapID","Name_lang"],[
+            {"ID":401,"MapID":100,"Name_lang":"Alternate journal name"},
+            {"ID":501,"MapID":200,"Name_lang":"World bosses"}])
+        self.write_csv("MapChallengeMode.csv",["ID","MapID","Name_lang"],[
+            {"ID":71,"MapID":100,"Name_lang":"Rotation dungeon"},
+            {"ID":72,"MapID":101,"Name_lang":"Missing dungeon"}])
+        self.write_csv("MythicPlusSeasonTrackedMap.csv",
+            ["DisplaySeasonID","MapChallengeModeID"],[
+            {"DisplaySeasonID":47,"MapChallengeModeID":71},
+            {"DisplaySeasonID":47,"MapChallengeModeID":72}])
+        self.write_csv("JournalEncounter.csv",["ID","JournalInstanceID","Name_lang"],[
+            {"ID":402,"JournalInstanceID":401,"Name_lang":"Dungeon boss"},
+            {"ID":502,"JournalInstanceID":501,"Name_lang":"Registered boss"},
+            {"ID":503,"JournalInstanceID":501,"Name_lang":"Unregistered field boss"}])
+        self.write_csv("JournalEncounterItem.csv",
+            ["ID","JournalEncounterID","ItemID","DisplaySeasonID"],[
+            {"ID":i,"JournalEncounterID":eid,"ItemID":iid,"DisplaySeasonID":sid}
+            for i,(eid,iid,sid) in enumerate([
+                (402,299902,47),(402,299903,0),(402,299904,46),
+                (502,299905,47),(503,299906,47)],1)])
+        self.write_csv("CraftingData.csv",["ID","CraftedItemID"],[])
+        tables={p.stem:{"sha256":build.digest(p.read_bytes()),
+                         "bytes":p.stat().st_size} for p in self.wago.glob("*.csv")}
+        receipt=json.dumps({"build":self.BUILD,"locale":"enUS","tables":tables}).encode()
+        (self.wago/"receipt.json").write_bytes(receipt)
+        original["snapshot_receipt_sha256"]=build.digest(receipt)
+        raw=json.dumps(original).encode()
+        Path(linked["candidate_path"]).write_bytes(raw)
+        report={"schema":"v155_season_discovery_provider_probe_v1",
+            "mode":"LIVE_AUTHENTICATED_BOUNDED","wcl":{"zones":[
+                {"zone_id":i,"zone_name":name,"wcl_frozen":False,
+                 "expansion_id":15,"encounters":[{"name":boss}]}
+                for i,name,boss in [(1,"Raid","Raid boss"),(2,"Rotation","Rotation dungeon"),
+                                    (3,"Extra bosses","Registered boss")]]}}
+        def write_wcl():
+            target=self.root/"source/season_api_report.json"
+            target.parent.mkdir(parents=True,exist_ok=True)
+            target.write_text(json.dumps(report),"utf8")
+        build.stage_engine.execute_stage(root=self.root,stage_id="fresh-v155",
+            stage_version="test",inputs={"build":self.BUILD},
+            outputs={"report":"source/season_api_report.json"},execute=write_wcl)
+        def transport(req,timeout):
+            if req.full_url==build.delve_provider.SOURCE_URL:
+                return Response(json.dumps({"items":[{"id":self.item_id,
+                    "name":"Source plain sword"}]}).encode())
+            return Response(b"ID,ItemID,ItemEffectID\n")
+        args=dict(stage_root=self.root,wago_folder=self.wago,build=self.BUILD,
+                  linked=linked,include_delve=True)
+        first=build._fresh_ordinary_gear_source_stage(**args,transport=transport)
+        self.assertTrue(first.get("candidate_path"),first)
+        self.assertTrue(first.get("a7_auto_source_choice_provenance",{}).get(
+            "candidate_provenance_verified"),first)
+        self.assertEqual(first["plain_candidate_count"],1)
+        data=json.loads(Path(first["candidate_path"]).read_text("utf8"))
+        self.assertEqual({x["item_id"] for x in data["items"]},
+                         {self.item_id,299902,299905})
+        rows=first["mplus_trinket_coverage"]
+        self.assertEqual(rows[0]["registered_current_trinket_ids"],[299902])
+        self.assertEqual(rows[0]["unscoped_only_trinket_ids"],[299903])
+        self.assertEqual(rows[0]["other_season_trinket_ids"],[299904])
+        self.assertEqual(rows[0]["missing_current_trinket_ids"],[])
+        self.assertEqual(rows[1]["status"],"DUNGEON_JOURNAL_UNRESOLVED")
+        self.assertEqual(first["selectable_source_extension"][
+            "supplementary_wcl_boss_review"]["registered_extra_encounters"],1)
+        self.assertEqual(Path(linked["candidate_path"]).read_bytes(),raw)
+        def no_fetch(*args,**kwargs):self.fail("NO_REPEAT_SOURCE_FETCH")
+        second=build._fresh_ordinary_gear_source_stage(**args,transport=no_fetch)
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(second["mplus_trinket_coverage"],rows)
+
     def test_bonus_review_reuses_tier_raw_and_caches_missing_two_tables(self):
         linked=self.source()
         original=json.loads(Path(linked["candidate_path"]).read_text("utf8"))
