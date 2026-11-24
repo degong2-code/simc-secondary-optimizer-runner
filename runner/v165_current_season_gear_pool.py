@@ -154,7 +154,8 @@ def _rotation_special_origin_current(row, display_season):
     return _rotation_origin_current(row,display_season,ROTATION_SPECIAL_EVIDENCE)
 
 
-def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
+def expand_selectable_source(original, folder, effect_path, *, wcl_report=None,
+                             metadata_loader=None):
     """Supplement only authenticated seasonal sources; preserve original v163/G."""
     import copy
     import v163_zero_seed_db2_join as join
@@ -327,15 +328,23 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
                 "expansion_id":original["db2_expansion_id"],
                 "classification":"SAME_EXPANSION_CRAFTED_PHYSICAL_CANDIDATE"})
     ids=set(origins)|set(dungeon_loot)|set(registered_unscoped)|set(indexed_raid_review)
-    item={integer(x["ID"]):x for x in read_csv(
-        folder/"Item.csv",("ID","ClassID","InventoryType"))
-        if integer(x["ID"]) in ids}
-    equipment={i for i,x in item.items() if integer(x["ClassID"]) in (2,4)}
-    wanted=equipment|(ids-set(item))
-    sparse={integer(x["ID"]):x for x in read_csv(folder/"ItemSparse.csv",
-        ("ID","Display_lang","InventoryType","ExpansionID"))
-        if integer(x["ID"]) in wanted}
-    linked,_=effects(effect_path,equipment)
+    if metadata_loader is None:
+        item={integer(x["ID"]):x for x in read_csv(
+            folder/"Item.csv",("ID","ClassID","InventoryType"))
+            if integer(x["ID"]) in ids}
+        equipment={i for i,x in item.items() if integer(x["ClassID"]) in (2,4)}
+        wanted=equipment|(ids-set(item))
+        sparse={integer(x["ID"]):x for x in read_csv(folder/"ItemSparse.csv",
+            ("ID","Display_lang","InventoryType","ExpansionID"))
+            if integer(x["ID"]) in wanted}
+        linked,_=effects(effect_path,equipment)
+    else:
+        # The product compiler also needs the original and Delve rows.
+        # The loader scans their union once, but exposes only this
+        # extension's scope here, retaining the existing admission policy.
+        item,sparse,linked=metadata_loader(ids)
+        equipment={i for i,x in item.items() if integer(x["ClassID"]) in (2,4)}
+        wanted=equipment|(ids-set(item))
     pending=[];added=[];indirect_review=[];effect_review_rows=[]
     for iid in sorted(wanted):
         src=origins.get(iid,[])
@@ -481,7 +490,7 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
 
 
 def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALLED,
-                 delve_selectable_only=False, sparse_rows=None):
+                 delve_selectable_only=False, sparse_rows=None, effect_observation=None):
     need(db2.get("schema")=="v163_zero_seed_db2_join_v1"
          and db2.get("source_provider")=="WAGO_TOOLS_PINNED_DB2_WCL_LIVE",
          "SOURCE_DB2_REPORT_INVALID")
@@ -542,7 +551,8 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
               "set_id":integer(row["ItemSet"],0),
               "quality":integer(row["OverallQualityID"])}
     need(ids<=set(sparse),"ITEMSPARSE_ID_MISSING")
-    linked,fx_sha=effects(effect_path,ids)
+    linked,fx_sha=(effects(effect_path,ids) if effect_observation is None
+                   else effect_observation)
     output=[]
     pending_public=[]
     for iid,row in sorted(originals.items()):

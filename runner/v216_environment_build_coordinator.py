@@ -3428,16 +3428,17 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
         # No installed J/F numbers are inputs to a catalogue derivation.
         effective_source=source
         if extend:
-            effective_source=source_gear_pool.expand_selectable_source(
-                source,pathlib.Path(wago_folder),effect_path,wcl_report=wcl_report)
+            effective_source,pool,compact=compact_gear_db.compile_season_catalog(
+                source,delve,pathlib.Path(wago_folder),effect_path,wcl_report=wcl_report)
             effective_source["parent_v163_sha256"]=digest(raw_source)
             target=root/paths["expanded_source"]
             target.parent.mkdir(parents=True,exist_ok=True)
             target.write_text(json.dumps(effective_source,sort_keys=True,
                 ensure_ascii=False,indent=2,allow_nan=False)+"\n","utf8")
-        pool,compact=compact_gear_db.compile_catalog(
-            effective_source,delve,item,sparse,effect_path,
-            delve_selectable_only=include_delve)
+        else:
+            pool,compact=compact_gear_db.compile_catalog(
+                effective_source,delve,item,sparse,effect_path,
+                delve_selectable_only=include_delve)
         candidate=product_gear_db.from_v166(compact)
         for name,payload in (("pool",pool),("compact",compact),
                              ("candidate",candidate)):

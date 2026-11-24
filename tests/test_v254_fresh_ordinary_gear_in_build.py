@@ -443,6 +443,24 @@ class FreshOrdinaryGearSource(unittest.TestCase):
             original,self.wago,effect)
         self.assertEqual(direct["selectable_source_extension"]["additional_candidate_ids"],
                          [299902,299903,299904])
+        # Compare the complete production compiler against the independent
+        # legacy steps, including the unresolved supplemental item.
+        item_path=self.wago/"Item.csv";sparse_path=self.wago/"ItemSparse.csv"
+        old_pool=build.source_gear_pool.compile_pool(
+            direct,None,sparse_path,effect,budget_source=None,delve_selectable_only=True)
+        old_compact=build.compact_gear_db.build(old_pool,item_path,sparse_path)
+        with mock.patch.object(build.compact_gear_db,"extract",
+                               wraps=build.compact_gear_db.extract) as scans, mock.patch.object(
+            build.source_gear_pool,"effects",wraps=build.source_gear_pool.effects) as effects:
+            expanded,pool,compact=build.compact_gear_db.compile_season_catalog(
+                original,None,self.wago,effect)
+        self.assertEqual(expanded,direct)
+        self.assertEqual(pool,old_pool)
+        self.assertEqual(compact,old_compact)
+        self.assertEqual(build.product_gear_db.from_v166(compact),
+                         build.product_gear_db.from_v166(old_compact))
+        self.assertEqual([Path(c.args[0]) for c in scans.call_args_list],[item_path,sparse_path])
+        self.assertEqual(effects.call_count,1)
         first=build._fresh_ordinary_gear_source_stage(**args,transport=transport)
         self.assertTrue(first.get("candidate_path"),first)
         self.assertTrue(first.get("a7_auto_source_choice_provenance",{}).get(

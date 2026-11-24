@@ -23,7 +23,7 @@ def load(path):
     p=Path(path)
     need(p.is_file() and 0<p.stat().st_size<=MAX_BYTES,"SOURCE_POOL_INVALID")
     return json.loads(p.read_text(encoding="utf8"))
-def extract(path,columns,ids,*,optional_columns=None):
+def extract(path,columns,ids,*,optional_columns=None,require_all=True):
     p=Path(path)
     need(p.is_file() and 0<p.stat().st_size<=MAX_CSV,"ITEM_TABLE_MISSING")
     matched={}
@@ -38,7 +38,7 @@ def extract(path,columns,ids,*,optional_columns=None):
                 need(iid not in matched,"DUPLICATE_DB2_ITEM_ID")
                 matched[iid]=(row if optional_columns is None else
                     {key:row[key] for key in (*columns,*optional_columns) if key in row})
-    need(set(matched)==ids,"CATALOG_ITEM_NOT_IN_DB2")
+    if require_all:need(set(matched)==ids,"CATALOG_ITEM_NOT_IN_DB2")
     return matched
 def integer(x):
     try:return int(x)
@@ -48,6 +48,53 @@ def integer(x):
 SPARSE_FIELDS=("ID","Display_lang","InventoryType","ExpansionID","ItemSet",
                "OverallQualityID","AllowableClass","StatModifier_bonusStat_0")
 OPTIONAL_STATS=tuple(f"StatModifier_bonusStat_{i}" for i in range(1,10))
+ITEM_FIELDS=("ID","ClassID","SubclassID","InventoryType")
+
+
+def _source_ids(db2,delve):
+    ids={row["item_id"] for row in db2["items"]}
+    if delve is not None:ids.update(row["item_id"] for row in delve["items"])
+    need(len(ids)<=60000 and all(type(i) is int and i>0 for i in ids),
+         "COMBINED_SOURCE_ITEM_SCOPE_INVALID")
+    return ids
+
+
+def compile_season_catalog(original,delve,folder,effect_file,*,wcl_report=None):
+    """One scoped physical/effect scan for extension, pool and compact.
+
+    The existing v165 extension verifies the pinned snapshot before
+    calling the loader. Missing supplemental records remain pending;
+    original/admitted rows still pass the existing strict pool/compact
+    checks. Nothing from this temporary projection is persisted.
+    """
+    import v165_current_season_gear_pool as pool_compiler
+    folder=Path(folder)
+    item_file=folder/"Item.csv";sparse_file=folder/"ItemSparse.csv"
+    base_ids=_source_ids(original,delve)
+    tables={}
+    def load(extension_ids):
+        items=extract(item_file,ITEM_FIELDS,base_ids|extension_ids,
+                      optional_columns=(),require_all=False)
+        extra={i:items[i] for i in extension_ids if i in items}
+        equipment={i for i,row in extra.items()
+                   if pool_compiler.integer(row["ClassID"]) in (2,4)}
+        wanted=equipment|(extension_ids-set(extra))
+        sparse=extract(sparse_file,SPARSE_FIELDS,base_ids|wanted,
+                       optional_columns=OPTIONAL_STATS,require_all=False)
+        effect_scope=base_ids|equipment
+        linked,sha=pool_compiler.effects(effect_file,effect_scope)
+        tables.update(item=items,sparse=sparse,scope=effect_scope,effects=(linked,sha))
+        return extra,{i:sparse[i] for i in wanted if i in sparse},linked&equipment
+    expanded=pool_compiler.expand_selectable_source(
+        original,folder,effect_file,wcl_report=wcl_report,metadata_loader=load)
+    admitted=_source_ids(expanded,delve)
+    need(admitted<=tables["scope"],"COMBINED_EFFECT_SOURCE_SCOPE_DRIFT")
+    need(admitted<=set(tables["sparse"]),"CATALOG_ITEM_NOT_IN_DB2")
+    pool=pool_compiler.compile_pool(expanded,delve,sparse_file,effect_file,
+        budget_source=None,delve_selectable_only=True,sparse_rows=tables["sparse"],
+        effect_observation=tables["effects"])
+    return expanded,pool,build(pool,item_file,sparse_file,
+        sparse_rows=tables["sparse"],item_rows=tables["item"])
 
 
 def compile_catalog(db2,delve,item_file,sparse_file,effect_file,*,delve_selectable_only=False):
@@ -58,17 +105,14 @@ def compile_catalog(db2,delve,item_file,sparse_file,effect_file,*,delve_selectab
     item database or independent second source owner is introduced.
     """
     import v165_current_season_gear_pool as pool_compiler
-    ids={row["item_id"] for row in db2["items"]}
-    if delve is not None:ids.update(row["item_id"] for row in delve["items"])
-    need(len(ids)<=60000 and all(type(i) is int and i>0 for i in ids),
-         "COMBINED_SOURCE_ITEM_SCOPE_INVALID")
+    ids=_source_ids(db2,delve)
     sparse=extract(sparse_file,SPARSE_FIELDS,ids,optional_columns=OPTIONAL_STATS)
     pool=pool_compiler.compile_pool(db2,delve,sparse_file,effect_file,
         budget_source=None,delve_selectable_only=delve_selectable_only,sparse_rows=sparse)
     return pool,build(pool,item_file,sparse_file,sparse_rows=sparse)
 
 
-def build(pool,item_file,sparse_file,*,sparse_rows=None):
+def build(pool,item_file,sparse_file,*,sparse_rows=None,item_rows=None):
     need(pool.get("schema")=="v165_current_season_gear_pool_v1"
          and pool.get("status")=="EFFECT_TABLE_OBSERVED_CANDIDATES"
          and pool.get("no_legacy_catalog_seed") is True
@@ -78,7 +122,8 @@ def build(pool,item_file,sparse_file,*,sparse_rows=None):
     need(type(values) is list and 1<=len(values)<=30000,"SOURCE_ITEM_ROWS_INVALID")
     ids={x["item_id"] for x in values}
     need(len(ids)==len(values),"DUPLICATE_POOL_ITEM_ID")
-    items=extract(item_file,("ID","ClassID","SubclassID","InventoryType"),ids)
+    items=(extract(item_file,ITEM_FIELDS,ids) if item_rows is None else item_rows)
+    need(ids<=set(items),"CATALOG_ITEM_NOT_IN_DB2")
     sparse=(extract(sparse_file,("ID","InventoryType","ExpansionID","AllowableClass",
         "StatModifier_bonusStat_0","ItemSet"),ids) if sparse_rows is None else sparse_rows)
     need(ids<=set(sparse),"CATALOG_ITEM_NOT_IN_DB2")
