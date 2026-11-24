@@ -109,3 +109,7 @@ v696 14 Actions SUCCESS. 기존 사용자 승인 v162 Localbots 정책 및 #4083
 ## v698 — 실제 장비 선택지의 한국어 명칭과 기존 환경 표시
 
 v697 10 SUCCESS/1 opt-in SKIP, 신규 live source 결과는 미확인. v335 과거 packaged v167 catalogue 참조를 실제 v212에 일치하는 v213 artifact SHA/manifest/build public projection으로 교체. Windows credential을 기존 이름 수집기 in-memory에 전달; 기존 same-build cache/증분 API, display-only optional, G/J/F/O·profile·session 불변. 기존 optional icon endpoint에서 누락 ko_KR labels를 자동 갱신하고 UI exact scope 내 text만 갱신, 선택/예산 무효화 없음, exact gear/budget GET은 read-only 유지. 복수 FJ 표시에는 이미 보유한 영약명·원본 revision 추가(기존 개별 승인 방식 유지). v697 실제 신규 선택지가 이전 설치본 v212/v213/v113와 직접 연결되는 기능은 미구현. 기존 immutable source와 profile identity를 보존해야 하므로 UI에만 추가하거나 덮어쓰지 않음. 추가 Native0, DB2수집0, source live0, 신규 회귀 PENDING. 공식 상태/권한 불변.
+
+## v699 — 범용 원본과 파생 선택 목록 수명 분리
+
+사용자: 범용 엔진 기능 수정·개편 방향. v698 16 SUCCESS/1 opt-in SKIP; v697 #45335900511 원본 로그 9 tests PASS(신규 2개 포함). 기존 v216/v217로 build-scoped raw relation/provider bytes 별도 봉인, 실제 원본 SHA/receipt·v163·compiler identity 기준 파생 gear/provenance generation, 시간·SimC revision·사용자·ilvl 제외. 기존 v254/v697 raw effect 재사용, 기존 immutable artifact 손대지 않음. Optional provider failure는 raid/M+ 유지 및 raw stage 다음 요청 복구 가능; 파생 generation 이전 결과 보존. 테스트는 compiler 변경 HTTP0, optional recovery effect 재수집0, new source generation, old bytes/cache 유지. 이번 v699는 실제 제품 source collection path 수정이지 기존 v212/v213/v113 설치본 갱신 통합 완료가 아니다. 기존 실행 identity에 새 선택 장비를 안전하게 연결하는 소비 단계는 남음. 전체 시즌/장비 DB 확대·새 SimC 엔진·Native 반복 금지. 새 CI PENDING, Native0/실제 DB2 수집0, 공식 상태/권한 불변.

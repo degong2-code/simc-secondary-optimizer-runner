@@ -3185,6 +3185,40 @@ def _join_authenticated_season_source(*,stage_root,output_dir,
 
 
 
+def _derived_source_generation(family,inputs):
+    """Content-address a derived output, not a new acquisition or admission.
+
+    Only the actual source inputs and compiler policy select a generation.
+    Previous output paths/receipts remain immutable for installed profiles.
+    Do not use SimC revision, timestamp, user or target ilvl as source keys.
+    """
+    return family+"-"+digest(canonical(inputs).encode("utf8"))[:24]
+
+
+def _sealed_season_raw_source(*,root,source_id,build,url,relative,
+                              obtain,validate_bytes):
+    """Same-build raw acquisition independent of derivative code changes.
+
+    Reuses the existing v217 engine. Failed optional fetches stay RUNNING
+    and can recover on a later request; no incomplete payload is promoted.
+    The source contract is stable and contains no compiler/revision hash.
+    """
+    target=pathlib.Path(root)/relative
+    def execute():
+        raw=obtain()
+        need(validate_bytes(raw),"SEASON_RAW_SOURCE_INVALID")
+        stage_engine._atomic_write(target,raw)
+    def validate(outputs):
+        try:return validate_bytes(outputs["raw"].read_bytes()) is True
+        except (OSError,ValueError,TypeError,KeyError):return False
+    receipt=stage_engine.execute_stage(
+        root=root,stage_id=source_id,stage_version="same-build-raw-v1",
+        inputs={"game_build":build,"source_url":url},
+        outputs={"raw":relative},execute=execute,validate=validate)
+    raw=target.read_bytes()
+    return target,raw,receipt["receipt_sha256"]
+
+
 def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
                                      linked, transport=None, include_delve=False):
     """Reuse v165->v166->v167 from the authenticated v163 seasonal source.
@@ -3218,16 +3252,13 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
          and source.get("source_provider")=="WAGO_TOOLS_PINNED_DB2_WCL_LIVE"
          and source.get("old_item_catalog_imported") is False,
          "V216_FRESH_GEAR_V163_SOURCE_MISMATCH")
-    # Preserve all prior sealed v254/v405 outputs and installed owners.
-    # The augmented source has its own versioned receipt, not a rewrite.
-    rel=("source/v697_gear_" if include_delve else
-         "source/v254_fresh_ordinary_gear_")
+    # Keep the old direct fixture / historical route unchanged.
+    # Production derives a new immutable generation from raw-source identity.
+    rel="source/v254_fresh_ordinary_gear_"
     paths={"effect":rel+"ItemXItemEffect.csv",
            "pool":rel+"v165_pool.json",
            "compact":rel+"v166_compact.json",
            "candidate":rel+"v167_candidates.json"}
-    if include_delve:
-        paths["delve"]=rel+"v162_delve.json"
     source_identity=stage_engine.module_dependency_fingerprint([
         pathlib.Path(source_gear_pool.__file__),
         pathlib.Path(compact_gear_db.__file__),
@@ -3236,79 +3267,133 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
         *([pathlib.Path(delve_provider.__file__)] if include_delve else [])])
     attempted=[0]
     def previous_effect():
-        # A changed catalog compiler does not invalidate static same-build
-        # ItemXItemEffect bytes. Reuse only a COMPLETE original receipt and
-        # exact original output hashes, never an unsealed stray CSV.
+        # Import a previously sealed raw effect relation, not a previous
+        # catalog's membership decisions. Older output bytes stay untouched.
         if not include_delve:return None
-        old_rel="source/v254_fresh_ordinary_gear_"
-        old_paths={"effect":old_rel+"ItemXItemEffect.csv",
-                   "pool":old_rel+"v165_pool.json",
-                   "compact":old_rel+"v166_compact.json",
-                   "candidate":old_rel+"v167_candidates.json"}
-        try:
-            old_files,receipt_path=stage_engine._safe_paths(
-                root,"fresh-ordinary-gear-source-candidates",old_paths)
-            receipt=stage_engine._read_receipt(receipt_path)
-            if (receipt.get("status")!="COMPLETE" or
-                receipt.get("stage_id")!="fresh-ordinary-gear-source-candidates" or
-                receipt.get("output_paths")!=old_paths):
-                return None
-            stage_engine._verify_outputs(receipt,old_files)
-            old_pool=json.loads((root/old_paths["pool"]).read_text("utf8"))
-            if old_pool.get("build")!=build:return None
-            raw=(root/old_paths["effect"]).read_bytes()
-            if (0<len(raw)<=12_000_000 and
-                digest(raw)==old_pool.get("item_x_item_effect_csv_sha256")):
-                return raw
-        except (stage_engine.StageExecutionBlocked,OSError,ValueError,TypeError):
-            pass
+        for stage_id,old_rel,has_delve in (
+            ("fresh-ordinary-gear-source-candidates",
+             "source/v254_fresh_ordinary_gear_",False),
+            ("fresh-selectable-gear-with-delve-v697","source/v697_gear_",True)):
+            old_paths={"effect":old_rel+"ItemXItemEffect.csv",
+                       "pool":old_rel+"v165_pool.json",
+                       "compact":old_rel+"v166_compact.json",
+                       "candidate":old_rel+"v167_candidates.json"}
+            if has_delve:old_paths["delve"]=old_rel+"v162_delve.json"
+            try:
+                old_files,receipt_path=stage_engine._safe_paths(root,stage_id,old_paths)
+                receipt=stage_engine._read_receipt(receipt_path)
+                if (receipt.get("status")!="COMPLETE" or
+                    receipt.get("stage_id")!=stage_id or
+                    receipt.get("output_paths")!=old_paths):
+                    continue
+                stage_engine._verify_outputs(receipt,old_files)
+                old_pool=json.loads((root/old_paths["pool"]).read_text("utf8"))
+                if old_pool.get("build")!=build:continue
+                raw=(root/old_paths["effect"]).read_bytes()
+                if (0<len(raw)<=12_000_000 and
+                    digest(raw)==old_pool.get("item_x_item_effect_csv_sha256")):
+                    return raw
+            except (stage_engine.StageExecutionBlocked,OSError,ValueError,TypeError):
+                continue
         return None
-    def execute():
-        url="https://wago.tools/db2/ItemXItemEffect/csv?"+urlencode(
-            {"build":build,"locale":"enUS"})
+    url="https://wago.tools/db2/ItemXItemEffect/csv?"+urlencode(
+        {"build":build,"locale":"enUS"})
+    def obtain_effect():
+        raw=previous_effect()
+        if raw is not None:return raw
         req=Request(url,headers={
             "User-Agent":"SIMC-Secondary-Environment-Gear/1.0",
             "Accept":"text/csv"})
-        raw_effect=previous_effect()
-        if raw_effect is None:
-            attempted[0]+=1
-            with (urlopen if transport is None else transport)(
-                    req,timeout=75) as response:
-                need(response.status==200,"V216_FRESH_GEAR_HTTP_NON_200")
-                parts=[]
-                total=0
-                while True:
-                    chunk=response.read(262144)
-                    if not chunk:
-                        break
-                    total+=len(chunk)
-                    need(total<=12_000_000,"V216_FRESH_GEAR_HTTP_SIZE_LIMIT")
-                    parts.append(chunk)
-            need(total>0,"V216_FRESH_GEAR_EMPTY_EFFECT_SOURCE")
-            raw_effect=b"".join(parts)
-        effect=root/paths["effect"]
-        effect.parent.mkdir(parents=True,exist_ok=True)
-        effect.write_bytes(raw_effect)
+        attempted[0]+=1
+        with (urlopen if transport is None else transport)(
+                req,timeout=75) as response:
+            need(response.status==200,"V216_FRESH_GEAR_HTTP_NON_200")
+            parts=[]
+            total=0
+            while True:
+                chunk=response.read(262144)
+                if not chunk:break
+                total+=len(chunk)
+                need(total<=12_000_000,"V216_FRESH_GEAR_HTTP_SIZE_LIMIT")
+                parts.append(chunk)
+        need(total>0,"V216_FRESH_GEAR_EMPTY_EFFECT_SOURCE")
+        return b"".join(parts)
+    def effect_valid(raw):
+        # The existing v165 classifier remains the relation parser.
+        return bool(0<len(raw)<=12_000_000 and
+            b"ItemID" in raw.split(b"\n",1)[0] and
+            b"ItemEffectID" in raw.split(b"\n",1)[0])
+    def obtain_delve():
+        attempted[0]+=1
+        return delve_provider.download(
+            delve_provider.SOURCE_URL,delve_provider.MAX_SOURCE_BYTES,
+            transport=(urlopen if transport is None else transport))
+    def delve_valid(raw):
+        return bool(delve_provider.source_rows(raw))
+    generation_inputs={"game_build":build,"v163_sha256":digest(raw_source),
+        "v163_stage_receipt":(linked.get("stage") or {}).get("receipt_sha256"),
+        "code_sha256":source_identity["sha256"]}
+    raw_delve=None
+    effect=None
+    stage_id="fresh-ordinary-gear-source-candidates"
+    stage_version="v165-v167-wago-no-legacy-budget-v1"
+    if include_delve:
+        try:
+            effect,raw,effect_receipt=_sealed_season_raw_source(
+                root=root,source_id="season-gear-effect-raw",build=build,url=url,
+                relative="source/raw_gear_effect.csv",
+                obtain=obtain_effect,validate_bytes=effect_valid)
+            generation_inputs["effect_sha256"]=digest(raw)
+            generation_inputs["effect_source_receipt"]=effect_receipt
+            del raw
+        except (stage_engine.StageExecutionBlocked,EnvironmentBuildBlocked,
+                OSError,ValueError,TypeError) as exc:
+            return {"status":"FRESH_GEAR_SOURCE_OR_JOIN_PENDING",
+                    "reason":str(exc).split(":",1)[0],"candidate_path":None,
+                    "network_calls_by_stage":attempted[0],
+                    "season_representative_verified":False}
+        try:
+            _,raw_delve,delve_receipt=_sealed_season_raw_source(
+                root=root,source_id="season-delve-pool-raw",build=build,
+                url=delve_provider.SOURCE_URL,relative="source/raw_delve_pool.json",
+                obtain=obtain_delve,validate_bytes=delve_valid)
+            generation_inputs["delve_sha256"]=digest(raw_delve)
+            generation_inputs["delve_source_receipt"]=delve_receipt
+        except (stage_engine.StageExecutionBlocked,delve_provider.SourceBlocked,
+                EnvironmentBuildBlocked,OSError,ValueError,TypeError,KeyError):
+            raw_delve=None
+            generation_inputs["delve_sha256"]=None
+            generation_inputs["delve_source_receipt"]=None
+        # A recovered provider, revised source or changed classification
+        # produces a separate generation without rewriting older catalogues.
+        stage_id=_derived_source_generation("season-gear-catalog",generation_inputs)
+        rel="source/"+stage_id+"/"
+        paths={"pool":rel+"v165_pool.json","compact":rel+"v166_compact.json",
+               "candidate":rel+"v167_candidates.json","delve":rel+"v162_delve.json"}
+        stage_version="derived-gear-catalog-v1"
+    def execute():
+        effect_path=effect
+        if not include_delve:
+            effect_path=root/paths["effect"]
+            effect_path.parent.mkdir(parents=True,exist_ok=True)
+            effect_path.write_bytes(obtain_effect())
         delve=None
         if include_delve:
-            try:
-                attempted[0]+=1
-                raw=delve_provider.download(
-                    delve_provider.SOURCE_URL,delve_provider.MAX_SOURCE_BYTES,
-                    transport=(urlopen if transport is None else transport))
-                # Consume the already-pinned same-build DB2 file. No second
-                # ItemSparse download, no Native, no Wowhead re-audit.
-                delve=delve_provider.assemble(raw,sparse.read_bytes(),
-                    build=build,expansion_id=source["db2_expansion_id"])
-                note={"status":"SUPPLEMENTARY_SOURCE_OBSERVED","report":delve}
-            except (delve_provider.SourceBlocked,OSError,ValueError,TypeError,KeyError):
-                # Optional source failure must not block verified raid/M+.
-                note={"status":"SUPPLEMENTARY_SOURCE_PENDING","report":None}
-            (root/paths["delve"]).write_text(json.dumps(
-                note,ensure_ascii=False,sort_keys=True,indent=2)+"\n","utf8")
-        # Explicit budget_source=None prevents any installed J/F reference.
+            if raw_delve is not None:
+                try:
+                    delve=delve_provider.assemble(raw_delve,sparse.read_bytes(),
+                        build=build,expansion_id=source["db2_expansion_id"])
+                except (delve_provider.SourceBlocked,OSError,ValueError,TypeError,KeyError):
+                    pass
+            note={"status":("SUPPLEMENTARY_SOURCE_OBSERVED" if delve is not None
+                            else "SUPPLEMENTARY_SOURCE_PENDING"),"report":delve}
+            target=root/paths["delve"]
+            target.parent.mkdir(parents=True,exist_ok=True)
+            target.write_text(json.dumps(note,ensure_ascii=False,
+                sort_keys=True,indent=2)+"\n","utf8")
+        # No installed J/F numbers are inputs to a catalogue derivation.
         pool=source_gear_pool.compile_pool(
-            source,delve,sparse,effect,budget_source=None,
+            source,delve,sparse,effect_path,budget_source=None,
             delve_selectable_only=include_delve)
         compact=compact_gear_db.build(pool,item,sparse)
         candidate=product_gear_db.from_v166(compact)
@@ -3333,7 +3418,8 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
                 "SAME_BUILD_SUPPLEMENTARY_SOURCE"))
         return (pool.get("build")==build
                 and pool.get("item_x_item_effect_csv_sha256")==
-                    digest(outputs["effect"].read_bytes())
+                    (generation_inputs["effect_sha256"] if include_delve
+                     else digest(outputs["effect"].read_bytes()))
                 and supplementary_ok
                 and pool.get("consumable_budget_reference") is None
                 and pool.get("consumable_budget_source_mode")==
@@ -3348,15 +3434,8 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
                 and product_gear_db.validate(candidate) is candidate)
     try:
         stage=stage_engine.execute_stage(
-            root=root,stage_id=("fresh-selectable-gear-with-delve-v697"
-                                if include_delve else "fresh-ordinary-gear-source-candidates"),
-            stage_version=("v165-v167-v162-selectable-loot-v1" if include_delve
-                           else "v165-v167-wago-no-legacy-budget-v1"),
-            inputs={"game_build":build,
-                    "v163_sha256":digest(raw_source),
-                    "v163_stage_receipt":(linked.get("stage") or {}).get(
-                        "receipt_sha256"),
-                    "code_sha256":source_identity["sha256"]},
+            root=root,stage_id=stage_id,stage_version=stage_version,
+            inputs=generation_inputs,
             outputs=paths,execute=execute,validate=validate)
     except (stage_engine.StageExecutionBlocked,
             source_gear_pool.CatalogBlocked,
@@ -3374,12 +3453,9 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
     # This is a separate small v217 stage: it NEVER refetches 62MB Wago or
     # asks an AI to select item IDs. Missing optional sources remain pending
     # without blocking unrelated G/J/F/O representative construction.
-    a7_path=("source/v697_a7_public_choice_provenance.json" if include_delve
-             else "source/v405_a7_auto_public_choice_provenance.json")
     delve_note=(json.loads((root/paths["delve"]).read_text("utf8"))
                 if include_delve else {})
     delve=delve_note.get("report")
-    a7_target=root/a7_path
     candidate_bytes=(root/paths["candidate"]).read_bytes()
     source_sha=digest(raw_source)
     candidate_sha=digest(candidate_bytes)
@@ -3388,6 +3464,14 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
         pathlib.Path(source_gear_pool.__file__),
         pathlib.Path(product_gear_db.__file__),
         pathlib.Path(stage_engine.__file__)])
+    audit_inputs={"game_build":build,"v163_sha256":source_sha,
+        "v167_sha256":candidate_sha,"v254_receipt_sha256":stage["receipt_sha256"],
+        "code_sha256":a7_code["sha256"]}
+    audit_stage_id=(_derived_source_generation("season-gear-provenance",audit_inputs)
+                    if include_delve else "fresh-a7-auto-public-choice-provenance")
+    a7_path=("source/"+audit_stage_id+".json" if include_delve else
+             "source/v405_a7_auto_public_choice_provenance.json")
+    a7_target=root/a7_path
     def audit_execute():
         report=a7_source_contract.assess(
             source=source,catalog=result,expected_game_build=build,
@@ -3413,13 +3497,8 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
                 and doc.get("native_calls")==0)
     try:
         a7_stage=stage_engine.execute_stage(
-            root=root,stage_id=("fresh-a7-auto-public-choice-v697" if include_delve
-                                else "fresh-a7-auto-public-choice-provenance"),
-            stage_version="v405-source-choice-proof-v1",
-            inputs={"game_build":build,"v163_sha256":source_sha,
-                    "v167_sha256":candidate_sha,
-                    "v254_receipt_sha256":stage["receipt_sha256"],
-                    "code_sha256":a7_code["sha256"]},
+            root=root,stage_id=audit_stage_id,
+            stage_version="v405-source-choice-proof-v1",inputs=audit_inputs,
             outputs={"a7_provenance":a7_path},
             execute=audit_execute,validate=audit_validate)
         a7_info={

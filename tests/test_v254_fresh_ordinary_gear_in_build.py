@@ -9,6 +9,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
@@ -198,6 +199,30 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertEqual(second["network_calls_by_stage"],0)
         self.assertEqual(second["candidate_path"],new["candidate_path"])
         self.assertEqual(len(calls),2)
+        # A new classifier generation consumes exactly the same sealed
+        # upstream bytes. No DB2 or provider HTTP, no old output mutation.
+        old_generation=Path(new["candidate_path"])
+        original_generation=old_generation.read_bytes()
+        fingerprint=build.stage_engine.module_dependency_fingerprint
+        def changed(entries):
+            result=fingerprint(entries)
+            if Path(entries[0]).name=="v165_current_season_gear_pool.py":
+                return {**result,"sha256":"f"*64}
+            return result
+        with mock.patch.object(build.stage_engine,
+                "module_dependency_fingerprint",side_effect=changed):
+            upgraded=build._fresh_ordinary_gear_source_stage(
+                **args,transport=no_fetch,include_delve=True)
+            reused=build._fresh_ordinary_gear_source_stage(
+                **args,transport=no_fetch,include_delve=True)
+        self.assertEqual(upgraded["network_calls_by_stage"],0)
+        self.assertEqual(upgraded["native_calls"],0)
+        self.assertNotEqual(upgraded["candidate_path"],new["candidate_path"])
+        self.assertEqual(Path(upgraded["candidate_path"]).read_bytes(),
+                         original_generation)
+        self.assertEqual(old_generation.read_bytes(),original_generation)
+        self.assertEqual(reused["candidate_path"],upgraded["candidate_path"])
+        self.assertEqual(reused["source_stage"]["status"],"REUSED_VERIFIED")
 
     def test_v697_optional_provider_failure_keeps_raid_mplus(self):
         linked=self.source()
@@ -212,6 +237,28 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertEqual(result["supplementary_delve_status"],
                          "SUPPLEMENTARY_SOURCE_PENDING")
         self.assertEqual(result["plain_candidate_count"],1)
+        prior=Path(result["candidate_path"])
+        old=prior.read_bytes()
+        def recovered(req,timeout):
+            self.assertEqual(req.full_url,build.delve_provider.SOURCE_URL)
+            return Response(json.dumps({"items":[{"id":self.item_id,
+                "name":"Source plain sword"}]}).encode("utf8"))
+        ready=build._fresh_ordinary_gear_source_stage(
+            stage_root=self.root,wago_folder=self.wago,build=self.BUILD,
+            linked=linked,transport=recovered,include_delve=True)
+        self.assertEqual(ready["network_calls_by_stage"],1)
+        self.assertEqual(ready["supplementary_delve_status"],
+                         "SUPPLEMENTARY_SOURCE_OBSERVED")
+        self.assertEqual(ready["plain_candidate_count"],1)
+        self.assertNotEqual(ready["candidate_path"],result["candidate_path"])
+        self.assertEqual(prior.read_bytes(),old)
+        def no_fetch(*args,**kwargs):
+            self.fail("NO_REPEAT_SOURCE_FETCH")
+        again=build._fresh_ordinary_gear_source_stage(
+            stage_root=self.root,wago_folder=self.wago,build=self.BUILD,
+            linked=linked,transport=no_fetch,include_delve=True)
+        self.assertEqual(again["network_calls_by_stage"],0)
+        self.assertEqual(again["candidate_path"],ready["candidate_path"])
 
     def test_unauthenticated_join_has_zero_network(self):
         result=build._fresh_ordinary_gear_source_stage(
