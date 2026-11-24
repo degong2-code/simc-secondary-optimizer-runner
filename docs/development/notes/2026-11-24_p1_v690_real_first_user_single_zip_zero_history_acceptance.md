@@ -117,3 +117,7 @@ v697 10 SUCCESS/1 opt-in SKIP, 신규 live source 결과는 미확인. v335 과�
 ## v700 — 기존 설치본 장신구 증분 목록 갱신 연결
 
 v699 9 SUCCESS/1 opt-in SKIP. 범용 same-build v217 원본 검증된 두 DB2 테이블+v163 membership에 기존 v699 derivative 연결. 별도 source-only refresh, 기존 v212/v213/profile/session bytes 보존. 정확히 검증된 기존 설치 scope에서 신규 trinket IDs만 기존 선택 목록에 증분 추가(장신구 G 제외 및 exact ID profile/session 기존 소비 경로); 기존 선택·T 유지, stale UI response 폐기. 신규 특수효과 장비는 기존 static L/slot/4pc 소비 통합 전 미노출. 역사 세션 restore는 기존 read-only; 신규 목록 label/media와 새 선택 restore 검증 후속. 신규 fixture로 실제 stage receipts 및 원본 drift, 0 HTTP repeat, budget bytes untouched, 실제 70961 live 목록/Native/PC 미실행. CI PENDING. 공식 상태/권한 불변.
+
+## v700.1 — 신규 목록 갱신 실패 복구 우선
+
+v700 15 SUCCESS/2 FAIL/1 SKIP. #45341705318 및 #45341705137 Windows/Ubuntu 같은 신규 fixture에서 v405 original source full_season_completeness_confirmed=False 누락 확인; 시험 입력 보완 및 원래 first source error 안전 전달. 기존 검증 조건 유지. 실제 POST refresh scope/dedup/cache/특수 pending/budget 불변 fixture 추가. UI 80개 제한 제거 및 품목 수 명시. 신규 CI PENDING. 특수효과 runtime 연결은 미구현. Native0, 실제 DB2/원본 수집0; 공식 상태 불변.

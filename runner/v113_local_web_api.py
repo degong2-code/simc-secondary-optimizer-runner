@@ -3961,9 +3961,16 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 new_special_pending_count=sum(r["item_id"] not in prior_ids
                     for r in rows["special_effect_gear_candidate"]))
         except (stage_engine.StageExecutionBlocked,environment_build.EnvironmentBuildBlocked,
-                OSError,ValueError,TypeError,KeyError):
+                OSError,ValueError,TypeError,KeyError) as exc:
             # Optional choices are not a numeric environment requirement.
-            pass
+            # Export only stable internal codes, never local paths or data.
+            code=str(exc)
+            if isinstance(exc,(stage_engine.StageExecutionBlocked,
+                               environment_build.EnvironmentBuildBlocked)) and re.fullmatch(
+                    r"[A-Z][A-Z0-9_]{0,119}(?::[A-Z][A-Z0-9_]{0,119})?",code):
+                result["reason"]=code
+            else:
+                result["reason"]="SEASON_GEAR_REFRESH_SOURCE_UNAVAILABLE"
         return result
 
     @app.get("/api/v1/season-item-icons")

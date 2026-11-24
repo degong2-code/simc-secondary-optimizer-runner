@@ -295,7 +295,7 @@ function drawInlineEquipment(){
   trinketGrid.replaceChildren();
   if(!tFiltered.length)blank(trinketGrid,state.seasonGear?
     "검색 결과가 없습니다.":"시즌 장신구 목록을 불러오지 못했습니다.");
-  for(const item of tFiltered.slice(0,80)){
+  for(const item of tFiltered){
     const id=String(item.item_id);
     const used1=field("trinket1")===id,used2=field("trinket2")===id;
     const selected=used1||used2;
@@ -321,7 +321,8 @@ function drawInlineEquipment(){
   }
   $("equipment-trinket-status").textContent=state.seasonGear?
     "장신구 "+((field("trinket1")?1:0)+(field("trinket2")?1:0))+"/2 선택"+
-    (tFiltered.length>80?" · 검색하여 나머지 확인":""):
+    " · 확인된 후보 "+trinkets.length+"종"+
+    (tQuery?" 중 검색 결과 "+tFiltered.length+"종":"") :
     "시즌 선택지 미확인";
 
   const rows=[...$("special-rows").querySelectorAll(".gear-row")];
@@ -338,7 +339,7 @@ function drawInlineEquipment(){
   specialGrid.replaceChildren();
   if(!sFiltered.length)blank(specialGrid,state.seasonGear?
     "검색 결과가 없습니다.":"시즌 특수효과 장비 목록이 없습니다.");
-  for(const item of sFiltered.slice(0,80)){
+  for(const item of sFiltered){
     const id=String(item.item_id),selected=selectedIds.has(id);
     const valid=specialAllowedSlots(item);
     const slotFree=valid.some(v=>!occupiedSlots.has(v));
@@ -369,7 +370,6 @@ function drawInlineEquipment(){
   $("equipment-special-status").textContent=state.seasonGear?
     "특수효과 장비 "+selectedIds.size+"개 선택 · 확인된 후보 "+
     specials.length+"종"+(sQuery?" 중 검색 결과 "+sFiltered.length+"종":"")+
-    (sFiltered.length>80?" · 목록은 80개씩 표시, 검색으로 나머지 확인":"")+
     (complete?" · 시즌 목록 확인됨":" · 시즌 전체 목록 완성 확인 전"):
     "시즌 특수효과 장비 후보 검증·설치 필요";
   // Native slot controls are maintained only for the original API,

@@ -264,7 +264,9 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         linked=self.source()
         # Recreate the original two local source receipts using the same
         # v217 engine, not a fake bypass of their output checks.
-        raw=Path(linked["candidate_path"]).read_bytes()
+        original=json.loads(Path(linked["candidate_path"]).read_text("utf8"))
+        original["full_season_completeness_confirmed"]=False
+        raw=json.dumps(original).encode("utf8")
         rel="source/v163_unapproved_candidates_token_provenance.json"
         target=self.root/rel
         def write_join():

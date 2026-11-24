@@ -617,6 +617,65 @@ class LocalWebAPIOffline(unittest.TestCase):
             headers=self.headers).status_code,422)
         self.assertEqual(self.client.get(url).status_code,403)
 
+    def test_existing_gear_refresh_keeps_exact_installed_scope_and_only_adds_trinkets(self):
+        game_build="12.2.0.99999"
+        digest="b"*64
+        catalog_sha="c"*64
+        docs=self.app.state.jobs.root/"_fresh_season_sources"/("wago_"+game_build)/"fresh_source"
+        docs.mkdir(parents=True)
+        install_path=docs/("v212_installed_"+digest[:20]+".json")
+        install_path.write_text("{}")
+        (docs/"v213_candidate_catalog.json").write_text("{}")
+        doc={"manifest_sha256":digest,"game_build":game_build,
+             "target_ilevel":334,"source_catalog_artifact_sha256":catalog_sha,
+             "source_catalog_manifest_sha256":"a"*64,
+             "official_O_physical_source":None}
+        row={"item_id":269999,"name":"Existing trinket","category":"trinket",
+             "user_selectable":False,"inventory_type":12,"class_id":4,
+             "subclass_id":0,"slot_hint":None}
+        catalog={"manifest_sha256":"a"*64,"game_build":game_build,
+                 "catalog":{"gear":{"count":1,"slot_groups":{"trinket":[row]}}}}
+        fresh_trinket={**row,"item_id":270000,"name":"New trinket"}
+        fresh_special={**row,"item_id":270001,"category":"special_effect_gear_candidate",
+                       "inventory_type":11,"name":"New special"}
+        candidate={"items":[row,fresh_trinket,fresh_special]}
+        refresh={"candidate":candidate,"source_generation_sha256":"d"*64,
+                 "supplementary_delve_status":"SUPPLEMENTARY_SOURCE_OBSERVED",
+                 "network_calls":1,"native_calls":0}
+        url=("/api/v1/season-gear/refresh?game_build="+game_build+
+             "&target_ilevel=334&installed_manifest_sha256="+digest)
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                 side_effect=[(doc,"source"),(catalog,catalog_sha)]*2),
+              mock.patch.object(web.environment_manifest,
+                 "verify_fresh_installed_environment",return_value=True),
+              mock.patch.object(web.environment_build,
+                 "find_verified_installed_season_environment",
+                 return_value={"installed_manifest_sha256":digest}),
+              mock.patch.object(web.source_to_catalog,"verify_catalog",return_value=True),
+              mock.patch.object(web.official_ko_env,"read_names",return_value={}),
+              mock.patch.object(web.environment_build,"refresh_existing_season_gear_source",
+                 return_value=refresh) as collect,
+              mock.patch.object(web.season_gear,"public_options",return_value={"choices":{
+                  "trinket":[row,fresh_trinket],
+                  "special_effect_gear_candidate":[fresh_special],
+                  "selectable_stat_craft":[]}})):
+            first=self.client.post(url,headers=self.headers)
+            second=self.client.post(url,headers=self.headers)
+        self.assertEqual(first.status_code,200,first.text)
+        self.assertEqual(second.status_code,200,second.text)
+        report=first.json()
+        self.assertEqual(report["status"],"SEASON_TRINKET_SOURCE_REFRESHED")
+        self.assertEqual([r["item_id"] for r in report["new_trinkets"]],[270000])
+        self.assertEqual(report["new_special_pending_count"],1)
+        self.assertFalse(report["budget_rebuilt"])
+        self.assertEqual(report["native_calls_now"],0)
+        self.assertEqual(report["network_calls_now"],1)
+        self.assertEqual(second.json()["network_calls_now"],0)
+        self.assertEqual(report["installed_manifest_sha256"],digest)
+        self.assertEqual(install_path.read_text(),"{}")
+        collect.assert_called_once()
+        self.assertEqual(self.client.post(url).status_code,403)
+
     def test_verified_installed_oil_loadouts_are_read_only_and_empty(self):
         got=self.client.get("/api/v1/verified-oil-loadouts?ilevel=334",
                             headers=self.headers)

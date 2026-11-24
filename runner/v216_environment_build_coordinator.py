@@ -3589,10 +3589,14 @@ def refresh_existing_season_gear_source(*,stage_root,build,transport=None):
         linked={"candidate_path":str(root/rel),
                 "stage":{"receipt_sha256":linked_receipt["receipt_sha256"]}},
         transport=transport,include_delve=True)
-    need(result.get("candidate_path") and
-         result.get("a7_auto_source_choice_provenance",{}).get(
-             "candidate_provenance_verified") is True,
-         "SEASON_GEAR_REFRESH_SOURCE_PENDING")
+    provenance=result.get("a7_auto_source_choice_provenance",{})
+    if not result.get("candidate_path") or not provenance.get("candidate_provenance_verified"):
+        # Retain the actual existing source/contract failure, not a
+        # generic PENDING that obscures the first blocker.
+        reason=result.get("reason") or provenance.get("reason") or "UNCLASSIFIED"
+        if not isinstance(reason,str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{0,119}",reason):
+            reason="UNCLASSIFIED"
+        raise EnvironmentBuildBlocked("SEASON_GEAR_REFRESH_SOURCE_PENDING:"+reason)
     candidate=json.loads(pathlib.Path(result["candidate_path"]).read_text("utf8"))
     need(candidate.get("season_build")==build,
          "SEASON_GEAR_REFRESH_CANDIDATE_BUILD_DRIFT")
