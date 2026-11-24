@@ -250,6 +250,33 @@ function updateBudgetPreview() {
 /* v359: image slots and names in always-visible source-bound item lists.
    Preserve the original selects as the only session/SimC ID owners. */
 let activeTrinketSlot="trinket1";
+// Loot-spec roles describe the source designation, not equippability or
+// measured DPS. Never use this display helper as a candidate filter.
+function trinketLootRoleLabel(item){
+  const meta=item?.loot_spec_metadata;
+  if(meta?.source!=="SAME_BUILD_DB2_EXPLICIT_LOOT_SPEC_OVERRIDE"||
+     !["EXPLICIT_DPS_ROLE_ONLY","EXPLICIT_SHARED_WITH_DPS","EXPLICIT_NON_DPS_ROLES_ONLY"].includes(meta.status)||
+     !Array.isArray(meta.roles)||!meta.roles.length||
+     meta.roles.some(role=>!["DPS","TANK","HEALER"].includes(role)))return "";
+  const labels={DPS:"딜러",TANK:"탱커",HEALER:"힐러"};
+  return "획득: "+["DPS","TANK","HEALER"].filter(role=>meta.roles.includes(role))
+    .map(role=>labels[role]).join("·");
+}
+function mergeTrinketRoleMetadata(items,metadata){
+  if(!metadata||typeof metadata!=="object"||Array.isArray(metadata))return false;
+  let changed=false;
+  for(const item of items){
+    if(!Object.prototype.hasOwnProperty.call(metadata,String(item.item_id)))continue;
+    const next=metadata[String(item.item_id)];
+    if(next?.source!=="SAME_BUILD_DB2_EXPLICIT_LOOT_SPEC_OVERRIDE"||
+       !["EXPLICIT_DPS_ROLE_ONLY","EXPLICIT_SHARED_WITH_DPS","EXPLICIT_NON_DPS_ROLES_ONLY",
+         "NO_EXPLICIT_OVERRIDE_UNKNOWN","OVERRIDE_REFERENCE_OR_ROLE_PENDING"].includes(next.status))continue;
+    if(JSON.stringify(item.loot_spec_metadata)!==JSON.stringify(next)){
+      item.loot_spec_metadata=next;changed=true;
+    }
+  }
+  return changed;
+}
 function inlineEquipmentCard(item,{type,selected,disabled,reason="",onSelect}){
   const b=document.createElement("button");
   b.type="button";b.className="inline-item";
@@ -271,11 +298,20 @@ function inlineEquipmentCard(item,{type,selected,disabled,reason="",onSelect}){
     icon.textContent="◆";
   }
   const text=document.createElement("span");text.className="inline-item-label";
-  text.textContent=item.name_ko||item.name||"아이템 #"+item.item_id;
+  const itemName=item.name_ko||item.name||"아이템 #"+item.item_id;
+  text.textContent=itemName;
+  const roleLabel=type==="trinket"?trinketLootRoleLabel(item):"";
+  if(roleLabel){
+    const name=document.createElement("span");name.className="inline-item-name";
+    name.textContent=itemName;
+    const role=document.createElement("span");role.className="inline-item-role";
+    role.textContent=roleLabel;
+    text.replaceChildren(name,role);
+  }
   const mark=document.createElement("span");mark.className="inline-item-mark";
   mark.textContent=selected?"✓":"";
   b.append(icon,text,mark);
-  b.title=text.textContent+(reason?" · "+reason:"");
+  b.title=itemName+(roleLabel?" · "+roleLabel+" (획득 전문화 정보, DPS 판정 아님)":"")+(reason?" · "+reason:"");
   b.addEventListener("click",onSelect);
   return b;
 }
@@ -513,7 +549,8 @@ function renderEquipmentGallery(query){
     const label=document.createElement("span");label.className="equipment-card-name";
     label.textContent=item.name_ko||item.name||"아이템 #"+id;
     const meta=document.createElement("span");meta.className="equipment-card-meta";
-    meta.textContent="ItemID "+id+(dup?" · 다른 칸에 선택됨":
+    const roleLabel=group==="trinket"?trinketLootRoleLabel(item):"";
+    meta.textContent="ItemID "+id+(roleLabel?" · "+roleLabel:"")+(dup?" · 다른 칸에 선택됨":
       !compatible?" · 무기/부위 비호환":"");
     card.title=label.textContent+" · "+meta.textContent;
     card.append(placeholder,label,meta);
@@ -877,8 +914,9 @@ async function refreshExistingSeasonTrinkets(gear,level) {
   // Called only by a current user environment preparation, not historical
   // session browsing. An optional list update never resets T or selection.
   if(!gear||gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"||
-     ["SUPPLEMENTARY_SOURCE_OBSERVED","SUPPLEMENTARY_SOURCE_PARTIAL"]
-       .includes(gear.trinket_source_refresh))return;
+     (["SUPPLEMENTARY_SOURCE_OBSERVED","SUPPLEMENTARY_SOURCE_PARTIAL"]
+       .includes(gear.trinket_source_refresh)&&
+       gear.loot_spec_source_status==="TRINKET_LOOT_SPEC_SOURCE_OBSERVED"))return;
   try{
     const params=new URLSearchParams({game_build:gear.season_build,
       target_ilevel:String(level),installed_manifest_sha256:gear.installed_manifest_sha256});
@@ -909,10 +947,14 @@ async function refreshExistingSeasonTrinkets(gear,level) {
       ids.add(item.item_id);specialAdded.push(item);
     }
     gear.trinket_source_refresh=data.supplementary_delve_status;
+    gear.loot_spec_source_status=data.loot_spec_source_status;
+    const rolesChanged=mergeTrinketRoleMetadata(
+      [...(gear.choices.trinket||[]),...added],data.trinket_loot_spec_metadata);
     const unresolved=data.supplementary_delve_unresolved_count;
     const coverageNote=Number.isSafeInteger(unresolved)&&unresolved>0
       ?" · 구렁 미확인 "+unresolved+"종":"";
     if(!added.length&&!specialAdded.length){
+      if(rolesChanged)refreshEquipmentSelectionUI();
       if(coverageNote) $("season-gear-note").textContent=
         "기존 예산·목록 유지"+coverageNote+" · 시즌 전체 목록 완전성 미확인";
       return;

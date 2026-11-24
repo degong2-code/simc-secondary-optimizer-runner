@@ -710,6 +710,13 @@ body{background:radial-gradient(ellipse 80% 30% at 51% -15%,rgba(124,102,76,.12)
 #optimizer-form .fixed-gear-panel .inline-item-label{
  min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:660
 }
+#optimizer-form .fixed-gear-panel .inline-item-name,
+#optimizer-form .fixed-gear-panel .inline-item-role{
+ display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+#optimizer-form .fixed-gear-panel .inline-item-role{
+ font-size:9px;font-weight:400;color:#B6AFA5;line-height:1.2
+}
 #optimizer-form .fixed-gear-panel .inline-item-mark{color:#EFC06D;font-size:12px}
 #optimizer-form .fixed-gear-panel .equipment-inline-status,
 #optimizer-form .fixed-gear-panel .equipment-inline-empty{color:#B6AFA5;font-size:10px;margin:4px 0}

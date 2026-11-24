@@ -134,6 +134,37 @@ class SimpleUserInputs(unittest.TestCase):
         self.assertIn("Omnium Folio · 4열 스탯",html)
 
 
+    def test_loot_role_display_and_metadata_only_refresh_preserve_all_items(self):
+        import shutil, subprocess
+        if shutil.which("node") is None:
+            self.skipTest("node unavailable")
+        code=r"""
+const fs=require("fs"),vm=require("vm"),assert=require("assert");
+const src=fs.readFileSync("runner/webui/app.js","utf8");
+const a=src.indexOf("function trinketLootRoleLabel(");
+const b=src.indexOf("function inlineEquipmentCard(",a);
+assert(a>=0&&b>a);
+const helpers=vm.runInNewContext(src.slice(a,b)+"\n({trinketLootRoleLabel,mergeTrinketRoleMetadata})");
+const make=(status,roles)=>({source:"SAME_BUILD_DB2_EXPLICIT_LOOT_SPEC_OVERRIDE",status,roles});
+const tank=make("EXPLICIT_NON_DPS_ROLES_ONLY",["TANK"]);
+const shared=make("EXPLICIT_SHARED_WITH_DPS",["HEALER","DPS"]);
+const unknown=make("NO_EXPLICIT_OVERRIDE_UNKNOWN",[]);
+const items=[{item_id:1,name:"Tank"},{item_id:2,name:"Shared"},{item_id:3,name:"Unknown"}];
+assert(helpers.mergeTrinketRoleMetadata(items,{"1":tank,"2":shared,"3":unknown,"4":tank}));
+assert.equal(helpers.trinketLootRoleLabel(items[0]),"획득: 탱커");
+assert.equal(helpers.trinketLootRoleLabel(items[1]),"획득: 딜러·힐러");
+assert.equal(helpers.trinketLootRoleLabel(items[2]),"");
+assert.equal(helpers.trinketLootRoleLabel({}),"");
+assert.equal(helpers.trinketLootRoleLabel({loot_spec_metadata:make("OVERRIDE_REFERENCE_OR_ROLE_PENDING",["DPS"])}),"");
+assert.deepStrictEqual(items.map(x=>x.item_id),[1,2,3]);
+assert(!helpers.mergeTrinketRoleMetadata(items,{"1":tank,"2":shared,"3":unknown}));
+assert(src.includes("if(rolesChanged)refreshEquipmentSelectionUI();"));
+assert(src.includes("gear.loot_spec_source_status===\"TRINKET_LOOT_SPEC_SOURCE_OBSERVED\""));
+"""
+        completed=subprocess.run(["node","-e",code],cwd=ROOT,
+                                 capture_output=True,text=True)
+        self.assertEqual(completed.returncode,0,completed.stdout+"\n"+completed.stderr)
+
     def test_season_source_missing_owner_and_skipped_g_are_diagnostic_only(self):
         # Execute the existing two pure JS projections, without DOM, HTTP,
         # source collection, Native, AI or creating an environment manifest.

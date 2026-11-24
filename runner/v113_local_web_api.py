@@ -4070,6 +4070,18 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 existing_special_ids={r["item_id"] for r in base["choices"]["special_effect_gear_candidate"]})
             names=official_ko_env.read_names(jobs.root,game_build,new_ids|special_ids)
             rows=season_gear.public_options(source,official_names=names)["choices"]
+            # Metadata may change even when no new equipment is admitted.
+            # Project once over the union of the installed and new IDs.
+            if role_review["status"]=="TRINKET_LOOT_SPEC_SOURCE_OBSERVED":
+                union=base["choices"]["trinket"]+[
+                    r for r in rows["trinket"] if r["item_id"] in new_ids]
+                enriched=_annotate_current_trinket_roles(
+                    {"choices":{"trinket":union}},
+                    jobs.root/"_fresh_season_sources"/("wago_"+game_build),game_build)
+                metadata={str(r["item_id"]):r["loot_spec_metadata"]
+                    for r in enriched["choices"]["trinket"] if "loot_spec_metadata" in r}
+                if metadata:result["trinket_loot_spec_metadata"]=metadata
+                else:result["loot_spec_source_status"]="TRINKET_LOOT_SPEC_SOURCE_PENDING"
             result.update(status="SEASON_TRINKET_SOURCE_REFRESHED",
                 source_generation_sha256=refreshed["source_generation_sha256"],
                 supplementary_delve_status=refreshed["supplementary_delve_status"],
