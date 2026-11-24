@@ -75,6 +75,32 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         return {"candidate_path":str(path),
                 "stage":{"receipt_sha256":"a"*64}}
 
+    def test_combined_catalog_reuses_one_sparse_scan_and_preserves_outputs(self):
+        linked=self.source()
+        source=json.loads(Path(linked["candidate_path"]).read_text("utf8"))
+        item=self.wago/"Item.csv"
+        sparse=self.wago/"ItemSparse.csv"
+        effect=self.root/"effects.csv"
+        effect.write_bytes(b"ID,ItemID,ItemEffectID\n")
+        old_pool=build.source_gear_pool.compile_pool(
+            source,None,sparse,effect,budget_source=None)
+        old_compact=build.compact_gear_db.build(old_pool,item,sparse)
+        read_csv=build.source_gear_pool.read_csv
+        def no_second_sparse(path,columns):
+            self.assertNotEqual(Path(path),sparse)
+            return read_csv(path,columns)
+        with mock.patch.object(build.source_gear_pool,"read_csv",
+                               side_effect=no_second_sparse), mock.patch.object(
+            build.compact_gear_db,"extract",wraps=build.compact_gear_db.extract) as extract:
+            pool,compact=build.compact_gear_db.compile_catalog(
+                source,None,item,sparse,effect)
+        self.assertEqual(pool,old_pool)
+        self.assertEqual(compact,old_compact)
+        self.assertEqual(build.product_gear_db.from_v166(compact),
+                         build.product_gear_db.from_v166(old_compact))
+        self.assertEqual([Path(c.args[0]) for c in extract.call_args_list],
+                         [sparse,item])
+
     def test_same_build_source_join_sealed_and_reused_zero_http(self):
         linked=self.source()
         urls=[]

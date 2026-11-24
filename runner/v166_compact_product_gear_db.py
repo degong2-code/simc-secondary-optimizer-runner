@@ -23,7 +23,7 @@ def load(path):
     p=Path(path)
     need(p.is_file() and 0<p.stat().st_size<=MAX_BYTES,"SOURCE_POOL_INVALID")
     return json.loads(p.read_text(encoding="utf8"))
-def extract(path,columns,ids):
+def extract(path,columns,ids,*,optional_columns=None):
     p=Path(path)
     need(p.is_file() and 0<p.stat().st_size<=MAX_CSV,"ITEM_TABLE_MISSING")
     matched={}
@@ -36,13 +36,39 @@ def extract(path,columns,ids):
             except (ValueError,TypeError):continue
             if iid in ids:
                 need(iid not in matched,"DUPLICATE_DB2_ITEM_ID")
-                matched[iid]=row
+                matched[iid]=(row if optional_columns is None else
+                    {key:row[key] for key in (*columns,*optional_columns) if key in row})
     need(set(matched)==ids,"CATALOG_ITEM_NOT_IN_DB2")
     return matched
 def integer(x):
     try:return int(x)
     except (ValueError,TypeError):raise GearDbBlocked("ITEM_FIELD_NOT_INTEGER")
-def build(pool,item_file,sparse_file):
+# The combined compiler needs the union of v165 classification fields
+# and v166 physical metadata, not every column of the full DB2 table.
+SPARSE_FIELDS=("ID","Display_lang","InventoryType","ExpansionID","ItemSet",
+               "OverallQualityID","AllowableClass","StatModifier_bonusStat_0")
+OPTIONAL_STATS=tuple(f"StatModifier_bonusStat_{i}" for i in range(1,10))
+
+
+def compile_catalog(db2,delve,item_file,sparse_file,effect_file,*,delve_selectable_only=False):
+    """Compile v165/v166 from one scoped ItemSparse scan.
+
+    Preserve their separate sealed output schemas and standalone readers.
+    Raw metadata exists only during this compilation; no persistent broad
+    item database or independent second source owner is introduced.
+    """
+    import v165_current_season_gear_pool as pool_compiler
+    ids={row["item_id"] for row in db2["items"]}
+    if delve is not None:ids.update(row["item_id"] for row in delve["items"])
+    need(len(ids)<=60000 and all(type(i) is int and i>0 for i in ids),
+         "COMBINED_SOURCE_ITEM_SCOPE_INVALID")
+    sparse=extract(sparse_file,SPARSE_FIELDS,ids,optional_columns=OPTIONAL_STATS)
+    pool=pool_compiler.compile_pool(db2,delve,sparse_file,effect_file,
+        budget_source=None,delve_selectable_only=delve_selectable_only,sparse_rows=sparse)
+    return pool,build(pool,item_file,sparse_file,sparse_rows=sparse)
+
+
+def build(pool,item_file,sparse_file,*,sparse_rows=None):
     need(pool.get("schema")=="v165_current_season_gear_pool_v1"
          and pool.get("status")=="EFFECT_TABLE_OBSERVED_CANDIDATES"
          and pool.get("no_legacy_catalog_seed") is True
@@ -53,8 +79,9 @@ def build(pool,item_file,sparse_file):
     ids={x["item_id"] for x in values}
     need(len(ids)==len(values),"DUPLICATE_POOL_ITEM_ID")
     items=extract(item_file,("ID","ClassID","SubclassID","InventoryType"),ids)
-    sparse=extract(sparse_file,("ID","InventoryType","ExpansionID","AllowableClass",
-        "StatModifier_bonusStat_0","ItemSet"),ids)
+    sparse=(extract(sparse_file,("ID","InventoryType","ExpansionID","AllowableClass",
+        "StatModifier_bonusStat_0","ItemSet"),ids) if sparse_rows is None else sparse_rows)
+    need(ids<=set(sparse),"CATALOG_ITEM_NOT_IN_DB2")
     selectable=[]; conditional=[]; conditional_mplus=[]
     internal_plain_necks=[]
     internal_plain_rings=[]

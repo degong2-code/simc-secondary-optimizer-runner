@@ -481,7 +481,7 @@ def expand_selectable_source(original, folder, effect_path, *, wcl_report=None):
 
 
 def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALLED,
-                 delve_selectable_only=False):
+                 delve_selectable_only=False, sparse_rows=None):
     need(db2.get("schema")=="v163_zero_seed_db2_join_v1"
          and db2.get("source_provider")=="WAGO_TOOLS_PINNED_DB2_WCL_LIVE",
          "SOURCE_DB2_REPORT_INVALID")
@@ -528,8 +528,12 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
                 record["item_slot"]=row["inventory_type"]
                 record["name"]=row["name"]
     ids=set(originals);sparse={}
-    for row in read_csv(sparse_path,("ID","Display_lang","InventoryType",
-                                      "ExpansionID","ItemSet","OverallQualityID")):
+    # In the combined compiler, reuse the same bounded ItemSparse
+    # projection as v166. Standalone callers retain the original reader.
+    source_rows=(read_csv(sparse_path,("ID","Display_lang","InventoryType",
+                                      "ExpansionID","ItemSet","OverallQualityID"))
+                 if sparse_rows is None else sparse_rows.values())
+    for row in source_rows:
         iid=integer(row["ID"])
         if iid in ids:
             need(iid not in sparse,"SPARSE_DUPLICATE_ID")

@@ -3435,10 +3435,9 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
             target.parent.mkdir(parents=True,exist_ok=True)
             target.write_text(json.dumps(effective_source,sort_keys=True,
                 ensure_ascii=False,indent=2,allow_nan=False)+"\n","utf8")
-        pool=source_gear_pool.compile_pool(
-            effective_source,delve,sparse,effect_path,budget_source=None,
+        pool,compact=compact_gear_db.compile_catalog(
+            effective_source,delve,item,sparse,effect_path,
             delve_selectable_only=include_delve)
-        compact=compact_gear_db.build(pool,item,sparse)
         candidate=product_gear_db.from_v166(compact)
         for name,payload in (("pool",pool),("compact",compact),
                              ("candidate",candidate)):
@@ -3490,7 +3489,8 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
                 "candidate_path":None,
                 "network_calls_by_stage":attempted[0],
                 "season_representative_verified":False}
-    result=json.loads((root/paths["candidate"]).read_text(encoding="utf8"))
+    candidate_bytes=(root/paths["candidate"]).read_bytes()
+    result=json.loads(candidate_bytes)
     # The original v254 source and its public rows must agree item-by-item
     # before declaring the automatic A7 user-choice source join reviewed.
     # This is a separate small v217 stage: it NEVER refetches 62MB Wago or
@@ -3499,7 +3499,6 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
     delve_note=(json.loads((root/paths["delve"]).read_text("utf8"))
                 if include_delve else {})
     delve=delve_note.get("report")
-    candidate_bytes=(root/paths["candidate"]).read_bytes()
     effective_source_raw=((root/paths["expanded_source"]).read_bytes()
                           if extend else raw_source)
     effective_source=json.loads(effective_source_raw) if extend else source
