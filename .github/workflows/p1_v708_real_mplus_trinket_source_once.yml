@@ -93,6 +93,40 @@ jobs:
           include-hidden-files: true
           retention-days: 30
           if-no-files-found: warn
+  trinket-role-source:
+    # Research only. Use the already authenticated M+ cohort, not new loot
+    # discovery, an old packaged item list, or a Native DPS run.
+    if: ${{ contains(github.event.head_commit.message, '[v735-role-once]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    env:
+      PYTHONPATH: runner:.
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 45440562029
+          name: p1-v708-real-mplus-trinket-coverage
+          path: out/v735/prior
+          github-token: ${{ github.token }}
+      - name: Observe explicit loot-spec metadata for the verified cohort only
+        run: |
+          python -u integration_probes/p1_v735_trinket_role_source_once.py --prior out/v735/prior/V708_REAL_MPLUS_TRINKET_COVERAGE.json --out out/v735
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: p1-v735-trinket-role-source
+          path: |
+            out/v735/V735_TRINKET_ROLE_SOURCE.json
+            out/v735/raw/*.csv
+          retention-days: 30
+          if-no-files-found: warn
   context-free-replay:
     if: ${{ contains(github.event.head_commit.message, '[v719-bonus-replay]') }}
     runs-on: ubuntu-24.04

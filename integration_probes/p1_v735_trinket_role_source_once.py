@@ -1,0 +1,139 @@
+"""One source-only observation of explicit trinket specialization metadata.
+
+Not a product filter, loot rule engine, effect certificate or Native test.
+The existing authenticated rotation cohort supplies IDs; build is derived
+from its receipt. Missing override rows are UNKNOWN, not exclusion evidence.
+"""
+from __future__ import annotations
+import argparse
+import csv
+from collections import defaultdict, Counter
+import hashlib
+import io
+import json
+from pathlib import Path
+import re
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+
+# Stable DB2 role enum: TrinityCore DBCEnums.h ChrSpecializationRole.
+ROLES={0:"TANK",1:"HEALER",2:"DPS"}
+TABLES={"ChrSpecialization":(5_000_000,{"ID","ClassID","Role","Name_lang"}),
+        "ItemSpecOverride":(32_000_000,{"ID","ItemID","SpecID"})}
+
+def need(ok,code):
+    if not ok:raise ValueError(code)
+
+def sha(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+def read_rows(raw,table):
+    bound,columns=TABLES[table]
+    need(type(raw) is bytes and 0<len(raw)<=bound,"ROLE_SOURCE_SIZE:"+table)
+    reader=csv.DictReader(io.StringIO(raw.decode("utf-8-sig")))
+    need(reader.fieldnames and len(set(reader.fieldnames))==len(reader.fieldnames)
+         and columns<=set(reader.fieldnames),"ROLE_SOURCE_COLUMNS:"+table)
+    seen=set()
+    for n,row in enumerate(reader):
+        need(n<1_000_000 and None not in row,"ROLE_SOURCE_ROW_LIMIT_OR_SHAPE:"+table)
+        rid=int(row["ID"])
+        need(rid>0 and rid not in seen,"ROLE_SOURCE_ROW_ID:"+table)
+        seen.add(rid)
+        yield row
+    need(bool(seen),"ROLE_SOURCE_EMPTY:"+table)
+
+def fetch(table,build,root):
+    bound,_=TABLES[table]
+    url="https://wago.tools/db2/"+table+"/csv?"+urlencode({"build":build,"locale":"enUS"})
+    req=Request(url,headers={"User-Agent":"SIMC-Secondary-DB2-Role/1.0","Accept":"text/csv"})
+    with urlopen(req,timeout=60) as response:
+        need(response.status==200,"ROLE_SOURCE_HTTP:"+table)
+        raw=response.read(bound+1)
+    need(0<len(raw)<=bound,"ROLE_SOURCE_SIZE:"+table)
+    (root/(table+".csv")).write_bytes(raw)
+    print("V735_RAW",table,len(raw),sha(raw),flush=True)
+    return raw,{"url":url,"bytes":len(raw),"sha256":sha(raw)}
+
+def observe(prior,out):
+    out.mkdir(parents=True,exist_ok=True)
+    raw_dir=out/"raw";raw_dir.mkdir(exist_ok=True)
+    result_path=out/"V735_TRINKET_ROLE_SOURCE.json"
+    result={"schema":"p1_v735_trinket_explicit_spec_source_observation_v1",
+            "status":"STARTED","native_calls":0,"new_network_attempts":0,
+            "product_selection_mutated":False,"full_season_coverage":False,
+            "equipment_eligibility_proven":False,"dps_effect_usefulness_proven":False,
+            "sources":{}}
+    def save():
+        result_path.write_text(json.dumps(result,sort_keys=True,indent=2,ensure_ascii=False)+"\n","utf8")
+    try:
+        raw=prior.read_bytes()
+        need(0<len(raw)<2_000_000,"ROLE_PRIOR_SIZE")
+        doc=json.loads(raw)
+        build=doc["game_build"]
+        need(doc.get("schema")=="p1_v708_real_mplus_trinket_source_only_v1"
+             and re.fullmatch(r"\d+(?:\.\d+){3}",build)
+             and doc.get("authenticated_rotation_trinket_coverage_verified") is True
+             and doc.get("native_calls")==0,"ROLE_PRIOR_SCOPE_INVALID")
+        cohort={}
+        for dungeon in doc["dungeons"]:
+            for item in dungeon["registered_rotation_trinkets"]:
+                iid=item["item_id"];name=item["name"]
+                need(type(iid) is int and iid>0 and isinstance(name,str) and bool(name)
+                     and (iid not in cohort or cohort[iid]==name),"ROLE_COHORT_ITEM_INVALID")
+                cohort[iid]=name
+        need(0<len(cohort)<=2000 and len(cohort)==doc["registered_rotation_trinket_count"],
+             "ROLE_COHORT_COUNT_DRIFT")
+        result.update(game_build=build,prior_sha256=sha(raw),scope="VERIFIED_MPLUS_ROTATION_ONLY",
+                      item_count=len(cohort))
+        save()
+        sources={}
+        for table in TABLES:
+            result["new_network_attempts"]+=1
+            save()
+            sources[table],result["sources"][table]=fetch(table,build,raw_dir)
+        specs={}
+        for row in read_rows(sources["ChrSpecialization"],"ChrSpecialization"):
+            sid=int(row["ID"]);cid=int(row["ClassID"]);role=int(row["Role"])
+            specs[sid]={"spec_id":sid,"class_id":cid,"name":row["Name_lang"],
+                        "role_code":role,"role":ROLES.get(role,"UNKNOWN")}
+        links=defaultdict(set)
+        for row in read_rows(sources["ItemSpecOverride"],"ItemSpecOverride"):
+            iid=int(row["ItemID"])
+            if iid in cohort:
+                links[iid].add(int(row["SpecID"]))
+        rows=[]
+        for iid,name in sorted(cohort.items()):
+            spec_ids=sorted(links.get(iid,()))
+            known=[specs[s] for s in spec_ids if s in specs]
+            unresolved=sorted(set(spec_ids)-set(specs))
+            roles=sorted({s["role"] for s in known if 1<=s["class_id"]<=13})
+            incomplete=(bool(unresolved) or any(s["class_id"] not in range(1,14)
+                                             or s["role"]=="UNKNOWN" for s in known))
+            if not spec_ids:status="NO_EXPLICIT_OVERRIDE_UNKNOWN"
+            elif incomplete:status="OVERRIDE_REFERENCE_OR_ROLE_PENDING"
+            elif roles==["DPS"]:status="EXPLICIT_DPS_ROLE_ONLY"
+            elif "DPS" in roles:status="EXPLICIT_SHARED_WITH_DPS"
+            else:status="EXPLICIT_NON_DPS_ROLES_ONLY"
+            rows.append({"item_id":iid,"name":name,"spec_ids":spec_ids,
+                         "observed_specs":known,"unknown_spec_ids":unresolved,
+                         "observed_roles":roles,"status":status})
+        result.update(status="OBSERVED_EXPLICIT_LOOT_SPEC_METADATA",
+                      rows=rows,counts=dict(sorted(Counter(r["status"] for r in rows).items())))
+        save()
+        print("V735_ROLE_COUNTS",json.dumps(result["counts"],sort_keys=True),flush=True)
+        for row in rows:
+            print("V735_ROLE",row["item_id"],row["name"],row["status"],
+                  ",".join(row["observed_roles"]),flush=True)
+        return 0
+    except Exception as exc:
+        result.update(status="ROLE_SOURCE_PENDING",error=type(exc).__name__+":"+str(exc)[:240])
+        save()
+        print("V735_PENDING",result["error"],flush=True)
+        return 3
+
+if __name__=="__main__":
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--prior",type=Path,required=True)
+    parser.add_argument("--out",type=Path,required=True)
+    args=parser.parse_args()
+    raise SystemExit(observe(args.prior,args.out))
