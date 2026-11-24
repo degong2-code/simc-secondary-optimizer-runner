@@ -132,7 +132,7 @@ def observe_registered_boss_bonus_sources(folder, source):
     receipt=stages._read_receipt(receipt_path)
     assert receipt["status"]=="COMPLETE" and receipt["stage_id"]=="fresh-v155"
     stages._verify_outputs(receipt,files)
-    report=json.loads(files["report"].read_text("utf8"))
+    report=json.loads(files["report"][1].read_text("utf8"))
     assert report["mode"]=="LIVE_AUTHENTICATED_BOUNDED"
     scope=source["auto_source_scope"]
     season=source["db2_display_season_id"]
@@ -331,6 +331,10 @@ def observe(out):
         # Only the explicit PASS status is a verified positive result.
         return 0 if state["source_provenance_verified"] else 2
     except Exception as exc:
+        import traceback
+        state["failure_frames"]=[{"file":Path(frame.filename).name,"line":frame.lineno,"function":frame.name}
+            for frame in traceback.extract_tb(exc.__traceback__)[-5:]]
+        print("SOURCE_FAILURE_FRAMES "+json.dumps(state["failure_frames"],sort_keys=True),flush=True)
         state.update(status="BLOCKED_REAL_SOURCE_OBSERVATION",
                      first_blocker=safe_code(exc),error_type=type(exc).__name__)
         return 2

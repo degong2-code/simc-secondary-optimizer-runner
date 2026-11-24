@@ -321,7 +321,7 @@ function drawInlineEquipment(){
   }
   $("equipment-trinket-status").textContent=state.seasonGear?
     "장신구 "+((field("trinket1")?1:0)+(field("trinket2")?1:0))+"/2 선택"+
-    " · 확인된 후보 "+trinkets.length+"종"+
+    " · 현재 전문화 후보 "+trinkets.length+"종"+
     (tQuery?" 중 검색 결과 "+tFiltered.length+"종":"") :
     "시즌 선택지 미확인";
 
@@ -368,7 +368,7 @@ function drawInlineEquipment(){
   }
   const complete=state.seasonGear?.full_season_completeness_confirmed===true;
   $("equipment-special-status").textContent=state.seasonGear?
-    "특수효과 장비 "+selectedIds.size+"개 선택 · 확인된 후보 "+
+    "특수효과 장비 "+selectedIds.size+"개 선택 · 현재 전문화 후보 "+
     specials.length+"종"+(sQuery?" 중 검색 결과 "+sFiltered.length+"종":"")+
     (complete?" · 시즌 목록 확인됨":" · 시즌 전체 목록 완성 확인 전"):
     "시즌 특수효과 장비 후보 검증·설치 필요";
@@ -387,6 +387,16 @@ const equipNorm=x=>String(x??"").normalize("NFKC").toLocaleLowerCase("ko-KR").tr
 // A newly installed catalog gets a new object; WeakMap preserves no old UI
 // approval and does not retain obsolete catalogs after replacement.
 const equipmentChoicesByCatalog=new WeakMap();
+function equipmentSpecCompatible(item,group,spec){
+  if(!spec)return true;
+  if(Array.isArray(item.compatible_dps_specs)&&!item.compatible_dps_specs.includes(spec))return false;
+  // Use the existing representative weapon-form mapping. Do not confuse
+  // temporary occupied slots with class/spec incompatibility.
+  if(group==="special_effect_gear_candidate"&&
+     state.seasonGear?.weapon_forms?.[spec]&&
+     !specialAllowedSlots(item).length)return false;
+  return true;
+}
 function eligibleEquipment(group){
   const catalog=state.seasonGear;
   if(!catalog)return [];
@@ -397,12 +407,14 @@ function eligibleEquipment(group){
   }
   const input=catalog.choices?.[group];
   const saved=cached.get(group);
-  if(saved?.input===input)return saved.items;
+  const spec=field("spec");
+  if(saved?.input===input&&saved.spec===spec)return saved.items;
   const items=[...(input||[])]
-    .filter(x=>Number.isSafeInteger(Number(x.item_id))&&Number(x.item_id)>0)
+    .filter(x=>Number.isSafeInteger(Number(x.item_id))&&Number(x.item_id)>0&&
+      equipmentSpecCompatible(x,group,spec))
     .sort((a,b)=>String(a.name_ko||a.name||"").localeCompare(
       String(b.name_ko||b.name||""),"ko-KR")||a.item_id-b.item_id);
-  cached.set(group,{input,items});
+  cached.set(group,{input,spec,items});
   return items;
 }
 function refreshEquipmentSelectionUI(){
@@ -768,7 +780,8 @@ async function importSimcCharacter() {
 // The only user-selectable non-crafted equipment is seasonal trinkets and
 // optional special-effect gear. General plain equipment stays internal.
 function seasonChoice(group,id) {
-  return !!state.seasonGear?.choices?.[group]?.some(x=>x.item_id===Number(id));
+  return !!state.seasonGear?.choices?.[group]?.some(x=>x.item_id===Number(id)&&
+    equipmentSpecCompatible(x,group,field("spec")));
 }
 function setTrinketSelection(fieldId,itemId,restored=false) {
   const node=$(fieldId),value=String(itemId??"");

@@ -401,6 +401,43 @@ def validate(payload):
          "PRODUCT_EFFECT_OR_TIER_OVERCLAIM")
     return payload
 
+def equipment_primary_armor_compatibility(row):
+    """Display-only exclusion on positive source evidence, not BiS ranking.
+
+    An absent primary code on a proc/secondary-only trinket proves nothing.
+    Keep unknowns visible until a reliable specialization/role source exists.
+    Do not mutate or discard the original source catalog.
+    """
+    import v143_specialization_contracts as specs
+    import v169_source_first_representative_stage as representative
+    import v245_db2_first_tier_discovery as tier
+    mask=row.get("allowed_class_mask")
+    raw_codes=row.get("stat_modifier_codes")
+    primary_codes=representative.PRIMARY_STAT_CODES
+    observed=(set(raw_codes)&set().union(*primary_codes.values())
+              if type(raw_codes) is list and all(type(x) is int for x in raw_codes)
+              else set())
+    slot=row.get("inventory_type")
+    armor=slot in (1,3,5,6,7,8,9,10,20)
+    eligible=[]
+    for key,contract in sorted(specs.CONTRACTS.items()):
+        cls=key.split("/")[0]
+        class_bit=1<<(tier.CLASS_IDS[cls]-1)
+        if type(mask) is int and mask not in (-1,0) and not mask&class_bit:
+            continue
+        if armor and row.get("class_id")==4 and type(row.get("subclass_id")) is int and row["subclass_id"] in (1,2,3,4):
+            if row["subclass_id"]!=ARMOR_SUBCLASS[contract["family"]]:
+                continue
+        # Selectable craft primary is determined by the crafted variant,
+        # not a fixed base item's provisional stat metadata.
+        if row.get("category")!="selectable_stat_craft" and observed and not observed&primary_codes[contract["primary"]]:
+            continue
+        eligible.append(key)
+    return {"compatible_dps_specs":eligible,
+            "spec_role_source_verified":False,
+            "primary_source_observed":bool(observed)}
+
+
 def public_options(payload, *, official_names=None):
     """Selection-only public roles. Plain equipment remains an internal DB input."""
     db = validate(payload)
@@ -433,7 +470,8 @@ def public_options(payload, *, official_names=None):
             # UI selects a deterministic compatible crafted base privately.
             "class_id": x["class_id"],
             "subclass_id": x["subclass_id"],
-            "season_list_basis": x.get("season_list_basis")
+            "season_list_basis": x.get("season_list_basis"),
+            **equipment_primary_armor_compatibility(x)
         })
     for rows in choices.values():
         rows.sort(key=lambda x:(x["name"].casefold(), x["item_id"]))
@@ -501,7 +539,8 @@ def public_installed_v213_candidates(catalog, *, installed_manifest_sha256,
                 "slot_hint":entry.get("slot_hint"),
                 "class_id":entry["class_id"],
                 "subclass_id":entry["subclass_id"],
-                "season_list_basis":entry.get("season_list_basis")})
+                "season_list_basis":entry.get("season_list_basis"),
+                **equipment_primary_armor_compatibility(entry)})
     need(len(ids)==gear["count"],"INSTALLED_V213_GEAR_COUNT_DRIFT")
     official=official_names if official_names is not None else {}
     need(type(official) is dict and all(

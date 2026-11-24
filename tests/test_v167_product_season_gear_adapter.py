@@ -211,5 +211,34 @@ class ProductAdapterTests(unittest.TestCase):
         self.assertEqual(doc["new_native_calls"],0)
 
 
+class EquipmentSpecCompatibility(unittest.TestCase):
+    def test_fixed_primary_armor_class_and_unknown(self):
+        def eligible(**changes):
+            row={"category":"trinket","inventory_type":12,"class_id":4,
+                 "subclass_id":0,"allowed_class_mask":-1,
+                 "stat_modifier_codes":[]}
+            row.update(changes)
+            return set(adapter.equipment_primary_armor_compatibility(row)["compatible_dps_specs"])
+        intellect=eligible(stat_modifier_codes=[5,32])
+        self.assertIn("mage/fire",intellect)
+        self.assertIn("shaman/elemental",intellect)
+        self.assertNotIn("shaman/enhancement",intellect)
+        self.assertNotIn("warrior/fury",intellect)
+        self.assertNotIn("rogue/outlaw",intellect)
+        strength=eligible(stat_modifier_codes=[4])
+        self.assertIn("warrior/fury",strength)
+        self.assertNotIn("mage/fire",strength)
+        multi=eligible(stat_modifier_codes=[71])
+        self.assertEqual(len(multi),26)
+        self.assertEqual(eligible(stat_modifier_codes=[32]),multi)
+        self.assertEqual(eligible(stat_modifier_codes=None),multi)
+        cloth=eligible(category="special_effect_gear_candidate",inventory_type=5,subclass_id=1,stat_modifier_codes=[5])
+        self.assertIn("mage/fire",cloth)
+        self.assertNotIn("shaman/elemental",cloth)
+        self.assertNotIn("druid/balance",cloth)
+        self.assertEqual(eligible(allowed_class_mask=128),{"mage/arcane","mage/fire","mage/frost"})
+        self.assertIn("mage/fire",eligible(category="selectable_stat_craft",inventory_type=5,subclass_id=1,stat_modifier_codes=[4]))
+        self.assertFalse(adapter.equipment_primary_armor_compatibility({})["spec_role_source_verified"])
+
 if __name__=="__main__":
     unittest.main()
