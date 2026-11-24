@@ -113,3 +113,7 @@ v697 10 SUCCESS/1 opt-in SKIP, 신규 live source 결과는 미확인. v335 과�
 ## v699 — 범용 원본과 파생 선택 목록 수명 분리
 
 사용자: 범용 엔진 기능 수정·개편 방향. v698 16 SUCCESS/1 opt-in SKIP; v697 #45335900511 원본 로그 9 tests PASS(신규 2개 포함). 기존 v216/v217로 build-scoped raw relation/provider bytes 별도 봉인, 실제 원본 SHA/receipt·v163·compiler identity 기준 파생 gear/provenance generation, 시간·SimC revision·사용자·ilvl 제외. 기존 v254/v697 raw effect 재사용, 기존 immutable artifact 손대지 않음. Optional provider failure는 raid/M+ 유지 및 raw stage 다음 요청 복구 가능; 파생 generation 이전 결과 보존. 테스트는 compiler 변경 HTTP0, optional recovery effect 재수집0, new source generation, old bytes/cache 유지. 이번 v699는 실제 제품 source collection path 수정이지 기존 v212/v213/v113 설치본 갱신 통합 완료가 아니다. 기존 실행 identity에 새 선택 장비를 안전하게 연결하는 소비 단계는 남음. 전체 시즌/장비 DB 확대·새 SimC 엔진·Native 반복 금지. 새 CI PENDING, Native0/실제 DB2 수집0, 공식 상태/권한 불변.
+
+## v700 — 기존 설치본 장신구 증분 목록 갱신 연결
+
+v699 9 SUCCESS/1 opt-in SKIP. 범용 same-build v217 원본 검증된 두 DB2 테이블+v163 membership에 기존 v699 derivative 연결. 별도 source-only refresh, 기존 v212/v213/profile/session bytes 보존. 정확히 검증된 기존 설치 scope에서 신규 trinket IDs만 기존 선택 목록에 증분 추가(장신구 G 제외 및 exact ID profile/session 기존 소비 경로); 기존 선택·T 유지, stale UI response 폐기. 신규 특수효과 장비는 기존 static L/slot/4pc 소비 통합 전 미노출. 역사 세션 restore는 기존 read-only; 신규 목록 label/media와 새 선택 restore 검증 후속. 신규 fixture로 실제 stage receipts 및 원본 drift, 0 HTTP repeat, budget bytes untouched, 실제 70961 live 목록/Native/PC 미실행. CI PENDING. 공식 상태/권한 불변.

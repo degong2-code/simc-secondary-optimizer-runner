@@ -260,6 +260,62 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         self.assertEqual(again["network_calls_by_stage"],0)
         self.assertEqual(again["candidate_path"],ready["candidate_path"])
 
+    def test_existing_source_refresh_is_independent_of_installed_budget(self):
+        linked=self.source()
+        # Recreate the original two local source receipts using the same
+        # v217 engine, not a fake bypass of their output checks.
+        raw=Path(linked["candidate_path"]).read_bytes()
+        rel="source/v163_unapproved_candidates_token_provenance.json"
+        target=self.root/rel
+        def write_join():
+            target.parent.mkdir(parents=True,exist_ok=True)
+            target.write_bytes(raw)
+        build.stage_engine.execute_stage(root=self.root,
+            stage_id="fresh-v163-token-provenance",stage_version="test",
+            inputs={"game_build":self.BUILD},outputs={"candidate":rel},
+            execute=write_join)
+        content={k:(self.wago/(k+".csv")).read_bytes()
+                 for k in ("Item","ItemSparse")}
+        for k in content:(self.wago/(k+".csv")).unlink()
+        # A separate budget sentinel represents an untouched original owner.
+        budget=self.root/"original_installed_budget.json"
+        budget.write_bytes(b"original budget bytes")
+        def write_wago():
+            for k,v in content.items():(self.wago/(k+".csv")).write_bytes(v)
+            (self.wago/"receipt.json").write_text(json.dumps({
+                "schema":"v161_wago_zero_seed_csv_snapshot_v1","build":self.BUILD,
+                "locale":"enUS","tables":{k:{"sha256":build.digest(v),
+                    "bytes":len(v)} for k,v in content.items()}}),"utf8")
+        build.stage_engine.execute_stage(root=self.root,stage_id="fresh-wago-db2",
+            stage_version="test",inputs={"game_build":self.BUILD},
+            outputs={"receipt":"wago/receipt.json","Item":"wago/Item.csv",
+                     "ItemSparse":"wago/ItemSparse.csv"},execute=write_wago)
+        calls=[]
+        def transport(req,timeout):
+            calls.append(req.full_url)
+            if req.full_url==build.delve_provider.SOURCE_URL:
+                return Response(json.dumps({"items":[{"id":self.item_id,
+                    "name":"Source plain sword"}]}).encode("utf8"))
+            return Response(b"ID,ItemID,ItemEffectID\n")
+        first=build.refresh_existing_season_gear_source(stage_root=self.root,
+                    build=self.BUILD,transport=transport)
+        self.assertEqual(first["network_calls"],2)
+        self.assertEqual(first["native_calls"],0)
+        second=build.refresh_existing_season_gear_source(stage_root=self.root,
+                    build=self.BUILD,transport=transport)
+        self.assertEqual(second["network_calls"],0)
+        self.assertEqual(second["source_generation_sha256"],
+                         first["source_generation_sha256"])
+        self.assertEqual(len(calls),2)
+        self.assertEqual(budget.read_bytes(),b"original budget bytes")
+        self.assertEqual(target.read_bytes(),raw)
+        (self.wago/"ItemSparse.csv").write_bytes(b"changed")
+        with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                   "SEASON_GEAR_REFRESH_ORIGINAL_SOURCE_DRIFT"):
+            build.refresh_existing_season_gear_source(stage_root=self.root,
+                    build=self.BUILD,transport=transport)
+        self.assertEqual(len(calls),2)
+
     def test_unauthenticated_join_has_zero_network(self):
         result=build._fresh_ordinary_gear_source_stage(
             stage_root=self.root,wago_folder=self.wago,

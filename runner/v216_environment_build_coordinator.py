@@ -3550,6 +3550,59 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
             "seasonal_G_verified":False,"native_calls":0}
 
 
+def refresh_existing_season_gear_source(*,stage_root,build,transport=None):
+    """Recompile selectable loot from the original authenticated local source.
+
+    This is NOT Environment Build. Only the two consumed Wago tables and
+    original v163 membership are read. No budget, representative, profile,
+    SimC revision or installed-catalog output is created or rewritten.
+    """
+    need(type(build) is str and re.fullmatch(r"\d+(?:\.\d+){3}",build),
+         "SEASON_GEAR_REFRESH_BUILD_INVALID")
+    root=pathlib.Path(stage_root)
+    def verified_subset(stage_id,expected):
+        files,receipt_path=stage_engine._safe_paths(root,stage_id,expected)
+        receipt=stage_engine._read_receipt(receipt_path)
+        need(receipt.get("stage_id")==stage_id and
+             receipt.get("status")=="COMPLETE" and
+             all(receipt.get("output_paths",{}).get(k)==v
+                 for k,v in expected.items()),
+             "SEASON_GEAR_REFRESH_ORIGINAL_STAGE_REQUIRED")
+        actual,_=stage_engine._snapshot(files)
+        need(all(receipt.get("outputs",{}).get(k)==v for k,v in actual.items()),
+             "SEASON_GEAR_REFRESH_ORIGINAL_SOURCE_DRIFT")
+        return receipt,actual
+    wago,records=verified_subset("fresh-wago-db2",{
+        "receipt":"wago/receipt.json","Item":"wago/Item.csv",
+        "ItemSparse":"wago/ItemSparse.csv"})
+    raw=json.loads((root/"wago/receipt.json").read_text("utf8"))
+    need(raw.get("schema")=="v161_wago_zero_seed_csv_snapshot_v1" and
+         raw.get("build")==build and raw.get("locale")=="enUS" and
+         all(raw.get("tables",{}).get(k,{}).get("sha256")==records[k]["sha256"]
+             and raw["tables"][k].get("bytes")==records[k]["size"]
+             for k in ("Item","ItemSparse")),
+         "SEASON_GEAR_REFRESH_WAGO_SCOPE_DRIFT")
+    rel="source/v163_unapproved_candidates_token_provenance.json"
+    linked_receipt,_=verified_subset("fresh-v163-token-provenance",{"candidate":rel})
+    result=_fresh_ordinary_gear_source_stage(
+        stage_root=root,wago_folder=root/"wago",build=build,
+        linked={"candidate_path":str(root/rel),
+                "stage":{"receipt_sha256":linked_receipt["receipt_sha256"]}},
+        transport=transport,include_delve=True)
+    need(result.get("candidate_path") and
+         result.get("a7_auto_source_choice_provenance",{}).get(
+             "candidate_provenance_verified") is True,
+         "SEASON_GEAR_REFRESH_SOURCE_PENDING")
+    candidate=json.loads(pathlib.Path(result["candidate_path"]).read_text("utf8"))
+    need(candidate.get("season_build")==build,
+         "SEASON_GEAR_REFRESH_CANDIDATE_BUILD_DRIFT")
+    product_gear_db.validate(candidate)
+    return {"candidate":candidate,"source_generation_sha256":
+                result["source_stage"]["receipt_sha256"],
+            "supplementary_delve_status":result.get("supplementary_delve_status"),
+            "network_calls":result["network_calls_by_stage"],"native_calls":0}
+
+
 def _db2_first_tier_stage(*,stage_root,wago_folder,build,linked,
                          wago_receipt_sha256,transport=None):
     """Same Build: ItemSet + ItemSetSpell + ChrSpecialization, NO title seed.

@@ -746,6 +746,7 @@ class LocalJobs:
         self.locale_cache_lock = threading.Lock()
         self.equipment_icon_lock = threading.Lock()
         self.equipment_icon_cache = {}
+        self.season_gear_refresh_cache = {}
         self._verified_fresh_profile_result = None
         self._current_fresh_game_build = None
 
@@ -3914,6 +3915,56 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     "ordinary_equipment_user_selectable":False,
                     "full_season_completeness_confirmed":False,
                     "native_calls_now":0}
+
+    @app.post("/api/v1/season-gear/refresh")
+    def refresh_installed_season_gear(game_build: str,target_ilevel: int,
+                                      installed_manifest_sha256: str):
+        """Refresh choices without re-installing the verified numeric scope.
+
+        Only trinkets are independently consumable by the existing exact-ID
+        profile path. Special replacements still need their original
+        slot/static-budget/tier source connection; do not expose them yet.
+        """
+        base=current_season_gear(game_build,target_ilevel,installed_manifest_sha256)
+        result={"schema":"season_selectable_gear_refresh_v1",
+                "status":"SEASON_SELECTABLE_GEAR_REFRESH_PENDING",
+                "season_build":game_build,"target_ilevel":target_ilevel,
+                "installed_manifest_sha256":installed_manifest_sha256,
+                "source_catalog_manifest_sha256":base.get("source_catalog_manifest_sha256"),
+                "new_trinkets":[],"new_special_pending_count":None,
+                "native_calls_now":0,"network_calls_now":0,
+                "budget_rebuilt":False,"full_season_completeness_confirmed":False}
+        if (base.get("source_scope")!="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"
+            or base.get("installed_manifest_sha256")!=installed_manifest_sha256):
+            return result
+        try:
+            with jobs.season_source_lock:
+                refreshed=jobs.season_gear_refresh_cache.get(game_build)
+                if refreshed is None:
+                    root=jobs.root/"_fresh_season_sources"/("wago_"+game_build)
+                    refreshed=environment_build.refresh_existing_season_gear_source(
+                        stage_root=root,build=game_build)
+                    if refreshed.get("supplementary_delve_status")=="SUPPLEMENTARY_SOURCE_OBSERVED":
+                        jobs.season_gear_refresh_cache[game_build]={
+                            **refreshed,"network_calls":0}
+            result["network_calls_now"]=refreshed["network_calls"]
+            source=refreshed["candidate"]
+            prior_ids={r["item_id"] for rows in base["choices"].values() for r in rows}
+            new_ids={r["item_id"] for r in source["items"]
+                     if r["category"]=="trinket" and r["item_id"] not in prior_ids}
+            names=official_ko_env.read_names(jobs.root,game_build,new_ids)
+            rows=season_gear.public_options(source,official_names=names)["choices"]
+            result.update(status="SEASON_TRINKET_SOURCE_REFRESHED",
+                source_generation_sha256=refreshed["source_generation_sha256"],
+                supplementary_delve_status=refreshed["supplementary_delve_status"],
+                new_trinkets=[r for r in rows["trinket"] if r["item_id"] in new_ids],
+                new_special_pending_count=sum(r["item_id"] not in prior_ids
+                    for r in rows["special_effect_gear_candidate"]))
+        except (stage_engine.StageExecutionBlocked,environment_build.EnvironmentBuildBlocked,
+                OSError,ValueError,TypeError,KeyError):
+            # Optional choices are not a numeric environment requirement.
+            pass
+        return result
 
     @app.get("/api/v1/season-item-icons")
     def installed_season_item_icons(game_build: str,
