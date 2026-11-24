@@ -428,6 +428,8 @@ def stage(args):
                     request["spec"]=="destruction" and
                     request["trinkets"]==list(map(int,choices)),
                     "EXACT_USER_SELECTED_REQUEST_DRIFT")
+            # Actual worker Native count is not captured by this browser receipt.
+            record["new_dps_native_calls"]=None
             clickable(driver,driver.find_element(By.ID,"start-btn"))
             sid=WebDriverWait(driver,120).until(lambda d:d.execute_script(
                 "return /^[a-f0-9]{20}$/.test(state.session||'')?"
@@ -449,6 +451,7 @@ def stage(args):
             record["actual_browser_sem"]=screen["sem"]
             record["actual_browser_conf95"]=screen["conf95"]
             record["actual_first_user_result_screen"]=True
+            record["last_completed_stage"]="REAL_USER_DPS_RESULT_VISIBLE"
             record["status"]="PASS_REAL_FIRST_USER_SOURCE_AND_DPS"
             save()
             return record

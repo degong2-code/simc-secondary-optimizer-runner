@@ -119,3 +119,92 @@ jobs:
           path: out/v691-path/V691_NATIVE_PATH_COMPARISON.json
           retention-days: 10
           if-no-files-found: warn
+
+  v694-user-beta-package-only:
+    if: ${{ contains(github.event.head_commit.message, '[v694-package-only]') }}
+    runs-on: windows-2022
+    timeout-minutes: 8
+    steps:
+      - name: Preserve exact source bytes
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          ref: 624ee15221631176c18bb5473d02063a41778f3d
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 41360273361
+          name: v213-source-to-catalog-41360273361
+          path: out/v694/legacy-package-only
+          github-token: ${{ github.token }}
+      - name: Recreate tested ZIP and reproduce only the tested quarantine
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          Copy-Item 'out/v694/legacy-package-only/v213_current_season_source_to_catalog.json' 'data/current_season_source_to_catalog.json'
+          python integration_probes/v181_windows_beta_packager.py --out out/v694/tested-parent.zip
+          if ($LASTEXITCODE -ne 0) { throw 'V694_EXISTING_PACKAGER_FAILED' }
+          @'
+          import fnmatch, hashlib, json, pathlib, zipfile
+          out=pathlib.Path("out/v694")
+          parent=out/"tested-parent.zip"
+          sha=lambda b:hashlib.sha256(b).hexdigest()
+          parent_sha=sha(parent.read_bytes())
+          assert parent_sha=="6862a73920d3dd727b82e31f5b4069db9abbf17fcd61c5d39ae3c73d22567c4d", ("PARENT_ZIP_BYTES_DRIFT",parent_sha)
+          prefix="SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/"
+          manifest_name=prefix+"V181_PACKAGE_MANIFEST.json"
+          target=out/"SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA_V693_1_FIRST_USER.zip"
+          def historical(path):
+              p=pathlib.PurePosixPath(path)
+              return ((p.parent.as_posix()=="data" and any(fnmatch.fnmatchcase(p.name,pattern)
+                  for pattern in ("current_season_*.json","v202_*.json","v206_*.json")))
+                  or (p.parent.as_posix()=="data/season_ordinary_gem_nominal" and p.suffix==".json"))
+          with zipfile.ZipFile(parent) as z:
+              m=json.loads(z.read(manifest_name))
+              assert m["file_count"]==286
+              removed=[r["path"] for r in m["files"] if historical(r["path"])]
+              assert len(removed)==13
+              kept=[r for r in m["files"] if r["path"] not in removed]
+              m["files"]=kept; m["file_count"]=len(kept)
+              m["package_variant"]="first_user_zero_history_candidate"
+              m["tested_parent_zip_sha256"]=parent_sha
+              m["historical_quarantined_paths"]=removed
+              m["source_catalog"]=None
+              with zipfile.ZipFile(target,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=8,allowZip64=False) as dst:
+                  for r in kept:
+                      name=prefix+r["path"]
+                      raw=z.read(name)
+                      assert len(raw)==r["size"] and sha(raw)==r["sha256"]
+                      dst.writestr(z.getinfo(name),raw,compress_type=zipfile.ZIP_DEFLATED,compresslevel=8)
+                  dst.writestr(z.getinfo(manifest_name),(json.dumps(m,ensure_ascii=False,sort_keys=True,indent=2)+"\n").encode("utf8"),compress_type=zipfile.ZIP_DEFLATED,compresslevel=8)
+          with zipfile.ZipFile(target) as z:
+              assert set(z.namelist())=={prefix+r["path"] for r in kept}|{manifest_name}
+              assert all(sha(z.read(prefix+r["path"]))==r["sha256"] for r in kept)
+              assert z.testzip() is None
+          receipt={"status":"FIRST_USER_BETA_PACKAGE_READY_FOR_PERSONAL_PC_REVIEW",
+              "tested_source_head":"624ee15221631176c18bb5473d02063a41778f3d",
+              "tested_run":45318051264,"tested_receipt_artifact":14886722098,
+              "tested_parent_zip_sha256":parent_sha,"candidate_zip_sha256":sha(target.read_bytes()),
+              "candidate_zip_bytes":target.stat().st_size,"unchanged_payload_files":len(kept),
+              "excluded_historical_files":removed,"new_native_calls":0,
+              "new_season_build_calls":0,"personal_pc_tested":False,
+              "candidate_archive_reexecuted":False,"full_product_e2e":"PENDING"}
+          (out/"V694_USER_BETA_PACKAGE_RECEIPT.json").write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n","utf8")
+          print(json.dumps(receipt,sort_keys=True))
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'V694_PACKAGE_IDENTITY_FAILED' }
+      - uses: actions/upload-artifact@v6
+        with:
+          name: p1-v694-first-user-beta-candidate
+          path: |
+            out/v694/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA_V693_1_FIRST_USER.zip
+            out/v694/V694_USER_BETA_PACKAGE_RECEIPT.json
+          retention-days: 14
+          if-no-files-found: error
