@@ -98,11 +98,44 @@ class ExactPhysicalNativeInput(unittest.TestCase):
                 stage_root=self.root,relation=self.source,
                 build=BUILD,simc_revision=REV)
 
+    def test_v758_same_token_different_flask_ids_held_without_blocking_oil(self):
+        raw={**SOURCE,"source":{**SOURCE["source"],"simc_revision":REV},
+             "items":[*SOURCE["items"],{**SOURCE["items"][0],"item_id":502}]}
+        derived=relation.correlate(
+            raw,relation.scan_spell_effects(self.root/"effects.csv",{111,211,212}),
+            TMP,build=BUILD,flask_dbc_rows=[*FLASK,{**FLASK[0],"item_id":502}])
+        # Separate immutable fixture stage; never reseal a changed input
+        # under the original stage identity.
+        self.root=self.root/"ambiguous"
+        self.root.mkdir()
+        self.output=self.root/"source"/"v284_simc_consumable_relations.json"
+        self.output.parent.mkdir()
+        def execute():
+            self.output.write_text(json.dumps(derived),encoding="utf8")
+            (self.root/"source"/"v284_SpellEffect.csv").write_bytes(CSV)
+        stage=stages.execute_stage(root=self.root,
+            stage_id="fresh-consumable-simc-spell-effect-source-other",
+            stage_version="v281-real-other-consumables-v2",
+            inputs={"build":BUILD,"case":"ambiguous"},
+            outputs={"candidate":"source/v284_simc_consumable_relations.json",
+                     "spell_effect":"source/v284_SpellEffect.csv"},execute=execute)
+        self.source={"candidate_path":str(self.output),
+                     "source_stage":{k:v for k,v in stage.items() if k!="result"}}
+        plan=relation.plan_physical_native_measurements(stage_root=self.root,
+            relation=self.source,build=BUILD,simc_revision=REV)
+        self.assertEqual(plan["flask"],[])
+        self.assertEqual(plan["ambiguous_flask_token_item_ids_source_only"],[501,502])
+        self.assertEqual(len(plan["oil"]),2)
+        with self.assertRaisesRegex(relation.SimCRelationBlocked,
+                                    "PHYSICAL_TOKEN_AMBIGUOUS"):
+            self.choose("flask",501)
+
     def test_flask_and_main_offhand_use_exact_physical_id(self):
         f=self.choose("flask",501)
         self.assertEqual(f["physical_item_id"],501)
         self.assertEqual(f["simc_input_token"],"test_flask_3")
         self.assertEqual(f["crafting_quality"],3)
+        self.assertEqual(f["flask_use_source_scope"]["on_use_spell_ids"],[111])
         self.assertEqual(f["source_stage_receipt_sha256"],
                          self.source["source_stage"]["receipt_sha256"])
         o=self.choose("temporary_enchant",601,"main_hand")
@@ -335,6 +368,34 @@ class ExactPhysicalNativeInput(unittest.TestCase):
         self.assertIsNone(result["F"])
         self.assertFalse(result["environment_ready"])
         self.assertFalse(default["environment_ready"])
+
+    def test_v758_explicit_rank_not_vetoed_by_name_only(self):
+        plan=relation.plan_physical_native_measurements(
+            stage_root=self.root,relation=self.source,build=BUILD,simc_revision=REV)
+        # Higher-ranked same-name row is only a source priority observation.
+        plan["flask"].append({**plan["flask"][0],
+            "physical_item_id":999,"simc_input_token":"test_flask_4",
+            "crafting_quality":4,
+            "flask_use_source_scope":{"on_use_spell_ids":[222]}})
+        collected={"expected_game_build":BUILD,
+            "fresh_consumable_simc_effect_relation":self.source,
+            "fresh_one_spec_physical_G_probe":{
+                "profile_path":str(self.root/"source"/"probe.simc"),
+                "source_stage":{"status":"EXECUTED_AND_SEALED"}}}
+        compilation={"status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+            "stage_root":str(self.root),"simc_revision":REV,
+            "automatic_F_O_measurement_candidates_unadmitted":plan}
+        with mock.patch.object(build.native_effect_pair,"measure",return_value={
+            "kind":"flask","token":"test_flask_3",
+            "status":"SIMC_CONSUMABLE_SOURCE_OR_BINARY_PENDING",
+            "new_native_calls":0,"F_candidate_unadmitted":None}) as measure:
+            rows,report=build._auto_F_native_from_sealed_v281(
+                collected=collected,compilation=compilation,
+                binary=self.root/"fake_simc",selected_item_id=501)
+        measure.assert_called_once()
+        self.assertEqual(measure.call_args.kwargs["token"],"test_flask_3")
+        self.assertEqual(len(rows),1)
+        self.assertFalse(report["F_approved"])
 
     def test_auto_F_measurement_uses_sealed_precombat_without_editing_v233(self):
         original=self.root/"source"/"probe.simc"

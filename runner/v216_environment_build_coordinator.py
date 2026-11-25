@@ -6182,6 +6182,9 @@ def _zero_history_F_O_native_component_candidates(*, observations,
             "simc_input_token": source["simc_input_token"],
             "simc_enchant_id": source.get("simc_enchant_id"),
             "selected_hand": source.get("selected_hand"),
+            **({"flask_use_source_scope":source["flask_use_source_scope"]}
+               if row["kind"]=="flask" and
+                  "flask_use_source_scope" in source else {}),
             "game_build": game_build, "simc_revision": simc_revision,
             "physical_item_source_stage_sha256":
                 source["source_stage_receipt_sha256"],
@@ -6282,11 +6285,17 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
         # v281 flask token comes from the exact SimC ItemID DBC relation.
         # Do not merge different stat kinds or unfamiliar naming formats.
         family = (token[:-len(suffix)]
-                  if token.endswith(suffix) else
+                  if quality>0 and token.endswith(suffix) else
                   "item_" + str(option["physical_item_id"]))
-        groups.setdefault(family, []).append(option)
+        # Do not group different original on-use identities or source
+        # conditions just because their normalized names share a stem.
+        # Legacy observations without this field retain their old diagnostic
+        # grouping, not an equivalence or UI suppression certificate.
+        scope=option.get("flask_use_source_scope")
+        scope_key=canonical(scope) if scope is not None else ""
+        groups.setdefault((family,scope_key), []).append(option)
     flasks = []
-    for family, rows in sorted(groups.items()):
+    for (family,scope_key), rows in sorted(groups.items()):
         ranked = sorted(rows, key=lambda x:(
             -x["crafting_quality"], x["physical_item_id"]))
         measured = [x for x in ranked
@@ -6311,6 +6320,8 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
                               for x in measured))
         flasks.append({
             "simc_family_stem_source_only":family,
+            **({"flask_use_source_scope":rows[0]["flask_use_source_scope"]}
+               if scope_key else {}),
             "observed_item_ids":[x["physical_item_id"] for x in measured],
             "observed_qualities":[x["crafting_quality"] for x in measured],
             "source_unmeasured_item_ids_unadmitted":[
@@ -7118,24 +7129,15 @@ def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
         need(type(token) is str and bool(token) and
              type(rank) is int and rank>=0,
              "V216_SELECTED_F_V281_TOKEN_QUALITY_INVALID")
-        suffix="_"+str(rank)
-        family_key=token[:-len(suffix)] if token.endswith(suffix) else None
-        # Preserve existing highest-observed-quality policy: measuring only
-        # this item must not make a known lower rank look like the top rank.
-        if family_key is not None:
-            for other in worklist:
-                q=other["crafting_quality"]
-                t=other["simc_input_token"]
-                need(type(q) is int and q>=0 and type(t) is str,
-                     "V216_SELECTED_F_V281_QUALITY_RECORD_INVALID")
-                if (t.endswith("_"+str(q)) and
-                    t[:-(len(str(q))+1)]==family_key and q>rank):
-                    out["requires"].append(
-                        "AUTO_F_SELECTED_ITEM_BELOW_OBSERVED_QUALITY")
-                    return [],out
+        # A source rank is measurement priority, not proof that another
+        # physical item dominates this explicit choice. The existing v278
+        # numeric owner and selected F admission still decide its budget.
+        if sum(row["simc_input_token"]==token for row in worklist)!=1:
+            out["requires"].append("AUTO_F_SELECTED_PHYSICAL_TOKEN_AMBIGUOUS")
+            return [],out
         worklist=matches
     # Only create a derived profile when at least one physical item will be
-    # measured, never for missing IDs / below-observed-quality selections.
+    # measured, never for missing IDs / ambiguous-token selections.
     # The original v233 G input and Native G receipts remain unchanged.
     if worklist and max_new_native_calls>=2:
         source_profile=_sealed_v233_precombat_F_O_profile(
@@ -7158,7 +7160,10 @@ def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
                 kind=kind,item_id=item_id,hand=hand)
             need(type(source) is dict and
                  source.get("simc_input_token")==item["simc_input_token"] and
-                 source.get("selected_hand")==hand,
+                 source.get("selected_hand")==hand and
+                 all(source.get(key)==item[key] for key in
+                     ("source_candidate_sha256","source_stage_receipt_sha256",
+                      "flask_use_source_scope") if key in item),
                  "AUTO_"+label+"_EXACT_ITEM_SOURCE_DRIFT")
             native=native_effect_pair.measure(
                 stage_root=compilation["stage_root"],

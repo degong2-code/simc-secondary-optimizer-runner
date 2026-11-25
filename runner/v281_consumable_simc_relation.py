@@ -471,6 +471,7 @@ def plan_physical_native_measurements(*,stage_root,relation,build,
         stage_root=stage_root,relation=relation,build=build,
         simc_revision=simc_revision)
     source=loaded[0]
+    ambiguous_flasks=loaded[4]
     # A candidate row is an unadmitted source observation, not a default.
     # Only rows with all original v281 prerequisites may be measured.
     to_resolve=[]
@@ -483,7 +484,8 @@ def plan_physical_native_measurements(*,stage_root,relation,build,
         if (item.get("kind")=="flask" and
                 item.get("simc_flask_item_source",{}).get("status")==(
                     "SIMC_ITEM_ID_CLASS_SUBCLASS_CANDIDATE")):
-            to_resolve.append(("flask",item["item_id"],None))
+            if item["item_id"] not in ambiguous_flasks:
+                to_resolve.append(("flask",item["item_id"],None))
         elif item.get("kind")=="item_enhancement":
             links=item.get("simc_temporary_enchant_source",{}).get(
                 "exact_source_matches")
@@ -514,6 +516,8 @@ def plan_physical_native_measurements(*,stage_root,relation,build,
               "simc_input_token":exact["simc_input_token"],
               "selected_hand":exact["selected_hand"],
               "simc_enchant_id":exact["simc_enchant_id"],
+              **({"flask_use_source_scope":exact["flask_use_source_scope"]}
+                 if kind=="flask" else {}),
               "source_candidate_sha256":exact["source_candidate_sha256"],
               "source_stage_receipt_sha256":
                   exact["source_stage_receipt_sha256"],
@@ -527,7 +531,8 @@ def plan_physical_native_measurements(*,stage_root,relation,build,
     return {**output,"status":status,"flask":flasks,"oil":oils,
             "requires":["F_HIGHEST_QUALITY_EFFECT_COVERAGE_AND_NATIVE_PENDING",
                         "O_EXPLICIT_SELECTION_WEAPON_HAND_AND_NATIVE_PENDING"],
-            "candidate_count":len(flasks)+len(oils)}
+            "candidate_count":len(flasks)+len(oils),
+            "ambiguous_flask_token_item_ids_source_only":sorted(ambiguous_flasks)}
 
 
 def _load_native_item_source(*,stage_root,relation,build,simc_revision):
@@ -600,7 +605,17 @@ def _load_native_item_source(*,stage_root,relation,build,simc_revision):
     for item in items:
         if type(item) is dict and type(item.get("item_id")) is int:
             by_id.setdefault(item["item_id"],[]).append(item)
-    return source,by_id,stage["receipt_sha256"],output["sha256"]
+    token_ids={}
+    for item in items:
+        if type(item) is not dict or item.get("kind")!="flask":
+            continue
+        src=item.get("simc_flask_item_source") or {}
+        token=src.get("simc_flask_option_candidate")
+        if (src.get("status")=="SIMC_ITEM_ID_CLASS_SUBCLASS_CANDIDATE"
+                and type(token) is str and type(item.get("item_id")) is int):
+            token_ids.setdefault(token,set()).add(item["item_id"])
+    ambiguous={i for ids in token_ids.values() if len(ids)>1 for i in ids}
+    return source,by_id,stage["receipt_sha256"],output["sha256"],ambiguous
 
 
 def resolve_native_input(*,stage_root,relation,build,simc_revision,
@@ -642,7 +657,7 @@ def _resolve_loaded_native_item(*,loaded,build,simc_revision,kind,item_id,hand):
     need((kind=="flask" and hand is None) or
          (kind=="temporary_enchant" and hand in ("main_hand","off_hand")),
          "V281_NATIVE_ITEM_HAND_SELECTION_INVALID")
-    _,by_id,receipt_sha,candidate_sha=loaded
+    _,by_id,receipt_sha,candidate_sha,ambiguous_flasks=loaded
     matches=by_id.get(item_id,[])
     need(len(matches)==1 and matches[0].get("ui_selectable") is False
          and matches[0].get("simc_token")=="UNRESOLVED",
@@ -661,8 +676,16 @@ def _resolve_loaded_native_item(*,loaded,build,simc_revision,kind,item_id,hand):
              and TOKEN_CHARS.fullmatch(token) is not None
              and type(src.get("crafting_quality")) is int,
              "V281_NATIVE_FLASK_DBC_ITEM_TOKEN_PENDING")
+        need(item_id not in ambiguous_flasks,
+             "V281_NATIVE_FLASK_PHYSICAL_TOKEN_AMBIGUOUS")
         enchant_id=None
         quality=src["crafting_quality"]
+        # Exact on-use IDs and item-source scope, not an effect interpreter.
+        # Unknown conditions are not evidence of equivalent applicability.
+        flask_scope={
+            "on_use_spell_ids":list(item["item_effect_source"]["on_use_spell_ids"]),
+            **{key:item.get(key) for key in
+               ("item_class","item_subclass","inventory_type","expansion_id")}}
     else:
         src=item.get("simc_temporary_enchant_source") or {}
         links=src.get("exact_source_matches")
@@ -700,6 +723,7 @@ def _resolve_loaded_native_item(*,loaded,build,simc_revision,kind,item_id,hand):
         "physical_item_id":item_id,"kind":kind,
         "simc_input_token":token,"crafting_quality":quality,
         "simc_enchant_id":enchant_id,"selected_hand":hand,
+        **({"flask_use_source_scope":flask_scope} if kind=="flask" else {}),
         "source_stage_receipt_sha256":receipt_sha,
         "source_candidate_sha256":candidate_sha,
         "same_effect_quality_group_verified":False,
