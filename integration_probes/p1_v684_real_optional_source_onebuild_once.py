@@ -299,7 +299,7 @@ def replay_ordered_lookup(previous, out):
     out=pathlib.Path(out)
     out.mkdir(parents=True,exist_ok=True)
     (out/"V780_ORDERED_LOOKUP_REPLAY.json").write_text(
-        json.dumps(state,sort_keys=True,indent=2,ensure_ascii=False)+"\\n",
+        json.dumps(state,sort_keys=True,indent=2,ensure_ascii=False)+"\n",
         encoding="utf8")
     print("V780_REPLAY "+json.dumps(state,sort_keys=True,ensure_ascii=False),flush=True)
     return 0
