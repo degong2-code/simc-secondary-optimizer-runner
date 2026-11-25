@@ -29,7 +29,7 @@ def item_row(iid,inv,cls,sub,primary=4,quality=4,base=335,mask="0x2",
 
 
 def make_fixture(*,omit=None,wrong_weapon=False,quality_error=False,
-                 warrior=False):
+                 warrior=False,alternate_fifth=False):
     src=raw_fixture(set_class=1 if warrior else 2)
     extra=[
         item_row(9020,5,4,4),  # source-only plain chest
@@ -43,6 +43,8 @@ def make_fixture(*,omit=None,wrong_weapon=False,quality_error=False,
         item_row(9028,9,4,4,base=700),# remote base ilevel
         item_row(9029,8,4,4,mask="0x4"), # wrong class
     ]
+    if alternate_fifth:
+        extra.append(item_row(9032,7,4,4))  # ordinary legs, not tier
     if warrior:
         extra.append(item_row(9031,17,2,8))  # Titan's Grip second 2H
     if omit is not None:
@@ -117,6 +119,67 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertFalse(row["environment_ready"])
         self.assertEqual(row["native_calls"],0)
         self.assertEqual(row["cache_mutations"],0)
+
+    def test_alternate_fifth_flows_to_G_and_user_profile(self):
+        from runner import v233_source_only_G_probe_profile as probe
+        import sys
+        from unittest.mock import patch
+        runner=str(pathlib.Path(__file__).resolve().parents[1]/"runner")
+        if runner not in sys.path:sys.path.insert(0,runner)
+        import v098_target_user_scenario_bootstrap as bootstrap
+        import v139_pure_target_profile_composer as pure
+        # Both the original chest and an extra alternative: original IDs
+        # and candidate count remain unchanged relative to the old pool.
+        baseline=self.plan()
+        self.seed_files(make_fixture(alternate_fifth=True))
+        with patch.object(builder.metadata,"parse_exact",
+                          wraps=builder.metadata.parse_exact) as parse:
+            normal=self.plan()
+            self.assertEqual(parse.call_count,1)
+        self.assertEqual(normal["selected_G_slot_ids"],baseline["selected_G_slot_ids"])
+        self.assertEqual(normal["physical_gear_candidates_seen"],
+                         baseline["physical_gear_candidates_seen"])
+        # No compatible chest: keep four exact class tier IDs using legs as
+        # the ordinary slot. No additional source pass or Native.
+        self.seed_files(make_fixture(omit=9020,alternate_fifth=True))
+        with patch.object(builder.metadata,"parse_exact",
+                          wraps=builder.metadata.parse_exact) as parse:
+            candidate=self.plan()
+            self.assertEqual(parse.call_count,1)
+        ids=candidate["selected_G_slot_ids"]
+        self.assertEqual(ids["chest"],9005)
+        self.assertEqual(ids["legs"],9032)
+        self.assertEqual(len(ids),13)
+        self.assertEqual(set(ids.values()) & set(self.tier["tier_piece_ids"].values()),
+                         {9001,9002,9003,9005})
+        self.assertEqual(candidate["native_calls"],0)
+        text,proof=probe.build(source_directory=self.folder,
+            tier_candidate=self.tier,representative_candidate=candidate,race="human")
+        self.assertEqual(proof["selected_G_slot_ids"],ids)
+        self.assertIn("chest=simc_source_9005,id=9005",text)
+        self.assertIn("legs=simc_source_9032,id=9032",text)
+        settings=copy.deepcopy(pure.catalog());settings["target_ilevel"]=335
+        scope=bootstrap._verified_one_spec_G_profile_scope(
+            source_bundle={"gear":{"season_build":BUILD},
+                "tier":{"retail_build":BUILD,"classes":{"paladin":{
+                    "pieces":self.tier["tier_piece_ids"]}}},
+                "settings":settings},candidate=candidate,
+            selected_key=("paladin","retribution"),target_ilevel=335,
+            source_revision=REVISION)
+        spec=scope["specializations"]["paladin/retribution"]
+        self.assertEqual(set(spec["four_tier_slots"]),{"head","shoulders","chest","hands"})
+        self.assertEqual(spec["ordinary"],candidate["selected_ordinary"])
+        broken=copy.deepcopy(candidate)
+        broken["selected_ordinary"]["chest"]=9020
+        broken["receipt_sha256"]=seed.digest(seed.canonical(
+            {k:v for k,v in broken.items() if k!="receipt_sha256"}).encode())
+        with self.assertRaisesRegex(ValueError,"FRESH_V232_USER_PHYSICAL_G_SLOT_DRIFT"):
+            bootstrap._verified_one_spec_G_profile_scope(
+                source_bundle={"gear":{"season_build":BUILD},
+                    "tier":{"retail_build":BUILD,"classes":{"paladin":{
+                        "pieces":self.tier["tier_piece_ids"]}}},"settings":settings},
+                candidate=broken,selected_key=("paladin","retribution"),
+                target_ilevel=335,source_revision=REVISION)
 
     def test_missing_neck_reports_which_existing_source_filter_lost_it(self):
         from runner import v167_product_season_gear_adapter as provider

@@ -27,7 +27,9 @@ except ImportError:
     import v169_source_first_representative_stage as chooser
 
 SCHEMA="v232_simc_only_one_dps_representative_source_candidate_v1"
-VALID_INVENTORY=frozenset((2,5,20,9,6,8,16,11,13,17,15,26,14,23))
+ALTERNATE_FIFTH_INVENTORY=frozenset(inv for slot in chooser.FIFTH_PLAIN_ORDER[1:]
+                                    for inv in chooser.SLOT_TO_INV[slot])
+VALID_INVENTORY=frozenset((2,5,20,9,6,8,16,11,13,17,15,26,14,23)) | ALTERNATE_FIFTH_INVENTORY
 GEAR_LIMIT=4500
 MAX_DISTANCE=20
 
@@ -280,7 +282,7 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
             if ring:ring_coverage["simc_class_mask_rejected"]+=1
             return False
         sub=metadata.number(fields[12],"V232_SUBCLASS_INVALID")
-        if inv in (5,20,9,6,8):
+        if inv in (5,20,9,6,8) or inv in ALTERNATE_FIFTH_INVENTORY:
             return kind==4 and sub==chooser.gear.ARMOR_SUBCLASS[
                 contract["family"]]
         if inv in (2,16,11):
@@ -322,9 +324,17 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
             return not (codes & all_primary) or bool(codes & primary_allowed)
         return bool(codes & primary_allowed)
 
+    # The one existing streaming pass also retains possible fifth-slot
+    # alternatives. Do not expand the normal candidate/receipt semantics
+    # when a compatible ordinary chest already exists.
+    chest_available=any(r["item_id"] not in tier_ids and
+        r["inventory_type"] in chooser.SLOT_TO_INV["chest"] and
+        matching_primary(r["item_id"],"chest") for r in items.values())
     options=[]
     for r in items.values():
         if r["item_id"] in tier_ids:continue
+        if chest_available and r["inventory_type"] in ALTERNATE_FIFTH_INVENTORY:
+            continue
         provider=provider_by_id.get(r["item_id"])
         if season_ids is not None:
             need(provider is not None and
@@ -370,14 +380,26 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         return source_rank(iid)==0
     scratch={"items":options}
     used=set(tier_ids)
-    ordinary={}
-    for slot in chooser.ORDINARY:
+    def armor_matches(slot):
+        matches=chooser.available_plain(scratch,slot=slot,
+            family=contract["family"],class_mask=class_mask,used=used)
+        return sorted((iid for iid in matches if matching_primary(iid,slot)),
+                      key=lambda iid:(source_rank(iid),iid))
+    fifth=chooser.choose_plain_fifth(armor_matches)
+    if fifth is None:
+        need(bool(chooser.available_plain(scratch,slot="chest",
+            family=contract["family"],class_mask=class_mask,used=used)),
+            "V232_ORDINARY_SLOT_WITHOUT_SIMC_CANDIDATE:chest")
+        need(False,"V232_ORDINARY_PRIMARY_STAT_NOT_COMPATIBLE:chest")
+    fifth_slot,fifth_id=fifth
+    four=[slot for slot in chooser.contracts.TIER_SLOTS if slot!=fifth_slot]
+    ordinary={fifth_slot:fifth_id};used.add(fifth_id)
+    for slot in chooser.ORDINARY[1:]:
         matches=chooser.available_plain(scratch,slot=slot,
             family=contract["family"],class_mask=class_mask,used=used)
         need(bool(matches),"V232_ORDINARY_SLOT_WITHOUT_SIMC_CANDIDATE:"+slot)
-        matches=[iid for iid in matches if matching_primary(iid,slot)]
+        matches=armor_matches(slot)
         need(bool(matches),"V232_ORDINARY_PRIMARY_STAT_NOT_COMPATIBLE:"+slot)
-        matches.sort(key=lambda iid:(source_rank(iid),iid))
         ordinary[slot]=matches[0];used.add(matches[0])
     common={}
     common_socket_source_candidates={}
@@ -444,7 +466,7 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
             "V232_WEAPON_FORM_SOURCE_CANDIDATE_MISSING:"+str(exc)) from exc
     selected={
         **{s:tier_candidate["tier_piece_ids"][s]
-           for s in chooser.FOUR},
+           for s in four},
         **ordinary,**common,**weapons
     }
     need(len(selected) in (13,14) and

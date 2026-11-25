@@ -26,8 +26,11 @@ SCHEMA="v169_source_first_physical_representative_preview_v1"
 # Bump only if season-profile weapon-selection semantics change. v106 uses
 # this to segregate corrected sessions from pre-v184 immutable Native caches.
 WEAPON_SELECTION_POLICY="v184_db2_primary_with_hybrid_71_74_v1"
-SLOT_TO_INV={"chest":{5,20},"wrists":{9},"waist":{6},"feet":{8},
-             "neck":{2},"back":{16},"finger1":{11},"finger2":{11}}
+SLOT_TO_INV={slot:set(types) for slot,types in
+             contracts.SELECTED_CORE_INVENTORY.items()}
+# Preserve the original chest-first baseline; alternatives are feasibility,
+# not DPS gear-combination search. Same ordering as the existing overflow.
+FIFTH_PLAIN_ORDER=("chest","legs","hands","shoulders","head")
 FOUR=("head","shoulders","hands","legs")
 ORDINARY=("chest","wrists","waist","feet")
 COMMON=("neck","back","finger1","finger2")
@@ -124,6 +127,14 @@ def available_plain(db,*,slot,family=None,class_mask=None,used=()):
             continue
         candidates.append(item["item_id"])
     return sorted(candidates)
+
+def choose_plain_fifth(matches_for_slot):
+    """Select one ordinary tier-position slot, keeping the original layout if possible."""
+    for slot in FIFTH_PLAIN_ORDER:
+        matches=matches_for_slot(slot)
+        if matches:return slot,matches[0]
+    return None
+
 
 def shape_weapons(db,weapon_form,class_mask,*,spec_key,
                   allow_observed_offhand_fallback=True):
@@ -227,9 +238,20 @@ def select_class_spec(db,tier,cls,spec):
     tier5=info["pieces"]
     need(set(tier5)==set(contracts.TIER_SLOTS),"TIER_FIVE_SLOTS_MISSING")
     used=set(tier5.values())
-    result={"tier_ids":dict(tier5),"four_tier_slots":list(FOUR),
-            "ordinary":{},"weapons":{}}
-    for slot in ORDINARY:
+    indexed={row["item_id"]:row for row in db["items"]}
+    def armor_matches(slot):
+        return [iid for iid in available_plain(db,slot=slot,family=family,
+                    class_mask=class_mask,used=used)
+                if any(code in PRIMARY_STAT_CODES[contract["primary"]]
+                       for code in indexed[iid].get("stat_modifier_codes",[]))]
+    fifth=choose_plain_fifth(armor_matches)
+    need(fifth is not None,"PLAIN_BASE_NOT_AVAILABLE_"+family+"_chest")
+    fifth_slot,fifth_id=fifth
+    four=[slot for slot in contracts.TIER_SLOTS if slot!=fifth_slot]
+    result={"tier_ids":dict(tier5),"four_tier_slots":four,
+            "ordinary":{fifth_slot:fifth_id},"weapons":{}}
+    used.add(fifth_id)
+    for slot in ORDINARY[1:]:
         matches=available_plain(db,slot=slot,family=family,
                                 class_mask=class_mask,used=used)
         need(matches,"PLAIN_BASE_NOT_AVAILABLE_"+family+"_"+slot)

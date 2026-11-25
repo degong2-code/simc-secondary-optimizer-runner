@@ -39,6 +39,25 @@ class SourceFirstRepresentative(unittest.TestCase):
                 self.assertTrue(set(spec["weapons"].values())<=source_ids)
         self.assertTrue(set(plan["common_gear"].values())<=source_ids)
 
+    def test_missing_plain_chest_reuses_another_tier_position(self):
+        db=copy.deepcopy(self.db)
+        db["items"]=[r for r in db["items"] if not (
+            r["category"]=="plain_representative_candidate" and
+            r["class_id"]==4 and r["subclass_id"]==1 and
+            r["inventory_type"] in (5,20))]
+        from collections import Counter
+        db["item_count"]=len(db["items"])
+        db["role_counts"]=dict(Counter(r["category"] for r in db["items"]))
+        result=stage.select_class_spec(db,self.tier,"mage","frost")
+        self.assertEqual(set(result["four_tier_slots"]),
+                         {"head","shoulders","chest","hands"})
+        self.assertEqual(set(result["ordinary"]),{"legs","wrists","waist","feet"})
+        row=next(r for r in db["items"] if r["item_id"]==result["ordinary"]["legs"])
+        self.assertEqual(row["inventory_type"],7)
+        self.assertIn(5,row["stat_modifier_codes"])
+        self.assertEqual(stage.select_class_spec(self.db,self.tier,"mage","frost")
+                         ["four_tier_slots"],list(stage.FOUR))
+
     def test_season_target_preview_follows_selected_scope_not_old_334(self):
         import v139_pure_target_profile_composer as pure
         # Synthetic 350 is a contract test, not source admission or Native.

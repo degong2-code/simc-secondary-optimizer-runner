@@ -538,14 +538,19 @@ def _verified_one_spec_G_profile_scope(*, source_bundle, candidate,
          candidate.get("character",{}).get("spec")==spec,
          "FRESH_V232_SELECTED_G_BUILD_SPEC_OR_ILEVEL_DRIFT")
     tier_ids=tier["classes"][cls]["pieces"]
-    four=source_first.FOUR
+    ordinary_slots=set(candidate["selected_ordinary"])
+    tier_slots=set(source_first.contracts.TIER_SLOTS)
+    fifth=ordinary_slots & tier_slots
+    need(len(fifth)==1 and ordinary_slots==
+         fifth | source_first.contracts.NON_TIER_ORDINARY,
+         "FRESH_V232_USER_PHYSICAL_G_SLOT_DRIFT")
+    four=[slot for slot in source_first.contracts.TIER_SLOTS if slot not in fifth]
     selected={**{slot:tier_ids[slot] for slot in four},
               **candidate["selected_ordinary"],
               **candidate["selected_common"],
               **candidate["selected_weapons"]}
     need(selected==candidate["selected_G_slot_ids"] and
-         set(candidate["selected_common"])==set(source_first.COMMON) and
-         set(candidate["selected_ordinary"])==set(source_first.ORDINARY),
+         set(candidate["selected_common"])==set(source_first.COMMON),
          "FRESH_V232_USER_PHYSICAL_G_SLOT_DRIFT")
     config=source_bundle["settings"]
     original=pure.validate_season(config)
