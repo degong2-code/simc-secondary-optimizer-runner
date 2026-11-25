@@ -13,6 +13,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 import v285_consumable_weapon_source as v285
 import v281_consumable_simc_relation as v281
+import v286_representative_oil_source_binding as v286
 from tests.test_v281_consumable_simc_relation import (
     SOURCE,TMP,FLASK,CSV,BUILD)
 
@@ -77,6 +78,38 @@ class WeaponMaskSourceTests(unittest.TestCase):
         self.assertEqual(third["status"],"WEAPON_MASK_SOURCE_PENDING")
         self.assertEqual(third["network_calls_by_stage"],0)
         self.assertEqual(len(self.mock_hit),1)
+    def test_preparation_reads_only_original_candidate_and_never_admits(self):
+        first=v285.collect(stage_root=self.root,build=BUILD,
+                           consumables=self.source,transport=self.transport)
+        self.assertEqual(first["status"],"EXACT_SAME_BUILD_WEAPON_MASK_SOURCE_ONLY")
+        projection=v286.preparation_options_from_sealed_stage(
+            stage_root=self.root,game_build=BUILD)
+        self.assertEqual(projection["status"],"OIL_PREPARATION_SOURCE_IDENTIFIED",projection)
+        self.assertEqual([x["physical_item_id"] for x in projection["items"]],[601])
+        self.assertEqual(projection["items"][0]["source_quality_rank"],2)
+        self.assertFalse(projection["items"][0]["user_selectable"])
+        self.assertFalse(projection["quality_equivalence_verified"])
+        self.assertEqual(projection["native_calls"],0)
+        self.assertEqual(projection["network_calls"],0)
+        self.assertEqual(len(self.mock_hit),1)
+        wrong=v286.preparation_options_from_sealed_stage(
+            stage_root=self.root,game_build="12.2.0.99998")
+        self.assertEqual(wrong["items"],[])
+        self.assertEqual(wrong["reason"],"V286_OIL_PREPARATION_BUILD_OR_SOURCE_DRIFT")
+        pathlib.Path(first["candidate_path"]).write_bytes(b"MODIFIED")
+        tampered=v286.preparation_options_from_sealed_stage(
+            stage_root=self.root,game_build=BUILD)
+        self.assertEqual(tampered["items"],[])
+        self.assertEqual(tampered["reason"],"V286_OIL_CANDIDATE_SIZE_DRIFT")
+        self.assertEqual(len(self.mock_hit),1)
+
+    def test_missing_preparation_stage_does_not_block_base(self):
+        result=v286.preparation_options_from_sealed_stage(
+            stage_root=self.root,game_build=BUILD)
+        self.assertEqual(result["status"],"OIL_PREPARATION_SOURCE_PENDING")
+        self.assertEqual(result["items"],[])
+        self.assertEqual(result["reason"],"V286_OIL_PREPARATION_STAGE_MISSING")
+
     def test_missing_exact_simc_source_causes_no_http(self):
         p=v285.collect(stage_root=self.root,build=BUILD,consumables={},
                       transport=lambda *_:self.fail("UNEXPECTED_NETWORK"))

@@ -41,6 +41,7 @@ import v208_internal_exact_special_L_hydrator as exact_L
 import v212_environment_manifest as environment_manifest
 import v213_source_to_catalog as source_to_catalog
 import v216_environment_build_coordinator as environment_build
+import v286_representative_oil_source_binding as oil_preparation
 import v289_retail_live_build_source as retail_build_source
 import v522_myth_target_currency_source as myth_target_source
 import v348_windows_user_source_credentials as local_source_keys
@@ -1810,7 +1811,13 @@ class LocalJobs:
         if build is None:
             result["status"]="SELECT_LOCAL_INSTALLED_BUILD"
             return result
-        docs=base/("wago_"+build)/"fresh_source"
+        stage_root=base/("wago_"+build)
+        # Source preparation choices are NOT installed/runtime oil options.
+        # Reuse the original candidate receipt once, independently of F/J/O.
+        preparation=oil_preparation.preparation_options_from_sealed_stage(
+            stage_root=stage_root,game_build=build)
+        result["oil_preparation_source"]=preparation
+        docs=stage_root/"fresh_source"
         if not docs.is_dir() or docs.is_symlink():
             return result
         candidates=[]
@@ -1985,8 +1992,12 @@ class LocalJobs:
         special_ids={entry["special_gem_id"]
                      for entry in result["verified_gem_installs"]
                      if entry["special_gem_id"] is not None}
+        preparation_ids={row["physical_item_id"] for row in preparation["items"]}
         official_names=official_ko_env.read_names(
-            self.root,build,set(flasks_by_id)|oil_ids|special_ids)
+            self.root,build,set(flasks_by_id)|oil_ids|special_ids|preparation_ids)
+        for row in preparation["items"]:
+            if row["physical_item_id"] in official_names:
+                row["official_name_ko"]=official_names[row["physical_item_id"]]
         for entry in result["verified_gem_installs"]:
             item_id=entry["special_gem_id"]
             if item_id in official_names:

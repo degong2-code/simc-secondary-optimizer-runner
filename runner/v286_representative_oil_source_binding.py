@@ -80,6 +80,85 @@ def _verified_candidate(root,row,label):
     need(type(data) is dict,"V286_"+label+"_CANDIDATE_OBJECT_REQUIRED")
     return data,stage["receipt_sha256"],registered["sha256"]
 
+def preparation_options_from_sealed_stage(*,stage_root,game_build):
+    """Reuse one small existing v285 candidate for explicit Build preparation.
+
+    Not an installed oil menu, quality-equivalence proof or O budget. The
+    original v216/v281/v286/v296/v297 path revalidates selected ItemID,
+    hand, final weapon and rating before Policy A installation. No source
+    collection, Native, file writes, or whole DB2 rehash on this read.
+    """
+    out={"status":"OIL_PREPARATION_SOURCE_PENDING","items":[],
+         "reason":None,"native_calls":0,"network_calls":0,
+         "user_selectable":False,"quality_equivalence_verified":False}
+    root=Path(stage_root)
+    receipt_path=root/".stage_receipts"/(oil_db.STAGE+".json")
+    if not receipt_path.is_file():
+        return {**out,"reason":"V286_OIL_PREPARATION_STAGE_MISSING"}
+    try:
+        need(root.is_dir() and not root.is_symlink(),
+             "V286_OIL_PREPARATION_STAGE_ROOT_INVALID")
+        receipt=stages._read_receipt(receipt_path)
+        need(receipt.get("status")=="COMPLETE" and
+             receipt.get("stage_id")==oil_db.STAGE and
+             receipt.get("output_paths",{}).get("candidate")==oil_db.OUTPUTS["candidate"],
+             "V286_OIL_PREPARATION_STAGE_IDENTITY_DRIFT")
+        locator={"candidate_path":str(root/oil_db.OUTPUTS["candidate"]),
+                 "source_stage":{**receipt,"status":"REUSED_VERIFIED"}}
+        doc,receipt_sha,candidate_sha=_verified_candidate(root.resolve(),locator,"OIL")
+        source=doc.get("weapon_equipped_source",{})
+        need(source.get("schema")==oil_db.SCHEMA and
+             source.get("game_build")==game_build and source.get("source_only") is True and
+             doc.get("source",{}).get("wago_snapshot_build")==game_build and
+             doc.get("automatic_ui_promotion") is False and
+             type(doc.get("items")) is list,
+             "V286_OIL_PREPARATION_BUILD_OR_SOURCE_DRIFT")
+        by_id={};ambiguous=set()
+        for item in doc["items"]:
+            if (type(item) is not dict or item.get("kind")!="item_enhancement" or
+                item.get("ui_selectable") is not False):
+                continue
+            simc=item.get("simc_temporary_enchant_source") or {}
+            mask=item.get("weapon_spell_equipped_source") or {}
+            links=simc.get("exact_source_matches")
+            if (simc.get("status")!="EXACT_SIMC_TEMP_ENCHANT_ID_CANDIDATE" or
+                type(links) is not list or len(links)!=1 or type(links[0]) is not dict or
+                mask.get("status")!="EXACT_SAME_BUILD_WEAPON_MASK_SOURCE_ONLY"):
+                continue
+            link=links[0];iid=item.get("item_id");token=link.get("simc_token")
+            quality=link.get("quality_rank");enchant=link.get("enchant_id")
+            if (type(iid) is not int or iid<=0 or type(token) is not str or
+                "oil" not in token.split("_") or type(quality) is not int or quality<0 or
+                type(enchant) is not int or enchant<=0 or
+                mask.get("equipped_item_class")!=2 or
+                any(type(mask.get(k)) is not int or mask[k]<=0 for k in
+                    ("inventory_type_mask","weapon_subclass_mask"))):
+                continue
+            name=item.get("name_enUS")
+            if type(name) is not str or not name.strip():name=token.replace("_"," ")
+            row={"physical_item_id":iid,"name_enUS":name,
+                 "source_quality_rank":quality,
+                 "simc_enchant_id":enchant,
+                 "status":"SOURCE_IDENTIFIED_PREPARATION_ONLY",
+                 "user_selectable":False}
+            if iid in by_id and by_id[iid]!=row:
+                ambiguous.add(iid)
+            by_id[iid]=row
+        rows=sorted((r for iid,r in by_id.items() if iid not in ambiguous),
+                    key=lambda x:(x["name_enUS"].casefold(),-x["source_quality_rank"],
+                                  x["physical_item_id"]))
+        return {**out,"status":("OIL_PREPARATION_SOURCE_IDENTIFIED" if rows else
+                               "OIL_PREPARATION_NO_EXACT_SOURCE_CANDIDATES"),
+                "items":rows,"source_stage_receipt_sha256":receipt_sha,
+                "source_candidate_sha256":candidate_sha,
+                "ambiguous_item_ids":sorted(ambiguous)}
+    except (OSError,ValueError,TypeError,KeyError,stages.StageExecutionBlocked) as exc:
+        code=str(exc).split(":",1)[0]
+        # No private path or raw data in the local HTTP projection.
+        safe=code if code.startswith(("V286_","STAGE_")) and code.replace("_","").isalnum() else type(exc).__name__
+        return {**out,"reason":safe}
+
+
 def weapon_metadata_matches_masks(cls,sub,inv,masks):
     """One original DB2 mask predicate for representative and final weapons."""
     return (type(masks) is dict and cls==2 and

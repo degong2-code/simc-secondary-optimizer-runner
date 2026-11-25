@@ -1689,8 +1689,54 @@ async function chooseInstalledFlask() {
     "정확한 영약·기본 4보석 설치본으로 연결했습니다. 장신구 선택을 확인한 뒤 "+
     "새 최적화를 계획할 수 있습니다. G/F 재측정은 하지 않았습니다.";
 }
+function renderOilPreparationChoices(data) {
+  // Older test DOMs and older packaged pages have no preparation controls.
+  if(typeof document.getElementById!=="function")return;
+  const status=document.getElementById("oil-preparation-status");
+  if(!status)return;
+  const source=data?.oil_preparation_source;
+  const exact=installedConsumableScopeMatches(data) &&
+    source?.status==="OIL_PREPARATION_SOURCE_IDENTIFIED";
+  const rows=exact?(source.items||[]).filter(row=>
+    row.status==="SOURCE_IDENTIFIED_PREPARATION_ONLY" &&
+    row.user_selectable===false && Number.isSafeInteger(row.physical_item_id) &&
+    row.physical_item_id>0):[];
+  for(const [hand,id] of [["main","oil-preparation-main"],["off","oil-preparation-off"]]){
+    const node=$(id),prior=field("season-oil-"+hand+"-id");
+    node.replaceChildren(option("","검증할 기름 선택"));
+    for(const row of rows)node.appendChild(option(row.physical_item_id,
+      (row.official_name_ko||row.name_enUS)+" · 원본 품질 "+row.source_quality_rank));
+    node.value=rows.some(row=>String(row.physical_item_id)===prior)?prior:"";
+    node.disabled=!rows.length||(hand==="off"&&!oilNeedsOffhand());
+  }
+  status.textContent=rows.length?
+    "시즌 원본에서 확인한 "+rows.length+"종 · 검증 준비 전용(정적 수치·적용 무기·품질 우위 미확정). 일반 선택지에 등록되기 전에는 실행할 수 없습니다.":
+    "검증 준비할 정확한 기름 원본이 아직 없습니다."+
+      (source?.reason?" ("+source.reason+")":"");
+}
+function chooseOilPreparationCandidate(hand) {
+  const data=state.oilCatalog,source=data?.oil_preparation_source;
+  const value=field("oil-preparation-"+hand);
+  if(!installedConsumableScopeMatches(data) ||
+     source?.status!=="OIL_PREPARATION_SOURCE_IDENTIFIED" ||
+     (hand==="off"&&!oilNeedsOffhand()))return;
+  const row=(source.items||[]).find(x=>String(x.physical_item_id)===value &&
+    x.status==="SOURCE_IDENTIFIED_PREPARATION_ONLY" && x.user_selectable===false);
+  if(value&&!row)return;
+  // Intent only; revoke old readiness. Existing Build independently checks
+  // actual hand, ilvl, ID/token, static O and the exact F/J installation.
+  $("season-oil-"+hand+"-id").value=row?value:"";
+  $("optimizer-oil-"+hand+"-id").value=row?value:"";
+  $("oil_"+hand).checked=Boolean(row);
+  oilUseIntent=$("oil_main").checked||$("oil_off").checked;
+  $("optimizer-oil-loadout").value="";
+  state.seasonGearTargetIlevel=null;
+  syncOilUseToggle();updateBudgetPreview();
+  setNotice("기름 검증 준비 대상 변경 · 영약과 보석 구성을 확인한 후 ‘선택 환경 검증·준비’를 실행하세요. 아직 검증 설치되지 않았습니다.");
+}
 function renderInstalledOilLoadouts(data) {
   state.oilCatalog=data;
+  renderOilPreparationChoices(data);
   const selector=$("optimizer-oil-loadout");
   selector.replaceChildren(option("","기름 사용 안 함 (O=0)"));
   const form=state.seasonGear?.weapon_forms?.[field("spec")];
@@ -5691,6 +5737,10 @@ function registerHandlers() {
     $("season-verified-flask").value="";
     refreshDefaultConsumableSummaries();
   });
+  for(const hand of ["main","off"])
+    $("oil-preparation-"+hand)?.addEventListener("change",()=>{
+      if(!state.busy&&!state.running)chooseOilPreparationCandidate(hand);
+    });
   $("optimizer-oil-loadout").addEventListener("change",()=>withBusy(async()=>{
     chooseInstalledOilLoadout();
     await bindUniqueInstalledOilVariant();

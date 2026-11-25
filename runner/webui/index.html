@@ -153,12 +153,17 @@
           <div class="field"><label for="season-selected-flask-id">선택한 영약 ItemID <small>시즌 원본으로 검증 · 실제 검증된 선택지 등록과 별개</small></label><input id="season-selected-flask-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="이미 알고 있는 영약 ItemID"></div>
           <p class="hint">위 검증된 영약 목록에서 선택하면 정확한 물리 ID가 자동으로 입력됩니다. 새 환경 요청은 원본 v216이 다시 검증하며, 설치 영약이라는 이유만으로 다른 조합의 승인을 부여하지 않습니다. 직접 입력도 유지합니다. 선택한 경우 기존 같은 시즌 v281 원본에서 이 영약만 찾아 F Native 측정(별도 선택)을 진행합니다. 없는 ID나 관측상 더 낮은 품질은 보류하며, 다른 영약 전체를 측정하지 않습니다. 정확한 ID를 모르면 비워 두세요.</p>
         </details>
-        <details class="fold"><summary>신규 무기 기름 ItemID 검증 준비 (고급)</summary>
+        <details class="fold"><summary>신규 무기 기름 검증 준비 (고급)</summary>
+          <p id="oil-preparation-status" class="hint" role="status">같은 시즌 원본 확인 후 검증 준비 대상이 표시됩니다.</p>
+          <div class="two season-build-fields">
+            <div class="field"><label for="oil-preparation-main">주무기 검증 준비 대상</label><select id="oil-preparation-main"><option value="">원본 확인 필요</option></select></div>
+            <div class="field"><label for="oil-preparation-off">보조무기 검증 준비 대상</label><select id="oil-preparation-off"><option value="">원본 확인 필요</option></select></div>
+          </div>
           <div class="two season-build-fields">
             <div class="field"><label for="season-oil-main-id">주무기 기름 ItemID <small>같은 시즌 SimC·아이템 원본으로 자동 대조</small></label><input id="season-oil-main-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="선택한 기름 물리 ItemID"></div>
             <div class="field"><label for="season-oil-off-id">보조무기 기름 ItemID <small>해당 무기와 손의 적용 조건 검증 필요</small></label><input id="season-oil-off-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="적용할 때만 입력"></div>
           </div>
-          <p class="hint">일반적인 장비 선택 항목이 아닙니다. 기름을 지정하면 같은 시즌의 실제 아이템·품질·손/무기 적용 조건과 SimC 정적 rating을 기존 환경 엔진에서 확인합니다. 영약 ID도 함께 지정해야 하며, 검증이 끝나지 않은 항목은 등록하지 않습니다. 기름 종류가 같은 손에 여러 개 설치된 경우 일반 사용자 세션에서 임의로 하나를 고르지 않습니다.</p>
+          <p class="hint">일반 선택 목록에 아직 등록되지 않은 기름의 검증 준비입니다. 위 이름을 선택하면 정확한 ID가 입력됩니다. ‘선택 환경 검증·준비’에서 같은 시즌의 실제 아이템·품질·손/무기 적용 조건과 SimC 정적 rating을 기존 환경 엔진으로 확인합니다. 영약 ID도 함께 지정해야 하며, 검증이 끝나지 않은 항목은 등록하지 않습니다. 기름 종류가 같은 손에 여러 개 설치된 경우 일반 사용자 세션에서 임의로 하나를 고르지 않습니다.</p>
         </details>
         </details>
    <div class="check-row"><label><input id="oil_main" type="checkbox"> 주무기 기름</label><label><input id="oil_off" type="checkbox"> 보조무기 기름</label></div>
