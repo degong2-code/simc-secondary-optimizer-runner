@@ -105,7 +105,7 @@ jobs:
           retention-days: 30
 
   v802-selected-mixed-oil:
-    if: contains(github.event.head_commit.message, '[v802-selected-oil-once]')
+    if: contains(github.event.head_commit.message, '[v802-selected-oil-once]') || contains(github.event.head_commit.message, '[v803-selected-oil-diagnostic-once]')
     runs-on: windows-2022
     timeout-minutes: 40
     env:

@@ -12,6 +12,8 @@ from pathlib import Path
 import re
 import tempfile
 import time
+import traceback
+from contextlib import contextmanager
 from fastapi.testclient import TestClient
 from p1_v769_incremental_environment_once import (
     BUILD, REV, EphemeralActionsCredentials, digest, summary, need)
@@ -29,6 +31,76 @@ WEAPON_LEVEL=330
 T=3500
 TOKEN="v802-local-only"
 MAX_ENV_NATIVE=24
+
+def _safe_failure(exc):
+    """Only fixed code and repository-relative frame names; no local paths,
+    profile text, credentials, raw logs or arbitrary exception message."""
+    code=str(exc).split(":",1)[0].split("\n",1)[0]
+    out={"kind":type(exc).__name__}
+    if re.fullmatch(r"[A-Z][A-Z0-9_]{3,140}",code):
+        out["code"]=code
+    if isinstance(exc,KeyError) and exc.args and type(exc.args[0]) is str:
+        key=exc.args[0]
+        if re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_]{0,80}",key):
+            out["missing_field"]=key
+    out["frames"]=[{"file":Path(f.filename).name,"function":f.name,
+                    "line":f.lineno}
+                   for f in traceback.extract_tb(exc.__traceback__)
+                   if re.fullmatch(r"v[0-9]+_[a-zA-Z0-9_]+\.py",Path(f.filename).name)][-12:]
+    return out
+
+def _native_observation(root):
+    """Count already recorded attempts without rerunning, exporting bytes,
+    or interpreting a missing result as a successful measurement."""
+    pairs={}
+    for path in root.rglob("v278_*/receipt.json"):
+        if not path.is_file() or path.is_symlink():continue
+        try:
+            row=json.loads(path.read_text("utf8"))
+            if row.get("schema")=="v278_original_simc_precombat_native_pair_v1":
+                pairs[path.parent.name]={"status":row.get("status"),
+                    "new_native_calls":row.get("new_native_calls"),
+                    "receipt_sha256":digest(path)}
+        except (OSError,ValueError,TypeError):continue
+    static={}
+    folder=root.parent/"static-item-probes"
+    if folder.is_dir():
+        for path in folder.glob("*/native.log"):
+            if not path.is_file() or path.is_symlink():continue
+            with path.open("rb") as stream:
+                count=sum(b"=== V208 ONE SELECTED USER STATIC NATIVE ===" in line
+                          for line in stream)
+            static[path.parent.name]={"attempts":count,
+                "json2_exists":(path.parent/"native.json").is_file()}
+    return pairs,static
+
+@contextmanager
+def observe_real_boundary(report,root):
+    """CI-only observer: delegate the real exception mapping unchanged.
+    Never bypass an admission, substitute a response or add a Native call."""
+    original=web.blocked
+    before_pair,before_static=_native_observation(root)
+    def observe(exc,**kw):
+        if "original_boundary_failure" not in report:
+            report["original_boundary_failure"]=_safe_failure(exc)
+        return original(exc,**kw)
+    web.blocked=observe
+    try:
+        yield
+    finally:
+        web.blocked=original
+        after_pair,after_static=_native_observation(root)
+        new_pairs=[row for key,row in after_pair.items() if key not in before_pair]
+        new_static=[{"attempts":row["attempts"]-before_static.get(key,{}).get("attempts",0),
+                     "json2_exists":row["json2_exists"]}
+                    for key,row in after_static.items()
+                    if row["attempts"]>before_static.get(key,{}).get("attempts",0)]
+        report["observed_selected_native_receipts"]={
+            "oil_completed_attempt_receipts":len(new_pairs),
+            "oil_cases":new_pairs,
+            "static_logged_attempts":sum(row["attempts"] for row in new_static),
+            "static_cases":new_static,
+            "counts_are_observed_receipts_not_unrecorded_processes":True}
 
 def run(args):
     out=Path(args.out).resolve()
@@ -52,8 +124,9 @@ def run(args):
             try:
                 detail=response.json().get("detail",{})
                 code=detail.get("code") if isinstance(detail,dict) else None
-            except ValueError:code=None
-            report["http_blocker"]={"status":response.status_code,"code":code}
+                kind=detail.get("kind") if isinstance(detail,dict) else None
+            except ValueError:code=None;kind=None
+            report["http_blocker"]={"status":response.status_code,"code":code,"kind":kind}
             save()
             raise RuntimeError("V802_ORIGINAL_HTTP_BLOCKED")
         return response.json()
@@ -131,7 +204,7 @@ def run(args):
             report["installed_O"]=env["O"]
             report["installed_manifest_sha256"]=sha
             query={"game_build":BUILD,"target_ilevel":TARGET,"installed_manifest_sha256":sha}
-            with TestClient(app,base_url="http://127.0.0.1:8765") as c:
+            with observe_real_boundary(report,root), TestClient(app,base_url="http://127.0.0.1:8765") as c:
                 save("EXACT_SELECTED_WEAPON_SOURCE")
                 gear=call(c,"GET","/api/v1/season-gear",params=query)
                 def selected(g):
@@ -223,6 +296,7 @@ def run(args):
         report.update(status="BLOCKED_REAL_SELECTED_MIXED_OIL",
                       first_blocker=code if re.fullmatch(r"[A-Z][A-Z0-9_]{3,140}",code)
                                     else type(exc).__name__)
+        report.setdefault("probe_failure",_safe_failure(exc))
         return 2
     finally:save()
 
