@@ -52,6 +52,9 @@ class OneBuildOptionalChoices(unittest.TestCase):
         self.assertEqual(token("Mana-Infused Stew",1),"manainfused_stew_1")
         self.assertIsNone(token("SimC + symbol",3))
         self.assertIsNone(token("A two-digit rank",12))
+        self.assertIsNone(token("Unranked Name 1",0))
+        self.assertEqual(fresh_build.optional_source_join.parser_name_stem(
+            "Old Royal Roást"),"old_royal_rost")
         # Spelling is only a candidate: actual SimC input acceptance and
         # numerical quality dominance remain distinct, unproven boundaries.
 
@@ -93,6 +96,15 @@ class OneBuildOptionalChoices(unittest.TestCase):
         self.assertTrue(built["optional_items_do_not_block_base"])
         # This guard is deliberately limited to source-known rows.
         # Do not claim complete SimC DBC uniqueness or Native acceptance.
+
+    def test_v764_unranked_token_can_match_rank_one_but_not_rank_two(self):
+        built=self.registry([
+            exact_row("food",301,"royal_roast",0,"spell:301"),
+            exact_row("food",302,"old_royal_roast_1",1,"spell:302"),
+            exact_row("food",303,"other_roast",0,"spell:303"),
+            exact_row("food",304,"old_other_roast_2",2,"spell:304")])
+        self.assertEqual([r["item_id"] for r in
+                          built["categories"]["food"]["options"]],[302,303,304])
 
     def test_same_effect_equal_quality_ambiguous_is_not_auto_picked(self):
         # Do not pick either a tie or a guessed text token.

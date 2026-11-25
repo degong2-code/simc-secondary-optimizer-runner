@@ -660,7 +660,9 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
                     parser_name({"simc_input_token":row["simc_token"],
                                  "crafting_quality":row["quality"]}) in other_name
                     for other_id,other_name in known_parser_names.get(
-                        (name,row["quality"]),[]))]
+                        (name,row["quality"]),[])+
+                        (known_parser_names.get((name,1),[])
+                         if row["quality"]==0 else []))]
         # The v216 same-pass DBC inventory may identify a shadow from an
         # item outside the active-season candidate list. Remove only the
         # chosen winner, never silently substitute a lower quality.

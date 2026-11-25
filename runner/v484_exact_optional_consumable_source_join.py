@@ -51,24 +51,28 @@ def candidate_token(name, rank):
     single-digit crafting-quality suffix. Names with supported SimC punctuation
     that cannot fit the existing installed-token grammar stay unadmitted.
     """
-    if type(rank) is not int or not 0<=rank<=9:
+    if (type(name) is not str or not name.isascii() or
+            type(rank) is not int or not 0<=rank<=9):
         return None
     stem=parser_name_stem(name)
-    if stem is None or TOKEN.fullmatch(stem) is None:
+    if (stem is None or TOKEN.fullmatch(stem) is None or
+            (rank==0 and re.search(r"_[0-9]$",stem))):
         return None
     return stem+("_"+str(rank) if rank else "")
 
 
 def parser_name_stem(name):
-    """Same known ASCII tokenizer projection, including non-input names.
+    """Pinned util::tokenize name projection, including non-input names.
 
-    A DBC name can contain characters that cannot be a product token but
-    can still shadow a valid shorter needle in the SimC parser.
+    SimC removes bytes >= 0x80. Such a DBC name may still shadow a valid
+    ASCII needle, even though it is not itself an eligible product token.
     """
-    if type(name) is not str or not name.isascii():
+    if type(name) is not str:
         return None
     chars=[]
     for char in name.lstrip("_+"):
+        if not char.isascii():
+            continue
         if char.isalpha():
             chars.append(char.lower())
         elif char==" ":

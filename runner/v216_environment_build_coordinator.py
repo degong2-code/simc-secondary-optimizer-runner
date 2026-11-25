@@ -9725,9 +9725,12 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
             stem=optional_source_join.parser_name_stem(row["name"])
             names_for_parser=parser_names.get(
                 (classes[kind],row["crafting_quality"]),[])
-            # Only a unique ASCII name needle in the complete collected
-            # subclass/quality key is projected. Unknown/non-ASCII
-            # tokenizer behavior is not claimed as Native acceptance.
+            # Actual pinned consumable.cpp: q==quality OR (!quality && q==1).
+            # A token without a rank can match both unranked and rank 1.
+            if row["crafting_quality"]==0:
+                names_for_parser=names_for_parser+parser_names.get(
+                    (classes[kind],1),[])
+            # This is parser identity only, not Native effect acceptance.
             if (not any(i==item_id and name==stem
                         for i,name in names_for_parser) or
                     any(i!=item_id and stem in name
