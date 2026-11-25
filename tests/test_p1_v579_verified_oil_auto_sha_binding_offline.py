@@ -27,6 +27,8 @@ const sections=[
  block("let oilUseIntent=true;","\nfunction applyOilUseToggle()"),
  block("function installedConsumableScopeMatches(data) {",
        "function renderInstalledFlaskChoices(data) {"),
+ block("async function chooseInstalledFlask() {",
+       "function renderInstalledOilLoadouts(data) {"),
  block("function renderInstalledOilLoadouts(data) {",
        "// A selected verified oil is an O intent"),
  block("async function bindUniqueInstalledOilVariant() {",
@@ -83,8 +85,8 @@ const funcs=Function(
  "specialAllowedSlots","renderSeasonOptionCatalog",
  "restoreInstalledSeasonOptionCatalog","updateBudgetPreview",
  "setNotice","verifiedInstalledGearScopeMatchesRun","oilCompatibility",
- "document",sections+"\nreturn {refreshInstalledOilLoadouts,"+
- "selectedFullVerifiedOil,tryApplyDefaultOil};"
+ "document","refreshDefaultConsumableSummaries",sections+"\nreturn {refreshInstalledOilLoadouts,"+
+ "selectedFullVerifiedOil,tryApplyDefaultOil,chooseInstalledFlask};"
 )(state,$,field,valueInt,option,
  data=>{event.push("flasks");assert.strictEqual(data,catalog)},
  async url=>{
@@ -114,7 +116,7 @@ const funcs=Function(
  ()=>{},s=>notices.push(s),
  ()=>false,
  ()=>{ /* source oilCompatibility calls syncOilUseToggle in product */ },
- {querySelector:()=>({open:false})});
+ {querySelector:()=>({open:false})},()=>{});
 (async()=>{
   await funcs.refreshInstalledOilLoadouts();
   assert.deepStrictEqual(selected,[OIL]);
@@ -158,9 +160,9 @@ const funcs=Function(
      ordinary_four_gem_profile:true,reference_G_track:"general"}
   ];
   row.installed_manifest_sha256=OLD;
-  $("oil_main").checked=false;
-  $("optimizer-oil-main-id").value="";
   await funcs.refreshInstalledOilLoadouts();
+  $("season-verified-flask").value="241324";
+  await funcs.chooseInstalledFlask();
   assert.strictEqual(state.seasonGear.installed_manifest_sha256,OIL);
   assert.strictEqual($("optimizer-oil-loadout").value,OLD);
   assert.equal(urls.filter(x=>x.startsWith("/api/v1/season-gear?")).length,2);
@@ -192,7 +194,7 @@ const funcs=Function(
         self.assertIn("  return true;\n}\nfunction applyOilUseToggle()",text)
         self.assertIn("if(matches.length!==1){syncOilUseToggle();return false;}",text)
         self.assertIn("candidate.verified_variant_count===1",text)
-        self.assertIn("candidate.ordinary_four_gem_profile===true",text)
+        self.assertIn("v.ordinary_four_gem_profile===true",text)
         self.assertIn("if(seasonBuildInputScope(true)!==scope ||",text)
         self.assertIn("if(gear.status!==\"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY\"",text)
         self.assertNotIn("automatic_O_approved_by_ui",text)
