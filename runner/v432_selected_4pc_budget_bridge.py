@@ -76,6 +76,16 @@ def _native(cache, identity):
     }
 
 
+def _final_levels_match_user(final_rows, user, target_ilevel):
+    """Only explicit selected nontrinket rows may differ from target ilvl."""
+    chosen={row["slot"]:row.get("ilevel",target_ilevel)
+            for row in user["special_items"]+user["embellishments"]}
+    return all(type(row.get("ilevel")) is int and
+               1<=row["ilevel"]<=1000 and row["slot"]==slot and
+               row["ilevel"]==chosen.get(slot,target_ilevel)
+               for slot,row in final_rows.items())
+
+
 def reconcile(*, baseline_rows, final_rows, final_groups,
               user, class_tier_five, baseline_slot_ids,
               installed_document, original_v191_link, native_cache,
@@ -129,9 +139,7 @@ def reconcile(*, baseline_rows, final_rows, final_groups,
          all(row["slot"] == slot and
              row["ilevel"] == doc["target_ilevel"]
              for slot, row in baseline_rows.items()) and
-         all(row["slot"] == slot and
-             row["ilevel"] == doc["target_ilevel"]
-             for slot, row in final_rows.items()),
+         _final_levels_match_user(final_rows,user,doc["target_ilevel"]),
          "B8_PROFILE_PHYSICAL_SLOTS_OR_LEVEL_DRIFT")
     base_ids = {
         slot: row["item_id"] for slot, row in baseline_rows.items()

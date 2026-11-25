@@ -643,8 +643,14 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
                             ("special",user["special_items"]),
                             ("crafted",user["embellishments"])):
         for raw in selection:
-            need(type(raw) is dict and set(raw)=={"slot","item_id","options"},
+            need(type(raw) is dict and set(raw) in (
+                 {"slot","item_id","options"},
+                 {"slot","item_id","options","ilevel"}) and
+                 ("ilevel" not in raw or group!="trinkets"),
                  "SELECTED_ITEM_FIELDS")
+            selected_level=items.checked_level(raw.get("ilevel",ilevel))
+            need(selected_level==ilevel or flexible_current_tier,
+                 "MIXED_SELECTED_ILEVEL_REQUIRES_CURRENT_SEASON")
             slot=raw["slot"]
             need(slot in rows and slot not in taken,
                  "SELECTED_SLOT_INVALID_OR_DUPLICATE")
@@ -703,7 +709,7 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
                      "redirected_base_stats" not in opts,
                      "EMBELLISHMENT_NOT_ON_CRAFTED_EQUIPMENT")
             rows[slot]={"slot":slot,"item_id":raw["item_id"],
-                        "ilevel":ilevel,"options":opts}
+                        "ilevel":selected_level,"options":opts}
             groups[slot]=slot_group
     need({r["slot"] for r in user["trinkets"]}=={"trinket1","trinket2"},
          "USER_TRINKET_SLOTS_NOT_EXACT")

@@ -1436,6 +1436,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
           and static_cache_path is None),
          "SEASON_WRITER_INTERNAL_SOURCE_AND_NO_STATIC_CACHE_REQUIRED")
     selected_season_items=bool(user["special_items"] or user["embellishments"])
+    # Mixed physical levels need the installed G baseline + exact selected
+    # delta owner. The legacy target-level reference must not silently absorb
+    # an explicit different item level without that reconciliation.
+    need(not any(row.get("ilevel",ilvl)!=ilvl for row in
+                 user["special_items"]+user["embellishments"]) or
+         (fresh_installed_environment_path is not None and
+          (static_special_probe_only or season_selected_static_cache_path is not None)),
+         "MIXED_SELECTED_ILEVEL_REQUIRES_INSTALLED_EXACT_G_DELTA")
     # B8 selected profile is intentionally NON-executable. Do not weaken
     # the ordinary v212/v096 user session or accept uninstalled v216 previews.
     need(season_selected_static_cache_path is None or (

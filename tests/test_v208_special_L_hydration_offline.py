@@ -405,4 +405,32 @@ class OneExactSpecialHydration(unittest.TestCase):
         with self.assertRaisesRegex(hydrate.StaticLBlocked,"IDENTITY|MISMATCH"):
             fake(json.dumps(raw).encode(),[row],"710c2408bf")
 
+class MixedSelectedLevelContract(unittest.TestCase):
+    def test_optional_selected_level_preserved_and_legacy_shape_unchanged(self):
+        controls=user_controls()
+        legacy=sessions.user_scenario(controls)
+        self.assertNotIn("ilevel",legacy["special_items"][0])
+        controls["special_items"][0]["ilevel"]=327
+        user=sessions.user_scenario(controls)
+        self.assertEqual(user["target"]["ilevel"],331)
+        self.assertEqual(user["special_items"][0]["ilevel"],327)
+        for invalid in (0,1001,True,"327"):
+            controls["special_items"][0]["ilevel"]=invalid
+            with self.assertRaises(ValueError):
+                sessions.user_scenario(controls)
+
+    def test_mixed_levels_require_exact_explicit_selected_slots(self):
+        from v432_selected_4pc_budget_bridge import _final_levels_match_user
+        controls=user_controls()
+        controls["special_items"][0]["ilevel"]=327
+        user=sessions.user_scenario(controls)
+        rows={"chest":{"slot":"chest","ilevel":327},
+              "head":{"slot":"head","ilevel":331}}
+        self.assertTrue(_final_levels_match_user(rows,user,331))
+        rows["chest"]["ilevel"]=331
+        self.assertFalse(_final_levels_match_user(rows,user,331))
+        rows["chest"]["ilevel"]=327
+        rows["head"]["ilevel"]=330
+        self.assertFalse(_final_levels_match_user(rows,user,331))
+
 if __name__=="__main__":unittest.main()

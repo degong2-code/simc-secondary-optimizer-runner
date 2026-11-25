@@ -2790,6 +2790,10 @@ class LocalJobs:
                 params.selected_oil_item_ids_by_hand or None),
             required_gem_layout=gems,
             selected_flask_item_id=params.selected_flask_item_id,
+            **({"required_reference_G_track":
+                 ("fury_dual_2h" if user["target"]["final_T"] is None else None)}
+               if (user["character"]["class"],user["character"]["spec"])==
+                  ("warrior","fury") else {}),
             **({"expected_installed_manifest_sha256":
                  params.installed_manifest_sha256}
                if params.installed_manifest_sha256 is not None else {}))

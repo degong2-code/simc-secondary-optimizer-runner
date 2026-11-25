@@ -147,7 +147,8 @@ def validated_selected_gear(entries,group,limit):
     out=[]
     for item in entries:
         need(type(item) is dict and
-             set(item)=={"slot","item_id","options"},
+             set(item) in ({"slot","item_id","options"},
+                           {"slot","item_id","options","ilevel"}),
              "SELECTED_GEAR_FIELDS")
         slot=item["slot"]
         need(type(slot) is str and slot in bootstrap.item_mod.SLOTS and
@@ -162,8 +163,10 @@ def validated_selected_gear(entries,group,limit):
             need("embellishment" in options and
                  "redirected_base_stats" not in options,
                  "CRAFTED_NEEDS_EMBELLISHMENT_NOT_CATALYST")
-        out.append({"slot":slot,"item_id":item["item_id"],
-                    "options":options})
+        selected={"slot":slot,"item_id":item["item_id"],"options":options}
+        if "ilevel" in item:
+            selected["ilevel"]=bootstrap.item_mod.checked_level(item["ilevel"])
+        out.append(selected)
     need(len({v["slot"] for v in out})==len(out),
          "DUPLICATE_SELECTED_GEAR_SLOT")
     return out
@@ -186,16 +189,20 @@ def selected_rows_from_form(special_rows,crafted_rows):
         result=[]
         for raw in rows:
             need(type(raw) is dict
-                 and set(raw)=={"slot","item_id"}|set(option_keys),
+                 and set(raw) in ({"slot","item_id"}|set(option_keys),
+                                  {"slot","item_id","ilevel"}|set(option_keys)),
                  "ADVANCED_FORM_FIELDS")
             text={k:str(v).strip() for k,v in raw.items()}
             if not any(text.values()):continue
             need(text["slot"] and text["item_id"] and
                  text["item_id"].isdigit(),
                  "ADVANCED_FORM_SLOT_AND_ITEM_REQUIRED")
-            result.append({
-                "slot":text["slot"],"item_id":int(text["item_id"]),
-                "options":{k:text[k] for k in option_keys if text[k]}})
+            row={"slot":text["slot"],"item_id":int(text["item_id"]),
+                 "options":{k:text[k] for k in option_keys if text[k]}}
+            if text.get("ilevel"):
+                need(text["ilevel"].isdigit(),"SELECTED_GEAR_ILEVEL_INVALID")
+                row["ilevel"]=bootstrap.item_mod.checked_level(int(text["ilevel"]))
+            result.append(row)
         converted[group]=result
     return converted
 
