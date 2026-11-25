@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import tempfile
 from pathlib import Path
 
 import v191_unified_season_data_update as v191
@@ -18,6 +19,10 @@ import v217_stage_execution_engine as stages
 
 MAX_V191_BYTES = 25_000_000
 MAX_MANIFEST_BYTES = 1_000_000
+# Process-local only: no new persistent cache or authority. The old
+# COMPLETE output is verified on every reuse, even after a replay hit.
+_REPLAYED_IDENTICAL = {}
+_MAX_REPLAY_IDENTITIES = 128
 
 
 def require(ok, code):
@@ -40,6 +45,57 @@ def sha(raw):
 def encode(doc):
     return json.dumps(doc, ensure_ascii=False, sort_keys=True,
                       indent=2, allow_nan=False) + "\n"
+
+
+def _compile_or_reuse_identical(*,root,stage_id,inputs,output_name,
+                                relative,compile_to,validate):
+    """Reuse a fixed catalog after an update only by exact compiler replay.
+
+    Installed v212 receipts and saved sessions reference the original v213
+    artifact. Never replace any of the three fixed source files or bless a
+    different result merely because the new code uses the same season.
+    The regular v217 rules remain unchanged for all other stage owners.
+    """
+    version="1"
+    outputs={output_name:relative}
+    paths,receipt_path=stages._safe_paths(root,stage_id,outputs)
+    target=root/relative
+    current=stages._input_sha(stage_id,version,inputs)
+    if receipt_path.is_file():
+        prior=stages._read_receipt(receipt_path)
+        old=prior.get("input_fingerprint")
+        if old!=current:
+            require(type(old) is str and len(old)==64 and
+                    all(c in "0123456789abcdef" for c in old),
+                    "FRESH_STAGE_ORIGINAL_FINGERPRINT_INVALID")
+            stages._check_identity(prior,stage_id,version,old,paths)
+            require(prior.get("status")=="COMPLETE",
+                    "FRESH_STAGE_ORIGINAL_INCOMPLETE")
+            total=stages._verify_outputs(prior,paths)
+            key=(str(root.resolve()),stage_id,prior["receipt_sha256"],current)
+            if key not in _REPLAYED_IDENTICAL:
+                # No changes to the permanent workspace, even on failure.
+                # Use the SAME compiler and writer as first acquisition,
+                # including platform text encoding/newline behavior.
+                with tempfile.TemporaryDirectory(prefix="simc-catalog-replay-") as temp:
+                    candidate=Path(temp)/target.name
+                    compile_to(candidate)
+                    require(validate({output_name:candidate}) is True,
+                            "FRESH_STAGE_REPLAY_VALIDATION_FAILED")
+                    raw=raw_file(candidate,MAX_V191_BYTES)
+                    original=prior["outputs"][output_name]
+                    require(len(raw)==original["size"] and
+                            sha(raw)==original["sha256"],
+                            "FRESH_STAGE_REPLAY_OUTPUT_CHANGED_EXACT_CORRECTION_REQUIRED:"+stage_id)
+                if len(_REPLAYED_IDENTICAL)>=_MAX_REPLAY_IDENTITIES:
+                    _REPLAYED_IDENTICAL.pop(next(iter(_REPLAYED_IDENTICAL)))
+                _REPLAYED_IDENTICAL[key]=True
+            return {**stages._summary(prior,"REUSED_VERIFIED",False,False,0,total),
+                    "result":None}
+    return stages.execute_stage(
+        root=root,stage_id=stage_id,stage_version=version,
+        inputs=inputs,outputs=outputs,execute=lambda:compile_to(target),
+        validate=validate)
 
 
 def source_inputs(v191_path, simc_source_dir, simc_manifest_path,
@@ -123,14 +179,14 @@ def compile_fresh_v191_stage(*, stage_root, fresh_v191_inputs,
     output = "fresh_source/v191_candidate.json"
     target = root / output
 
-    def execute():
+    def compile_to(destination):
         arguments = []
         for key in ("gear", "tier", "v189", "v190"):
             arguments.extend(["--" + key, str(fresh_v191_inputs[key])])
         arguments.extend([
             "--simc-generated-folder", str(generated),
             "--fresh-budget-pending", "--event", event,
-            "--out", str(target)])
+            "--out", str(destination)])
         require(v191.main(arguments) == 0, "FRESH_V191_COMPILER_BLOCKED")
 
     def validate(paths):
@@ -151,13 +207,14 @@ def compile_fresh_v191_stage(*, stage_root, fresh_v191_inputs,
             and cons.get("general_gems", {}).get(
                 "reference", "MISSING") is None
             and doc.get("environment_ready") is False)
-    result = stages.execute_stage(
-        root=root, stage_id="fresh-v191", stage_version="1",
+    result = _compile_or_reuse_identical(
+        root=root, stage_id="fresh-v191",
         inputs={**pinned, "event": event,
                 "expected_build": expected_game_build,
                 "expected_revision": expected_simc_revision,
                 "code_sha256": code["sha256"]},
-        outputs={"candidate": output}, execute=execute, validate=validate)
+        output_name="candidate", relative=output,
+        compile_to=compile_to, validate=validate)
     return str(target.resolve()), {
         k: v for k, v in result.items() if k != "result"}
 
@@ -169,8 +226,9 @@ def compile_fresh_candidate(*, stage_root, simc_source_dir,
     """Reuse v217 stages; never read installed-season data or caches.
 
     root must be an existing, dedicated build-source workspace outside the
-    product session/cache root. Input identity changes fail closed; a new
-    season must use a distinct stage root rather than overwriting receipts.
+    product session/cache root. On changed input identity, exact compiler
+    replay must reproduce existing bytes or the fixed catalog stays pending.
+    A new season uses a distinct stage root, never overwriting receipts.
     """
     root = Path(stage_root).expanduser()
     require(root.is_dir() and not root.is_symlink(),
@@ -195,11 +253,11 @@ def compile_fresh_candidate(*, stage_root, simc_source_dir,
     first = root / first_rel
     second = root / second_rel
 
-    def execute_v211():
+    def compile_v211_to(destination):
         classified = v211.compile_fresh_season(
             season, simc_source_dir, manifest)
-        first.parent.mkdir(parents=True, exist_ok=True)
-        first.write_text(encode(classified), encoding="utf8")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(encode(classified), encoding="utf8")
 
     def validate_v211(paths):
         doc = json.loads(paths["classification"].read_text(encoding="utf8"))
@@ -210,29 +268,29 @@ def compile_fresh_candidate(*, stage_root, simc_source_dir,
                 and doc.get("counts", {}).get("user_selectable_existing_scope") == 0
                 and doc.get("counts", {}).get("native_E_measured") == 0)
 
-    one = stages.execute_stage(
-        root=root, stage_id="fresh-v211", stage_version="1",
-        inputs=base_inputs, outputs={"classification": first_rel},
-        execute=execute_v211, validate=validate_v211)
+    one = _compile_or_reuse_identical(
+        root=root, stage_id="fresh-v211",
+        inputs=base_inputs, output_name="classification", relative=first_rel,
+        compile_to=compile_v211_to, validate=validate_v211)
     classified_raw = raw_file(first, MAX_V191_BYTES)
     classified = json.loads(classified_raw)
 
-    def execute_v213():
+    def compile_v213_to(destination):
         joined = v213.compile_catalog(
             season, identity["v191_sha256"], classified, sha(classified_raw))
         v213.verify_catalog(joined)
-        second.parent.mkdir(parents=True, exist_ok=True)
-        second.write_text(encode(joined), encoding="utf8")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(encode(joined), encoding="utf8")
 
     def validate_v213(paths):
         artifact = json.loads(paths["candidate"].read_text(encoding="utf8"))
         return v213.verify_catalog(artifact) is True
 
-    two = stages.execute_stage(
-        root=root, stage_id="fresh-v213", stage_version="1",
+    two = _compile_or_reuse_identical(
+        root=root, stage_id="fresh-v213",
         inputs={**base_inputs, "v211_output_sha256": sha(classified_raw)},
-        outputs={"candidate": second_rel},
-        execute=execute_v213, validate=validate_v213)
+        output_name="candidate", relative=second_rel,
+        compile_to=compile_v213_to, validate=validate_v213)
     return {
         "source_catalog_path": str(second.resolve()),
         "v191_stage": first_stage,

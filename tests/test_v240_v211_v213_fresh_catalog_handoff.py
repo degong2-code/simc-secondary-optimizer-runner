@@ -630,6 +630,48 @@ class SameFreshCatalogChain(unittest.TestCase):
                      "expected_game_build":BUILD,"expected_simc_revision":REV}
             first=adapter.compile_fresh_candidate(**request)
             again=adapter.compile_fresh_candidate(**request)
+            # Actual v191 -> v211 -> v213 compilers, old receipt identity
+            # and original bytes remain intact after a package fingerprint
+            # update. A second target build in the same process avoids
+            # replaying unchanged compilers, but verifies the old files.
+            before={p.relative_to(stage_root):p.read_bytes()
+                    for p in stage_root.rglob("*") if p.is_file()}
+            with (patch.object(adapter.stages,"module_dependency_fingerprint",
+                               return_value={"sha256":"a"*64}),
+                  patch.object(adapter.v191,"main",wraps=adapter.v191.main) as v191_run,
+                  patch.object(adapter.v211,"compile_fresh_season",
+                               wraps=adapter.v211.compile_fresh_season) as v211_run,
+                  patch.object(adapter.v213,"compile_catalog",
+                               wraps=adapter.v213.compile_catalog) as v213_run):
+                updated=adapter.compile_fresh_candidate(**request)
+                cached=adapter.compile_fresh_candidate(**request)
+            for name in ("v191_stage","v211_stage","v213_stage"):
+                self.assertEqual(updated[name]["receipt_sha256"],
+                                 first[name]["receipt_sha256"])
+                self.assertEqual(updated[name]["status"],"REUSED_VERIFIED")
+                self.assertEqual(cached[name]["receipt_writes"],0)
+            self.assertEqual(v191_run.call_count,1)
+            self.assertEqual(v211_run.call_count,1)
+            self.assertEqual(v213_run.call_count,1)
+            self.assertEqual(updated["source_catalog_path"],
+                             first["source_catalog_path"])
+            self.assertEqual(before,{p.relative_to(stage_root):p.read_bytes()
+                             for p in stage_root.rglob("*") if p.is_file()})
+            # Changed classification under a new code fingerprint must not
+            # overwrite the original catalog or publish an installation.
+            compile_original=adapter.v211.compile_fresh_season
+            def changed(*args,**kwargs):
+                doc=compile_original(*args,**kwargs)
+                doc["fixture_changed_output"]=True
+                return doc
+            with (patch.object(adapter.stages,"module_dependency_fingerprint",
+                               return_value={"sha256":"b"*64}),
+                  patch.object(adapter.v211,"compile_fresh_season",side_effect=changed)):
+                with self.assertRaisesRegex(ValueError,
+                        "FRESH_STAGE_REPLAY_OUTPUT_CHANGED_EXACT_CORRECTION_REQUIRED:fresh-v211"):
+                    adapter.compile_fresh_candidate(**request)
+            self.assertEqual(before,{p.relative_to(stage_root):p.read_bytes()
+                             for p in stage_root.rglob("*") if p.is_file()})
             self.assertEqual(first["v191_stage"]["status"],
                              "EXECUTED_AND_SEALED")
             self.assertEqual(first["v211_stage"]["status"],
