@@ -302,6 +302,37 @@ class CurrentDefaultWeaponSource(unittest.TestCase):
         self.assertEqual(result["mismatched_item_ids"],[101])
         self.assertIn("paladin/retribution",result["missing_specializations"])
 
+    def test_signed_db2_class_mask_preserves_simc_class_restrictions(self):
+        import v169_source_first_representative_stage as chooser
+        gear,metadata=self.sample()
+        gear["items"][0]["allowed_class_mask"]=-1
+        # DB2 all-class does not expand the SimC paladin-only mask.
+        with mock.patch.object(chooser.gear,"validate",return_value=gear), \
+             mock.patch.object(subject.item_metadata,"from_seed",
+                               return_value=metadata):
+            result=subject.current_source_profile_default_weapons(
+                gear=gear,seed_directory="test",game_build=BUILD,
+                simc_revision=REV)
+        self.assertEqual(result["specializations"]["paladin/retribution"],
+                         {"weapons":{"main_hand":101}})
+        self.assertIn("warrior/arms",result["missing_specializations"])
+        self.assertNotIn(101,result["mismatched_item_ids"])
+
+    def test_signed_mask_other_bits_and_invalid_row_do_not_expand_pool(self):
+        import v169_source_first_representative_stage as chooser
+        gear,metadata=self.sample()
+        # -3 has the paladin bit cleared; no intersection for 101.
+        gear["items"][0]["allowed_class_mask"]=-3
+        gear["items"][1]["allowed_class_mask"]=-((1<<31)+1)
+        with mock.patch.object(chooser.gear,"validate",return_value=gear), \
+             mock.patch.object(subject.item_metadata,"from_seed",
+                               return_value=metadata):
+            result=subject.current_source_profile_default_weapons(
+                gear=gear,seed_directory="test",game_build=BUILD,
+                simc_revision=REV)
+        self.assertEqual(result["mismatched_item_ids"],[101,102])
+        self.assertIn("paladin/retribution",result["missing_specializations"])
+
     def test_wrong_revision_does_not_authorize_weapon_pool(self):
         import v169_source_first_representative_stage as chooser
         gear,metadata=self.sample()

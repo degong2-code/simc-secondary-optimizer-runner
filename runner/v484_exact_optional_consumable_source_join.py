@@ -197,13 +197,18 @@ def current_source_profile_default_weapons(*, gear, seed_directory,
                 or row.get("item_set_id")!=0):
             mismatched.append(iid)
             continue
-        # Use the intersection of actual SimC and DB2 class restrictions.
+        # ItemSparse AllowableClass is signed; SimC DBC emits an unsigned
+        # mask. In particular DB2 -1 means all bits set, not malformed.
+        # Preserve the existing v169 per-class bit semantics, including
+        # zero as no matching class, and intersect both original masks.
         simc_mask=row.get("allowed_class_mask")
         db2_mask=physical.get("allowed_class_mask")
-        need(type(simc_mask) is int and simc_mask>=0 and
-             (db2_mask is None or type(db2_mask) is int and db2_mask>=0),
-             "V787_CURRENT_WEAPON_CLASS_MASK_INVALID")
-        mask=simc_mask if db2_mask is None else simc_mask & db2_mask
+        if not (type(simc_mask) is int and 0<=simc_mask<=0xffffffff and
+                (db2_mask is None or type(db2_mask) is int and
+                 -(1<<31)<=db2_mask<=0xffffffff)):
+            mismatched.append(iid)
+            continue
+        mask=simc_mask if db2_mask is None else simc_mask & (db2_mask & 0xffffffff)
         if not mask:
             mismatched.append(iid)
             continue

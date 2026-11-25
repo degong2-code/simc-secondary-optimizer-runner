@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/p1_v769_incremental_environment_once.yml
       - integration_probes/p1_v769_incremental_environment_once.py
+      - runner/v484_exact_optional_consumable_source_join.py
 permissions:
   contents: read
 concurrency:
