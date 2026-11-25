@@ -136,6 +136,42 @@ def observe(out):
                       "sample_item_ids":[r["item_id"] for r in
                                          entry["options"][:12]]}
                 for name,entry in projected["categories"].items()}
+            # Preserve the complete compact join/projection, not another
+            # copy of the large raw DB2/SimC files. This lets subsequent
+            # reviews distinguish input, quality and parser gaps without
+            # repeating an ephemeral source collection.
+            state["joined_item_rows"]=[
+                {k:row[k] for k in (
+                    "kind","physical_item_id","simc_input_token",
+                    "crafting_quality","effect_identity",
+                    "use_condition_identity","name_enUS")}
+                for row in rows]
+            state["parser_shadowed_item_ids"]=bridge.get(
+                "parser_shadowed_item_ids",[])
+            state["projected_options_by_kind"]={
+                kind:entry["options"]
+                for kind,entry in projected["categories"].items()}
+            state["quality_pending_ids_by_kind"]={
+                kind:entry.get("quality_comparison_pending_item_ids",[])
+                for kind,entry in projected["categories"].items()}
+            reviewed=original.optional_source_join.reviewed_apl_default_groups(
+                BUILD,REV)
+            state["reviewed_default_token_status"]={}
+            for kind,defaults in reviewed.items():
+                joined={row["simc_input_token"]:row for row in rows
+                        if row["kind"]==kind}
+                selected={row["simc_token"]:row for row in
+                          projected["categories"][kind]["options"]}
+                state["reviewed_default_token_status"][kind]={
+                    token:{
+                        "joined_item_ids":sorted(row["physical_item_id"]
+                            for row in rows if row["kind"]==kind and
+                            row["simc_input_token"]==token),
+                        "projected_item_id":selected.get(token,{}).get("item_id"),
+                        "status":("SOURCE_PROJECTED" if token in selected else
+                                  "JOINED_NOT_PROJECTED" if token in joined else
+                                  "SOURCE_JOIN_MISSING")}
+                    for token in defaults}
             # A source-owned row is not necessarily a user-selectable
             # choice: v212 may withhold every tie, duplicate, or shadowed
             # parser token. Do not report an empty gamer menu as PASS.
@@ -166,7 +202,10 @@ def observe(out):
                 "simc_full_item_seed_status","physical_food_item_count",
                 "physical_potion_item_count","simc_wago_joined_rows",
                 "joined_by_kind","v212_source_only_projection",
-                "v212_selectable_option_count","native_calls_reported")
+                "v212_selectable_option_count","native_calls_reported",
+                "reviewed_default_token_status","quality_pending_ids_by_kind",
+                "parser_shadowed_item_ids","joined_item_rows",
+                "projected_options_by_kind")
         },ensure_ascii=False,sort_keys=True),flush=True)
 
 

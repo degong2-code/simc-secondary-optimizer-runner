@@ -96,6 +96,28 @@ class V684OneBuildReceiptTests(unittest.TestCase):
         self.assertNotIn("fetch",options)
         self.assertNotIn("same_build_budget_evidence",options)
 
+    def test_v778_receipt_distinguishes_default_join_and_projection(self):
+        rows=[row(201,kind="potion",token="lights_potential_2",quality=2),
+              row(202,kind="potion",token="liquid_luster_2",
+                  effect="simc:shared",quality=2),
+              row(203,kind="potion",token="liquid_luster_1",
+                  effect="simc:shared",quality=1)]
+        status,doc,_=self.invoke(original_result(rows))
+        self.assertEqual(status,0)
+        self.assertEqual(len(doc["joined_item_rows"]),3)
+        self.assertEqual(doc["quality_pending_ids_by_kind"]["potion"],[202,203])
+        observed=doc["reviewed_default_token_status"]["potion"]
+        self.assertEqual(observed["lights_potential_2"],
+            {"joined_item_ids":[201],"projected_item_id":201,
+             "status":"SOURCE_PROJECTED"})
+        self.assertEqual(observed["liquid_luster_2"]["status"],
+                         "JOINED_NOT_PROJECTED")
+        self.assertEqual(observed["potion_of_recklessness_2"]["status"],
+                         "SOURCE_JOIN_MISSING")
+        self.assertEqual(doc["projected_options_by_kind"]["potion"][0]["item_id"],201)
+        self.assertFalse(doc["all_quality_numeric_noninferiority_proven"])
+        self.assertFalse(doc["actual_parser_native_accepted"])
+
     def test_multiple_joined_rows_but_zero_user_choices_are_pending(self):
         # Same parser family with unproven quality dominance stays pending.
         # Nonzero Wago/SimC joins are not proof of available menu options.
