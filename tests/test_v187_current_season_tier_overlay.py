@@ -563,7 +563,8 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
                      "allowed_class_mask":-1,"stat_modifier_codes":[3],
                      "item_set_id":0,"slot_hint":None,
                      "source_kinds":["raid_journal"],
-                     "season_list_basis":"SEALED_CONTEXT_FREE_EFFECT_OPTION"}
+                     "season_list_basis":"SEALED_CONTEXT_FREE_EFFECT_OPTION",
+                     "required_options":{"bonus_id":"987654"}}
                 self.assertEqual(key in product_gear.equipment_primary_armor_compatibility(
                     row)["compatible_dps_specs"],allowed)
                 craft={**row,"category":"selectable_stat_craft"}
