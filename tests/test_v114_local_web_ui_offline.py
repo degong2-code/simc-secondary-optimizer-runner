@@ -580,8 +580,8 @@ const apply=Function("state","$","field","valueInt",
             self.assertIn('id="'+ident+'"',page)
         self.assertIn('function refreshDefaultConsumableSummaries()',js)
         self.assertIn('refreshDefaultConsumableSummaries();',js)
-        self.assertIn('advanced.open=true;',js)
         self.assertIn('$("env-oil-options").open=true;',js)
+        self.assertNotIn('advanced.open=true;',js)
         self.assertIn('function applyOilUseToggle()',js)
         self.assertIn('if(matches.length!==1)',js)
 

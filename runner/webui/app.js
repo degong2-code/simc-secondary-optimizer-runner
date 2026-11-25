@@ -1320,11 +1320,9 @@ function applyOilUseToggle(){
   tryApplyDefaultOil();
   const matches=state.oilLoadouts.filter(fullVerifiedOilMatch);
   if(matches.length!==1&&!selectedFullVerifiedOil()){
-    if(matches.length>1){
-      const advanced=document.querySelector("#optimizer-form .env-advanced-controls");
-      if(advanced)advanced.open=true;
-      $("env-oil-options").open=true;
-    }
+    // This is now a normal environment control, not an expert-ID menu.
+    // Keep the old guidance fold behavior elsewhere; no need to expose IDs.
+    if(matches.length!==1)$("env-oil-options").open=true;
     setNotice(matches.length?
       "기름 사용 기본값은 켜져 있습니다. 검증된 조합이 여러 개라 직접 고르세요.":
       "기름 사용 기본값은 켜져 있지만 검증된 조합이 없습니다. 시즌 환경 검증 또는 기름 미사용을 선택하세요.");
@@ -1793,12 +1791,22 @@ function renderInstalledOilLoadouts(data) {
   selector.value=exact?.installed_manifest_sha256||"";
   const count=state.oilLoadouts.length;
   const defaultOilChosen=tryApplyDefaultOil();
+  // A missing installed choice must be discoverable without opening the
+  // expert ItemID panel. Do not open anything on a deliberate O=0 choice.
+  if(typeof document.getElementById==="function" && oilUseIntent &&
+     !selectedFullVerifiedOil()){
+    const panel=document.getElementById("env-oil-options");
+    const prepare=document.getElementById("oil-preparation-panel");
+    if(panel)panel.open=true;
+    if(prepare&&!count&&data?.oil_preparation_source?.status===
+       "OIL_PREPARATION_SOURCE_IDENTIFIED")prepare.open=true;
+  }
   $("optimizer-oil-loadout-status").textContent=count?
     "이 PC에 봉인된 "+count+"개 기름 조합 · 저장된 게임 빌드 "+
     data.game_build+" / ilvl "+data.target_ilevel+
     " · 실제 시즌·무기 적용은 실행 때 재검증":
-    "현재 조건에 검증된 기름 조합이 없습니다. 기름 사용이 선택된 동안은 실행 전에 검증이 필요합니다. "+
-    "기름을 사용하지 않으려면 체크를 해제하세요.";
+    "현재 조건에 검증된 기름 조합이 없습니다. 아래에서 이름으로 검증할 기름을 선택하거나 "+
+    "무기 기름을 ‘미사용’으로 변경하세요.";
   return defaultOilChosen;
 }
 async function refreshInstalledOilLoadouts() {

@@ -234,6 +234,23 @@ assert(!diagnose({source_compilation:{missing:["GENERATED_PERMANENT"],
 
 
 class SelectedOilPreparationRouting(unittest.TestCase):
+    def test_oil_name_selection_is_outside_expert_itemid_panel(self):
+        from pathlib import Path
+        html=(Path(__file__).resolve().parents[1]/"runner/webui/index.html").read_text("utf8")
+        start=html.index('id="conditions-title"')
+        expert=html.index('id="optimizer-season-itemid-expert"',start)
+        prepare=html.index('id="user-variant-prepare-btn"',start)
+        for ident in ("env-oil-options","optimizer-oil-loadout",
+                      "oil-preparation-main","oil-preparation-off"):
+            marker='id="'+ident+'"'
+            self.assertEqual(html.count(marker),1,ident+" duplicate DOM ID")
+            self.assertLess(html.index(marker,start),prepare,
+                            ident+" must be before ordinary preparation action")
+            self.assertLess(html.index(marker,start),expert,
+                            ident+" must not require expert ItemID panel")
+        self.assertGreater(html.index('id="season-oil-main-id"',start),expert)
+
+
     def test_actual_build_consumable_flags_are_scoped_to_selected_variant(self):
         import shutil, subprocess
         from pathlib import Path
