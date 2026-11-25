@@ -674,12 +674,59 @@ def _v680_exact_installed_optional_document(root,params,user):
     return doc
 
 
+def _v775_source_optional_defaults(doc,approved):
+    """Reviewed level-90 APL defaults, scoped to their exact source revision.
+
+    This is a preference over the installed registry, not new admission,
+    highest-quality proof, or a future-season assumption. Unknown revisions
+    and missing installed tokens have no automatic recommendation.
+    Source: engine/class_modules/apl/*, sc_{druid,shaman,warrior}.cpp
+    and paladin/sc_paladin.cpp at the pinned revision below.
+    """
+    if (doc.get("game_build")!="12.1.5.70961" or
+        doc.get("simc_revision")!="9933ffb946fb55b1fa66657b848f519ac19006e1"):
+        return {}
+    groups={
+        "food":{
+            "harandar_celebration":(
+                "druid/balance druid/feral monk/windwalker "
+                "rogue/assassination rogue/outlaw rogue/subtlety "
+                "shaman/elemental shaman/enhancement warlock/affliction "
+                "warlock/demonology warlock/destruction warrior/arms warrior/fury"),
+            "silvermoon_parade":(
+                "deathknight/frost deathknight/unholy evoker/devastation "
+                "hunter/beast_mastery hunter/marksmanship hunter/survival "
+                "mage/arcane mage/fire mage/frost priest/shadow"),
+            "blooming_feast":"demonhunter/havoc demonhunter/devourer",
+            "royal_roast":"paladin/retribution"},
+        "potion":{
+            "lights_potential_2":(
+                "druid/balance evoker/devastation mage/arcane mage/fire "
+                "paladin/retribution priest/shadow rogue/assassination "
+                "rogue/outlaw rogue/subtlety shaman/elemental "
+                "shaman/enhancement warrior/arms warrior/fury"),
+            "potion_of_recklessness_2":(
+                "deathknight/frost deathknight/unholy demonhunter/havoc "
+                "demonhunter/devourer hunter/beast_mastery hunter/marksmanship "
+                "hunter/survival mage/frost monk/windwalker warlock/destruction"),
+            "liquid_luster_2":"druid/feral warlock/affliction warlock/demonology"}}
+    defaults={}
+    for kind,tokens in groups.items():
+        for token,specs in tokens.items():
+            if token not in approved[kind]:
+                continue
+            for spec in specs.split():
+                defaults.setdefault(spec,{})[kind]=token
+    return defaults
+
+
 def _v680_public_installed_optional_choices(doc):
     """One verified v212 source projection used by UI and profile selection."""
     approved=profile_stage.current_season_approved_optional_choices(doc)
     source=doc.get("installed_optional_consumables")
     return {"schema":"v113_current_season_optional_consumables_v1",
             **approved,"source_default_simc_token":"disabled",
+            "recommended_tokens_by_spec":_v775_source_optional_defaults(doc,approved),
             "diamond_id":[0],"omnium_talents":["source_default"],
             "installed_manifest_sha256":doc["manifest_sha256"],
             "items":([{"kind":name,**row}

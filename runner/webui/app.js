@@ -151,6 +151,7 @@ const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, s
                 longrunEnabled:false, longrunResultReady:false,
                 longrunCompleted:false,
                 busy:false, options:null, defaultOptionalChoices:null,
+                optionalAuto:{food:true,potion:true},
                 verifiedInstalledBuildFromThisPage:null,
                 budgetPreviewDirty:false, seasonOptionRequestEpoch:0,
                 seasonBuildTargetManualOverride:false,
@@ -1180,7 +1181,8 @@ function fillDefault(item) {
   $("dk_rune_main").value="";
   $("dk_rune_off").value="";
   runeCompatibility();
-  for (const id of ["food","potion","augmentation","diamond","omnium"]) $(id).selectedIndex=0;
+  // Keep explicit off/selected choices. Automatic intent follows the spec.
+  for (const id of ["augmentation","diamond","omnium"]) $(id).selectedIndex=0;
   refreshDefaultConsumableSummaries();
   $("season_enchant_finger1").value="";
   $("season_enchant_finger2").value="";
@@ -1353,6 +1355,8 @@ function currentSeasonOptionalUseStatus(name) {
      !approved[name].includes("source_default"))
     return "이번 시즌 "+label+" 정보를 아직 가져오지 못했습니다. "+label+" 효과 없이 계산할 수 있습니다.";
   const selected=$(name).selectedOptions?.[0];
+  if(chosen==="source_default"&&state.optionalAuto?.[name])
+    return "기본 사용 설정 · 이번 시즌 전문화 기본 "+label+"이 검증된 목록에 없어 효과 없이 계산합니다.";
   if(chosen==="source_default")
     return approved[name].length>1?
       label+"을 사용하지 않고 계산합니다.":
@@ -1364,14 +1368,29 @@ function currentSeasonOptionalUseStatus(name) {
   // v218/v212 profile owner; rendering cannot authorize the SimC token.
   return "선택한 "+label+"으로 계산합니다. SimulationCraft에서 지원하지 않으면 실행 시 안내합니다.";
 }
+function applyOptionalAutoDefaults(){
+  const approved=state.options?.current_season_product_choices;
+  if(!state.optionalAuto||approved?.schema!=="v113_current_season_optional_consumables_v1")
+    return;
+  const spec=field("spec");
+  for(const name of ["food","potion"]){
+    if(!state.optionalAuto[name])continue;
+    const token=approved.recommended_tokens_by_spec?.[spec]?.[name];
+    // Resolve only to an already installed exact option.
+    $(name).value=typeof token==="string"&&
+      Array.isArray(approved[name])&&approved[name].includes(token)?
+        token:"source_default";
+  }
+}
 function refreshDefaultConsumableSummaries(){
+  applyOptionalAutoDefaults();
   const fid=field("season-selected-flask-id");
   const fOption=[...$("season-verified-flask").options].find(o=>o.value===fid);
   $("env-flask-summary").textContent=fid?
     (fOption?.textContent||"영약 #"+fid+" · 검증 필요"):"시즌 기본값";
   const potion=$("potion"),chosen=field("potion");
   $("env-potion-summary").textContent=!chosen||chosen==="source_default"?
-    "미사용 (이번 시즌 기본)":potion.selectedOptions?.[0]?.textContent||chosen;
+    "미사용":potion.selectedOptions?.[0]?.textContent||chosen;
   for(const name of ["food","potion"])
     $(name+"-application-status").textContent=
       currentSeasonOptionalUseStatus(name);
@@ -2166,6 +2185,8 @@ function fillSessionInputs(payload) {
     node.value=value;
   }
   const choices=u.consumable_choices||{};
+  // Restoration is explicit historical intent, not a new-session default.
+  state.optionalAuto={food:false,potion:false};
   for(const key of ["food","potion","augmentation"]) {
     const node=$(key),value=choices[key]??"source_default";
     // Preserve old sealed-session choices for inspection. A historical
@@ -4676,7 +4697,8 @@ function syncInstalledOptionalConsumables(catalog){
          item.simc_token,item.label]));
     const previously=field(name);
     populateSelect(name,allowed,token=>
-       token==="source_default"?"미사용 (이번 시즌 기본)":
+       token==="source_default"?(name==="augmentation"?
+         "미사용 (이번 시즌 기본)":"미사용"):
        (names.get(token)||token.replace(/_/g," ")));
     $(name).value=allowed.includes(previously)?previously:"source_default";
   }
@@ -4994,7 +5016,7 @@ function installOptions(options) {
       approved[name].every(token=>offered.includes(token)) ?
       approved[name]:["source_default"];
     populateSelect(name,permitted,v=>v==="source_default"?
-      "미사용 (이번 시즌 기본)":label(name,v));
+      (name==="augmentation"?"미사용 (이번 시즌 기본)":"미사용"):label(name,v));
   }
   // Preserve historical catalogues in /options, but never advertise a
   // diamond or season module selection that v218 cannot admit at runtime.
@@ -5648,7 +5670,10 @@ function registerHandlers() {
     await chooseInstalledFlask();
   }));
   for(const name of ["food","potion"])
-    $(name).addEventListener("change",refreshDefaultConsumableSummaries);
+    $(name).addEventListener("change",()=>{
+      state.optionalAuto[name]=false;
+      refreshDefaultConsumableSummaries();
+    });
   $("season-selected-flask-id").addEventListener("input",()=>{
     $("season-verified-flask").value="";
     refreshDefaultConsumableSummaries();

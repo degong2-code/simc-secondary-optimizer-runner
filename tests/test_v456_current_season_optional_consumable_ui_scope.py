@@ -163,7 +163,7 @@ installOptions(options);
 for(const name of ["food","potion","augmentation"]){
   assert.deepStrictEqual($(name).options.map(v=>v.value),["source_default"]);
   assert.strictEqual($(name).options[0].textContent,
-    "미사용 (이번 시즌 기본)");
+    name==="augmentation"?"미사용 (이번 시즌 기본)":"미사용");
 }
 assert.deepStrictEqual($("diamond").options.map(v=>v.value),["0"]);
 assert.deepStrictEqual($("omnium").options.map(v=>v.value),["source_default"]);
@@ -283,7 +283,7 @@ for(const id of ['food','potion'])
   assert(html.includes('id="'+id+'-application-status"'));
 assert(src.includes('const disabledOptional='));
 assert(src.includes('이 효과를 제외한 DPS 조건으로 계산합니다.'));
-assert(src.includes('$(name).addEventListener("change",refreshDefaultConsumableSummaries)'));
+assert(src.includes('state.optionalAuto[name]=false;'));
 console.log('V679_NO_FALSE_FOOD_POTION_SIMC_APPLICATION_PASS');
 """
         p=subprocess.run(

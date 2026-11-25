@@ -19,6 +19,7 @@ import v218_v098_profile_stage_adapter as profile
 import v106_user_session_controller as sessions
 import v280_consumable_item_use_spell_source as wago_effects
 import v216_environment_build_coordinator as fresh_build
+import v113_local_web_api as web_api
 
 BUILD="12.1.5.70961"
 REV="a"*40
@@ -186,6 +187,29 @@ class OneBuildOptionalChoices(unittest.TestCase):
                 profile._verified_fresh_season_consumables(
                     invalid,installed_environment=doc)
 
+    def test_v775_default_recommendations_require_reviewed_revision_and_exact_menu(self):
+        doc={"game_build":BUILD,
+             "simc_revision":"9933ffb946fb55b1fa66657b848f519ac19006e1"}
+        approved={"food":["source_default","harandar_celebration",
+                          "silvermoon_parade","blooming_feast","royal_roast"],
+                  "potion":["source_default","lights_potential_2",
+                            "potion_of_recklessness_2","liquid_luster_2"]}
+        selected=web_api._v775_source_optional_defaults(doc,approved)
+        self.assertEqual(len(selected),26)
+        self.assertTrue(all(set(row)=={"food","potion"}
+                            for row in selected.values()))
+        self.assertEqual(selected["mage/frost"],
+            {"food":"silvermoon_parade","potion":"potion_of_recklessness_2"})
+        self.assertEqual(selected["warlock/affliction"]["potion"],"liquid_luster_2")
+        self.assertNotIn("evoker/augmentation",selected)
+        self.assertEqual(web_api._v775_source_optional_defaults(
+            {**doc,"simc_revision":"a"*40},approved),{})
+        self.assertEqual(web_api._v775_source_optional_defaults(
+            doc,{"food":["source_default"],"potion":["source_default"]}),{})
+        missing=web_api._v775_source_optional_defaults(
+            doc,{**approved,"potion":["source_default","lights_potential_2"]})
+        self.assertEqual(missing["mage/frost"],{"food":"silvermoon_parade"})
+
     def test_actual_user_ui_consumes_only_the_exact_installed_source(self):
         node=shutil.which("node")
         if node is None:
@@ -208,7 +232,13 @@ const populateSelect=(name,allowed,label)=>{
  nodes[name].options=allowed.map(token=>({value:token,label:label(token)}));
  nodes[name].value=allowed[0];
 };
-const refreshDefaultConsumableSummaries=()=>{};
+const a=raw.indexOf('function applyOptionalAutoDefaults(){');
+const b=raw.indexOf('function refreshDefaultConsumableSummaries()',a);
+assert(a>=0&&b>a);
+nodes.spec={value:'mage/frost'};
+const apply=new Function('state','$','field',
+ raw.slice(a,b)+'return applyOptionalAutoDefaults;')(state,$,field);
+const refreshDefaultConsumableSummaries=()=>apply();
 const f=new Function('state','$','field','populateSelect',
  'refreshDefaultConsumableSummaries',
  raw.slice(begin,end)+'return syncInstalledOptionalConsumables;'
@@ -224,6 +254,7 @@ const exact={
   food:['source_default','food_3'],
   potion:['source_default','potion_3'],
   augmentation:['source_default'],
+  recommended_tokens_by_spec:{'mage/frost':{food:'food_3',potion:'potion_3'}},
   items:[
     {kind:'food',simc_token:'food_3',label:'영웅의 식사'},
     {kind:'potion',simc_token:'potion_3',label:'특급 전투 물약'}]
@@ -234,7 +265,19 @@ assert.deepStrictEqual(nodes.food.options.map(x=>x.value),['source_default','foo
 assert(nodes.food.options[1].label==='영웅의 식사');
 assert.deepStrictEqual(state.options.current_season_product_choices.potion,
  ['source_default','potion_3']);
-nodes.food.value='food_3';
+state.optionalAuto={food:true,potion:true};
+f(exact);
+assert(nodes.food.value==='food_3'&&nodes.potion.value==='potion_3');
+state.optionalAuto.food=false;
+nodes.food.value='source_default';
+f(exact);
+assert(nodes.food.value==='source_default'&&nodes.potion.value==='potion_3');
+nodes.spec.value='mage/fire';
+apply();
+assert(nodes.potion.value==='source_default');
+nodes.spec.value='mage/frost';
+apply();
+assert(nodes.potion.value==='potion_3'&&nodes.food.value==='source_default');
 f({...exact,installed_manifest_sha256:'b'.repeat(64)});
 assert.deepStrictEqual(nodes.food.options.map(x=>x.value),['source_default']);
 assert(nodes.food.value==='source_default');
