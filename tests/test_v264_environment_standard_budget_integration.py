@@ -231,6 +231,49 @@ class StandardBudgetNormalBuildTests(unittest.TestCase):
             result=self.preflight(incomplete,native_paths=paths,manual=3300)
             self.assertEqual(result["G_levels_filled_from_existing_v234_native"],
                              [334,335])
+            # Incrementally add only 335. The existing 334 proof is already
+            # source-bound and need not have its original receipt read again.
+            mixed={334:table[334],335:incomplete[335]}
+            partial=self.preflight(mixed,native_paths={335:paths[335]},manual=3300)
+            self.assertEqual(partial["G_levels_filled_from_existing_v234_native"],[335])
+            self.assertEqual(partial["standardized_ilevel_budget_rows_unadmitted"],
+                             result["standardized_ilevel_budget_rows_unadmitted"])
+            self.assertEqual(partial["proposed_budget_arithmetic_unadmitted"],
+                             result["proposed_budget_arithmetic_unadmitted"])
+            self.assertEqual(len(partial["measured_ilevel_G_from_existing_native_unadmitted"]),1)
+            self.assertNotIn("G",incomplete[335]["components"])
+            with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                        "G_NATIVE_MISSING_LEVEL_OBSERVATION"):
+                self.preflight(incomplete,native_paths={335:paths[335]})
+            with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                        "G_NATIVE_V262_LEVEL_SET_MISMATCH"):
+                self.preflight({334:table[334]},native_paths={335:paths[335]})
+            # The production tracks are not arbitrary labels for new Native
+            # evidence. The exact observed specialization controls the track.
+            general=copy.deepcopy(mixed)
+            general[334]["components"]["G"]["reference_track"]="general"
+            out=self.preflight(general,track="general",native_paths={335:paths[335]})
+            self.assertEqual(out["standardized_ilevel_budget_rows_unadmitted"]["reference_track"],
+                             "general")
+            fury=copy.deepcopy(mixed)
+            fury[334]["components"]["G"]["reference_track"]="fury_dual_2h"
+            with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                        "G_NATIVE_REFERENCE_TRACK_MISMATCH"):
+                self.preflight(fury,track="fury_dual_2h",native_paths={335:paths[335]})
+            import json
+            original=paths[335].read_text("utf8")
+            outer=json.loads(original)
+            native=outer["observed_G"]
+            native.update({"class":"warrior","spec":"fury"})
+            native["receipt_sha256"]=build.digest(build.canonical({
+                k:v for k,v in native.items() if k!="receipt_sha256"}).encode("utf8"))
+            paths[335].write_text(json.dumps(outer),encoding="utf8")
+            with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                        "G_NATIVE_REFERENCE_TRACK_MISMATCH"):
+                self.preflight(general,track="general",native_paths={335:paths[335]})
+            self.assertEqual(self.preflight(fury,track="fury_dual_2h",
+                native_paths={335:paths[335]})["G_levels_filled_from_existing_v234_native"],[335])
+            paths[335].write_text(original,encoding="utf8")
             self.assertEqual([r["G_standard"] for r in result[
                 "standardized_ilevel_budget_rows_unadmitted"]["rows"]],
                 [2850,2850])

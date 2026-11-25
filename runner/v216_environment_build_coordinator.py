@@ -2938,7 +2938,10 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
     native_G_filled_levels=[]
     if (existing_G_rows is not None
             and standard_budget_evidence_by_ilevel is not None):
-        need(set(existing_G_rows)==set(standard_budget_evidence_by_ilevel),
+        # Incremental rows: already supplied source-bound G components
+        # need no repeat receipt read. Only missing G needs an observation;
+        # any supplied observation must still belong to this exact table.
+        need(set(existing_G_rows)<=set(standard_budget_evidence_by_ilevel),
              "V216_G_NATIVE_V262_LEVEL_SET_MISMATCH")
         populated={}
         for level,evidence in standard_budget_evidence_by_ilevel.items():
@@ -2946,8 +2949,20 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                  type(evidence.get("components")) is dict,
                  "V216_GJFO_EVIDENCE_COMPONENTS_OBJECT_REQUIRED")
             components=evidence["components"]
+            observed=existing_G_rows.get(level)
+            if observed is not None and standard_budget_reference_track in (
+                    "general","fury_dual_2h"):
+                # v234 observations identify the exact measured DPS spec.
+                # Do not relabel Fury's distinct G as general, or vice versa.
+                cls,sp=observed.get("class"),observed.get("spec")
+                need(type(cls) is str and type(sp) is str and
+                     simc_representative.chooser.contracts.lookup(cls,sp) is not None and
+                     (("fury_dual_2h" if (cls,sp)==("warrior","fury")
+                       else "general")==standard_budget_reference_track),
+                     "V216_G_NATIVE_REFERENCE_TRACK_MISMATCH")
             if components.get("G") is None:
-                observed=existing_G_rows[level]
+                need(observed is not None,
+                     "V216_G_NATIVE_MISSING_LEVEL_OBSERVATION")
                 need(observed["generic_G_numeric_reference_usable"] is True,
                      "V216_G_NATIVE_GENERIC_PHYSICAL_CONDITIONS_MISSING")
                 rounded=observed["standardization"]
@@ -2985,8 +3000,6 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                  "V216_STANDARD_BUDGET_TARGET_EVIDENCE_CONFLICT")
             budget_evidence = target_evidence
     if existing_G_rows is not None and standard_table is not None:
-        need(set(existing_G_rows)==set(standard_budget_evidence_by_ilevel),
-             "V216_G_NATIVE_V262_LEVEL_SET_MISMATCH")
         for level,native_row in existing_G_rows.items():
             component=standard_budget_evidence_by_ilevel[level]["components"]["G"]
             need(component.get("source_sha256")==
