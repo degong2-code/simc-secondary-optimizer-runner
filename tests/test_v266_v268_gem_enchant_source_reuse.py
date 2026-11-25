@@ -90,12 +90,12 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
         buf=io.StringIO()
         writer=csv.DictWriter(buf,fieldnames=header,lineterminator="\n")
         writer.writeheader()
-        for i,stat_code in enumerate((0,32,36,49,40,32,32)):
+        for i,stat_code in enumerate((0,32,36,49,40,32,32,32,32,32)):
             item=2100+i
             links["joins"].append({
                 "item_id":item,"gem_property_id":11+i,
                 "enchant_id":600+i,"color_mask":2,
-                "minimum_ilevel":340 if i==5 else 0,"expansion_id":12,
+                "minimum_ilevel":340 if i in (5,8) else 0,"expansion_id":12,
                 "socket_eligibility":"NOT_YET_VERIFIED",
                 "status":"EXACT_DB2_ITEMSPARSE_GEM_PROPERTY_RELATION",
                 "ui_selectable":False})
@@ -110,9 +110,15 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                 # One equal +50/+50 example must remain unassigned.
                 row.update(Effect_1="5",
                            EffectArg_1=str(
-                               {2:32,3:40,4:36,5:49,6:36}[i]),
+                               {2:32,3:40,4:36,5:49,6:36,
+                                7:36,8:36,9:36}[i]),
                            EffectPointsMin_1=str(50 if i==6 else 7),
                            EffectScalingPoints_1="0")
+            if i>=7:
+                row.update(EffectScalingPoints_0="0.5",
+                           EffectScalingPoints_1="0.2")
+                if i==9:
+                    row.update(Effect_1="3")
             writer.writerow(row)
         links["exact_link_count"]=len(links["joins"])
         raw=buf.getvalue().encode("utf8")
@@ -151,6 +157,8 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                 stage_root=root,v221_candidate_path=path,build=BUILD,
                 target_ilevel=334,selected_gem_item_ids=[2105])
             self.assertFalse(scoped["four_stat_ordinary_source_complete_unadmitted"])
+            self.assertEqual(scoped[
+                "ordinary_two_CHMV_scaled_shape_candidate_ids_source_only"],[2107])
             self.assertNotIn("crit_rating",
                              scoped["four_stat_ordinary_best_observed_unadmitted"])
             self.assertEqual(scoped["selected_gem_raw_points_by_id_unadmitted"],
@@ -159,6 +167,8 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                                   build=BUILD,target_ilevel=340)
             self.assertEqual(boundary["four_stat_ordinary_best_observed_unadmitted"],
                              first["four_stat_ordinary_best_observed_unadmitted"])
+            self.assertEqual(boundary[
+                "ordinary_two_CHMV_scaled_shape_candidate_ids_source_only"],[2107,2108])
             chosen=adapter.view(
                 stage_root=root,v221_candidate_path=path,build=BUILD,
                 selected_gem_item_ids=[2102,2103,2104,2105],

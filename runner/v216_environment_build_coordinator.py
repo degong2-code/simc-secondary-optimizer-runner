@@ -89,6 +89,13 @@ def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
+def _raw_four_stat_j_can_finish(observed):
+    """A complete raw four-family projection is not a scaled comparison."""
+    return (observed.get("four_stat_ordinary_source_complete_unadmitted")
+            is True and not observed.get(
+                "ordinary_two_CHMV_scaled_shape_candidate_ids_source_only"))
+
+
 def _existing_v268_four_stat_source_diagnostic(*, observed, csv_source):
     """Compact, read-only projection of already-computed v268 J candidates.
 
@@ -128,6 +135,8 @@ def _existing_v268_four_stat_source_diagnostic(*, observed, csv_source):
             if type(missing_source_ids) is list else None),
         "four_ordinary_two_stat_types_complete":candidate.get(
             "four_stat_ordinary_source_complete_unadmitted"),
+        "ordinary_two_CHMV_scaled_shape_candidate_ids_source_only":
+            candidate.get("ordinary_two_CHMV_scaled_shape_candidate_ids_source_only"),
         "observed_leading_types":sorted(known),
         "missing_leading_types":sorted(expected-set(known)),
         "observed_nominal_candidates_by_type_unadmitted":known,
@@ -1436,7 +1445,22 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
     slot=("neck" if any(line.startswith("neck=")
                       for line in profile_text.splitlines()) else "head")
     observed=[];numeric_by_signature={};receipts={};calls=0
+    scaled_samples=[]
     stats=season_budget_contract.STATS
+    def usable(measurement,candidate,*,unbuffed):
+        prefix=("simc_unbuffed_gear_two_stat_" if unbuffed else
+                "simc_effective_two_stat_")
+        vector=measurement.get(prefix+"vector_unadmitted")
+        return (type(vector) is dict and set(vector)==set(stats)
+                and all(type(value) is int and value>=0
+                        for value in vector.values())
+                and sum(value>0 for value in vector.values())==2
+                and type(measurement.get(prefix+"rating_unadmitted")) is int
+                and measurement[prefix+"rating_unadmitted"]==sum(vector.values())
+                and vector[candidate["lead"]]>vector[candidate["partner"]]>0
+                and (not unbuffed or measurement.get(
+                    "simc_unbuffed_gear_rating_source")==
+                        "V046_JSON2_RESOLVED_ITEM_STATIC_CHMV"))
     for row in plan["sample_items"]:
         signature=row["signature"]
         if row["numeric_kind"]=="SIMC_STATIC":
@@ -1462,43 +1486,53 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
                         "native_observations_unadmitted":observed}
             calls+=measured["new_native_calls"]
             observed.append(measured)
-            # Static DBC points are unbuffed. Do not rank them against
-            # talent-modified snapshots in the mixed numeric path.
-            rating_field=("simc_unbuffed_gear_two_stat_rating_unadmitted"
-                          if mixed else "simc_effective_two_stat_rating_unadmitted")
-            vector_field=("simc_unbuffed_gear_two_stat_vector_unadmitted"
-                          if mixed else "simc_effective_two_stat_vector_unadmitted")
-            vector=measured.get(vector_field)
-            if mixed and (vector is None or measured.get(
-                    "simc_unbuffed_gear_rating_source")!=
-                    "V046_JSON2_RESOLVED_ITEM_STATIC_CHMV"):
+            scaled_samples.append((row,measured))
+            # Keep the original failure-short-circuit; no subsequent
+            # candidate Native calls after a failed observation.
+            if (measured.get("status")!=
+                    "SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED"
+                    or type(measured.get("observed")) is not dict
+                    or measured["observed"].get("source")!=
+                        "SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS"):
+                return {**pending,"reason":measured.get("status",
+                            "SIMC_GEM_NUMERIC_OR_DIRECTION_PENDING"),
+                        "new_native_calls":calls,
+                        "native_observations_unadmitted":observed}
+            raw_ok=usable(measured,row,unbuffed=True)
+            effective_ok=usable(measured,row,unbuffed=False)
+            if mixed and not raw_ok:
                 return {**pending,"reason":"GEM_MIXED_UNBUFFED_RATING_PENDING",
                         "new_native_calls":calls,
                         "native_observations_unadmitted":observed}
-            if not (measured.get("status")==
-                        "SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED"
-                    and type(vector) is dict and set(vector)==set(stats)
-                    and all(type(value) is int and value>=0
-                            for value in vector.values())
-                    and sum(value>0 for value in vector.values())==2
-                    and type(measured.get(rating_field)) is int
-                    and measured[rating_field]==sum(vector.values())
-                    and type(measured.get("observed")) is dict and
-                    measured["observed"].get("source")==
-                        "SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS"
-                    and vector[row["lead"]]>vector[row["partner"]]>0):
+            if not raw_ok and not effective_ok:
                 return {**pending,"reason":"SIMC_GEM_NUMERIC_OR_DIRECTION_PENDING",
                         "new_native_calls":calls,
                         "native_observations_unadmitted":observed}
-            sample={"item_id":row["item_id"],"signature":signature,
-                    "major_rating":vector[row["lead"]],
-                    "minor_rating":vector[row["partner"]],
-                    "numeric_source":(
-                        "EXACT_CONTROLLED_SIMC_NATIVE_UNBUFFED_GEAR_DELTA"
-                        if mixed else "EXACT_CONTROLLED_SIMC_NATIVE_DELTA")}
-            receipts[str(row["item_id"])]=list(
-                measured["native_case_receipts"])
+            receipts[str(row["item_id"])]=list(measured["native_case_receipts"])
+            continue
         numeric_by_signature[signature]=sample
+    # Prefer one consistent unbuffed basis for ALL scaled candidates when
+    # available. Preserve historical pure-scaled effective-only behavior
+    # without calling it unbuffed; never mix raw with buffed candidates.
+    use_unbuffed=bool(scaled_samples) and all(
+        usable(measured,row,unbuffed=True) for row,measured in scaled_samples)
+    if scaled_samples and not use_unbuffed and not all(
+            usable(measured,row,unbuffed=False) for row,measured in scaled_samples):
+        return {**pending,"reason":"GEM_COMMON_NUMERIC_BASIS_PENDING",
+                "new_native_calls":calls,
+                "native_observations_unadmitted":observed}
+    for row,measured in scaled_samples:
+        vector=measured[
+            "simc_unbuffed_gear_two_stat_vector_unadmitted" if use_unbuffed
+            else "simc_effective_two_stat_vector_unadmitted"]
+        signature=row["signature"]
+        numeric_by_signature[signature]={
+            "item_id":row["item_id"],"signature":signature,
+            "major_rating":vector[row["lead"]],
+            "minor_rating":vector[row["partner"]],
+            "numeric_source":(
+                "EXACT_CONTROLLED_SIMC_NATIVE_UNBUFFED_GEAR_DELTA"
+                if use_unbuffed else "EXACT_CONTROLLED_SIMC_NATIVE_DELTA")}
     # Confirm exact scaling SOURCE equivalence for every inferred item.
     # This never claims an unseen item's own SimC Native was executed.
     proofs={}
@@ -1542,6 +1576,9 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
         "highest_quality_candidate_count":
             plan["selected_tier_candidate_count"],
         "numeric_signature_count":plan["numeric_signature_count"],
+        "numeric_rating_basis":(
+            "UNBUFFED_DBC_AND_OR_RESOLVED_GEAR" if use_unbuffed or not scaled_samples
+            else "LEGACY_PURE_SCALED_EFFECTIVE_ONLY"),
         "source_named_tier_structure":plan["observed_tier_structure"],
         "source_selected_tier_candidate_ids":[
             r["item_id"] for r in plan["selected_tier_candidates"]],
@@ -10169,10 +10206,16 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     source_compilation[
                         "four_stat_source_owner_diagnostic_unadmitted"]=(
                             j_owner_diagnostic)
+                    # The existing mixed Native owner is ordinary-only.
+                    # Do not silently change an explicitly selected special's
+                    # established raw/nominal route; its mixed scope is separate.
+                    raw_j_complete=(
+                        _raw_four_stat_j_can_finish(observed)
+                        if source_selected_gem_roles["special_gem_id"] is None
+                        else observed.get(
+                            "four_stat_ordinary_source_complete_unadmitted") is True)
                     if (nominal_four_stat_source is None and
-                            observed.get(
-                                "four_stat_ordinary_source_complete_unadmitted"
-                                ) is not True):
+                            not raw_j_complete):
                         # Raw EffectPointsMin may be unobserved (70783: 0/75).
                         # Reuse the exact v221 IDs and already collected v230
                         # item_data once, without attempting gem Native/DPS.
@@ -10189,9 +10232,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             gem_candidates["status"])
                     unresolved_j_source=(
                         nominal_four_stat_source is None and
-                        observed.get(
-                            "four_stat_ordinary_source_complete_unadmitted"
-                        ) is not True and
+                        not raw_j_complete and
                         source_selected_gem_roles["special_gem_id"] is None)
                     pinned_dbc_j_preview=None
                     # Both J branches consume the same immutable source
@@ -10308,9 +10349,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                                 special_gem_id=None,need=need)
                             zero_history_gem_ratings=dict(
                                 native_j_preview["rating_by_id"])
-                        elif observed.get(
-                                "four_stat_ordinary_source_complete_unadmitted"
-                                ) is True:
+                        elif raw_j_complete:
                             ordinary=physical_gems.ordinary_four_stat_default(
                                 observed_by_stat=observed[
                                     "four_stat_ordinary_best_observed_unadmitted"],

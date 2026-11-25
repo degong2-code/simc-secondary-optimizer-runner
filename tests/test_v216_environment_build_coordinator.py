@@ -744,6 +744,14 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 len(row["internal_crafting_qualities"])==inner_rank_count
                 for row in plan["observed_tier_structure"]))
 
+    def test_v755_raw_completion_only_without_scaled_competitors(self):
+        complete={"four_stat_ordinary_source_complete_unadmitted":True}
+        self.assertTrue(v216._raw_four_stat_j_can_finish(complete))
+        self.assertFalse(v216._raw_four_stat_j_can_finish({**complete,
+            "ordinary_two_CHMV_scaled_shape_candidate_ids_source_only":[330001]}))
+        self.assertFalse(v216._raw_four_stat_j_can_finish({
+            "four_stat_ordinary_source_complete_unadmitted":False}))
+
     def test_v558_native_rating_uses_source_signatures_not_four_effects(self):
         """8 physical item effects, 2 rank signatures -> only 2 Native pairs."""
         build="12.2.0.99999";rev="a"*40
@@ -821,6 +829,8 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(actual["status"],
                          "FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED")
         self.assertEqual(actual["J_candidate_unadmitted"],92)
+        self.assertEqual(actual["numeric_rating_basis"],
+                         "LEGACY_PURE_SCALED_EFFECTIVE_ONLY")
         self.assertEqual(actual["new_native_calls"],3)
         self.assertEqual(actual["numeric_signature_count"],2)
         self.assertEqual(actual["source_effect_family_count"],4)
@@ -833,6 +843,27 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 "selected_numeric_source_proofs_by_item_id"].values()))
         self.assertIsNone(actual.get("J"))
         self.assertFalse(actual["environment_ready"])
+        def with_unbuffed(**kwargs):
+            result=one_gem(**kwargs)
+            raw=dict(result["simc_effective_two_stat_vector_unadmitted"])
+            lead=max(raw,key=raw.get)
+            raw[lead]-=1
+            return {**result,
+                "simc_unbuffed_gear_two_stat_vector_unadmitted":raw,
+                "simc_unbuffed_gear_two_stat_rating_unadmitted":sum(raw.values()),
+                "simc_unbuffed_gear_rating_source":"V046_JSON2_RESOLVED_ITEM_STATIC_CHMV"}
+        with mock.patch.object(v216.oil_raw_source,"from_v275",
+                               side_effect=original_source), mock.patch.object(
+                v216.native_effect_pair,"measure_ordinary_gem",
+                side_effect=with_unbuffed) as execution:
+            unbuffed=v216._fresh_four_stat_simc_observed_j_preview(**args)
+            self.assertEqual(execution.call_count,2)
+        self.assertEqual(unbuffed["J_candidate_unadmitted"],88)
+        self.assertEqual(unbuffed["numeric_rating_basis"],
+                         "UNBUFFED_DBC_AND_OR_RESOLVED_GEAR")
+        self.assertTrue(all(p["numeric_source"]==
+            "EXACT_CONTROLLED_SIMC_NATIVE_UNBUFFED_GEAR_DELTA"
+            for p in unbuffed["selected_numeric_source_proofs_by_item_id"].values()))
         with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
                 "V216_GEM_FOUR_FAMILY_SOURCE_IDENTITY_DRIFT"):
             v216._fresh_four_stat_simc_observed_j_preview(

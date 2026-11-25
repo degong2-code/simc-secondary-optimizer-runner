@@ -113,6 +113,9 @@ def preview(*, gem_join, raw_enchant_csv, expected_game_build):
         vector={name:0 for name in CHMV.values()}
         unknown=False
         applicable=0
+        pure_stat_args=set()
+        has_scaled_component=False
+        non_chmv_or_invalid_component=False
         if row is None:
             verdict="ENCHANT_ID_MISSING_FROM_SAME_BUILD_CSV"
         else:
@@ -125,6 +128,14 @@ def preview(*, gem_join, raw_enchant_csv, expected_game_build):
                 points=integer(row[f"EffectPointsMin_{idx}"],"POINTS")
                 scaling=floating(row[f"EffectScalingPoints_{idx}"],
                                  "SCALING")
+                # Source shape only: identify pure two-stat scaled rows
+                # without evaluating their coefficients or granting J.
+                if (kind==STAT_ENCHANT_EFFECT and arg in CHMV and
+                        points>=0 and scaling>=0 and (points>0 or scaling>0)):
+                    pure_stat_args.add(arg)
+                    has_scaled_component |= scaling>0
+                else:
+                    non_chmv_or_invalid_component=True
                 if (kind!=STAT_ENCHANT_EFFECT or arg not in CHMV or
                         points<=0 or scaling!=0):
                     unknown=True
@@ -137,6 +148,9 @@ def preview(*, gem_join, raw_enchant_csv, expected_game_build):
             "item_id":join["item_id"],"gem_property_id":join["gem_property_id"],
             "enchant_id":enchant_id,
             "effect_classification":verdict,
+            "pure_two_CHMV_scaled_shape_source_only":(
+                applicable==2 and len(pure_stat_args)==2 and
+                has_scaled_component and not non_chmv_or_invalid_component),
             "raw_static_points_candidate":(
                 vector if verdict=="RAW_STATIC_CHMV_POINTS_CANDIDATE_ONLY"
                 else None),

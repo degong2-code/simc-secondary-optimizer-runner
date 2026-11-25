@@ -206,6 +206,7 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
     stat_types=("crit_rating","haste_rating",
                 "mastery_rating","versatility_rating")
     four_stat_best={}
+    scaled_candidate_ids=[]
     # Only the automatic representative choice uses this known v221
     # lower bound. The sealed join and explicitly selected rows stay intact.
     minimum_by_id={r["item_id"]:r.get("minimum_ilevel")
@@ -218,8 +219,11 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
             continue
         if (item_id in (selected_special_gem_item_id,
                         excluded_ordinary_item_id) or
-            item_id in (240967,240983) or
-            record["effect_classification"]!=
+            item_id in (240967,240983)):
+            continue
+        if record.get("pure_two_CHMV_scaled_shape_source_only") is True:
+            scaled_candidate_ids.append(item_id)
+        if record["effect_classification"]!=(
                 "RAW_STATIC_CHMV_POINTS_CANDIDATE_ONLY"):
             continue
         vector=record["raw_static_points_candidate"]
@@ -361,6 +365,8 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
         "four_stat_ordinary_best_observed_unadmitted":four_stat_best,
         "four_stat_ordinary_source_complete_unadmitted":(
             set(four_stat_best)==set(stat_types)),
+        "ordinary_two_CHMV_scaled_shape_candidate_ids_source_only":
+            sorted(scaled_candidate_ids),
         "four_stat_effect_or_special_role_reverified":False,
         **source_membership,
         "selected_gem_raw_points_by_id_unadmitted":selected,
