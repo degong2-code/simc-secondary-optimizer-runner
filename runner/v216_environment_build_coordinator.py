@@ -792,8 +792,29 @@ def _fresh_same_build_ordinary_gem_metadata_candidates(*, compiled,
         "native_calls":0,"network_calls":0}
 
 
+def _one_build_gem_dbc_reader():
+    """One local successful raw projection, shared by the two J paths.
+
+    Not a persistent cache or source admission. Each consumer still checks
+    the original build, revision and exact enchant ID scope. A changed
+    request is resolved normally; errors are not cached.
+    """
+    previous=None
+    raw=None
+    def read(**request):
+        nonlocal previous,raw
+        if previous is not None and request==previous:
+            return raw
+        result=oil_raw_source.from_v275(**request)
+        previous=copy.deepcopy(request)
+        raw=result
+        return result
+    return read
+
+
 def _fresh_pinned_dbc_ordinary_gem_j_source(*, candidates, collected,
-                                           stage_root, simc_revision):
+                                           stage_root, simc_revision,
+                                           _read_dbc=None):
     """Reuse v275/v211/v296's sealed DBC static CHMV before gem Native.
 
     This is an UNADMITTED J candidate. Identical source conditions and
@@ -842,7 +863,7 @@ def _fresh_pinned_dbc_ordinary_gem_j_source(*, candidates, collected,
             "PINNED_V211_AND_GENERATED_SOURCES_SEALED"):
         return {**out,"reason":"GEM_PINNED_V275_SOURCE_PENDING"}
     try:
-        raw=oil_raw_source.from_v275(
+        raw=(_read_dbc or oil_raw_source.from_v275)(
             pinned_source=pinned,stage_root=stage_root,
             game_build=build,simc_revision=simc_revision,
             enchant_ids=enchant_ids)
@@ -1232,7 +1253,7 @@ def _fresh_two_stat_gem_named_tier_measurement_plan(*, rows, by_enchant):
 
 def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
                                              stage_root, binary, simc_revision,
-                                             native_G_status):
+                                             native_G_status,_read_dbc=None):
     """One original v278 Native pair per DISTINCT same-season scale signature.
 
     Do not require exactly four effects: CH/CM/CV, HC/HM/HV, MC/MH/MV,
@@ -1287,7 +1308,7 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
             "PINNED_V211_AND_GENERATED_SOURCES_SEALED"):
         return {**pending,"reason":"GEM_NATIVE_EXACT_PINNED_DBC_PENDING"}
     try:
-        raw=oil_raw_source.from_v275(
+        raw=(_read_dbc or oil_raw_source.from_v275)(
             pinned_source=pinned,stage_root=stage_root,
             game_build=build,simc_revision=simc_revision,
             enchant_ids=enchant_ids)
@@ -10090,6 +10111,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         ) is not True and
                         source_selected_gem_roles["special_gem_id"] is None)
                     pinned_dbc_j_preview=None
+                    # Both J branches consume the same immutable source
+                    # projection within this Build, not another DBC scan.
+                    read_gem_dbc=_one_build_gem_dbc_reader()
                     if unresolved_j_source:
                         # The ORIGINAL v275/v211/v296 generated DBC is
                         # already sealed and includes unbuffed static effects.
@@ -10100,7 +10124,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                                     "ordinary_gem_v221_v230_source_candidates_unadmitted"),
                                 collected=collected,
                                 stage_root=source_compilation["stage_root"],
-                                simc_revision=source_compilation["simc_revision"]))
+                                simc_revision=source_compilation["simc_revision"],
+                                _read_dbc=read_gem_dbc))
                         progress["four_stat_pinned_dbc_j_status_unadmitted"]=(
                             pinned_dbc_j_preview["status"])
                         source_compilation[
@@ -10120,7 +10145,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             stage_root=source_compilation["stage_root"],
                             binary=binary,
                             simc_revision=source_compilation["simc_revision"],
-                            native_G_status=native_G["status"])
+                            native_G_status=native_G["status"],
+                            _read_dbc=read_gem_dbc)
                         progress["new_native_calls"]+=native_j_preview[
                             "new_native_calls"]
                         progress["four_stat_native_j_status_unadmitted"]=(

@@ -41,6 +41,55 @@ class NormalBuildGemJ(unittest.TestCase):
                     manual_final_T=manual,gem_layout_receipt=layout,
                     gem_rating_by_id=ratings)
 
+    def test_static_and_scaled_gem_paths_share_exact_dbc_projection_once(self):
+        catalog,_,_=prepared()
+        game_build,revision=catalog["game_build"],catalog["simc_revision"]
+        candidate={"status":"SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED",
+                   "game_build":game_build,"simc_revision":revision,
+                   "v221_stage_receipt_sha256":"a"*64,
+                   "v230_stage_receipt_sha256":"b"*64,
+                   "v230_original_item_data_sha256":"c"*64,
+                   "candidate_count":1,"candidates_unadmitted":[{
+                       "item_id":311100,"gem_property_id":1,"enchant_id":99,
+                       "color_mask":2,"minimum_ilevel":1,"expansion_id":11,
+                       "quality":3,"crafting_quality":2,"item_name":"Synthetic Gem",
+                       "item_ilevel_unscaled":100}]}
+        collected={"expected_game_build":game_build,
+                   "fresh_pinned_v211_source":{
+                       "status":"PINNED_V211_AND_GENERATED_SOURCES_SEALED"}}
+        raw={"game_build":game_build,"simc_revision":revision,
+             "source_sha256":"d"*64,"items":[{"enchant_id":99,
+                 "status":build.oil_raw_source.PENDING,
+                 "static_CHMV_vector":None,
+                 "unresolved_simc_scaled_static_stats":{
+                     "crit_rating":{"simc_scaling_id":-7,"simc_coefficient":0.7},
+                     "haste_rating":{"simc_scaling_id":-7,"simc_coefficient":0.3}}}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            kwargs=dict(candidates=candidate,collected=collected,
+                        stage_root=pathlib.Path(tmp),simc_revision=revision)
+            with mock.patch.object(build.oil_raw_source,"from_v275",
+                                   return_value=raw) as load:
+                before=build._fresh_pinned_dbc_ordinary_gem_j_source(**kwargs)
+                fallback=build._fresh_four_stat_simc_observed_j_preview(
+                    **kwargs,binary=None,native_G_status="PENDING")
+                self.assertEqual(load.call_count,2)
+                load.reset_mock()
+                reader=build._one_build_gem_dbc_reader()
+                self.assertEqual(build._fresh_pinned_dbc_ordinary_gem_j_source(
+                    **kwargs,_read_dbc=reader),before)
+                self.assertEqual(build._fresh_four_stat_simc_observed_j_preview(
+                    **kwargs,binary=None,native_G_status="PENDING",
+                    _read_dbc=reader),fallback)
+                self.assertEqual(load.call_count,1)
+                self.assertEqual(fallback["new_native_calls"],0)
+                self.assertEqual(fallback["reason"],
+                                 "VERIFIED_G_PROBE_PROFILE_AND_NATIVE_REQUIRED")
+                # Different exact request must never hit the local entry.
+                reader(pinned_source=collected["fresh_pinned_v211_source"],
+                       stage_root=pathlib.Path(tmp),game_build=game_build,
+                       simc_revision=revision,enchant_ids={99,100})
+                self.assertEqual(load.call_count,2)
+
     def test_season_nominal_j_bypasses_unresolved_v266_but_not_source_gate(self):
         """Existing source-bounded v216 J connection needs no new SimC run."""
         catalog,_,ui=prepared()
