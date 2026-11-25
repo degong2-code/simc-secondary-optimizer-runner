@@ -144,6 +144,58 @@ class ManualPositiveOilInstalledBridge(unittest.TestCase):
             self.assertFalse((root/"manifest.json").exists(),
                              "preflight must not start/seed Native or write manifests")
 
+    def test_manual_install_reused_for_auto_reference_without_new_native(self):
+        import v098_target_user_scenario_bootstrap as bootstrap
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            doc,cfg,profile,flask,selection,attested=self.case(root)
+            # Earlier user's manual T was sealed by the original Build.
+            # Preserve this valid historic artifact; do not rebuild G/J/F/O.
+            old_auto_B=doc["official_B"]
+            payload=copy.deepcopy({k:v for k,v in doc.items() if k!="manifest_sha256"})
+            payload.update(official_B=MANUAL_T-SYNTHETIC_O,
+                           official_T=MANUAL_T,manual_final_T_authoritative=True)
+            payload["v222_reconciled_budget"].update(
+                base_B=MANUAL_T-SYNTHETIC_O,final_T=MANUAL_T,
+                manual_final_T_authoritative=True)
+            doc={**payload,"manifest_sha256":installed.sha(
+                installed.canonical(payload).encode("utf8"))}
+            path=pathlib.Path(selection["installed_environment_path"]).with_name(
+                "v212_installed_"+doc["manifest_sha256"][:20]+".json")
+            path.write_text(installed.canonical(doc)+"\\n",encoding="utf8")
+            original=path.read_bytes()
+            selection.update(installed_environment_path=str(path),
+                             installed_manifest_sha256=doc["manifest_sha256"])
+            attested["installed_manifest_sha256"]=doc["manifest_sha256"]
+            inputs={"v216_numeric_preview":{
+                "calculation":copy.deepcopy(doc["v222_reconciled_budget"])}}
+            compilation={"verified_environment_install":{
+                "manifest_sha256":doc["manifest_sha256"]},
+                "simc_revision":doc["simc_revision"]}
+            auto=bootstrap._retarget_fresh_user_inputs(
+                inputs=inputs,user={"target":{"ilevel":334,"final_T":None}},
+                compilation=compilation,installed_path=path)
+            calc=auto["v216_numeric_preview"]["calculation"]
+            self.assertEqual((calc["base_B"],calc["final_T"]),(old_auto_B,3183))
+            self.assertFalse(calc["manual_final_T_authoritative"])
+            self.assertEqual(inputs["v216_numeric_preview"]["calculation"]["final_T"],MANUAL_T)
+            actual=self.bridge(root,cfg,profile,flask,selection,attested)
+            self.assertEqual((actual["season_budget"]["base_B"],
+                actual["season_budget"]["final_T"]),(old_auto_B,3183))
+            manual=copy.deepcopy(selection)
+            manual["user_final_T"]=MANUAL_T
+            manual_cfg=copy.deepcopy(cfg)
+            manual_cfg["target"]["manual_total"]=MANUAL_T-SYNTHETIC_O
+            previous=self.bridge(root,manual_cfg,profile,flask,manual,attested)
+            self.assertEqual(previous["season_budget"]["final_T"],MANUAL_T)
+            self.assertNotEqual(previous["season_source_identity"]["source_input_sha256"],
+                                actual["season_source_identity"]["source_input_sha256"])
+            with self.assertRaisesRegex(entry.EntryBlocked,
+                                        "FRESH_SEASON_TYPED_GJFO_B_T_O_DRIFT"):
+                self.bridge(root,manual_cfg,profile,flask,selection,attested)
+            self.assertEqual(path.read_bytes(),original)
+            self.assertFalse((root/"manifest.json").exists())
+
     def test_t_below_fixed_floor_and_unknown_physical_oil_fail_closed(self):
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td)

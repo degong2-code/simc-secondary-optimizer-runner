@@ -329,7 +329,10 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
             doc,{"finger1":positive_id},manual_final_T=user_final_T)
         approved_B=actual["base_B"]
         approved_T=actual["final_T"]
-    elif user_final_T is not None:
+    elif (user_final_T is not None or
+          doc.get("manual_final_T_authoritative") is True):
+        # A prior manual-target install is valid source evidence, not the
+        # next automatic user's budget. Reconstruct the original reference B.
         try:
             adjusted=budget_contract.retarget_verified_install(
                 document=doc,manual_final_T=user_final_T)
@@ -399,6 +402,10 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
                 bound["stage_receipt_sha256"],
             **({"user_final_T":user_final_T,"derived_base_B":approved_B}
                 if user_final_T is not None else {}),
+            **({"auto_reference_restored_from_manual_install":True,
+                "derived_auto_base_B":approved_B}
+               if user_final_T is None and
+                  doc.get("manual_final_T_authoritative") is True else {}),
             **({"verified_user_positive_E_enchant_id":positive_id,
                 "fixed_E":actual["fixed_E"],
                 "original_native_before_json2_sha256":

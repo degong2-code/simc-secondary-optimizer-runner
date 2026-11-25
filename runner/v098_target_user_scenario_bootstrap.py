@@ -2469,6 +2469,62 @@ def _selected_refresh_special_source(*,user,gear,stage_root,pinned=None):
     return found,binding
 
 
+def _retarget_fresh_user_inputs(*,inputs,user,compilation,installed_path):
+    """Reuse a signed install without inheriting an earlier user's manual T."""
+    # Signed v212 environment remains immutable; only the user session
+    # retargets B/T. Original v096 checks source-owner proofs once more.
+    positive_choice=(user.get(SEASON_ENCHANT_FIELD) in
+                     positive_enchant.CHOICES and
+                     _historical_exact_enchant_user_scope(
+                         user,game_build=inputs["v216_numeric_preview"][
+                             "calculation"]["game_build"],
+                         revision=compilation.get("simc_revision")))
+    original=inputs["v216_numeric_preview"]["calculation"]
+    if installed_path is not None and (
+            user["target"]["final_T"] is not None or positive_choice or
+            original.get("manual_final_T_authoritative") is True):
+        p=pathlib.Path(installed_path)
+        need(p.is_file() and not p.is_symlink(),
+             "FRESH_USER_T_INSTALLED_PATH_INVALID")
+        doc,_=installed_manifest.read_json(p)
+        installed_manifest.verify_fresh_installed_environment(doc)
+        need(doc["manifest_sha256"]==compilation[
+                 "verified_environment_install"]["manifest_sha256"] and
+             original["base_B"]==doc["official_B"] and
+             original["final_T"]==doc["official_T"] and
+             (original.get("manual_final_T_authoritative") is True)==
+                 (doc.get("manual_final_T_authoritative") is True) and
+             original["J"]==doc["official_J"] and
+             original["F"]==doc["official_F"] and
+             original["fixed_O"]==doc["official_O"] and
+             original["source_catalog_manifest_sha256"]==
+                 doc["source_catalog_manifest_sha256"] and
+             original["source_catalog_artifact_sha256"]==
+                 doc["source_catalog_artifact_sha256"],
+             "FRESH_USER_T_ORIGINAL_SOURCE_DRIFT")
+        try:
+            adjusted=(
+                positive_enchant.project(
+                    doc,user[SEASON_ENCHANT_FIELD],
+                    manual_final_T=user["target"]["final_T"])
+                if positive_choice else
+                budget_contract.retarget_verified_install(
+                    document=doc,manual_final_T=user["target"]["final_T"]))
+        except budget_contract.SeasonBudgetBlocked as exc:
+            raise UserScenarioBlocked(
+                "FRESH_USER_T_FIXED_BUDGET_INVALID:"+str(exc)) from exc
+        inputs=copy.deepcopy(inputs)
+        inputs["v216_numeric_preview"]["calculation"].update({
+            "base_B":adjusted["base_B"],
+            "final_T":adjusted["final_T"],
+            "manual_final_T_authoritative":
+                user["target"]["final_T"] is not None,
+            **({k:adjusted[k] for k in
+                 ("fixed_E","effective_G","reference_B")}
+               if positive_choice else {})})
+    return inputs
+
+
 def preview_from_environment_build(user,folder,binary,revision,*,
                                    environment_result,season_settings=None,
                                    season_controls=None,
@@ -2557,54 +2613,8 @@ def preview_from_environment_build(user,folder,binary,revision,*,
          inputs.get("schema")=="v098_internal_season_profile_inputs_v1" and
          type(inputs.get("v216_numeric_preview")) is dict,
          "SEASON_V216_SOURCE_PATHS_OR_INPUTS_DRIFT")
-    # Signed v212 environment remains immutable; only the user session
-    # retargets B/T. Original v096 checks source-owner proofs once more.
-    positive_choice=(user.get(SEASON_ENCHANT_FIELD) in
-                     positive_enchant.CHOICES and
-                     _historical_exact_enchant_user_scope(
-                         user,game_build=inputs["v216_numeric_preview"][
-                             "calculation"]["game_build"],
-                         revision=compilation.get("simc_revision")))
-    if installed_path is not None and (
-            user["target"]["final_T"] is not None or positive_choice):
-        original=inputs["v216_numeric_preview"]["calculation"]
-        p=pathlib.Path(installed_path)
-        need(p.is_file() and not p.is_symlink(),
-             "FRESH_USER_T_INSTALLED_PATH_INVALID")
-        doc,_=installed_manifest.read_json(p)
-        installed_manifest.verify_fresh_installed_environment(doc)
-        need(doc["manifest_sha256"]==compilation[
-                 "verified_environment_install"]["manifest_sha256"] and
-             original["base_B"]==doc["official_B"] and
-             original["final_T"]==doc["official_T"] and
-             original["J"]==doc["official_J"] and
-             original["F"]==doc["official_F"] and
-             original["fixed_O"]==doc["official_O"] and
-             original["source_catalog_manifest_sha256"]==
-                 doc["source_catalog_manifest_sha256"] and
-             original["source_catalog_artifact_sha256"]==
-                 doc["source_catalog_artifact_sha256"],
-             "FRESH_USER_T_ORIGINAL_SOURCE_DRIFT")
-        try:
-            adjusted=(
-                positive_enchant.project(
-                    doc,user[SEASON_ENCHANT_FIELD],
-                    manual_final_T=user["target"]["final_T"])
-                if positive_choice else
-                budget_contract.retarget_verified_install(
-                    document=doc,manual_final_T=user["target"]["final_T"]))
-        except budget_contract.SeasonBudgetBlocked as exc:
-            raise UserScenarioBlocked(
-                "FRESH_USER_T_FIXED_BUDGET_INVALID:"+str(exc)) from exc
-        inputs=copy.deepcopy(inputs)
-        inputs["v216_numeric_preview"]["calculation"].update({
-            "base_B":adjusted["base_B"],
-            "final_T":adjusted["final_T"],
-            "manual_final_T_authoritative":
-                user["target"]["final_T"] is not None,
-            **({k:adjusted[k] for k in
-                 ("fixed_E","effective_G","reference_B")}
-               if positive_choice else {})})
+    inputs=_retarget_fresh_user_inputs(
+        inputs=inputs,user=user,compilation=compilation,installed_path=installed_path)
     numeric=inputs["v216_numeric_preview"]
     calc=numeric.get("calculation")
     need(numeric.get("schema")==
