@@ -241,6 +241,19 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(chosen["by_stat"]["crit_rating"]["item_id"],349991)
         self.assertEqual(chosen["native_calls"],0)
         self.assertFalse(chosen["environment_ready"])
+        # A lower craft rank can provide greater nominal J. This is not
+        # a UI quality equivalence decision.
+        lower_rank={**other,"crafting_quality":1}
+        with mock.patch.object(v216.oil_raw_source,"from_v275",
+                               return_value=alternate):
+            lower=v216._fresh_pinned_dbc_ordinary_gem_j_source(
+                **{**kwargs,"candidates":{**candidate,
+                   "candidate_count":len(rows)+1,
+                   "candidates_unadmitted":rows+[lower_rank]}})
+        self.assertEqual(lower["J_candidate_unadmitted"],93)
+        self.assertEqual(lower["by_stat"]["crit_rating"]["item_id"],349991)
+        self.assertFalse(lower["highest_quality_verified"])
+        self.assertEqual(lower["native_calls"],0)
         # Same quality and same J: smallest physical ID wins.
         tied=v216.oil_raw_source.extract(
             generated_text=raw+'{ 8991, 0, 0, 0, 0, 0, 0, 0, 0, '
@@ -535,6 +548,44 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 preview=altered,layout=layout,ratings=ratings,
                 link=link,game_build=build,simc_revision=rev)
 
+    def test_v753_named_tiers_keep_incomparable_source_conditions(self):
+        def row(i,name,level,minimum=310):
+            return {"item_id":i,"enchant_id":i,"gem_property_id":i,
+                    "color_mask":2,"minimum_ilevel":minimum,
+                    "expansion_id":13,"quality":4,"crafting_quality":3,
+                    "item_name":name,"item_ilevel_unscaled":level}
+        def source(major,minor,scale=-7,base=0):
+            return {"source_reason_codes":["SIMC_ITEM_ENCHANT_SCALING_REQUIRED"],
+                    "unresolved_simc_scaled_static_stats":{
+                        "crit_rating":{"simc_scaling_id":scale,
+                                       "dbc_base_amount":base,
+                                       "simc_coefficient":major},
+                        "haste_rating":{"simc_scaling_id":scale,
+                                        "dbc_base_amount":base,
+                                        "simc_coefficient":minor}},
+                    "static_CHMV_vector":None,
+                    "source_min_ilevel":0,"source_max_ilevel":0}
+        rows=[row(1,"High ilvl",350),row(2,"Tradeoff",330),
+              row(3,"Other restriction",330,300),
+              row(4,"Other scale",330),row(5,"Dominated",330),
+              row(6,"Same numeric",320),row(7,"Other base",330)]
+        sources={1:source(.6,.2),2:source(.5,.3),3:source(.4,.1),
+                 4:source(.4,.1,-8),5:source(.4,.1),
+                 6:source(.6,.2),7:source(.4,.1,base=1)}
+        plan=v216._fresh_two_stat_gem_named_tier_measurement_plan(
+            rows=rows,by_enchant=sources)
+        self.assertEqual(plan["status"],
+                         "NAMED_TIER_AND_INNER_QUALITY_PLAN_UNADMITTED")
+        self.assertEqual([x["item_id"] for x in plan["selected_tier_candidates"]],
+                         [1,2,3,4,6,7])
+        # Existing signature reuse is preserved (same numeric signature
+        # can represent more than one candidate); no Native here.
+        self.assertEqual(plan["sample_count"],5)
+        by_id={x["item_id"]:x["signature"]
+               for x in plan["selected_tier_candidates"]}
+        self.assertEqual(by_id[1],by_id[6])
+        self.assertNotEqual(by_id[3],by_id[7])
+
     def test_v560_dynamic_12_gem_directions_and_named_tier_rank_steps(self):
         """48/72 source items -> 24/36 higher-name-tier rows -> 2/3 samples."""
         stats=list(v216.physical_gems.ORDINARY_FOUR_STATS)
@@ -564,8 +615,10 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                                     "SIMC_ITEM_ENCHANT_SCALING_REQUIRED"],
                                 "unresolved_simc_scaled_static_stats":{
                                     lead:{"simc_scaling_id":-7,
+                                          "dbc_base_amount":0,
                                           "simc_coefficient":major},
                                     partner:{"simc_scaling_id":-7,
+                                             "dbc_base_amount":0,
                                              "simc_coefficient":minor}},
                                 "static_CHMV_vector":None,
                                 "source_min_ilevel":0,"source_max_ilevel":0}
@@ -622,9 +675,9 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                     "source_reason_codes":[
                         "SIMC_ITEM_ENCHANT_SCALING_REQUIRED"],
                     "unresolved_simc_scaled_static_stats":{
-                        stats[k]:{"simc_scaling_id":-7,
+                        stats[k]:{"simc_scaling_id":-7,"dbc_base_amount":0,
                                   "simc_coefficient":.35 if not higher else .25},
-                        stats[(k+1)%4]:{"simc_scaling_id":-7,
+                        stats[(k+1)%4]:{"simc_scaling_id":-7,"dbc_base_amount":0,
                                         "simc_coefficient":.15 if not higher else .10}},
                     "static_CHMV_vector":None,
                     "source_min_ilevel":0,"source_max_ilevel":0})

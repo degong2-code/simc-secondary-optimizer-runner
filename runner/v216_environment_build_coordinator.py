@@ -892,14 +892,8 @@ def _fresh_pinned_dbc_ordinary_gem_j_source(*, candidates, collected,
         if vec[positive[0]]==vec[positive[1]]:
             unresolved+=1;continue
         lead=max(positive,key=lambda stat:vec[stat])
-        partner=next(s for s in positive if s!=lead)
-        # C+H and C+M are both C-family if C is their larger stat.
-        # Partner stat is NOT a fifth gem family or an extra admission gate.
-        # Preserve source use metadata for comparable same-effect checks.
-        scope=(partner,row["color_mask"],row["minimum_ilevel"],
-               row["expansion_id"],row["quality"],
-               original["source_min_ilevel"],original["source_max_ilevel"])
-        groups[lead].append((row,vec,scope))
+        # This is nominal J selection, not same-effect UI quality pruning.
+        groups[lead].append((row,vec))
     if any(not groups[stat] for stat in groups):
         return {**out,"reason":"FOUR_LEADING_CHMV_TYPES_INCOMPLETE",
                 "observed_leading_types":[
@@ -908,22 +902,7 @@ def _fresh_pinned_dbc_ordinary_gem_j_source(*, candidates, collected,
                 "source_sha256":raw["source_sha256"]}
     chosen={}
     for lead,observed in groups.items():
-        # Approved rule: highest crafting quality, then highest sum of
-        # both secondary stats, then lowest exact physical ItemID.
-        best=max(observed,key=lambda x:(
-            x[0]["crafting_quality"],sum(x[1].values()),-x[0]["item_id"]))
-        row,vector,scope=best
-        # Only SAME two-stat effect+conditions can be judged componentwise
-        # for quality dominance. Other partner stats are separate effects
-        # but share the same C/H/M/V leading-type choice.
-        comparable=[v for _,v,source_scope in observed
-                    if source_scope==scope]
-        if any(vector[stat]<other[stat]
-               for other in comparable
-               for stat in physical_gems.ORDINARY_FOUR_STATS):
-            return {**out,"reason":"HIGHER_QUALITY_NUMERIC_DOMINANCE_PENDING",
-                    "source_sha256":raw["source_sha256"],
-                    "unresolved_item_count":unresolved}
+        row,vector=max(observed,key=lambda x:_nominal_gem_order(*x))
         chosen[lead]={"item_id":row["item_id"],
                       "raw_nominal_points":sum(vector.values())}
     return {**out,
@@ -1049,7 +1028,9 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
              and sum(v>0 for v in vector.values())==2
              and sum(vector.values())==mapping[str(ident)]
              and type(sample_id) is int and sample_id>0
-             and type(signature) is list and len(signature)==4
+             # Legacy four-field receipts remain readable; new scaled
+             # signatures additionally bind base amounts and use scope.
+             and type(signature) is list and len(signature) in (4,10)
              and samples.get(str(sample_id))==signature
              and numeric_origin in (
                  "EXACT_CONTROLLED_SIMC_NATIVE_DELTA",
@@ -1112,13 +1093,46 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
     return ids
 
 
+def _gem_measurement_source_dominates(a,b):
+    """Conservative shortlist reduction, not a UI/effect equivalence proof.
+
+    Only compare component ordering within the same known source scope
+    and numeric representation. Never compare coefficient sums between
+    scaling IDs, or use rarity/item level/name as evidence of strength.
+    """
+    scope=("lead","partner","color_mask","minimum_ilevel","expansion_id",
+           "quality","numeric_kind")
+    bounds=("source_min_ilevel","source_max_ilevel")
+    if (any(k not in a or k not in b or a[k]!=b[k] for k in scope)
+            or any(k not in a["source"] or k not in b["source"] or
+                   a["source"][k]!=b["source"][k] for k in bounds)):
+        return False
+    if a["numeric_kind"]=="SIMC_SCALED":
+        sa=a["source"]["unresolved_simc_scaled_static_stats"]
+        sb=b["source"]["unresolved_simc_scaled_static_stats"]
+        for stat in (a["lead"],a["partner"]):
+            if (sa[stat]["simc_scaling_id"]!=sb[stat]["simc_scaling_id"]
+                    or "dbc_base_amount" not in sa[stat]
+                    or "dbc_base_amount" not in sb[stat]
+                    or sa[stat]["dbc_base_amount"]!=sb[stat]["dbc_base_amount"]):
+                return False
+        va=[sa[s]["simc_coefficient"] for s in (a["lead"],a["partner"])]
+        vb=[sb[s]["simc_coefficient"] for s in (b["lead"],b["partner"])]
+    else:
+        va=[a["source"]["static_CHMV_vector"][s] for s in (a["lead"],a["partner"])]
+        vb=[b["source"]["static_CHMV_vector"][s] for s in (b["lead"],b["partner"])]
+    return all(x>=y for x,y in zip(va,vb)) and any(x>y for x,y in zip(va,vb))
+
+
 def _fresh_two_stat_gem_named_tier_measurement_plan(*, rows, by_enchant):
     """Plan minimal exact-SimC gem measurements from existing v230/v296 data.
 
-    Names distinguish item tiers; crafting_quality ranks the variants INSIDE
-    each name tier. Never freeze the number of tiers or ranks to 2 or 3.
-    Same numeric signature means same SimC scaling ID and BOTH exact source
-    coefficients (modulo stat orientation). This is an inference contract,
+    Names retain tier diagnostics and inner calibration ranks, not numeric
+    priority. Keep incomparable source tiers and deduplicate numeric samples.
+    Never freeze the number of tiers or ranks to 2 or 3.
+    Same scaled numeric signature binds SimC scaling ID, BOTH source
+    coefficients and base amounts (modulo stat orientation), and known
+    item-level applicability. This is an inference contract,
     not an item-mechanics simulator or a fabricated per-item Native receipt.
     """
     stats=season_budget_contract.STATS
@@ -1149,15 +1163,27 @@ def _fresh_two_stat_gem_named_tier_measurement_plan(*, rows, by_enchant):
                            or v["simc_coefficient"]<=0
                            for v in scaled.values())):
                 continue
-            props={stat:round(float(val["simc_coefficient"]),8)
+            props={stat:float(val["simc_coefficient"])
                    for stat,val in scaled.items()}
             ids={val["simc_scaling_id"] for val in scaled.values()}
             if len(ids)!=1 or len(set(props.values()))!=2:
                 continue
             kind="SIMC_SCALED"
-            signature=(kind,next(iter(ids)),*sorted(props.values()))
             main=max(props,key=props.get)
             partner=next(stat for stat in props if stat!=main)
+            # Scope and base amounts must not disappear when samples are
+            # shared. Incomplete legacy inputs can still be measured, but
+            # cannot share a new inferred numeric observation across IDs.
+            base_minor=scaled[partner].get("dbc_base_amount")
+            base_major=scaled[main].get("dbc_base_amount")
+            scope=(row.get("minimum_ilevel"),source.get("source_min_ilevel"),
+                   source.get("source_max_ilevel"))
+            known=all(type(v) is int for v in
+                      (base_minor,base_major,*scope))
+            signature=(kind,next(iter(ids)),props[partner],props[main],
+                       *(v if type(v) is int else -1 for v in
+                         (base_minor,base_major,*scope)),
+                       0 if known else row["item_id"])
             score=sum(props.values())
         else:
             positive={stat:value for stat,value in static.items()
@@ -1198,43 +1224,29 @@ def _fresh_two_stat_gem_named_tier_measurement_plan(*, rows, by_enchant):
                 "maximum_strength":max(strengths),
                 "crafting_quality_steps":sorted({
                     item["crafting_quality"] for item in items})})
-        # Item level and rarity are source-owned; when tied, require a
-        # nonoverlapping scaling-strength ordering between named item tiers.
-        top_rank=max((t["item_ilevel"],t["item_quality"]) for t in ranked)
-        contenders=[t for t in ranked if
-                    (t["item_ilevel"],t["item_quality"])==top_rank]
-        if len(contenders)!=1:
-            best=max(t["minimum_strength"] for t in contenders)
-            winners=[t for t in contenders if t["minimum_strength"]==best]
-            winner=winners[0] if len(winners)==1 and all(
-                winners[0]["minimum_strength"]>other["maximum_strength"]
-                for other in contenders if other is not winners[0]) else None
-        else:
-            winner=contenders[0]
-        if winner is None or any(
-                not (winner["minimum_item_ilevel"]>
-                         other["item_ilevel"] or
-                     winner["minimum_strength"]>
-                         other["maximum_strength"])
-                for other in ranked if other is not winner):
-            return {"status":"PENDING",
-                    "reason":"GEM_NAMED_TIER_STRENGTH_ORDER_UNPROVEN",
-                    "ambiguous_direction":[lead,partner]}
-        # Preserve ALL internal quality steps for dynamic calibration:
-        # first/last name tiers are NOT equivalent to inner craft ranks.
-        chosen.extend(winner["items"])
-        tier_proofs.append({
-            "leading_stat":lead,"partner_stat":partner,
-            "selected_name":winner["name"],
-            "item_ilevel":winner["item_ilevel"],
-            "minimum_item_ilevel":winner["minimum_item_ilevel"],
-            "item_quality":winner["item_quality"],
-            "internal_crafting_qualities":
-                winner["crafting_quality_steps"],
-            "other_named_tier_count":len(ranked)-1,
-            "tier_count":len(ranked)})
-    # Each exact source numeric signature needs at most ONE SimC pair. The
-    # two stat types may be permuted without changing the signature.
+        # Names are diagnostic groupings, never proof of superiority.
+        # Preserve an entire named tier unless every row is covered by
+        # a strictly stronger row of another tier within the same numeric
+        # and known applicability scope. Keep inner ranks for calibration.
+        for tier in ranked:
+            competitors=[item for other in ranked if other is not tier
+                         for item in other["items"]]
+            if all(any(_gem_measurement_source_dominates(other,item)
+                       for other in competitors) for item in tier["items"]):
+                continue
+            chosen.extend(tier["items"])
+            tier_proofs.append({
+                "leading_stat":lead,"partner_stat":partner,
+                "selected_name":tier["name"],
+                "item_ilevel":tier["item_ilevel"],
+                "minimum_item_ilevel":tier["minimum_item_ilevel"],
+                "item_quality":tier["item_quality"],
+                "internal_crafting_qualities":
+                    tier["crafting_quality_steps"],
+                "other_named_tier_count":len(ranked)-1,
+                "tier_count":len(ranked)})
+    # Each matching source numeric signature needs at most ONE SimC pair.
+    # Stat orientation may be permuted; different base or scope cannot share.
     by_signature={}
     for item in chosen:
         by_signature.setdefault(item["signature"],[]).append(item)
@@ -1250,6 +1262,11 @@ def _fresh_two_stat_gem_named_tier_measurement_plan(*, rows, by_enchant):
         "observed_direction_count":len(by_direction),
         "observed_tier_structure":tier_proofs,
         "unresolved_item_ids":unresolved}
+
+
+def _nominal_gem_order(item,vector):
+    """Default numeric J order shared by static and measured sources."""
+    return (sum(vector.values()),item["crafting_quality"],-item["item_id"])
 
 
 def _default_measured_ordinary_gems(*,items,proofs):
@@ -1268,9 +1285,7 @@ def _default_measured_ordinary_gems(*,items,proofs):
         return None
     selected={}
     for lead,options in groups.items():
-        item,vector=max(options,key=lambda pair:(
-            sum(pair[1].values()),pair[0]["crafting_quality"],
-            -pair[0]["item_id"]))
+        item,vector=max(options,key=lambda pair:_nominal_gem_order(*pair))
         selected[lead]={"item_id":item["item_id"],
                         "raw_nominal_points":sum(vector.values())}
     return selected
@@ -8155,8 +8170,8 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                      "V216_NATIVE_GEM_QUALITY_ORIGINAL_FULL_SOURCE_REQUIRED")
                 # These are winning measured candidates, not a claim that
                 # a different partner effect is numerically equivalent.
-                # All higher-quality-source competitors were already
-                # measured under the original v230/scaled-DBC shortlist.
+                # The bounded source shortlist and resolved numeric samples
+                # support the nominal representative, not UI equivalence.
                 bounded=[{
                     "observed_item_ids":[item],
                     "observed_crafting_quality_ranks":[by_id[item]],
@@ -8165,7 +8180,7 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                     "best_discovered_effect_item_id_source_only":item,
                     "comparable_effect_source_only":True,
                     "comparison_basis":
-                        "TOP_NAMED_TIER_AND_INNER_CRAFT_RANK_FROM_SOURCE_WITH_SAMPLED_SIMC_SIGNATURE"
+                        "SOURCE_SCOPE_COMPONENT_ORDER_WITH_SAMPLED_SIMC_SIGNATURE"
                 } for item in sorted(set(ordinary))]
             nominal_ranks=j.get("observed_quality_rank_by_id")
             nominal_bound=(j.get("numeric_source_owner")==
