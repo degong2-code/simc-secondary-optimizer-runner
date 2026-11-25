@@ -657,5 +657,43 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
         self.assertIn("_v680_preflight_optional_consumables",api)
 
 
+
+
+class NativeDefaultObservationProjection(unittest.TestCase):
+    def observation(self):
+        return {"schema":"v788_simc_default_observation_v1",
+                "game_build":BUILD,"simc_revision":REV,
+                "binary_sha256":"c"*64,"weapon_source_receipt_sha256":"d"*64,
+                "initialization_sha256":"e"*64,
+                "compiled_game_build_verified":True,"character_level":90,
+                "observed_defaults":{"mage/fire":{"food":"new_food",
+                                      "potion":"unadmitted_potion"}}}
+
+    def test_current_defaults_flow_only_through_admitted_menu(self):
+        source={"game_build":BUILD,"simc_revision":REV,
+                "source_receipt_sha256":SHA,
+                "rows":[exact_row("food",101,"new_food",0,"spell:101")],
+                "native_default_observation":self.observation()}
+        installed=manifest.project_fresh_optional_consumables(
+            game_build=BUILD,simc_revision=REV,source=source)
+        self.assertTrue(manifest.verify_fresh_optional_consumables(
+            installed,game_build=BUILD,simc_revision=REV))
+        preferences=web_api._v775_source_optional_defaults(
+            {"game_build":BUILD,"simc_revision":REV,
+             "installed_optional_consumables":installed},
+            {"food":["disabled","new_food"],"potion":["disabled"]})
+        self.assertEqual(preferences,{"mage/fire":{"food":"new_food"}})
+
+    def test_observation_cannot_cross_source_revision(self):
+        observation=self.observation()
+        observation["simc_revision"]="f"*40
+        with self.assertRaisesRegex(ValueError,"V788_DEFAULT_OBSERVATION_SCOPE_INVALID"):
+            manifest.project_fresh_optional_consumables(
+                game_build=BUILD,simc_revision=REV,source={
+                    "game_build":BUILD,"simc_revision":REV,
+                    "source_receipt_sha256":SHA,"rows":[],
+                    "native_default_observation":observation})
+
+
 if __name__=="__main__":
     unittest.main()

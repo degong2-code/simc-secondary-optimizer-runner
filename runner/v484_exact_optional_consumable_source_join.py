@@ -44,7 +44,7 @@ def need(condition, code):
 
 
 
-def extract_simc_profile_defaults(*, binary, season, receipt):
+def extract_simc_profile_defaults(*, binary, season, receipt, allow_partial=False):
     """Observe SimC's own defaults with caller-supplied representative weapons.
 
     Caller owns exact binary identity, season/weapon provenance and caching.
@@ -58,14 +58,17 @@ def extract_simc_profile_defaults(*, binary, season, receipt):
 
     binary=pathlib.Path(binary).resolve()
     need(binary.is_file(),"V784_BINARY_MISSING")
-    roster=sorted(sessions.SUPPORTED)
+    full_roster={"/".join(k) for k in sessions.SUPPORTED}
     level=season.get("character_level")
-    need(type(level) is int and 1<=level<=100 and
+    need((level is None or type(level) is int and 1<=level<=100) and
          type(season.get("target_ilevel")) is int and
          1<=season["target_ilevel"]<=1000 and
          type(season.get("specializations")) is dict and
-         set(season["specializations"])=={"/".join(k) for k in roster},
+         bool(season["specializations"]) and
+         (set(season["specializations"])<=full_roster if allow_partial
+          else set(season["specializations"])==full_roster),
          "V785_REPRESENTATIVE_CATALOG_SCOPE_INVALID")
+    roster=sorted(tuple(key.split("/")) for key in season["specializations"])
     doc=receipt
     doc.update(character_level=level,
                weapon_target_ilevel=season["target_ilevel"],
@@ -86,8 +89,9 @@ def extract_simc_profile_defaults(*, binary, season, receipt):
             need(set(info["weapons"])==set(hands),
                  "V785_REPRESENTATIVE_WEAPON_FORM_DRIFT")
             files[key]=(file,spec)
-            lines.extend([cls+"="+actor,"spec="+spec,"level="+str(level),
-                          "race="+controls["race"],"load_default_talents=1",
+            lines.extend([cls+"="+actor,"spec="+spec]+
+                          (["level="+str(level)] if level is not None else [])+
+                          ["race="+controls["race"],"load_default_talents=1",
                           "role="+contract["role"],"position="+contract["position"],
                           "flask=disabled","augmentation=disabled",
                           "temporary_enchant=disabled","save="+file])
@@ -111,6 +115,7 @@ def extract_simc_profile_defaults(*, binary, season, receipt):
         doc["diagnostic_tail"]=output[-1800:]
         observed={}
         missing=[]
+        observed_levels=set()
         for key,(file,spec) in files.items():
             path=root/file
             if not path.is_file() or path.stat().st_size>500_000:
@@ -125,12 +130,19 @@ def extract_simc_profile_defaults(*, binary, season, receipt):
                     if name in values:
                         raise RuntimeError("V784_DUPLICATE_PROFILE_FIELD")
                     values[name]=value.strip()
-            if (values.get("spec")!=spec or values.get("level")!=str(level) or
+            actual_level=values.get("level","")
+            if (values.get("spec")!=spec or
+                    not re.fullmatch(r"[1-9][0-9]{0,2}",actual_level) or
+                    not 1<=int(actual_level)<=100 or
+                    (level is not None and actual_level!=str(level)) or
                     not all(re.fullmatch(r"[a-z0-9_]{1,100}",values.get(k,""))
                             for k in ("food","potion"))):
                 missing.append(key)
                 continue
+            observed_levels.add(int(actual_level))
             observed[key]={k:values[k] for k in ("food","potion")}
+        need(len(observed_levels)==1,"V788_SIMC_CHARACTER_LEVEL_DRIFT")
+        doc["character_level"]=next(iter(observed_levels))
         doc["observed_defaults"]=observed
         doc["missing_specs"]=missing
         need(process.returncode==0 and doc["generation_branch_observed"]
@@ -232,6 +244,40 @@ def current_source_profile_default_weapons(*, gear, seed_directory,
             "matched_weapon_count":len(rows),
             "mismatched_item_ids":sorted(mismatched),
             "native_calls":0,"network_calls":0}
+
+
+
+def observed_default_groups(observation):
+    groups={"food":{},"potion":{}}
+    for spec,choices in sorted(observation.get("observed_defaults",{}).items()):
+        for kind,token in choices.items():
+            if token not in ("disabled","source_default"):
+                groups[kind].setdefault(token,[]).append(spec)
+    return {kind:{token:" ".join(specs) for token,specs in values.items()}
+            for kind,values in groups.items()}
+
+
+def verify_default_observation(doc, *, game_build, simc_revision):
+    import v143_specialization_contracts as contracts
+    need(type(doc) is dict and
+         doc.get("schema")=="v788_simc_default_observation_v1" and
+         doc.get("game_build")==game_build and
+         doc.get("simc_revision")==simc_revision and
+         all(type(doc.get(k)) is str and HEX64.fullmatch(doc[k])
+             for k in ("binary_sha256","weapon_source_receipt_sha256",
+                       "initialization_sha256")) and
+         doc.get("compiled_game_build_verified") is True and
+         type(doc.get("character_level")) is int and
+         1<=doc["character_level"]<=100 and
+         type(doc.get("observed_defaults")) is dict and
+         bool(doc["observed_defaults"]) and
+         set(doc["observed_defaults"])<=set(contracts.CONTRACTS) and
+         all(type(row) is dict and set(row)=={"food","potion"} and
+             all(type(t) is str and re.fullmatch(r"[a-z0-9_]{1,100}",t)
+                 for t in row.values())
+             for row in doc["observed_defaults"].values()),
+         "V788_DEFAULT_OBSERVATION_SCOPE_INVALID")
+    return True
 
 
 def reviewed_apl_default_groups(game_build,simc_revision):

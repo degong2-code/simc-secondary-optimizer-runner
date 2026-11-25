@@ -676,8 +676,12 @@ def _v680_exact_installed_optional_document(root,params,user):
 
 def _v775_source_optional_defaults(doc,approved):
     """Preference over the verified installed menu, never new admission."""
-    groups=environment_build.optional_source_join.reviewed_apl_default_groups(
-        doc.get("game_build"),doc.get("simc_revision"))
+    source=doc.get("installed_optional_consumables") or {}
+    observation=source.get("native_default_observation")
+    groups=(environment_build.optional_source_join.observed_default_groups(observation)
+            if observation is not None else
+            environment_build.optional_source_join.reviewed_apl_default_groups(
+                doc.get("game_build"),doc.get("simc_revision")))
     defaults={}
     for kind,tokens in groups.items():
         for token,specs in tokens.items():

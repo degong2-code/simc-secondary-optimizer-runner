@@ -9750,7 +9750,112 @@ def _fresh_source_owner_exact_no_oil(*, preflight, selected_budget_items,
             "components":{**components,"O":exact}}
 
 
-def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
+
+def _fresh_v788_profile_default_observation(*, collected, compilation,
+                                            binary, target_ilevel):
+    """One optional profile-generation stage within normal environment Build.
+    Cache hits do not parse weapons or launch SimC. A failed optional attempt
+    does not prevent the base environment from installing.
+    """
+    import v193_simc_local_updater as updater
+    import v143_specialization_contracts as contracts
+    import v055_simc_item_selection as item_serializer
+    import v106_user_session_controller as sessions
+    import subprocess
+
+    if binary is None:
+        return None
+    gear=collected.get("fresh_ordinary_gear") or {}
+    seed=collected.get("fresh_lazy_full_pinned_simc_item_source") or {}
+    try:
+        root=pathlib.Path(compilation["stage_root"]).resolve()
+        build=collected["expected_game_build"]
+        revision=compilation["simc_revision"]
+        path=pathlib.Path(gear["candidate_path"])
+        exe=pathlib.Path(binary).resolve()
+        need(path.is_file() and not path.is_symlink() and
+             path.resolve().is_relative_to(root) and exe.is_file() and
+             type(seed.get("receipt_sha256")) is str and
+             re.fullmatch(r"[a-f0-9]{64}",seed["receipt_sha256"]) is not None,
+             "V788_CURRENT_WEAPON_OR_BINARY_SOURCE_PENDING")
+        gear_raw=path.read_bytes()
+        inputs={"game_build":build,"simc_revision":revision,
+                "binary_sha256":zero_history_G_native.sha_file(exe),
+                "gear_sha256":digest(gear_raw),
+                "item_source_receipt_sha256":seed["receipt_sha256"],
+                "target_ilevel":target_ilevel,
+                "character_level_policy":"SIMC_COMPILED_DEFAULT_MAX_LEVEL",
+                "code_sha256":stage_engine.module_dependency_fingerprint([
+                    pathlib.Path(optional_source_join.__file__),
+                    pathlib.Path(simc_item_metadata.__file__),
+                    pathlib.Path(simc_representative.__file__),
+                    pathlib.Path(simc_representative.chooser.__file__),
+                    pathlib.Path(contracts.__file__),
+                    pathlib.Path(item_serializer.__file__),
+                    pathlib.Path(sessions.__file__),
+                    pathlib.Path(updater.__file__),
+                    pathlib.Path(__file__)])["sha256"]}
+        key=digest(canonical(inputs).encode("utf8"))[:24]
+        outputs={"defaults":"source/v788_simc_defaults_"+key+".json"}
+        dest=root/outputs["defaults"]
+        def execute():
+            receipt={}
+            try:
+                weapons=optional_source_join.current_source_profile_default_weapons(
+                    gear=json.loads(gear_raw),seed_directory=seed["source_dir"],
+                    game_build=build,simc_revision=revision)
+                need(weapons["specializations"],"V788_NO_CURRENT_SOURCE_WEAPONS")
+                updater.probe_cli(exe,expected_build=build)
+                season={"character_level":None,"target_ilevel":target_ilevel,
+                        "specializations":weapons["specializations"]}
+                observed=optional_source_join.extract_simc_profile_defaults(
+                    binary=exe,season=season,receipt=receipt,allow_partial=True)
+                doc={"schema":"v788_simc_default_observation_v1",
+                     "game_build":build,"simc_revision":revision,
+                     "binary_sha256":inputs["binary_sha256"],
+                     "compiled_game_build_verified":True,
+                     "weapon_source_receipt_sha256":weapons["source_receipt_sha256"],
+                     "initialization_sha256":digest(canonical(season).encode("utf8")),
+                     "character_level":receipt["character_level"],
+                     "observed_defaults":observed}
+                optional_source_join.verify_default_observation(
+                    doc,game_build=build,simc_revision=revision)
+                result={"status":"OBSERVED","observation":doc,
+                        "missing_specializations":weapons["missing_specializations"],
+                        "profile_generation_processes":1}
+            except (ValueError,KeyError,TypeError,OSError,RuntimeError,
+                    subprocess.SubprocessError) as exc:
+                result={"status":"OPTIONAL_DEFAULTS_PENDING",
+                        "reason":str(exc)[:400],
+                        "diagnostic_tail":receipt.get("diagnostic_tail",""),
+                        "profile_generation_processes":receipt.get(
+                            "profile_generation_processes",0)}
+            dest.parent.mkdir(parents=True,exist_ok=True)
+            dest.write_text(canonical(result)+"\n",encoding="utf8")
+        def validate(files):
+            found=json.loads(files["defaults"].read_text("utf8"))
+            if found.get("status")=="OPTIONAL_DEFAULTS_PENDING":
+                return type(found.get("reason")) is str
+            doc=found.get("observation")
+            return (found.get("status")=="OBSERVED" and
+                    optional_source_join.verify_default_observation(
+                        doc,game_build=build,simc_revision=revision) and
+                    doc["binary_sha256"]==inputs["binary_sha256"])
+        stage=stage_engine.execute_stage(root=root,
+            stage_id="fresh-v788-simc-defaults-"+key,
+            stage_version="v788-profile-defaults-v1",inputs=inputs,
+            outputs=outputs,execute=execute,validate=validate)
+        result=json.loads(dest.read_text("utf8"))
+        return {**result,"stage_status":stage["status"],
+                "stage_receipt_sha256":stage["receipt_sha256"],
+                "new_profile_generation_processes":(
+                    result.get("profile_generation_processes",0)
+                    if stage["status"]=="EXECUTED_AND_SEALED" else 0)}
+    except (ValueError,KeyError,TypeError,OSError,RuntimeError) as exc:
+        return {"status":"OPTIONAL_DEFAULTS_PENDING","reason":str(exc)[:400]}
+
+
+def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation,default_observation=None):
     """Same BUILD one-pass Wago ItemID/spell -> pinned SimC DBC/handler.
 
     This derives product input tokens using SimC-generated item spelling,
@@ -9838,8 +9943,9 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
         # Actual SimC APL may select ordinary DBC consumables without a
         # Midnight custom-effect registration. Exact reviewed APL tokens
         # are a second source of input identity, not a DPS or quality proof.
-        reviewed=optional_source_join.reviewed_apl_default_groups(
-            build,revision)
+        reviewed=(optional_source_join.observed_default_groups(default_observation)
+                  if default_observation is not None else
+                  optional_source_join.reviewed_apl_default_groups(build,revision))
         # First collect exact physical candidates without discarding lower
         # ranks of a generic APL-selected item. The reviewed token anchors
         # a family only when both the same Wago on-use spell and exact
@@ -9898,6 +10004,8 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
                     "wago_stage":original["source_stage"]["receipt_sha256"],
                     "simc_item_source":metadata["source_receipt_sha256"],
                     "handler_stage":source["source_stage"]["receipt_sha256"],
+                    **({"native_default_observation":default_observation}
+                       if default_observation is not None else {}),
                     **({"reviewed_quality_item_evidence":quality_evidence}
                        if quality_evidence is not None else {})
                 }).encode("utf8")),"rows":rows,
@@ -9920,7 +10028,7 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
 
 
 
-def _fresh_v680_source_owned_food_potion(*,collected,compilation):
+def _fresh_v680_source_owned_food_potion(*,collected,compilation,default_observation=None):
     """Reuse the first same-build source join without reparsing item_data.inc.
 
     The original v217 owner already checks the Wago & pinned SimC bytes.
@@ -9948,13 +10056,20 @@ def _fresh_v680_source_owned_food_potion(*,collected,compilation):
             "wago_simc_handler_stage_sha256":source["source_stage"][
                 "receipt_sha256"],
             "simc_generated_item_stage_sha256":seed["receipt_sha256"],
+            **({"default_observation_sha256":digest(
+                canonical(default_observation).encode("utf8"))}
+               if default_observation is not None else {}),
             "code_sha256":code["sha256"]}
         key=digest(canonical(inputs).encode("utf8"))[:16]
         output={"options":"source/v680_source_owned_options_"+key+".json"}
         dest=root/output["options"]
         def execute():
             projection=_fresh_v680_source_owned_food_potion_uncached(
-                collected=collected,compilation=compilation)
+                collected=collected,compilation=compilation,
+                **({"default_observation":default_observation}
+                   if default_observation is not None else {}))
+            if default_observation is not None:
+                projection={**projection,"native_default_observation":default_observation}
             need(type(projection) is dict and
                  projection.get("game_build")==inputs["game_build"] and
                  projection.get("simc_revision")==inputs["simc_revision"] and
@@ -10413,8 +10528,21 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         try:
             source_compilation=source_wiring.compile_collected(
                 collected,compiler=fresh_stage.compile_fresh_candidate)
+            default_observation=None
+            if (default_auto_core and binary is not None and
+                    source_compilation.get("status")==
+                        "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
+                optional_defaults=_fresh_v788_profile_default_observation(
+                    collected=collected,compilation=source_compilation,
+                    binary=binary,target_ilevel=fresh_collection_inputs[
+                        "representative_request"]["target_ilevel"])
+                if optional_defaults is not None:
+                    progress["optional_profile_defaults"]=optional_defaults
+                    default_observation=optional_defaults.get("observation")
             source_owned_v680=_fresh_v680_source_owned_food_potion(
-                collected=collected,compilation=source_compilation)
+                collected=collected,compilation=source_compilation,
+                **({"default_observation":default_observation}
+                   if default_observation is not None else {}))
             if source_owned_v680 is not None:
                 source_compilation["source_owned_optional_consumables"]=(
                     source_owned_v680)

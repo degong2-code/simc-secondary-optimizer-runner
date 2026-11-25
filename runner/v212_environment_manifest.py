@@ -722,7 +722,13 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
             kinds[name]["status"]=(
                 "SOURCE_BACKED_OPTIONS_READY" if kinds[name]["options"]
                 else "SOURCE_OPTIONS_UNAVAILABLE")
+    observation=source.get("native_default_observation") if source else None
+    if observation is not None:
+        optional_source_join.verify_default_observation(
+            observation,game_build=game_build,simc_revision=simc_revision)
     return {"schema":OPTIONAL_INSTALL_SCHEMA,
+            **({"native_default_observation":observation}
+               if observation is not None else {}),
             "game_build":game_build,
             "simc_revision":simc_revision,
             "source_receipt_sha256":origin,
@@ -742,6 +748,10 @@ def verify_fresh_optional_consumables(doc,*,game_build,simc_revision):
          type(doc.get("categories")) is dict and
          set(doc["categories"])==set(OPTIONAL_KINDS),
          "OPTIONAL_INSTALLED_SOURCE_SCOPE_INVALID")
+    if "native_default_observation" in doc:
+        optional_source_join.verify_default_observation(
+            doc["native_default_observation"],game_build=game_build,
+            simc_revision=simc_revision)
     tokens=set()
     for name,group in doc["categories"].items():
         need(type(group) is dict and
