@@ -233,6 +233,7 @@ def observe_simc_defaults(args):
     """
     import re
     import v106_user_session_controller as sessions
+    import v139_pure_target_profile_composer as representative
     out=Path(args.out).resolve()
     out.mkdir(parents=True,exist_ok=True)
     dest=out/"V784_SIMC_DEFAULTS.json"
@@ -254,6 +255,16 @@ def observe_simc_defaults(args):
         doc["binary_sha256"]=identity["binary_sha256"]
         roster=sorted(sessions.SUPPORTED)
         need(len(roster)==26,"V784_DPS_ROSTER_DRIFT")
+        # Same-season diagnostic only: reuse the existing representative
+        # weapon IDs/options and serializer. Do not copy any profile gear or
+        # add a second weapon catalog. Future runtime must use its current
+        # compiled representative catalog, not this historical snapshot.
+        season=representative.catalog()
+        need(season["character_level"]==90 and
+             set(season["specializations"])=={"/".join(k) for k in roster},
+             "V785_DIAGNOSTIC_CATALOG_SCOPE_DRIFT")
+        doc["initialization_weapons"]="existing_v139_v144_representative_catalog"
+        doc["weapon_target_ilevel"]=season["target_ilevel"]
         with tempfile.TemporaryDirectory(prefix="v784-") as td:
             root=Path(td)
             lines=["save_profiles=1","save_profile_with_actions=0",
@@ -263,11 +274,21 @@ def observe_simc_defaults(args):
                 controls=sessions.standard_controls((cls,spec))
                 actor="defaults_"+str(n)
                 file=actor+".simc"
-                files[cls+"/"+spec]=(file,spec)
+                key=cls+"/"+spec
+                contract=representative.contracts.lookup(cls,spec)
+                info=season["specializations"][key]
+                hands=representative.contracts.WEAPON_FORMS[contract["weapon_form"]]
+                need(set(info["weapons"])==set(hands),
+                     "V785_REPRESENTATIVE_WEAPON_FORM_DRIFT")
+                files[key]=(file,spec)
                 lines.extend([cls+"="+actor,"spec="+spec,"level=90",
                               "race="+controls["race"],"load_default_talents=1",
+                              "role="+contract["role"],"position="+contract["position"],
                               "flask=disabled","augmentation=disabled",
-                              "temporary_enchant=disabled","save="+file])
+                              "temporary_enchant=disabled","save="+file"])
+                lines.extend(representative.items.equipment_line(
+                    hand,info["weapons"][hand],season["target_ilevel"],
+                    info.get("item_options",{}).get(hand,{})) for hand in hands)
             input_path=root/"defaults_input.simc"
             input_path.write_text("\n".join(lines)+"\n",encoding="utf8")
             doc["profile_generation_processes"]=1
