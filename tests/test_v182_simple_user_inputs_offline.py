@@ -234,6 +234,56 @@ assert(!diagnose({source_compilation:{missing:["GENERATED_PERMANENT"],
 
 
 class SelectedOilPreparationRouting(unittest.TestCase):
+    def test_actual_build_consumable_flags_are_scoped_to_selected_variant(self):
+        import shutil, subprocess
+        from pathlib import Path
+        node=shutil.which("node")
+        if node is None:self.skipTest("Node required")
+        raw=Path(__file__).resolve().parents[1]/"runner/webui/app.js"
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const src=fs.readFileSync(process.argv[1],"utf8");
+const start=src.indexOf("async function buildSeasonEnvironment(forUserVariant=false)");
+const a=src.indexOf("const reference_G_track=",start);
+const b=src.indexOf("const existingSpecial=",a);
+assert(start>=0&&a>start&&b>a,"missing Build request source");
+const nodes={},$=id=>nodes[id]??=({value:"",checked:false});
+const field=id=>String($(id).value).trim();
+const run=Function("$","field","forUserVariant",src.slice(a,b)+
+ "return {selected_flask_item_id,selected_oil_item_ids_by_hand,auto_native_F_requested,auto_native_O_requested,auto_select_observed_F_no_oil};");
+$("season-auto-f-no-oil").checked=true;
+$("season-native-f").checked=true;
+$("season-selected-flask-id").value="241324";
+$("season-oil-main-id").value="243734";
+$("optimizer-oil-main-id").value="243734";
+const selected=run($,field,true);
+assert.equal(selected.selected_flask_item_id,241324,"explicit F retained");
+assert.deepStrictEqual(selected.selected_oil_item_ids_by_hand,{main_hand:243734},"selected oil");
+assert.equal(selected.auto_native_O_requested,true,"selected O measured");
+assert.equal(selected.auto_select_observed_F_no_oil,false,"base no-oil flag must not leak");
+const baseline=run($,field,false);
+assert.equal(baseline.selected_flask_item_id,null,"default Build not user F");
+assert.deepStrictEqual(baseline.selected_oil_item_ids_by_hand,{},"default Build not user oil");
+assert.equal(baseline.auto_select_observed_F_no_oil,true,"default F flag retained");
+assert.equal(baseline.auto_native_O_requested,false,"base O flag retained");
+$("season-oil-main-id").value="";$("optimizer-oil-main-id").value="";
+$("season-native-o").checked=true;
+const noOil=run($,field,true);
+assert.equal(noOil.auto_native_O_requested,false,"base O flag must not leak");
+assert.equal(noOil.auto_select_observed_F_no_oil,false,"explicit F not auto-selected");
+$("season-selected-flask-id").value="";
+const autoF=run($,field,true);
+assert.equal(autoF.auto_select_observed_F_no_oil,true,"selected no-F/no-O fallback");
+$("season-oil-main-id").value="243734";
+assert.throws(()=>run($,field,true),/정확한 영약 ItemID/,"missing F not guessed");
+$("optimizer-oil-main-id").value="999999";
+assert.throws(()=>run($,field,true),/서로 다릅니다/,"different IDs not silently replaced");
+"""
+        result=subprocess.run([node,"-e",script,str(raw)],capture_output=True,
+                              text=True,encoding="utf8",timeout=20)
+        self.assertEqual(result.returncode,0,result.stdout+"\n"+result.stderr)
+
+
     def test_actual_js_select_and_start_reuse_or_build_selected_only(self):
         import shutil, subprocess
         from pathlib import Path

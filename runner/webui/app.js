@@ -1731,6 +1731,18 @@ function chooseOilPreparationCandidate(hand) {
   const row=(source.items||[]).find(x=>String(x.physical_item_id)===value &&
     x.status==="SOURCE_IDENTIFIED_PREPARATION_ONLY" && x.user_selectable===false);
   if(value&&!row)return;
+  // If the user did not separately select F, retain ONLY the physical F
+  // of the current exact verified installation. Never choose a first item
+  // from the flask menu, and never copy a numeric budget into a new variant.
+  if(row&&!field("season-selected-flask-id")){
+    const activeSha=state.seasonGear?.installed_manifest_sha256;
+    const active=(data.verified_gem_installs||[]).filter(x=>
+      /^[a-f0-9]{64}$/.test(activeSha||"") &&
+      x.installed_manifest_sha256===activeSha &&
+      Number.isSafeInteger(x.flask_item_id)&&x.flask_item_id>0);
+    if(active.length===1)
+      $("season-selected-flask-id").value=String(active[0].flask_item_id);
+  }
   // Intent only; revoke old readiness. Existing Build independently checks
   // actual hand, ilvl, ID/token, static O and the exact F/J installation.
   $("season-oil-"+hand+"-id").value=row?value:"";
@@ -1831,6 +1843,13 @@ function chooseInstalledOilLoadout() {
   $("oil_off").checked=Boolean(ids.off_hand);
   $("optimizer-oil-main-id").value=ids.main_hand??"";
   $("optimizer-oil-off-id").value=ids.off_hand??"";
+  // A deliberate installed selection replaces earlier preparation intent.
+  for(const hand of ["main","off"]){
+    const node=$("season-oil-"+hand+"-id");
+    if(node)node.value="";
+    const menu=$("oil-preparation-"+hand);
+    if(menu)menu.value="";
+  }
   oilCompatibility();
   syncOilUseToggle();
 }
@@ -2233,6 +2252,12 @@ function fillSessionInputs(payload) {
   const restoredOils=payload.verified_oil_item_ids_by_hand||{};
   $("optimizer-oil-main-id").value=restoredOils.main_hand??"";
   $("optimizer-oil-off-id").value=restoredOils.off_hand??"";
+  // Restoring a historical sealed session replaces uncommitted oil IDs.
+  for(const hand of ["main","off"]){
+    $("season-oil-"+hand+"-id").value="";
+    const menu=$("oil-preparation-"+hand);
+    if(menu)menu.value="";
+  }
   oilCompatibility();
   renderInstalledOilLoadouts(state.oilCatalog);
   runeCompatibility();
@@ -3853,14 +3878,8 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     ?"fury_dual_2h":"general";
   const nativeRequested=$("season-native-g").checked||forUserVariant;
   const auto_native_F_requested=$("season-native-f").checked||forUserVariant;
-  const auto_native_O_requested=$("season-native-o").checked||
-    (forUserVariant&&(Boolean(field("season-oil-main-id"))||
-                      Boolean(field("season-oil-off-id"))||
-                      Boolean(field("optimizer-oil-main-id"))||
-                      Boolean(field("optimizer-oil-off-id"))));
-  const auto_select_observed_F_no_oil=$("season-auto-f-no-oil").checked||
-    (forUserVariant&&!field("season-selected-flask-id")&&
-     !auto_native_O_requested);
+  // The base season Build flags do not govern a selected user's variant.
+  // Otherwise an earlier default-F/no-oil selection blocks a valid oil.
   const selectedFlask=forUserVariant?field("season-selected-flask-id"):"";
   if(selectedFlask&&!/^[1-9][0-9]*$/.test(selectedFlask))
     throw Error("영약 ItemID는 양의 정수여야 합니다.");
@@ -3869,8 +3888,6 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       (!Number.isSafeInteger(selected_flask_item_id)||
        selected_flask_item_id>999999999))
     throw Error("영약 ItemID 범위가 올바르지 않습니다.");
-  if(selected_flask_item_id!==null&&auto_select_observed_F_no_oil)
-    throw Error("정확한 영약 ItemID 선택과 영약 자동 선택은 함께 사용할 수 없습니다.");
   // The advanced oil controls select physical item identities only. Their
   // static CHMV values, spell syntax, quality and eligibility are *never*
   // supplied by the browser; existing season source owners determine them.
@@ -3893,6 +3910,13 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     }
   }
   const oilHands=Object.keys(selected_oil_item_ids_by_hand);
+  const auto_native_O_requested=forUserVariant?oilHands.length>0:
+    $("season-native-o").checked;
+  const auto_select_observed_F_no_oil=forUserVariant?
+    selected_flask_item_id===null&&!oilHands.length:
+    $("season-auto-f-no-oil").checked;
+  if(selected_flask_item_id!==null&&auto_select_observed_F_no_oil)
+    throw Error("정확한 영약 ItemID 선택과 영약 자동 선택은 함께 사용할 수 없습니다.");
   if(oilHands.length&&selected_flask_item_id===null)
     throw Error("기름을 선택한 시즌 환경은 정확한 영약 ItemID도 지정해야 합니다.");
   if(oilHands.length&&auto_select_observed_F_no_oil)
