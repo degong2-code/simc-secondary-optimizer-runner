@@ -1785,6 +1785,7 @@ class LocalJobs:
                 "game_build":build,"target_ilevel":ilevel,
                 "items":[],"verified_flasks":[],
                 "verified_base_flask_installs":[],
+                "verified_gem_installs":[],
                 "verified_base_fj_collision_diagnostics":[],
                 "native_calls":0,"network_calls":0}
         if build is None:
@@ -1848,6 +1849,34 @@ class LocalJobs:
                     profile_doc.get("environment_result"),
                     special_gem_id=None,socket_total=4)
                 flask=doc.get("official_F_physical_source")
+                # Project exact installed gem layouts from the SAME verified
+                # snapshot. No raw source candidate becomes selectable here.
+                runtime=profile_doc.get("environment_result")
+                compilation=(runtime.get("source_compilation")
+                             if type(runtime) is dict else None)
+                layout=(compilation.get("physical_gem_layout_unadmitted")
+                        if type(compilation) is dict else None)
+                if type(layout) is dict and type(flask) is dict:
+                    special=layout.get("special_gem_id")
+                    sockets=layout.get("socket_total")
+                    ordinary=layout.get("ordinary_gem_ids")
+                    if ((special is None or
+                         type(special) is int and special>0) and
+                        type(sockets) is int and 4<=sockets<=64 and
+                        type(ordinary) is list and
+                        all(type(g) is int and g>0 and g!=special
+                            for g in ordinary) and
+                        _verified_snapshot_gem_layout_matches(
+                            runtime,special_gem_id=special,
+                            socket_total=sockets)):
+                        result["verified_gem_installs"].append({
+                            "installed_manifest_sha256":doc["manifest_sha256"],
+                            "special_gem_id":special,
+                            "socket_total":sockets,
+                            "flask_item_id":flask["physical_item_id"],
+                            "selected_oil_item_ids_by_hand":dict(ids),
+                            "reference_G_track":doc.get(
+                                "official_G_reference_track","general")})
                 if type(flask) is dict and not ids and ordinary_4_gems:
                     layout=profile_doc["environment_result"][
                         "source_compilation"]["physical_gem_layout_unadmitted"]
@@ -1932,8 +1961,18 @@ class LocalJobs:
         oil_ids={item_id for entry in result["items"]
                  for item_id in
                  entry["selected_oil_item_ids_by_hand"].values()}
+        special_ids={entry["special_gem_id"]
+                     for entry in result["verified_gem_installs"]
+                     if entry["special_gem_id"] is not None}
         official_names=official_ko_env.read_names(
-            self.root,build,set(flasks_by_id)|oil_ids)
+            self.root,build,set(flasks_by_id)|oil_ids|special_ids)
+        for entry in result["verified_gem_installs"]:
+            item_id=entry["special_gem_id"]
+            if item_id in official_names:
+                entry["official_name_ko"]=official_names[item_id]
+        result["verified_gem_installs"].sort(
+            key=lambda x:(x["special_gem_id"] or 0,x["socket_total"],
+                          x["installed_manifest_sha256"]))
         # v676: multiple independently admitted installations are separate
         # exact-SHA choices, without cross-SHA equality requirements.
         # Session creation and cache/resume must reverify the selected SHA.

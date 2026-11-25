@@ -309,6 +309,51 @@ const funcs=Function('state','field','$','oilUseIntent',
         self.assertEqual(r.returncode,0,r.stderr)
         self.assertIn("V677_EXISTING_INSTALL_BUTTON_NATIVE0_PASS",r.stdout)
 
+    def test_v763_exact_gem_variant_matches_selected_flask_oil_and_track(self):
+        node=shutil.which("node")
+        if node is None:self.skipTest("Node required")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const start=raw.indexOf("function matchingInstalledGemVariants()");
+const end=raw.indexOf("async function chooseVerifiedGem()",start);
+assert(start>=0&&end>start);
+const A="a".repeat(64),B="b".repeat(64);
+const base={special_gem_id:101,socket_total:5,flask_item_id:241326,
+  selected_oil_item_ids_by_hand:{},reference_G_track:"general"};
+const state={seasonGear:{installed_manifest_sha256:B},
+  oilCatalog:{verified_gem_installs:[
+    {...base,installed_manifest_sha256:A},
+    {...base,installed_manifest_sha256:B,special_gem_id:null,socket_total:4},
+    {...base,installed_manifest_sha256:"c".repeat(64),flask_item_id:241327},
+    {...base,installed_manifest_sha256:"d".repeat(64),reference_G_track:"fury_dual_2h"},
+    {...base,installed_manifest_sha256:"e".repeat(64),selected_oil_item_ids_by_hand:{main_hand:22}}
+  ]}};
+const fields={"season-existing-special-gem-id":"101","season-target-socket-count":"5",
+  "season-selected-flask-id":"241326","season-game-build":"12.1.5.70783",
+  "ilevel":"334",spec:"paladin/retribution"};
+const field=id=>fields[id]||"",valueInt=id=>Number(field(id));
+let calls=[];
+const funcs=Function("state","field","valueInt","$","oilUseIntent",
+ "installedConsumableScopeMatches","bindExactInstalledGearVariant",
+ raw.slice(start,end)+"\nreturn {matchingInstalledGemVariants,reuseVerifiedGemVariant};")(
+ state,field,valueInt,()=>({checked:false}),false,()=>true,
+ async args=>{calls.push(args.sha);assert(args.stillMatches());return true;});
+(async()=>{
+ assert(await funcs.reuseVerifiedGemVariant());
+ assert.deepStrictEqual(calls,[A]);
+ fields["season-existing-special-gem-id"]="999";
+ assert.strictEqual(await funcs.reuseVerifiedGemVariant(),false);
+ fields["season-existing-special-gem-id"]="101";
+ state.oilCatalog.verified_gem_installs.push({...base,installed_manifest_sha256:"f".repeat(64)});
+ await assert.rejects(funcs.reuseVerifiedGemVariant(),/여러 개/);
+ assert.deepStrictEqual(calls,[A]);
+})().catch(e=>{console.error(e.stack||e);process.exitCode=1});
+"""
+        result=subprocess.run([node,"-e",script,str(ROOT/"runner/webui/app.js")],
+                              cwd=ROOT,capture_output=True,text=True,timeout=18)
+        self.assertEqual(result.returncode,0,result.stderr)
+
     def test_optimizer_and_UI_hooks_use_read_only_selected_source(self):
         s=(ROOT/"runner/webui/app.js").read_text(encoding="utf8")
         self.assertIn('"user-variant-prepare-btn").addEventListener("click",()=>withBusy(prepareUserSelectedEnvironment)',s)

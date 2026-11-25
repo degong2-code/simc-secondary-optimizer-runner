@@ -858,6 +858,49 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(len(res.json()["verified_flasks"]),1)
         self.assertEqual(res.json()["native_calls"],0)
 
+    def test_v763_verified_special_gem_layout_is_a_selectable_exact_install(self):
+        build="12.1.5.70783"
+        docs=(self.app.state.jobs.root/"_fresh_season_sources"/
+              ("wago_"+build)/"fresh_source")
+        docs.mkdir(parents=True)
+        digest="d"*64
+        (docs/("v212_installed_"+digest[:20]+".json")).write_text("{}")
+        (docs/("v113_profile_"+digest[:20]+".json")).write_text("{}")
+        doc={"manifest_sha256":digest,"game_build":build,"target_ilevel":334,
+             "official_F_physical_source":{"physical_item_id":241326,
+                 "simc_input_token":"flask_3","crafting_quality":3,"F_rating":165}}
+        layout={"schema":"v271_user_socket_gem_layout_stage_v1",
+                "status":"PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING",
+                "special_gem_id":101,"socket_total":5,
+                "ordinary_gem_ids":[11,12,13,14]}
+        profile={"environment_result":{"source_compilation":{
+            "physical_gem_layout_unadmitted":layout}}}
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                                return_value=(doc,"sha")),
+              mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment"),
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                return_value={"installed_manifest_sha256":digest}),
+              mock.patch.object(web,"_verified_saved_profile_snapshot",
+                                return_value=profile),
+              mock.patch.object(web.official_ko_env,"read_names",
+                                return_value={101:"검증 보석"}),
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE"))):
+            url="/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build
+            data=self.client.get(url,headers=self.headers).json()
+            self.assertEqual(data["verified_gem_installs"],[{
+                "installed_manifest_sha256":digest,"special_gem_id":101,
+                "socket_total":5,"flask_item_id":241326,
+                "selected_oil_item_ids_by_hand":{},"reference_G_track":"general",
+                "official_name_ko":"검증 보석"}])
+            layout["socket_total"]=6
+            self.assertEqual(self.client.get(url,headers=self.headers).json()[
+                "verified_gem_installs"],[])
+        self.assertEqual(data["native_calls"],0)
+        self.assertEqual(data["network_calls"],0)
+
     def test_oil_loadout_only_if_exact_installed_and_profile_saved(self):
         build="12.1.5.70783"
         docs=(self.app.state.jobs.root/"_fresh_season_sources"/

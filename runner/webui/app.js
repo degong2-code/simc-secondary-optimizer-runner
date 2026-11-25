@@ -1375,6 +1375,7 @@ function refreshDefaultConsumableSummaries(){
   for(const name of ["food","potion"])
     $(name+"-application-status").textContent=
       currentSeasonOptionalUseStatus(name);
+  if(typeof renderVerifiedGemChoices==="function")renderVerifiedGemChoices();
 }
 
 function installedConsumableScopeMatches(data) {
@@ -1791,23 +1792,27 @@ async function bindUniqueInstalledOilVariant() {
       "‘선택 환경 검증·준비’에서 정확한 구성을 검증한 후 실행하세요.");
     return;
   }
+  return bindExactInstalledGearVariant({sha,build,level,
+    stillMatches:()=>field("optimizer-oil-loadout")===menuSha &&
+      (field("spec")==="warrior/fury"&&!$("manual-t-mode").checked?
+       "fury_dual_2h":"general")===track});
+}
+// Share the exact-SHA gear/options binding with other installed F/J/O layouts.
+async function bindExactInstalledGearVariant({sha,build,level,stillMatches}) {
   if(verifiedInstalledGearScopeMatchesRun(build,level)&&
      state.seasonGear.installed_manifest_sha256===sha){
     syncOilUseToggle();
-    return;
+    return true;
   }
   const scope=seasonBuildInputScope(true);
   state.seasonGearTargetIlevel=null;
   const gear=await api("/api/v1/season-gear?game_build="+
     encodeURIComponent(build)+"&target_ilevel="+level+
     "&installed_manifest_sha256="+sha);
-  if(seasonBuildInputScope(true)!==scope ||
-     field("optimizer-oil-loadout")!==menuSha ||
-     (field("spec")==="warrior/fury"&&!$("manual-t-mode").checked?
-       "fury_dual_2h":"general")!==track){
+  if(seasonBuildInputScope(true)!==scope || !stillMatches()){
     setNotice("설치 장비 조회 중 기름·F/J·보석 또는 시즌 선택이 변경되었습니다. "+
       "현재 조건으로 다시 검증하세요.");
-    return;
+    return false;
   }
   if(gear.status!=="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY"||
      gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"||
@@ -1841,8 +1846,108 @@ async function bindUniqueInstalledOilVariant() {
   }catch(error){renderSeasonOptionCatalog(null);}
   syncOilUseToggle();
   updateBudgetPreview();
-  setNotice("검증된 단일 기름·영약·4보석 설치본으로 장비 목록을 연결했습니다. "+
+  setNotice("현재 선택과 일치하는 검증 설치본으로 장비 목록을 연결했습니다. "+
     "추가 G/F Native는 실행하지 않았습니다.");
+  return true;
+}
+function matchingInstalledGemVariants() {
+  const data=state.oilCatalog;
+  if(!installedConsumableScopeMatches(data))return [];
+  const rows=Array.isArray(data.verified_gem_installs)?data.verified_gem_installs:[];
+  const active=rows.find(v=>v.installed_manifest_sha256===
+    state.seasonGear?.installed_manifest_sha256);
+  const explicit=field("season-selected-flask-id");
+  const flask=explicit?Number(explicit):active?.flask_item_id;
+  if(!Number.isSafeInteger(flask)||flask<=0)return [];
+  const oils={};
+  if(oilUseIntent){
+    if(!selectedFullVerifiedOil())return [];
+    for(const [hand,id] of [["main_hand","optimizer-oil-main-id"],
+                            ["off_hand","optimizer-oil-off-id"]])
+      if(field(id))oils[hand]=Number(field(id));
+  }
+  const track=field("spec")==="warrior/fury"&&!$("manual-t-mode").checked?
+    "fury_dual_2h":"general";
+  return rows.filter(v=>{
+    const ids=v.selected_oil_item_ids_by_hand||{};
+    return /^[a-f0-9]{64}$/.test(v.installed_manifest_sha256||"") &&
+      v.flask_item_id===flask && v.reference_G_track===track &&
+      Number.isSafeInteger(v.socket_total)&&v.socket_total>=4&&v.socket_total<=64 &&
+      (v.special_gem_id===null ||
+       Number.isSafeInteger(v.special_gem_id)&&v.special_gem_id>0&&v.socket_total>=5) &&
+      Object.keys(ids).length===Object.keys(oils).length &&
+      Object.entries(ids).every(([hand,id])=>oils[hand]===id);
+  });
+}
+function renderVerifiedGemChoices(){
+  const selector=document.getElementById("season-verified-special-gem");
+  if(!selector)return;
+  const special=field("season-existing-special-gem-id");
+  const sockets=valueInt("season-target-socket-count");
+  const rows=matchingInstalledGemVariants();
+  const groups=new Map();
+  for(const v of rows){
+    if(v.special_gem_id===null)continue;
+    const key=v.special_gem_id+":"+v.socket_total;
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(v);
+  }
+  selector.replaceChildren(option("",special?"현재 직접 지정한 보석":"특수보석 선택 안 함"));
+  selector.appendChild(option("none","특수보석 미사용"));
+  for(const [key,variants] of groups){
+    const active=variants.find(v=>v.installed_manifest_sha256===
+      state.seasonGear?.installed_manifest_sha256);
+    if(variants.length!==1&&!active)continue;
+    const v=variants.length===1?variants[0]:active;
+    selector.appendChild(option(key,(v.official_name_ko||
+      "특수보석 #"+v.special_gem_id)+" · 소켓 "+v.socket_total+"개"));
+  }
+  const current=special+":"+sockets;
+  if(special&&Array.from(selector.options).some(o=>o.value===current))
+    selector.value=current;
+  selector.disabled=selector.options.length<=2&&!special;
+}
+async function reuseVerifiedGemVariant(){
+  const special=field("season-existing-special-gem-id");
+  const sockets=valueInt("season-target-socket-count");
+  const rows=matchingInstalledGemVariants().filter(v=>
+    v.special_gem_id===(special?Number(special):null)&&v.socket_total===sockets);
+  const active=rows.find(v=>v.installed_manifest_sha256===
+    state.seasonGear?.installed_manifest_sha256);
+  if(!rows.length)return false;
+  if(rows.length!==1&&!active)
+    throw Error("같은 보석 구성의 검증 설치본이 여러 개입니다. 정확한 환경을 선택해 주세요.");
+  const chosen=rows.length===1?rows[0]:active;
+  const sha=chosen.installed_manifest_sha256;
+  const build=field("season-game-build")||state.verifiedInstalledBuildFromThisPage;
+  const level=valueInt("ilevel");
+  return bindExactInstalledGearVariant({sha,build,level,
+    stillMatches:()=>matchingInstalledGemVariants().some(v=>
+      v.installed_manifest_sha256===sha&&
+      v.special_gem_id===(field("season-existing-special-gem-id")?
+        Number(field("season-existing-special-gem-id")):null)&&
+      v.socket_total===valueInt("season-target-socket-count"))});
+}
+async function chooseVerifiedGem(){
+  const value=field("season-verified-special-gem");
+  if(!value)return;
+  if(value!=="none"){
+    const match=/^([1-9][0-9]*):([1-9][0-9]*)$/.exec(value);
+    if(!match||!matchingInstalledGemVariants().some(v=>
+      v.special_gem_id===Number(match[1])&&v.socket_total===Number(match[2])))return;
+    $("season-existing-special-gem-id").value=match[1];
+    $("season-target-socket-count").value=match[2];
+  }else $("season-existing-special-gem-id").value="";
+  $("season-verified-budget").value="";
+  updateSeasonSocketBreakdown();
+  updateBudgetPreview();
+  // If the exact layout has not been installed, preserve the user's intent
+  // but revoke the old run scope; no automatic Native from a menu change.
+  if(!await reuseVerifiedGemVariant()){
+    state.seasonGearTargetIlevel=null;
+    setNotice("현재 보석 구성에 맞는 검증 환경이 없습니다. 선택 환경 검증·준비를 실행하세요.");
+  }
+  renderVerifiedGemChoices();
 }
 function runeCompatibility() {
   const key=field("spec");
@@ -2344,6 +2449,11 @@ async function prepareSelectedExistingEnvironment() {
 async function prepareUserSelectedEnvironment() {
   if(field("season-verified-budget"))
     return prepareSelectedExistingEnvironment();
+  // Non-default layouts use an exact installed snapshot before any Build.
+  if(typeof reuseVerifiedGemVariant==="function" &&
+     (field("season-existing-special-gem-id")||
+      Number(field("season-target-socket-count"))!==4) &&
+     await reuseVerifiedGemVariant())return true;
   // No accidental Native run simply because a valid ordinary installation
   // has not been chosen yet. Advanced variants retain explicit Build consent.
   if(!oilUseIntent && Number(field("season-target-socket-count"))===4 &&
@@ -5485,6 +5595,10 @@ function registerHandlers() {
   $("user-variant-prepare-btn").addEventListener("click",()=>withBusy(prepareUserSelectedEnvironment));
   $("season-target-socket-count").addEventListener("input",updateSeasonSocketBreakdown);
   $("season-existing-special-gem-id").addEventListener("input",updateSeasonSocketBreakdown);
+  $("season-verified-special-gem").addEventListener("change",()=>withBusy(chooseVerifiedGem));
+  for(const id of ["season-target-socket-count","season-existing-special-gem-id",
+    "season-verified-flask","optimizer-oil-loadout","optimizer-oil-use-mode","spec"])
+    $(id).addEventListener("change",renderVerifiedGemChoices);
   updateSeasonSocketBreakdown();
   $("source-credentials-save-btn").addEventListener("click",()=>withBusy(saveSourceCredentials));
   $("source-credentials-clear-btn").addEventListener("click",()=>withBusy(clearSourceCredentials));
