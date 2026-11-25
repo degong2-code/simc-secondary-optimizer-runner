@@ -105,7 +105,7 @@ jobs:
           retention-days: 30
 
   v802-selected-mixed-oil:
-    if: contains(github.event.head_commit.message, '[v802-selected-oil-once]') || contains(github.event.head_commit.message, '[v803-selected-oil-diagnostic-once]')
+    if: contains(github.event.head_commit.message, '[v802-selected-oil-once]') || contains(github.event.head_commit.message, '[v803-selected-oil-diagnostic-once]') || contains(github.event.head_commit.message, '[v805-selected-oil-once]')
     runs-on: windows-2022
     timeout-minutes: 40
     env:
@@ -136,6 +136,10 @@ jobs:
           python -m pip install -r requirements-web-test.txt
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -m py_compile integration_probes/p1_v802_selected_mixed_oil_once.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Exact selected longrun replay regressions before expensive Native
+        run: |
+          python -m unittest -v tests.test_v436_selected_v096_admission
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: One real selected mixed-level weapon and oil, two DPS cases, zero-Native replay
         timeout-minutes: 33

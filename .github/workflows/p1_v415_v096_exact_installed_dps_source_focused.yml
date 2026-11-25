@@ -5,6 +5,7 @@ on:
     paths:
       - runner/v096_unified_product_entry.py
       - tests/test_p3_ho_fresh_v212_user_bridge.py
+      - tests/test_v436_selected_v096_admission.py
       - .github/workflows/p1_v415_v096_exact_installed_dps_source_focused.yml
   workflow_dispatch:
 permissions:
@@ -22,4 +23,4 @@ jobs:
         env:
           PYTHONPATH: runner:integration_probes:.
         run: |
-          python -m unittest -v tests.test_p3_ho_fresh_v212_user_bridge
+          python -m unittest -v tests.test_p3_ho_fresh_v212_user_bridge tests.test_v436_selected_v096_admission

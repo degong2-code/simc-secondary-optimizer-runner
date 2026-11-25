@@ -46,7 +46,7 @@ def _safe_failure(exc):
     out["frames"]=[{"file":Path(f.filename).name,"function":f.name,
                     "line":f.lineno}
                    for f in traceback.extract_tb(exc.__traceback__)
-                   if re.fullmatch(r"v[0-9]+_[a-zA-Z0-9_]+\.py",Path(f.filename).name)][-12:]
+                   if re.fullmatch(r"(?:p1_)?v[0-9]+_[a-zA-Z0-9_]+\.py",Path(f.filename).name)][-12:]
     return out
 
 def _native_observation(root):
@@ -117,6 +117,14 @@ def run(args):
         raw=json.dumps(report,sort_keys=True,ensure_ascii=False,allow_nan=False)
         receipt.write_text(raw+"\n",encoding="utf8")
         print("V802_RECEIPT "+raw,flush=True)
+    def check(code, observed, expected):
+        # Only explicitly selected numeric/boolean/status fields are passed.
+        # Record the failed comparison before raising, not a broad PASS flag.
+        if observed!=expected:
+            report["failed_comparison"]={"code":code,"observed":observed,
+                                         "expected":expected}
+            save()
+            raise RuntimeError(code)
     def call(client,method,url,**kw):
         response=client.request(method,url,headers={
             "x-simc-local-token":TOKEN,"origin":"http://127.0.0.1:8765"},**kw)
@@ -135,7 +143,20 @@ def run(args):
         while time.monotonic()<limit:
             status=call(client,"GET","/api/v1/sessions/"+sid+"/longrun/status")
             if not status.get("active"):
-                worker=(status.get("progress") or {}).get("worker") or {}
+                progress=status.get("progress") or {}
+                worker=progress.get("worker") or {}
+                def fixed_code(value):
+                    if type(value) is not str:return None
+                    code=value.split(":",1)[0].split("\n",1)[0]
+                    return code if re.fullmatch(r"[A-Z][A-Z0-9_]{3,140}",code) else None
+                report["last_worker"]={"status":worker.get("status"),
+                    "reason_code":fixed_code(worker.get("reason")),
+                    "progress_error_code":fixed_code(progress.get("error")),
+                    "progress_status":progress.get("status"),
+                    "native_attempts":progress.get("native_attempts"),
+                    "completed_jobs":progress.get("completed_jobs"),
+                    "result_ready":status.get("result_ready")}
+                save()
                 need(worker.get("status") not in ("BLOCKED_OR_PARTIAL","QUEUED","RUNNING"),
                      "V802_ORIGINAL_WORKER_BLOCKED")
                 return status
@@ -238,48 +259,57 @@ def run(args):
                 report["selected_oil_native"]=p.get("selected_oil_native_calls_this_start")
                 report["selected_static_native"]=p.get("selected_static_native_calls_this_start")
                 save()
-                need(p["status"]=="LONGRUN_SOURCE_PREPARED_NO_DPS_NATIVE" and
-                     p["new_dps_native_calls"]==0 and
-                     report["selected_oil_native"]==2 and
-                     type(report["selected_static_native"]) is int and
-                     0<=report["selected_static_native"]<=2,"V802_START_NATIVE_COUNTS_DRIFT")
+                check("V802_START_STATUS_DRIFT",p.get("status"),"LONGRUN_SOURCE_PREPARED_NO_DPS_NATIVE")
+                check("V802_START_DPS_NATIVE_DRIFT",p.get("new_dps_native_calls"),0)
+                check("V802_START_OIL_NATIVE_DRIFT",report["selected_oil_native"],2)
+                check("V802_START_STATIC_NATIVE_BOUND",
+                      type(report["selected_static_native"]) is int and
+                      0<=report["selected_static_native"]<=2,True)
                 sid=p["session_id"];folder=root/sid
                 manifest=json.loads((folder/"generated"/"manifest.json").read_text("utf8"))
                 selected=manifest[web.bootstrap.entry.SELECTED_FRESH_SEASON_FIELD]
                 oil=selected["oil_by_hand"]["main_hand"]["static_CHMV_vector"]
                 report["selected_O"]=oil
                 need(sum(oil.values())>0,"V802_SELECTED_MEASURED_O_NOT_POSITIVE")
+                save("READ_ONLY_SELECTED_PLAN")
                 plan=call(c,"POST","/api/v1/sessions/plan",json=request)
-                need(plan["status"]=="READY_ZERO_NATIVE" and plan["native_calls"]==0 and
-                     plan["session_id"]==sid and plan["plan"]["base_B"]==T-sum(oil.values()) and
-                     plan["plan"]["final_T"]==T,"V802_SELECTED_PLAN_REPLAY_OR_B_T_DRIFT")
+                check("V802_PLAN_STATUS_DRIFT",plan.get("status"),"READY_ZERO_NATIVE")
+                check("V802_PLAN_NATIVE_DRIFT",plan.get("native_calls"),0)
+                check("V802_PLAN_SESSION_DRIFT",plan.get("session_id")==sid,True)
+                check("V802_PLAN_B_DRIFT",plan["plan"]["base_B"],T-sum(oil.values()))
+                check("V802_PLAN_T_DRIFT",plan["plan"]["final_T"],T)
                 report["B"]=plan["plan"]["base_B"];report["T"]=T
+                save("SAME_SESSION_REPREPARE")
                 replay=call(c,"POST","/api/v1/longrun/prepare",json=longreq)
-                need(replay["session_id"]==sid and replay.get("selected_oil_native_calls_this_start")==0
-                     and replay.get("selected_static_native_calls_this_start")==0 and digest(path)==original,
-                     "V802_PREPARE_CACHE_OR_INSTALLED_IMMUTABILITY_DRIFT")
+                check("V802_REPREPARE_SESSION_DRIFT",replay["session_id"]==sid,True)
+                check("V802_REPREPARE_OIL_NATIVE_DRIFT",replay.get("selected_oil_native_calls_this_start"),0)
+                check("V802_REPREPARE_STATIC_NATIVE_DRIFT",replay.get("selected_static_native_calls_this_start"),0)
+                check("V802_REPREPARE_INSTALLED_BYTES_DRIFT",digest(path)==original,True)
                 report["reprepare_native"]=0
                 save("TWO_DPS_NATIVE_AND_CACHE_REPLAY")
                 url="/api/v1/sessions/"+sid
                 hashes=[]
                 for count in (1,2):
+                    save("DPS_NATIVE_BATCH_"+str(count))
                     call(c,"POST",url+"/longrun/resume",json={
                         "max_new_native_this_invocation":1,"max_elapsed_seconds":360})
                     status=wait(c,sid)
                     progress=status["progress"]
                     report["dps_native"]=progress["native_attempts"]
                     save()
-                    need(progress["native_attempts"]==count and progress["completed_jobs"]==count,
-                         "V802_DPS_NATIVE_PROGRESS_DRIFT")
+                    check("V802_DPS_NATIVE_ATTEMPT_DRIFT",progress["native_attempts"],count)
+                    check("V802_DPS_COMPLETED_CASE_DRIFT",progress["completed_jobs"],count)
                     current=case_hashes(root,sid)
                     need(len(current)==count and current[:len(hashes)]==hashes,
                          "V802_DPS_NATIVE_RECEIPT_DRIFT")
                     hashes=current
+                save("CACHE_ONLY_REPLAY")
                 call(c,"POST",url+"/longrun/cache-only",json={})
                 status=wait(c,sid)
-                need(status["progress"]["native_attempts"]==2 and
-                     case_hashes(root,sid)==hashes and digest(path)==original,
-                     "V802_CACHE_ONLY_NATIVE_OR_INSTALL_DRIFT")
+                check("V802_CACHE_ONLY_ATTEMPT_DRIFT",status["progress"]["native_attempts"],2)
+                check("V802_CACHE_ONLY_CASE_BYTES_DRIFT",case_hashes(root,sid)==hashes,True)
+                check("V802_CACHE_ONLY_INSTALL_BYTES_DRIFT",digest(path)==original,True)
+                save("USER_RESULT_DPS_SEM_95")
                 result=call(c,"GET",url+"/longrun/result")
                 user=result["user_result"];best=user["observed_first_choice"]
                 need(user["confidence_level"]==0.95 and user["global_optimum_proven"] is False and
