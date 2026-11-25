@@ -1880,8 +1880,9 @@ function matchingInstalledGemVariants() {
   });
 }
 function renderVerifiedGemChoices(){
+  if(typeof document!=="object"||typeof document.getElementById!=="function")return;
   const selector=document.getElementById("season-verified-special-gem");
-  if(!selector)return;
+  if(!selector||typeof selector.replaceChildren!=="function")return;
   const special=field("season-existing-special-gem-id");
   const sockets=valueInt("season-target-socket-count");
   const rows=matchingInstalledGemVariants();
