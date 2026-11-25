@@ -542,6 +542,8 @@ def equipment_primary_armor_compatibility(row):
         # not a fixed base item's provisional stat metadata.
         if row.get("category")!="selectable_stat_craft" and observed and not observed&primary_codes[contract["primary"]]:
             continue
+        if not representative.weapon_subclass_compatible(key,row):
+            continue
         eligible.append(key)
     return {"compatible_dps_specs":eligible,
             "spec_role_source_verified":False,

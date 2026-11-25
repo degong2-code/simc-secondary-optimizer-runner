@@ -591,6 +591,8 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
                     need(type(codes) is list and
                          any(x in expected_primary for x in codes),
                          "CURRENT_SEASON_SPECIAL_WEAPON_WRONG_PRIMARY:"+slot)
+                need(source_stage.weapon_subclass_compatible("/".join(key),row),
+                     "CURRENT_SEASON_SELECTED_WEAPON_WRONG_SUBCLASS:"+slot)
             elif group=="special":
                 # Match the existing public choice rule for non-weapon fixed
                 # gear, including armor, shields and frills. A positive

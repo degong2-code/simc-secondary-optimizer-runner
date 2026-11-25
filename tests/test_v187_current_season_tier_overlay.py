@@ -543,6 +543,54 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
                   "CURRENT_SEASON_SPECIAL_WEAPON_WRONG_PRIMARY:main_hand"):
             self.apply(u,rows,groups)
 
+    def test_source_weapon_subclass_matches_public_and_overlay(self):
+        import v167_product_season_gear_adapter as product_gear
+        base=product_gear.read()
+        tier=season.load_tier()
+        require=lambda valid,why:self.fail(why) if not valid else None
+        # Same inventory and primary, different subclass. Synthetic IDs
+        # isolate physical rules; no live item or effect certification.
+        for key,inv,cases in (
+                ("rogue/assassination",13,((13,False),(15,True))),
+                ("hunter/beast_mastery",26,((19,False),(18,True))),
+                ("hunter/marksmanship",26,((19,False),(3,True)))):
+            cls,sp=key.split("/")
+            tier_map=tier["classes"][cls]["pieces"]
+            for sub,allowed in cases:
+                row={"item_id":999991,"name":"Synthetic fixed weapon",
+                     "category":"special_effect_gear_candidate",
+                     "inventory_type":inv,"class_id":2,"subclass_id":sub,
+                     "allowed_class_mask":-1,"stat_modifier_codes":[3],
+                     "item_set_id":0,"slot_hint":None,
+                     "source_kinds":["raid_journal"],
+                     "season_list_basis":"SEALED_CONTEXT_FREE_EFFECT_OPTION"}
+                self.assertEqual(key in product_gear.equipment_primary_armor_compatibility(
+                    row)["compatible_dps_specs"],allowed)
+                craft={**row,"category":"selectable_stat_craft"}
+                self.assertEqual(key in product_gear.equipment_primary_armor_compatibility(
+                    craft)["compatible_dps_specs"],allowed)
+                merged=product_gear.merge_effect_option_rows(base,[row])
+                hands=("main_hand","off_hand") if cls=="rogue" else ("main_hand",)
+                for source,refresh in ((merged,None),(base,[row])):
+                    for hand in hands:
+                        with self.subTest(spec=key,sub=sub,hand=hand,refresh=refresh is not None):
+                            user=sessions.user_scenario(sessions.standard_controls((cls,sp)))
+                            _,_,rows,groups,_,_,_,fifth=pure.v098_inputs(
+                                user["character"],user["trinkets"],target_ilevel=334,
+                                combat=user["combat"],season_override=season.season_scope())
+                            user["special_items"]=[{"slot":hand,"item_id":row["item_id"],"options":{}}]
+                            args=dict(tier_override=tier_map,fifth_override=fifth,
+                                flexible_current_tier=True,season_source_tier=tier,
+                                season_source_gear=source,selected_refresh_rows=refresh)
+                            if not allowed:
+                                with self.assertRaisesRegex(AssertionError,
+                                        "CURRENT_SEASON_SELECTED_WEAPON_WRONG_SUBCLASS:"+hand):
+                                    common.apply_user_equipment((cls,sp),rows,groups,user,334,require,**args)
+                            else:
+                                common.apply_user_equipment((cls,sp),rows,groups,user,334,require,**args)
+                                self.assertEqual(rows[hand]["item_id"],row["item_id"])
+                                self.assertEqual(sum(groups.get(s)=="tier" for s in common.TIER_FIVE),4)
+
     def test_v188_armor_lining_rejected_on_real_ring_neck_and_weapon_crafts(self):
         # SimC's embellishment parser is intentionally permissive; our
         # product must respect optional-reagent recipe slot restrictions.

@@ -262,6 +262,30 @@ class SourceFirstRepresentative(unittest.TestCase):
                 with self.assertRaises(stage.RepresentativeBlocked):
                     choose([main,off],allow_observed_offhand_fallback=False)
 
+    def test_assassination_two_daggers_required_not_fist_fallback(self):
+        mask=self.tier["classes"]["rogue"]["allowed_class_mask"]
+        def item(iid,sub):
+            return {"item_id":iid,"category":"plain_representative_candidate",
+                    "class_id":2,"inventory_type":13,"subclass_id":sub,
+                    "allowed_class_mask":mask,"stat_modifier_codes":[3]}
+        dagger=item(900001,15)
+        fist=item(900002,13)
+        second=item(900003,15)
+        with self.assertRaises(stage.RepresentativeBlocked):
+            stage.shape_weapons({"items":[dagger,fist]},"dual_one_hand",
+                                mask,spec_key="rogue/assassination")
+        self.assertEqual(stage.shape_weapons({"items":[dagger,fist,second]},
+            "dual_one_hand",mask,spec_key="rogue/assassination"),
+            {"main_hand":900001,"off_hand":900003})
+        # Do not make the conservative representative preference a universal
+        # weapon prohibition for other specializations.
+        self.assertTrue(stage.weapon_subclass_compatible("rogue/outlaw",fist))
+        for subclass in (2,3,18,19):
+            row={"class_id":2,"inventory_type":26,"subclass_id":subclass}
+            for key in ("hunter/beast_mastery","hunter/marksmanship"):
+                self.assertEqual(stage.weapon_subclass_compatible(key,row),
+                                 subclass!=19)
+
     def test_weapon_inventory_form_only_not_class_proficiency(self):
         plan=stage.build_all(self.db,self.tier)["specializations"]
         self.assertEqual(len(plan["warrior/fury"]["weapons"]),2)

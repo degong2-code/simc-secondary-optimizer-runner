@@ -62,7 +62,7 @@ SPEC_SUBCLASS_PREFS={
     "druid/feral":(10,6,5),
     "hunter/survival":(6,10),
     "monk/windwalker":(10,6),
-    "rogue/assassination":(15,13),
+    "rogue/assassination":(15,),
     "rogue/subtlety":(15,13),
     "rogue/outlaw":(7,13,0,4),
     "shaman/enhancement":(4,0,13),
@@ -75,6 +75,21 @@ OBSERVED_OFFHAND_FALLBACK_SUBCLASSES={
     "warrior/fury":(6,),
     "rogue/outlaw":(15,),
 }
+
+def weapon_subclass_compatible(spec_key,row):
+    """Only explicit weapon-use constraints, not the representative preferences.
+
+    SimC sc_rogue.cpp (7bc10711b5), mutilate_t: both hands must be daggers.
+    The existing ranged form is bow/gun/crossbow, not inventory-26 wands.
+    Do not infer other spec-wide weapon prohibitions from preferred types.
+    """
+    if row.get("class_id")!=2:
+        return True
+    if spec_key=="rogue/assassination":
+        return row.get("subclass_id")==15
+    if spec_key in ("hunter/beast_mastery","hunter/marksmanship"):
+        return row.get("subclass_id") in FORM_SUBCLASS_PREFS["ranged"]
+    return True
 
 class RepresentativeBlocked(ValueError):pass
 def need(v,code):
@@ -155,6 +170,7 @@ def shape_weapons(db,weapon_form,class_mask,*,spec_key,
         spec_key,FORM_SUBCLASS_PREFS[weapon_form])
     def candidates(rows,preferred=prefs):
         valid=[x for x in rows if x["subclass_id"] in preferred
+               and weapon_subclass_compatible(spec_key,x)
                and allowed(x) and correct_primary(x)]
         return [x["item_id"] for x in sorted(valid,key=lambda x:(
             preferred.index(x["subclass_id"]),x["item_id"]))]
