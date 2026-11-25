@@ -627,12 +627,60 @@ def _quality_spell_fields(raw,build,spells):
     return spell_rows,effects
 
 
+def _direct_item_stat_components(spell, spell_effects, budget, trinket_multiplier):
+    """Bounded source-data average, not combat behavior.
+
+    Exact 70961 spell_data.cpp average(item) uses item_budget for -1
+    (and other ordinary classes), special branches for -7/-8/-9/0.
+    Restrict to observed direct stat rows, no clamp/override/delta.
+    Identical rarity first-column budgets avoid assuming the synthetic
+    consumable item's quality. Unsupported shape returns None.
+    """
+    import math
+    attrs=[_quality_int(v.strip()) for v in spell[39][1:-1].split(",")]
+    if (len(attrs)!=17 or not attrs[11]&(1<<2) or
+            any(_quality_int(spell[n])!=0 for n in (8,9,10)) or
+            _quality_int(spell[52])!=len(spell_effects) or
+            not 1<=len(spell_effects)<=16 or
+            len({e[2] for e in spell_effects})!=len(spell_effects)):
+        return None
+    rarities=[_quality_float(budget[n][1:-1].split(",")[0].strip())
+              for n in (3,4,5)]
+    if len(set(rarities))!=1 or rarities[0]<=0:
+        return None
+    values={}
+    for e in spell_effects:
+        etype,subtype,scaling=map(_quality_int,e[3:6])
+        misc=_quality_int(e[16])
+        if (etype!=6 or subtype not in (29,189) or
+                (subtype==29 and misc not in (-2,0,1,3)) or
+                (subtype==189 and (misc<=0 or misc&~_QUALITY_RATING_MASK)) or
+                scaling not in (-1,-7,-8,-9,0) or
+                _quality_int(e[19])!=0 or
+                any(_quality_float(e[n])!=0 for n in (8,9,10,11,12,14,21,22))):
+            return None
+        coefficient=_quality_float(e[7])
+        if coefficient==0:
+            return None
+        if scaling==-1:
+            scale_value=rarities[0]
+        elif scaling==-7:
+            scale_value=rarities[0]*(trinket_multiplier or 1)
+        else:
+            scale_value=_quality_float(budget[1 if scaling==-8 else 2])
+        value=coefficient*scale_value
+        if scale_value<=0 or not math.isfinite(value):
+            return None
+        values["spell_effect:"+e[0]+":"+str(subtype)+":"+str(misc)]=value
+    return values if len(values)==len(spell_effects) else None
+
+
 def direct_quality_source_families(*,game_build,simc_revision,rows,metadata,
                                   families,source_bytes):
     """Extract complete signed static stat components for exact direct auras.
 
     Unknown spell/scale shapes remain pending. This supports item-level
-    average branches -7/-8/-9/0 only, with no clamp/override/delta, and
+    average branches -1/-7/-8/-9/0 only, with no clamp/override/delta, and
     requires exact full same-driver ItemEffect rows and physical scope.
     """
     import hashlib
@@ -686,49 +734,15 @@ def direct_quality_source_families(*,game_build,simc_revision,rows,metadata,
                     len(spells.get(sid,[]))!=1):
                 continue
             spell=spells[sid][0]
-            attrs=[_quality_int(v.strip()) for v in spell[39][1:-1].split(",")]
             spell_effects=effects.get(sid,[])
-            # No triggered/complex effect, scaling clamps, or other
-            # effect types. Spell fields are the very same source row.
-            if (len(attrs)!=17 or not attrs[11]&(1<<2) or
-                    any(_quality_int(spell[n])!=0 for n in (8,9,10)) or
-                    _quality_int(spell[52])!=len(spell_effects) or
-                    not 1<=len(spell_effects)<=16 or
-                    len({e[2] for e in spell_effects})!=len(spell_effects)):
-                continue
             components={}
             for iid in ids:
                 level=by_id[iid]["ilevel_unscaled"]
                 if not 1<=level<=len(trinket) or len(budget_rows.get(level,[]))!=1:
                     break
-                budget=budget_rows[level][0]
-                rarities=[_quality_float(budget[n][1:-1].split(",")[0].strip())
-                          for n in (3,4,5)]
-                if len(set(rarities))!=1 or rarities[0]<=0:
-                    break
-                values={}
-                for e in spell_effects:
-                    etype,subtype,scaling=map(_quality_int,e[3:6])
-                    misc=_quality_int(e[16])
-                    if (etype!=6 or subtype not in (29,189) or
-                            (subtype==29 and misc not in (-2,0,1,3)) or
-                            (subtype==189 and (misc<=0 or misc&~_QUALITY_RATING_MASK)) or
-                            scaling not in (-7,-8,-9,0) or
-                            _quality_int(e[19])!=0 or
-                            any(_quality_float(e[n])!=0 for n in
-                                (8,9,10,11,12,14,21,22))):
-                        break
-                    coefficient=_quality_float(e[7])
-                    if coefficient==0:
-                        break
-                    scale_value=(
-                        rarities[0]*(trinket[level-1] or 1) if scaling==-7 else
-                        _quality_float(budget[1 if scaling==-8 else 2]))
-                    if scale_value<=0 or not math.isfinite(scale_value):
-                        break
-                    values["spell_effect:"+e[0]+":"+str(subtype)+":"+str(misc)]=(
-                        coefficient*scale_value)
-                if len(values)!=len(spell_effects):
+                values=_direct_item_stat_components(spell,spell_effects,
+                    budget_rows[level][0],trinket[level-1])
+                if values is None:
                     break
                 components[str(iid)]=values
             if signed_quality_family_winners(group,components) is None:
@@ -739,7 +753,10 @@ def direct_quality_source_families(*,game_build,simc_revision,rows,metadata,
                        "consumable_quality_physical_scopes"][str(ids[0])],
                    "source_hashes":source_hashes,"spell_id":sid}
             output.append({"rows":group,"signed_components":components,
-                "effect_and_use_scope_verified":True,
+                # APL-input identity plus identical physical source rows
+                # does not establish absence of a custom effect override.
+                # These are DBC observations, NOT an admission receipt.
+                "effect_and_use_scope_verified":False,
                 "signed_component_coverage_complete":True,
                 "source_evidence_sha256":hashlib.sha256(
                     stage_engine.canonical(proof).encode("utf8")).hexdigest()})
@@ -796,15 +813,12 @@ def collect_direct_quality_source(*,stage_root,game_build,simc_revision,
         found=direct_quality_source_families(game_build=game_build,
             simc_revision=simc_revision,rows=rows,metadata=metadata,
             families=groups,source_bytes=raw)
-        if found:
-            known={**(known or {"schema":QUALITY_EVIDENCE_SCHEMA,
-                "game_build":game_build,"simc_revision":simc_revision,
-                "item_data_sha256":metadata["source_sha256"],
-                "item_source_receipt_sha256":metadata["source_receipt_sha256"],
-                "families":[]}),
-                "families":[*(known or {}).get("families",[]),*found]}
-        return known,{"status":"DIRECT_SOURCE_COMPARISON_OBSERVED",
-                      "network_calls":calls[0],"new_families":len(found),
+        # Do not replace previously reviewed choices with a DBC-only
+        # result. Keep compact observations for the existing source owner.
+        return known,{"status":"DIRECT_SOURCE_NUMERICS_UNADMITTED",
+                      "network_calls":calls[0],"new_families":0,
+                      "observed_family_count":len(found),
+                      "observed_families_unadmitted":found,
                       "candidate_families":len(groups),
                       "raw_source_stage_sha256":stage["receipt_sha256"]}
     except (ValueError,KeyError,TypeError,OSError,OverflowError) as exc:

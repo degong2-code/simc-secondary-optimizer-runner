@@ -416,6 +416,52 @@ class DirectQualitySource(unittest.TestCase):
         self.assertEqual(subject.pending_direct_quality_families(
             rows,meta,{"families":evidence}),[])
 
+    def test_actual_70961_light_potential_numeric_source_excerpt(self):
+        # Exact spell/effect rows from v795 job139122551614.
+        # Exact budget rows from 9933ffb generated rand_prop_points.inc
+        # blob 7923a7ca1fc975a26a9e160059930256ac07dca8, lines 280/297.
+        # Source excerpt only: no fabricated Wago join or family admission.
+        spell=subject._quality_fields(
+            '{ "Light\'s Potential", 1236616, 1, 0.000000, 0.000000, 0.000000, '
+            '0x0000000000000000, 0x00000000, 0, 0, 0, 0, 0, 0, 0.000000, '
+            '0.000000, 300000, 0, 300000, 0, 0, 0, 0, 4, 1, 0, 0.000000, '
+            '0.000000, 30000, 0, 0, 0, 0x0000000000000000, 0, 0.000000, '
+            '0, 0x00000000, 0x00000000, 0, '
+            '{ 671088640, 1056, 0, 0, 0, 0, 0, 0, 4096, 0, 8388608, 4, '
+            '131072, 0, 0, 268435456, 0 }, { 0, 0, 0, 0 }, 0, '
+            '{ 0, 0 }, { 0, 0 }, 0x00000000, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2 },',56)
+        effect=subject._quality_fields(
+            '{ 1232711, 1236616, 0, 6, 29, -1, 0x00000000, 2.787640, '
+            '0.000000, 0.000000, 0.000000, 0.000000, 0, 0.000000, '
+            '0.000000, 0.0000, -2, 0, { 0, 0, 0, 0 }, 0, 1.000000, '
+            '0.000000, 0.000000, 0, 0, 1, 0, 0.000000, 1.000000, 0, 0 },',31)
+        for level,replacement,secondary,budget,expected in (
+                (278,"216.76193237f","307.82867432f",
+                 "{ 212.79293823f, 159.59471130f, 119.69602966f, 106.39646912f, 106.39646912f }",
+                 593.1901063342285),
+                (295,"257.52294922f","399.10116577f",
+                 "{ 249.31483459f, 186.98611450f, 140.23959351f, 124.65741730f, 124.65741730f }",
+                 695.0000055096435)):
+            fields=subject._quality_fields(
+                "{ "+", ".join([str(level),replacement,secondary,budget,budget,budget])+" },",6)
+            actual=subject._direct_item_stat_components(spell,[effect],fields,1.5)
+            self.assertAlmostEqual(actual["spell_effect:1232711:29:-2"],expected,places=8)
+            # The ordinary -1 branch must NOT apply the -7 rating multiplier.
+            self.assertEqual(actual,subject._direct_item_stat_components(
+                spell,[effect],fields,0.5))
+
+    def test_numeric_source_observation_cannot_publish_without_scope(self):
+        rows,meta,source=self.fixture()
+        found=self.extract(rows,meta,source)
+        self.assertEqual(len(found),1)
+        self.assertFalse(found[0]["effect_and_use_scope_verified"])
+        evidence={"schema":subject.QUALITY_EVIDENCE_SCHEMA,
+                  "game_build":BUILD,"simc_revision":REV,
+                  "item_data_sha256":"a"*64,"item_source_receipt_sha256":"b"*64,
+                  "families":found}
+        self.assertIsNone(subject.source_quality_family_winners(
+            BUILD,REV,rows,evidence))
+
     def test_different_item_use_cooldown_or_scope_stays_pending(self):
         rows,meta,source=self.fixture()
         source["item_effect.inc"]=source["item_effect.inc"].replace(

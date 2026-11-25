@@ -395,9 +395,9 @@ def replay_direct_quality(out,rows,metadata,tree,owner,seed):
             "spell_rows":spells.get(sid,[]),"effect_rows":effects.get(sid,[])}
         if len(spells.get(sid,[]))!=1 or not effects.get(sid):
             raise ValueError("V795_REAL_SPELL_ROWS_MISSING")
-        # Validate real physical item relations / scaling tables even when
-        # the original 60-row join contains no complete eligible family.
-        # Only complete groups are passed to the actual new producer.
+        # Only complete eligible groups enter the producer. If there are
+        # none, the producer returns before physical/scale table parsing.
+        # The successful no-family receipt proves spell layout only.
         found=owner.direct_quality_source_families(game_build=BUILD,
             simc_revision=REV,rows=rows,metadata=metadata,
             families=groups,source_bytes=raw)
