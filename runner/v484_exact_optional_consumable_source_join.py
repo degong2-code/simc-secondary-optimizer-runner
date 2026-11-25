@@ -517,6 +517,300 @@ def reviewed_as_source_quality_evidence(game_build,simc_revision,rows,metadata,
             "item_source_receipt_sha256":receipt,"families":families} if families else None
 
 
+
+# Direct generic potion stat auras only. These are static source values,
+# not a recreation of custom proc/APL/effect behavior.
+_QUALITY_DIRECT_POTION=re.compile(r"simc:reviewed_apl_input:spell:([1-9][0-9]*)\Z")
+_QUALITY_RATING_MASK=0x00000700|0x000e0000|0x02000000|0x70000000
+
+
+def pending_direct_quality_families(rows,metadata,known):
+    """Do not collect extra source for already-proven or unrelated items."""
+    known_rows=[f["rows"] for f in (known or {}).get("families",[])]
+    by_id={row["item_id"]:row for row in metadata["items"]}
+    groups={}
+    for row in rows:
+        rank=row["crafting_quality"]
+        token=row["simc_input_token"]
+        suffix="_"+str(rank)
+        stem=token[:-len(suffix)] if 1<=rank<=9 and token.endswith(suffix) else token
+        key=(row["kind"],row["effect_identity"],row["use_condition_identity"],stem)
+        groups.setdefault(key,[]).append(row)
+    pending=[]
+    for (kind,effect,use,stem),group in groups.items():
+        ordered=sorted(group,key=lambda row:row["physical_item_id"])
+        if (kind!="potion" or not _QUALITY_DIRECT_POTION.fullmatch(effect) or
+                use!="wago_on_use_0" or len(group)<2 or ordered in known_rows or
+                len({row["crafting_quality"] for row in group})!=len(group) or
+                any(not 1<=row["crafting_quality"]<=9 or
+                    row["simc_input_token"]!=stem+"_"+str(row["crafting_quality"])
+                    for row in group)):
+            continue
+        items=[by_id.get(row["physical_item_id"],{}) for row in group]
+        scopes=[row.get("quality_physical_scope_sha256") for row in items]
+        if (any(type(s) is not str or not HEX64.fullmatch(s) for s in scopes) or
+                len(set(scopes))!=1 or
+                any(row.get("stat_modifier_codes") or row.get("item_set_id")!=0 or
+                    row.get("intrinsic_socket_count_from_simc_source")!=0
+                    for row in items)):
+            continue
+        pending.append(ordered)
+    return pending
+
+
+def _quality_float(raw):
+    import math
+    import struct
+    value=float(raw.rstrip("fF"))
+    if raw.endswith(("f","F")):
+        value=struct.unpack("f",struct.pack("f",value))[0]
+    need(math.isfinite(value),"V794_NONFINITE_SOURCE_VALUE")
+    return value
+
+
+def _quality_array(raw,build,header,head,row_pattern,decode,wanted,*,closing):
+    """Scan exactly the declared generated array; parse only selected rows."""
+    import io
+    lines=io.BytesIO(raw)
+    found={}
+    active=False
+    expected=None
+    seen=0
+    header_seen=False
+    for line in lines:
+        line=line.decode("utf8").strip()
+        if not active:
+            if re.fullmatch(header,line):
+                header_seen=True
+                need(line.endswith(build),"V794_QUALITY_SOURCE_BUILD_DRIFT")
+            m=re.fullmatch(head,line)
+            if m:
+                need(header_seen,"V794_QUALITY_SOURCE_HEADER_MISSING")
+                expected=int(m.group(1))
+                active=True
+            continue
+        if line==closing:
+            need(seen==expected,"V794_QUALITY_ARRAY_COUNT_DRIFT")
+            return found
+        if not line or line.startswith("//"):
+            continue
+        m=re.match(row_pattern,line)
+        need(m is not None,"V794_QUALITY_ARRAY_ROW_LAYOUT")
+        seen+=1
+        key=int(m.group(1))
+        if key in wanted:
+            record=decode(line)
+            found.setdefault(key,[]).append(record)
+    raise OptionalConsumableSourceBlocked("V794_QUALITY_ARRAY_NOT_COMPLETE")
+
+
+def _quality_fields(line,count):
+    # Generated comments follow a complete row; do not split a quoted name.
+    return item_metadata.split_cpp_record(
+        re.sub(r"\s*(?:/\*.*\*/|//[^\n]*)$","",line).strip(),field_count=count)
+
+
+def _quality_int(raw):
+    return int(raw,16 if raw.lower().startswith("0x") else 10)
+
+
+def _quality_spell_fields(raw,build,spells):
+    spell_rows=_quality_array(raw,build,r"// \d+ spells, wow build level [0-9.]+",
+        r"static spell_data_t __spell_data\[(\d+)\] = \{",
+        r'\{\s*"(?:\\.|[^"\\])*"\s*,\s*(\d+)\s*,',
+        lambda line:_quality_fields(line,56),spells,closing="};")
+    effects=_quality_array(raw,build,r"// \d+ effects, wow build level [0-9.]+",
+        r"static spelleffect_data_t __spelleffect_data\[(\d+)\] = \{",
+        r"\{\s*\d+\s*,\s*(\d+)\s*,",
+        lambda line:_quality_fields(line,31),spells,closing="};")
+    return spell_rows,effects
+
+
+def direct_quality_source_families(*,game_build,simc_revision,rows,metadata,
+                                  families,source_bytes):
+    """Extract complete signed static stat components for exact direct auras.
+
+    Unknown spell/scale shapes remain pending. This supports item-level
+    average branches -7/-8/-9/0 only, with no clamp/override/delta, and
+    requires exact full same-driver ItemEffect rows and physical scope.
+    """
+    import hashlib
+    import math
+    by_id={row["item_id"]:row for row in metadata["items"]}
+    spell_ids={int(_QUALITY_DIRECT_POTION.fullmatch(g[0]["effect_identity"]).group(1))
+               for g in families}
+    item_ids={r["physical_item_id"] for g in families for r in g}
+    levels={by_id[i]["ilevel_unscaled"] for i in item_ids}
+    if not spell_ids:
+        return []
+    effects_by_item=_quality_array(source_bytes["item_effect.inc"],game_build,
+        r"// Item effects, wow build [0-9.]+",
+        r"static constexpr std::array<item_effect_t, (\d+)> __item_effect_data \{ \{",
+        r"\{\s*\d+\s*,\s*\d+\s*,\s*(\d+)\s*,",
+        lambda line:tuple(map(_quality_int,_quality_fields(line,8))),
+        item_ids,closing="} };")
+    spells,effects=_quality_spell_fields(source_bytes["sc_spell_data.inc"],
+                                         game_build,spell_ids)
+    budget_rows=_quality_array(source_bytes["rand_prop_points.inc"],game_build,
+        r"// Random property points for item levels 1-\d+, wow build [0-9.]+",
+        r"static constexpr std::array<random_prop_data_t, (\d+)> __rand_prop_points_data \{ \{",
+        r"\{\s*(\d+)\s*,",lambda line:_quality_fields(line,6),
+        levels,closing="} };")
+    scale=source_bytes["sc_scale_data.inc"].decode("utf8")
+    match=re.search(r"(?m)^// Combat rating multipliers for item level 1 - (\d+), wow build ([0-9.]+)\s*\n"
+                    r"static constexpr double __combat_ratings_mult_by_ilvl\[\]\[\1\] = \{",scale)
+    need(match is not None and match.group(2)==game_build,
+         "V794_CR_SCALE_HEADER_DRIFT")
+    end=scale.find("\n};",match.end())
+    need(end>=0,"V794_CR_SCALE_ARRAY_NOT_COMPLETE")
+    groups=re.findall(r"// ([^\n]+) Multiplier\s*\n\s*\{([^{}]*)\}",
+                      scale[match.end():end])
+    need([name for name,_ in groups]==["Armor","Weapon","Trinket","Jewelry"],
+         "V794_CR_SCALE_TYPE_ORDER_DRIFT")
+    trinket=[_quality_float(v.strip()) for v in
+             re.sub(r"//[^\n]*","",groups[2][1]).split(",") if v.strip()]
+    need(len(trinket)==int(match.group(1)),"V794_CR_SCALE_LENGTH_DRIFT")
+    source_hashes={name:hashlib.sha256(raw).hexdigest()
+                   for name,raw in source_bytes.items()}
+    output=[]
+    for group in families:
+        try:
+            sid=int(_QUALITY_DIRECT_POTION.fullmatch(group[0]["effect_identity"]).group(1))
+            ids=[row["physical_item_id"] for row in group]
+            links=[effects_by_item.get(i,[]) for i in ids]
+            # All ItemEffect fields except record ID and ItemID identical.
+            if (any(len(link)!=1 for link in links) or
+                    any(link[0][1]!=sid or link[0][4]!=0 for link in links) or
+                    len({(l[0][1],*l[0][3:]) for l in links})!=1 or
+                    len(spells.get(sid,[]))!=1):
+                continue
+            spell=spells[sid][0]
+            attrs=[_quality_int(v.strip()) for v in spell[39][1:-1].split(",")]
+            spell_effects=effects.get(sid,[])
+            # No triggered/complex effect, scaling clamps, or other
+            # effect types. Spell fields are the very same source row.
+            if (len(attrs)!=17 or not attrs[11]&(1<<2) or
+                    any(_quality_int(spell[n])!=0 for n in (8,9,10)) or
+                    _quality_int(spell[52])!=len(spell_effects) or
+                    not 1<=len(spell_effects)<=16 or
+                    len({e[2] for e in spell_effects})!=len(spell_effects)):
+                continue
+            components={}
+            for iid in ids:
+                level=by_id[iid]["ilevel_unscaled"]
+                if not 1<=level<=len(trinket) or len(budget_rows.get(level,[]))!=1:
+                    break
+                budget=budget_rows[level][0]
+                rarities=[_quality_float(budget[n][1:-1].split(",")[0].strip())
+                          for n in (3,4,5)]
+                if len(set(rarities))!=1 or rarities[0]<=0:
+                    break
+                values={}
+                for e in spell_effects:
+                    etype,subtype,scaling=map(_quality_int,e[3:6])
+                    misc=_quality_int(e[16])
+                    if (etype!=6 or subtype not in (29,189) or
+                            (subtype==29 and misc not in (-2,0,1,3)) or
+                            (subtype==189 and (misc<=0 or misc&~_QUALITY_RATING_MASK)) or
+                            scaling not in (-7,-8,-9,0) or
+                            _quality_int(e[19])!=0 or
+                            any(_quality_float(e[n])!=0 for n in
+                                (8,9,10,11,12,14,21,22))):
+                        break
+                    coefficient=_quality_float(e[7])
+                    if coefficient==0:
+                        break
+                    scale_value=(
+                        rarities[0]*(trinket[level-1] or 1) if scaling==-7 else
+                        _quality_float(budget[1 if scaling==-8 else 2]))
+                    if scale_value<=0 or not math.isfinite(scale_value):
+                        break
+                    values["spell_effect:"+e[0]+":"+str(subtype)+":"+str(misc)]=(
+                        coefficient*scale_value)
+                if len(values)!=len(spell_effects):
+                    break
+                components[str(iid)]=values
+            if signed_quality_family_winners(group,components) is None:
+                continue
+            proof={"game_build":game_build,"simc_revision":simc_revision,
+                   "rows":group,"signed_components":components,
+                   "physical_scope_sha256":by_id[ids[0]]["quality_physical_scope_sha256"],
+                   "source_hashes":source_hashes,"spell_id":sid}
+            output.append({"rows":group,"signed_components":components,
+                "effect_and_use_scope_verified":True,
+                "signed_component_coverage_complete":True,
+                "source_evidence_sha256":hashlib.sha256(
+                    stage_engine.canonical(proof).encode("utf8")).hexdigest()})
+        except (ValueError,TypeError,KeyError,IndexError,OverflowError):
+            continue
+    return output
+
+
+def collect_direct_quality_source(*,stage_root,game_build,simc_revision,
+                                  rows,metadata,known,transport=None):
+    """On demand, exact immutable Git bytes via existing v229 and v217.
+
+    Never fetch for an already-proven family. Store the raw source once per
+    build/revision, independently of optimizer code/target ilvl. No Native.
+    """
+    import v229_simc_only_source_seed as seed
+    groups=pending_direct_quality_families(rows,metadata,known)
+    if not groups:
+        return known,{"status":"NO_ELIGIBLE_UNRESOLVED_DIRECT_FAMILY",
+                      "network_calls":0,"new_families":0}
+    root=pathlib.Path(stage_root)
+    calls=[0]
+    try:
+        need(seed.REV.fullmatch(simc_revision) and seed.BUILD.fullmatch(game_build),
+             "V794_EXACT_SOURCE_IDENTITY_REQUIRED")
+        key=seed.digest((game_build+":"+simc_revision).encode("utf8"))[:24]
+        outputs={name:"source/v794_quality_"+key+"/"+name
+                 for name in seed.OPTIONAL_QUALITY_FILES}
+        def fetch(req,timeout):
+            calls[0]+=1
+            return (seed.urlopen if transport is None else transport)(req,timeout=timeout)
+        def execute():
+            tree=seed.discover_generated_tree(simc_revision,transport=fetch,quality_files=True)
+            for name,relative in outputs.items():
+                meta=tree[name]
+                raw=seed.fetch_generated_blob(revision=simc_revision,name=name,
+                    expected_sha=meta["sha"],expected_size=meta["size"],transport=fetch)
+                need(len(raw)==meta["size"] and seed.git_blob(raw)==meta["sha"],
+                     "V794_PINNED_SOURCE_BLOB_DRIFT:"+name)
+                path=root/relative
+                path.parent.mkdir(parents=True,exist_ok=True)
+                path.write_bytes(raw)
+        def validate(files):
+            return all(0<files[name].stat().st_size<=limit and
+                       game_build.encode("ascii") in
+                       seed.bounded_read(files[name],limit)[:256]
+                       for name,limit in seed.OPTIONAL_QUALITY_FILES.items())
+        stage=stage_engine.execute_stage(root=root,stage_id="fresh-v794-quality-raw-"+key,
+            stage_version="v794-exact-generated-source-v1",
+            inputs={"game_build":game_build,"simc_revision":simc_revision},
+            outputs=outputs,execute=execute,validate=validate)
+        raw={name:seed.bounded_read(root/outputs[name],limit)
+             for name,limit in seed.OPTIONAL_QUALITY_FILES.items()}
+        found=direct_quality_source_families(game_build=game_build,
+            simc_revision=simc_revision,rows=rows,metadata=metadata,
+            families=groups,source_bytes=raw)
+        if found:
+            known={**(known or {"schema":QUALITY_EVIDENCE_SCHEMA,
+                "game_build":game_build,"simc_revision":simc_revision,
+                "item_data_sha256":metadata["source_sha256"],
+                "item_source_receipt_sha256":metadata["source_receipt_sha256"],
+                "families":[]}),
+                "families":[*(known or {}).get("families",[]),*found]}
+        return known,{"status":"DIRECT_SOURCE_COMPARISON_OBSERVED",
+                      "network_calls":calls[0],"new_families":len(found),
+                      "candidate_families":len(groups),
+                      "raw_source_stage_sha256":stage["receipt_sha256"]}
+    except (ValueError,KeyError,TypeError,OSError,OverflowError) as exc:
+        return known,{"status":"DIRECT_QUALITY_SOURCE_PENDING",
+                      "reason":str(exc)[:200],"network_calls":calls[0],
+                      "new_families":0}
+
+
 def candidate_token(name, rank):
     """Conservative SimC parser spelling, NOT proof that a token selects an item.
 

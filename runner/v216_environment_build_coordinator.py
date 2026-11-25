@@ -10001,6 +10001,13 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation,defaul
             build,revision,rows,metadata)
         source_quality=optional_source_join.reviewed_as_source_quality_evidence(
             build,revision,rows,metadata,quality_evidence)
+        quality_status=None
+        # Actual ordinary auto Build only: no new downloads for source-only
+        # diagnostics or synthetic callers. Reuse the existing v680 cache.
+        if default_observation is not None:
+            source_quality,quality_status=optional_source_join.collect_direct_quality_source(
+                stage_root=stage_root,game_build=build,simc_revision=revision,
+                rows=rows,metadata=metadata,known=source_quality)
         return {"game_build":build,"simc_revision":revision,
                 "source_receipt_sha256":digest(canonical({
                     "wago_stage":original["source_stage"]["receipt_sha256"],
@@ -10013,6 +10020,8 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation,defaul
                     **({"signed_quality_source_evidence":source_quality}
                        if source_quality is not None else {})
                 }).encode("utf8")),"rows":rows,
+                **({"direct_quality_source_status":quality_status}
+                   if quality_status is not None else {}),
                 **({"signed_quality_source_evidence":source_quality}
                    if source_quality is not None else {}),
                 **({"reviewed_quality_item_evidence":quality_evidence}

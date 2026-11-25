@@ -39,6 +39,14 @@ SOURCE_FILES = {
 }
 OPTIONAL_ITEM_FILE = "item_data.inc"
 MAX_ITEM_FILE = 32_000_000
+# Optional numerical-quality input only. Never part of the small/ordinary
+# seed inventory, and never downloaded merely because an item seed is built.
+OPTIONAL_QUALITY_FILES = {
+    "item_effect.inc": 4_000_000,
+    "sc_spell_data.inc": 40_000_000,
+    "rand_prop_points.inc": 2_000_000,
+    "sc_scale_data.inc": 2_000_000,
+}
 REV = re.compile(r"[a-f0-9]{40}\Z")
 BUILD = re.compile(r"\d+(?:\.\d+){3}\Z")
 HEX = re.compile(r"[a-f0-9]{40}\Z")
@@ -311,7 +319,7 @@ def resolve_exact_commit(revision_hint, *, transport=urlopen):
     return exact
 
 
-def discover_generated_tree(revision, *, transport=urlopen):
+def discover_generated_tree(revision, *, transport=urlopen, quality_files=False):
     """Walk 4 fixed first-party Git tree levels, not whole repo/history."""
     need(type(revision) is str and REV.fullmatch(revision),
          "V229_IMMUTABLE_SIMC_COMMIT_REQUIRED")
@@ -332,7 +340,8 @@ def discover_generated_tree(revision, *, transport=urlopen):
     need(type(rows) is list and doc.get("truncated") is not True,
          "V229_SIMC_GENERATED_TREE_INCOMPLETE")
     known={}
-    for name in (*SOURCE_FILES,OPTIONAL_ITEM_FILE):
+    for name in (*SOURCE_FILES,OPTIONAL_ITEM_FILE,
+                 *(OPTIONAL_QUALITY_FILES if quality_files else ())):
         matches=[x for x in rows if x.get("path")==name and
                  x.get("type")=="blob"]
         need(len(matches)==1 and type(matches[0].get("sha")) is str and
@@ -352,10 +361,11 @@ def fetch_generated_blob(*, revision, name, expected_sha, expected_size,
     retain their final Git-blob/build checks. No general retry or new mirror.
     """
     need(type(revision) is str and REV.fullmatch(revision) is not None and
-         name in (*SOURCE_FILES, OPTIONAL_ITEM_FILE) and
+         name in (*SOURCE_FILES, OPTIONAL_ITEM_FILE, *OPTIONAL_QUALITY_FILES) and
          type(expected_sha) is str and HEX.fullmatch(expected_sha) is not None and
          type(expected_size) is int and
-         0 < expected_size <= SOURCE_FILES.get(name,MAX_ITEM_FILE),
+         0 < expected_size <= OPTIONAL_QUALITY_FILES.get(
+             name,SOURCE_FILES.get(name,MAX_ITEM_FILE)),
          "V229_PINNED_BLOB_REQUEST_INVALID")
     raw_url=RAW_BASE+revision+"/engine/dbc/generated/"+name
     request=Request(raw_url,headers={

@@ -347,5 +347,94 @@ class CurrentDefaultWeaponSource(unittest.TestCase):
                     simc_revision=REV)
 
 
+
+class DirectQualitySource(unittest.TestCase):
+    def fixture(self):
+        from copy import deepcopy
+        rows=[{"kind":"potion","physical_item_id":101,"simc_input_token":"test_1",
+               "crafting_quality":1,"effect_identity":"simc:reviewed_apl_input:spell:1000",
+               "use_condition_identity":"wago_on_use_0","name_enUS":"Test"},
+              {"kind":"potion","physical_item_id":102,"simc_input_token":"test_2",
+               "crafting_quality":2,"effect_identity":"simc:reviewed_apl_input:spell:1000",
+               "use_condition_identity":"wago_on_use_0","name_enUS":"Test"}]
+        metadata={"items":[{"item_id":iid,"ilevel_unscaled":lvl,
+                            "quality_physical_scope_sha256":"a"*64,
+                            "stat_modifier_codes":[],"item_set_id":0,
+                            "intrinsic_socket_count_from_simc_source":0}
+                           for iid,lvl in ((101,1),(102,2))]}
+        def record(fields):
+            return "{ "+", ".join(map(str,fields))+" },"
+        spell=["0"]*56
+        spell[0]='"Test"'
+        spell[1]="1000"
+        flags=["0"]*17
+        flags[11]="4"
+        spell[39]="{ "+", ".join(flags)+" }"
+        spell[40]="{ 0, 0, 0, 0 }"
+        spell[43]=spell[44]="{ 0, 0 }"
+        spell[52]="1"
+        effect=["0"]*31
+        effect[:8]=["2000","1000","0","6","189","-7","0","2"]
+        effect[16]="256"
+        effect[18]="{ 0, 0, 0, 0 }"
+        effect[28]="1"
+        sources={
+            "item_effect.inc":f"// Item effects, wow build {BUILD}\n"
+                +"static constexpr std::array<item_effect_t, 2> __item_effect_data { {\n"
+                +record([1,1000,101,0,0,1,300000,300000])+"\n"
+                +record([2,1000,102,0,0,1,300000,300000])+"\n} };\n",
+            "sc_spell_data.inc":f"// 1 spells, wow build level {BUILD}\n"
+                +"static spell_data_t __spell_data[1] = {\n"+record(spell)+"\n};\n"
+                +f"// 1 effects, wow build level {BUILD}\n"
+                +"static spelleffect_data_t __spelleffect_data[1] = {\n"
+                +record(effect)+"\n};\n",
+            "rand_prop_points.inc":f"// Random property points for item levels 1-2, wow build {BUILD}\n"
+                +"static constexpr std::array<random_prop_data_t, 2> __rand_prop_points_data { {\n"
+                +"\n".join(record([lvl,10,10,*["{ "+", ".join([str(v)]*5)+" }"]*3])
+                            for lvl,v in ((1,10),(2,20)))+"\n} };\n",
+            "sc_scale_data.inc":f"// Combat rating multipliers for item level 1 - 2, wow build {BUILD}\n"
+                +"static constexpr double __combat_ratings_mult_by_ilvl[][2] = {\n"
+                +"\n".join("  // "+name+" Multiplier\n  {\n    1.5, 1.5,\n  },"
+                            for name in ("Armor","Weapon","Trinket","Jewelry"))+"\n};\n"}
+        return rows,metadata,{k:v.encode("utf8") for k,v in sources.items()}
+
+    def extract(self,rows,meta,source):
+        groups=subject.pending_direct_quality_families(rows,meta,None)
+        return subject.direct_quality_source_families(game_build=BUILD,
+            simc_revision=REV,rows=rows,metadata=meta,families=groups,
+            source_bytes=source)
+
+    def test_direct_static_quality_uses_source_budget_and_rating_multiplier(self):
+        rows,meta,source=self.fixture()
+        evidence=self.extract(rows,meta,source)
+        self.assertEqual(len(evidence),1)
+        self.assertEqual(evidence[0]["signed_components"],
+                         {"101":{"spell_effect:2000:189:256":30.0},
+                          "102":{"spell_effect:2000:189:256":60.0}})
+        self.assertEqual(subject.signed_quality_family_winners(
+            rows,evidence[0]["signed_components"]),[rows[1]])
+        self.assertEqual(subject.pending_direct_quality_families(
+            rows,meta,{"families":evidence}),[])
+
+    def test_different_item_use_cooldown_or_scope_stays_pending(self):
+        rows,meta,source=self.fixture()
+        source["item_effect.inc"]=source["item_effect.inc"].replace(
+            b"102, 0, 0, 1, 300000, 300000",b"102, 0, 0, 1, 300000, 200000")
+        self.assertEqual(self.extract(rows,meta,source),[])
+        meta["items"][1]["quality_physical_scope_sha256"]="b"*64
+        self.assertEqual(subject.pending_direct_quality_families(rows,meta,None),[])
+
+    def test_no_source_reads_for_already_proven_family(self):
+        rows,meta,source=self.fixture()
+        known={"families":self.extract(rows,meta,source)}
+        with mock.patch("v229_simc_only_source_seed.discover_generated_tree") as fetch:
+            result,status=subject.collect_direct_quality_source(
+                stage_root="unused",game_build=BUILD,simc_revision=REV,
+                rows=rows,metadata=meta,known=known)
+        self.assertEqual(result,known)
+        self.assertEqual(status["network_calls"],0)
+        fetch.assert_not_called()
+
+
 if __name__=="__main__":
     unittest.main()

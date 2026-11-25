@@ -46,7 +46,7 @@ def number(raw,code):
     return int(raw,16 if raw.lower().startswith("0x") else 10)
 
 
-def split_cpp_record(line):
+def split_cpp_record(line, field_count=28):
     """Single generated C++ item row; preserve socket braces/quoted commas."""
     row=line.strip()
     need(row.startswith("{") and (row.endswith("},") or row.endswith("}")),
@@ -69,7 +69,7 @@ def split_cpp_record(line):
             fields.append("".join(part).strip());part=[]
         else:part.append(c)
     fields.append("".join(part).strip())
-    need(not quoted and depth==0 and len(fields)==28,
+    need(not quoted and depth==0 and len(fields)==field_count,
          "V230_ITEM_RECORD_FIELD_COUNT_OR_QUOTE")
     return fields
 
@@ -238,6 +238,14 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
                 "item_set_id":number(fields[24],"V230_ITEM_SET_ID_INVALID"),
                 "source":"SIMC_GENERATED_ITEM_DATA_EXACT_ROW",
             }
+            if include_consumable_parser_names and found[iid]["class_id"]==0:
+                # Compare the entire physical use/requirement/flag shape,
+                # not only item name, class and rank. Only ID, ilevel and
+                # crafting rank may differ in this conservative proof.
+                found[iid]["quality_physical_scope_sha256"]=hashlib.sha256(
+                    json.dumps([v for n,v in enumerate(fields)
+                                if n not in (1,5,27)],
+                               separators=(",",":")).encode("utf8")).hexdigest()
     need(built and chunks>0 and not inside_stats and not inside_chunk and
          declared_items==item_count and
          stat_total==len(stats) and
