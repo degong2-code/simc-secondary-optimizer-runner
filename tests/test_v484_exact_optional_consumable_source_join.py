@@ -247,5 +247,74 @@ class SimcProfileDefaultExtraction(unittest.TestCase):
                 "12.1.5.70961","9933ffb946fb55b1fa66657b848f519ac19006e1"))
 
 
+
+
+class CurrentDefaultWeaponSource(unittest.TestCase):
+    def sample(self):
+        rows=[
+            {"item_id":101,"name":"Two-handed sword","category":
+             "plain_representative_candidate","inventory_type":17,
+             "class_id":2,"subclass_id":8,"item_set_id":0,
+             "allowed_class_mask":2,"source_kinds":["raid_journal"],
+             "stat_modifier_codes":[4]},
+            {"item_id":102,"name":"Wrong weapon","category":
+             "plain_representative_candidate","inventory_type":17,
+             "class_id":2,"subclass_id":8,"item_set_id":0,
+             "allowed_class_mask":2,"source_kinds":["raid_journal"],
+             "stat_modifier_codes":[5]},
+            {"item_id":103,"name":"Trinket","category":"trinket",
+             "inventory_type":12,"class_id":4,"subclass_id":0}]
+        gear={"season_build":BUILD,"no_old_catalog_seed":True,"items":rows}
+        metadata={"game_build":BUILD,"simc_revision":REV,
+                  "source_receipt_sha256":"a"*64,"source_sha256":"b"*64,
+                  "selection_mode":"EXACT_REQUESTED_IDS_ALLOW_MISSING",
+                  "items":[dict(rows[0]),dict(rows[1])]}
+        return gear,metadata
+
+    def test_one_exact_parse_no_gear_or_native_for_all_specs(self):
+        import v169_source_first_representative_stage as chooser
+        gear,metadata=self.sample()
+        with mock.patch.object(chooser.gear,"validate",return_value=gear), \
+             mock.patch.object(subject.item_metadata,"from_seed",
+                               return_value=metadata) as read:
+            result=subject.current_source_profile_default_weapons(
+                gear=gear,seed_directory="test",game_build=BUILD,
+                simc_revision=REV)
+        read.assert_called_once_with(directory="test",item_ids=[101,102],
+                                     allow_missing=True)
+        self.assertEqual(result["specializations"]["paladin/retribution"],
+                         {"weapons":{"main_hand":101}})
+        self.assertIn("mage/fire",result["missing_specializations"])
+        self.assertEqual(len(result["specializations"])+
+                         len(result["missing_specializations"]),26)
+        self.assertEqual(result["native_calls"],0)
+
+    def test_exact_metadata_disagreement_excludes_weapon(self):
+        import v169_source_first_representative_stage as chooser
+        gear,metadata=self.sample()
+        metadata["items"][0]["subclass_id"]=18
+        with mock.patch.object(chooser.gear,"validate",return_value=gear), \
+             mock.patch.object(subject.item_metadata,"from_seed",
+                               return_value=metadata):
+            result=subject.current_source_profile_default_weapons(
+                gear=gear,seed_directory="test",game_build=BUILD,
+                simc_revision=REV)
+        self.assertEqual(result["mismatched_item_ids"],[101])
+        self.assertIn("paladin/retribution",result["missing_specializations"])
+
+    def test_wrong_revision_does_not_authorize_weapon_pool(self):
+        import v169_source_first_representative_stage as chooser
+        gear,metadata=self.sample()
+        metadata["simc_revision"]="f"*40
+        with mock.patch.object(chooser.gear,"validate",return_value=gear), \
+             mock.patch.object(subject.item_metadata,"from_seed",
+                               return_value=metadata):
+            with self.assertRaisesRegex(subject.OptionalConsumableSourceBlocked,
+                                        "V787_CURRENT_WEAPON_SIMC_IDENTITY_DRIFT"):
+                subject.current_source_profile_default_weapons(
+                    gear=gear,seed_directory="test",game_build=BUILD,
+                    simc_revision=REV)
+
+
 if __name__=="__main__":
     unittest.main()

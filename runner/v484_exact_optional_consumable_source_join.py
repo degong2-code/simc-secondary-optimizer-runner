@@ -138,6 +138,102 @@ def extract_simc_profile_defaults(*, binary, season, receipt):
              "V784_PROFILE_GENERATION_INCOMPLETE")
         return observed
 
+
+def current_source_profile_default_weapons(*, gear, seed_directory,
+                                          game_build, simc_revision):
+    """Prepare only initialisation weapons from current sealed source data.
+
+    One exact v230 parse for the entire bounded weapon pool, then reuse
+    v169's weapon shape, primary and proficiency constraints. This is NOT
+    full representative gear, G, item admission or a Native proof.
+    """
+    import v169_source_first_representative_stage as chooser
+    import v231_simc_tier_item_join as tier
+    import v232_simc_only_ordinary_representative as representative
+
+    verified=chooser.gear.validate(gear)
+    need(verified["season_build"]==game_build and
+         verified.get("no_old_catalog_seed") is True,
+         "V787_CURRENT_WEAPON_SOURCE_BUILD_REQUIRED")
+    inventory=frozenset(inv for hands in
+        chooser.contracts.SELECTED_WEAPON_INVENTORY.values()
+        for types in hands.values() for inv in types)
+    providers={row["item_id"]:row for row in
+        verified["items"]+verified.get(
+            "internal_conditional_mplus_plain_candidates",[])
+        if row.get("category")=="plain_representative_candidate"
+        and row.get("source_kinds") and row.get("item_set_id")==0
+        and row.get("inventory_type") in inventory}
+    need(0<len(providers)<=item_metadata.MAX_REQUEST_IDS,
+         "V787_CURRENT_WEAPON_SOURCE_SCOPE_INVALID")
+    metadata=item_metadata.from_seed(directory=seed_directory,
+        item_ids=sorted(providers),allow_missing=True)
+    need(metadata.get("game_build")==game_build and
+         metadata.get("simc_revision")==simc_revision and
+         type(metadata.get("source_receipt_sha256")) is str and
+         HEX64.fullmatch(metadata["source_receipt_sha256"]) is not None and
+         metadata.get("selection_mode")=="EXACT_REQUESTED_IDS_ALLOW_MISSING",
+         "V787_CURRENT_WEAPON_SIMC_IDENTITY_DRIFT")
+    rows=[]
+    mismatched=[]
+    for row in metadata["items"]:
+        iid=row["item_id"]
+        need(iid in providers,"V787_CURRENT_WEAPON_UNREQUESTED_ID")
+        physical=providers[iid]
+        if (any(row.get(k)!=physical.get(k) for k in
+                ("inventory_type","class_id","subclass_id"))
+                or row.get("item_set_id")!=0):
+            mismatched.append(iid)
+            continue
+        # Use the intersection of actual SimC and DB2 class restrictions.
+        simc_mask=row.get("allowed_class_mask")
+        db2_mask=physical.get("allowed_class_mask")
+        need(type(simc_mask) is int and simc_mask>=0 and
+             (db2_mask is None or type(db2_mask) is int and db2_mask>=0),
+             "V787_CURRENT_WEAPON_CLASS_MASK_INVALID")
+        mask=simc_mask if db2_mask is None else simc_mask & db2_mask
+        if not mask:
+            mismatched.append(iid)
+            continue
+        rows.append({**row,"category":"plain_representative_candidate",
+                     "allowed_class_mask":mask})
+    season=verified.get("db2_display_season_id")
+    scopes={r["item_id"]:representative._source_scope_diagnostic(
+        providers[r["item_id"]],season) for r in rows}
+    explicit=[r for r in rows if
+              scopes[r["item_id"]]["explicit_db2_match_no_world_state"]]
+    conditional=[r for r in rows if
+        scopes[r["item_id"]]["explicit_db2_match_no_world_state"] or
+        (scopes[r["item_id"]]["status"]=="WORLD_STATE_EXPRESSION_PENDING"
+         and scopes[r["item_id"]]["same_display_season_worldstate_pending"])]
+    pools=((explicit,False),(conditional,False),(rows,True))
+    selected={}
+    pending={}
+    for key,contract in sorted(chooser.contracts.CONTRACTS.items()):
+        cls=key.split("/")[0]
+        mask=1<<(tier.CLASS_ID[cls]-1)
+        for pool,allow_fallback in pools:
+            try:
+                weapons=chooser.shape_weapons({"items":pool},
+                    contract["weapon_form"],mask,spec_key=key,
+                    allow_observed_offhand_fallback=allow_fallback)
+            except chooser.RepresentativeBlocked as exc:
+                pending[key]=str(exc)
+            else:
+                selected[key]={"weapons":weapons}
+                pending.pop(key,None)
+                break
+    return {"schema":"v787_current_source_profile_default_weapons_v1",
+            "game_build":game_build,"simc_revision":simc_revision,
+            "source_receipt_sha256":metadata["source_receipt_sha256"],
+            "item_data_sha256":metadata["source_sha256"],
+            "specializations":selected,"missing_specializations":pending,
+            "requested_weapon_count":len(providers),
+            "matched_weapon_count":len(rows),
+            "mismatched_item_ids":sorted(mismatched),
+            "native_calls":0,"network_calls":0}
+
+
 def reviewed_apl_default_groups(game_build,simc_revision):
     """Exact reviewed level-90 APL input defaults (not numerical quality proof).
 
