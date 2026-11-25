@@ -1402,8 +1402,11 @@ function renderInstalledFlaskChoices(data) {
     typeof document.getElementById==="function"?
     document.getElementById("season-verified-fj-diagnostic-copy"):null;
   if(diagButton){diagButton.hidden=true;diagButton.disabled=true;}
+  const track=field("spec")==="warrior/fury"&&!$("manual-t-mode").checked?
+    "fury_dual_2h":"general";
   state.verifiedBaseFlaskInstalls=scoped?
     (data.verified_base_flask_installs||[]).filter(item=>
+      (item.reference_G_track||"general")===track &&
       item.individually_verified===true &&
       /^[a-f0-9]{64}$/.test(item.installed_manifest_sha256||"") &&
       Number.isSafeInteger(item.flask_item_id)&&item.flask_item_id>0 &&
@@ -1583,7 +1586,10 @@ async function chooseInstalledFlask() {
     !oilUseIntent && sockets===4 &&
     !field("season-existing-special-gem-id");
   const selectedBudget=field("season-verified-budget");
+  const track=field("spec")==="warrior/fury"&&!$("manual-t-mode").checked?
+    "fury_dual_2h":"general";
   const exact=eligible?state.verifiedBaseFlaskInstalls.filter(x=>
+    (x.reference_G_track||"general")===track &&
     x.flask_item_id===Number(flask) && x.socket_total===sockets &&
     (!selectedBudget || x.installed_manifest_sha256===selectedBudget)):[];
   if(exact.length!==1) {
@@ -1613,6 +1619,8 @@ async function chooseInstalledFlask() {
   if(field("season-verified-flask")!==flask ||
      field("season-selected-flask-id")!==flask ||
      field("season-verified-budget")!==selectedBudget ||
+     (field("spec")==="warrior/fury"&&!$("manual-t-mode").checked?
+       "fury_dual_2h":"general")!==track ||
      oilUseIntent || valueInt("season-target-socket-count")!==sockets ||
      field("season-existing-special-gem-id") ||
      Number(field("ilevel"))!==level ||
@@ -1625,7 +1633,8 @@ async function chooseInstalledFlask() {
   if(gear.status!=="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY" ||
      gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES" ||
      gear.season_build!==build ||
-     gear.installed_manifest_sha256!==sha)
+     gear.installed_manifest_sha256!==sha ||
+     (gear.reference_G_track||"general")!==track)
     throw Error("VERIFIED_FLASK_EXACT_INSTALLED_GEAR_UNAVAILABLE");
   const priorTrinkets=[field("trinket1"),field("trinket2")];
   const priorSpecial=Array.from($("special-rows").querySelectorAll(".gear-row"))
@@ -2325,6 +2334,15 @@ function selectedGear(nodeId, group) {
 }
 function verifiedInstalledGearScopeMatchesRun(build,ilevel) {
   const gear=state.seasonGear;
+  // Current API binds the actual installed G reference to this exact SHA.
+  // Fury manual T is authoritative and does not require either auto-G track.
+  // Older gear payloads remain subject to the server's exact track check.
+  if(gear?.reference_G_track!==undefined){
+    const fury=field("spec")==="warrior/fury";
+    if(!["general","fury_dual_2h"].includes(gear.reference_G_track) ||
+       (!(fury&&$("manual-t-mode").checked) &&
+        gear.reference_G_track!==(fury?"fury_dual_2h":"general")))return false;
+  }
   return typeof build==="string" && /^\d+(?:\.\d+){3}$/.test(build) &&
     Number.isInteger(ilevel) && ilevel>0 &&
     gear?.status==="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY" &&
@@ -2465,7 +2483,10 @@ async function prepareUserSelectedEnvironment() {
   // has not been chosen yet. Advanced variants retain explicit Build consent.
   if(!oilUseIntent && Number(field("season-target-socket-count"))===4 &&
      !field("season-existing-special-gem-id") &&
-     state.verifiedBaseFlaskInstalls.length>0)
+     state.verifiedBaseFlaskInstalls.some(x=>
+       (x.reference_G_track||"general")===
+       (field("spec")==="warrior/fury"&&!$("manual-t-mode").checked?
+         "fury_dual_2h":"general")))
     throw Error("검증된 기존 환경을 먼저 선택하세요. 새 측정은 시작하지 않았습니다.");
   return buildSeasonEnvironment(true);
 }
@@ -5559,7 +5580,11 @@ function registerHandlers() {
     });
   for(const button of document.querySelectorAll("[data-view]"))
     button.addEventListener("click",()=>switchView(button.dataset.view));
-  $("manual-t-mode").addEventListener("change",updateManualTMode);
+  $("manual-t-mode").addEventListener("change",()=>{
+    updateManualTMode();
+    // The local list already owns both tracks. Refilter without another GET.
+    if(state.oilCatalog)renderInstalledFlaskChoices(state.oilCatalog);
+  });
   for(const id of ["season_enchant_finger1","season_enchant_finger2",
                    "season_enchant_other",...["env-enchant-helm","env-enchant-neck","env-enchant-shoulders",
       "env-enchant-back","env-enchant-chest","env-enchant-wrists",

@@ -775,6 +775,8 @@ const end=raw.indexOf("function renderInstalledOilLoadouts(data) {",start);
 assert(start>=0&&end>start);
 const A="a".repeat(64),B="b".repeat(64),C="c".repeat(64);
 const el={
+  "spec":{value:"mage/fire"},
+  "manual-t-mode":{checked:false},
   "season-verified-flask":{value:"241327"},
   "season-selected-flask-id":{value:""},
   "season-verified-budget":{value:""},
@@ -853,6 +855,11 @@ const make=(oilUseIntent=false)=>Function(
     "AMBIGUOUS_CANNOT_REUSE_OLD_GEAR_SHA");
  assert($("season-verified-flask-status").textContent.includes(
     "임의로 적용하지 않습니다"));
+ // Distinct G tracks are not ambiguous F/J variants for one spec.
+ state.verifiedBaseFlaskInstalls[1].reference_G_track="fury_dual_2h";
+ state.seasonGearTargetIlevel=334;
+ await make()();
+ assert.strictEqual(calls.length,1,"GENERAL_TRACK_REUSES_ACTIVE_GENERAL");
  // A socket edit while the exact SHA source is in flight must not publish
  // yesterday's O=0/four-gem gear, even though the server would reject it.
  state.verifiedBaseFlaskInstalls=[
@@ -1769,8 +1776,10 @@ const a=raw.indexOf("function verifiedInstalledGearScopeMatchesRun(build,ilevel)
 const b=raw.indexOf("function buildRequest() {",a);
 assert(a>=0&&b>a,"real new-run gear guard required");
 const state={seasonGear:null,seasonGearTargetIlevel:null};
-const validate=Function("state",raw.slice(a,b)+
-   "return verifiedInstalledGearScopeMatchesRun;")(state);
+let spec="mage/fire",manual=false;
+const validate=Function("state","field","$",raw.slice(a,b)+
+   "return verifiedInstalledGearScopeMatchesRun;")(
+     state,id=>spec,id=>({checked:manual}));
 const sha="a".repeat(64),build="12.1.5.70783";
 const physical={status:"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
   source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
@@ -1781,6 +1790,18 @@ state.seasonGear=legacy;state.seasonGearTargetIlevel=334;
 assert.strictEqual(validate(build,334),false,"old packaged candidates have no v212 authority");
 state.seasonGear=physical;
 assert.strictEqual(validate(build,334),true,"exact installed build/level/SHA admitted");
+state.seasonGear={...physical,reference_G_track:"general"};
+spec="warrior/fury";
+assert.strictEqual(validate(build,334),false,"auto Fury cannot reuse general G");
+state.seasonGear={...physical,reference_G_track:"fury_dual_2h"};
+assert.strictEqual(validate(build,334),true,"auto Fury exact track");
+manual=true;
+state.seasonGear={...physical,reference_G_track:"general"};
+assert.strictEqual(validate(build,334),true,"manual T does not depend on auto G");
+spec="mage/fire";manual=false;
+state.seasonGear={...physical,reference_G_track:"fury_dual_2h"};
+assert.strictEqual(validate(build,334),false,"general spec cannot reuse Fury G");
+state.seasonGear=physical;
 assert.strictEqual(validate("",334),false,"no build cannot start");
 assert.strictEqual(validate("12.1.5.70782",334),false,"other build blocked");
 assert.strictEqual(validate(build,340),false,"other ilvl blocked");

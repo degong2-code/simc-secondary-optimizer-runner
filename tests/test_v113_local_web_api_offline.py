@@ -813,6 +813,8 @@ class LocalWebAPIOffline(unittest.TestCase):
             originals[key[:20]]={
                 "manifest_sha256":key,"game_build":build,
                 "target_ilevel":334,"official_G":2850,
+                "official_G_reference_track":(
+                    "fury_dual_2h" if key=="b"*64 else "general"),
                 "official_J":j,"official_F":165,
                 "simc_revision":"fixture-v490",
                 "official_F_physical_source":{
@@ -849,11 +851,11 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(res.json()["verified_base_flask_installs"],[
             {"installed_manifest_sha256":"a"*64,"flask_item_id":241326,
              "flask_quality":3,"ordinary_gem_item_ids":[11,12,13,14],
-             "J":92,"F":165,"socket_total":4,
+             "J":92,"F":165,"socket_total":4,"reference_G_track":"general",
              "simc_revision":"fixture-v490","individually_verified":True},
             {"installed_manifest_sha256":"b"*64,"flask_item_id":241326,
              "flask_quality":3,"ordinary_gem_item_ids":[11,12,13,14],
-             "J":108,"F":165,"socket_total":4,
+             "J":108,"F":165,"socket_total":4,"reference_G_track":"fury_dual_2h",
              "simc_revision":"fixture-v490","individually_verified":True}])
         self.assertEqual(len(res.json()["verified_flasks"]),1)
         self.assertEqual(res.json()["native_calls"],0)

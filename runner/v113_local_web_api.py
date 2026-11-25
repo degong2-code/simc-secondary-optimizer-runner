@@ -1893,6 +1893,8 @@ class LocalJobs:
                             "J":doc["official_J"],
                             "F":doc["official_F"],
                             "socket_total":4,
+                            "reference_G_track":doc.get(
+                                "official_G_reference_track","general"),
                             "simc_revision":doc["simc_revision"],
                             "individually_verified":True})
                 if type(flask) is dict:
@@ -3971,6 +3973,10 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 base=season_gear.public_installed_v213_candidates(
                     source,installed_manifest_sha256=installed_manifest_sha256,
                     official_names=names)
+                # Gear source selection is also a specific G budget track.
+                # This is the already verified v212 receipt, not a new read.
+                base["reference_G_track"]=installed.get(
+                    "official_G_reference_track","general")
                 if not include_refresh:return base
                 # Restore verified source-only selectable additions on GET,
                 # including after server restart. Never mutate v213/v212.
