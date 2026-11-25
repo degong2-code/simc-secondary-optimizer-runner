@@ -1,5 +1,5 @@
 name: P1 v769 actual same-season incremental GJFO once
-# One bounded post-v770 rerun on the current product checkout; unchanged test contract.
+# One bounded post-v773.1 actual Build retry; existing diagnostic and acceptance contract unchanged.
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
