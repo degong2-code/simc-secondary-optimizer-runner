@@ -8,7 +8,8 @@ NEVER certifies a SimC runtime option, the highest-quality effect, user
 eligibility, CHMV budget, or Policy A publication.
 
 Only an internal caller may provide the previously sealed v217 stage summary
-and pinned SimC seed directory. No HTTP, Native, cache writes or new stage.
+and pinned SimC seed directory. The item join has no HTTP, Native, cache writes or new stage. The separate
+profile-default observer is an explicit one-process caller-owned operation.
 """
 from __future__ import annotations
 
@@ -41,6 +42,101 @@ def need(condition, code):
     if not condition:
         raise OptionalConsumableSourceBlocked(code)
 
+
+
+def extract_simc_profile_defaults(*, binary, season, receipt):
+    """Observe SimC's own defaults with caller-supplied representative weapons.
+
+    Caller owns exact binary identity, season/weapon provenance and caching.
+    Profiles are ephemeral inputs, never executable user profiles.
+    No DPS or item-effect admission. Preserve SimC diagnostics on failure.
+    """
+    import subprocess
+    import tempfile
+    import v106_user_session_controller as sessions
+    import v139_pure_target_profile_composer as representative
+
+    binary=pathlib.Path(binary).resolve()
+    need(binary.is_file(),"V784_BINARY_MISSING")
+    roster=sorted(sessions.SUPPORTED)
+    level=season.get("character_level")
+    need(type(level) is int and 1<=level<=100 and
+         type(season.get("target_ilevel")) is int and
+         1<=season["target_ilevel"]<=1000 and
+         type(season.get("specializations")) is dict and
+         set(season["specializations"])=={"/".join(k) for k in roster},
+         "V785_REPRESENTATIVE_CATALOG_SCOPE_INVALID")
+    doc=receipt
+    doc.update(character_level=level,
+               weapon_target_ilevel=season["target_ilevel"],
+               profile_generation_processes=0,dps_simulations=0)
+    with tempfile.TemporaryDirectory(prefix="v784-") as td:
+        root=Path(td)
+        lines=["save_profiles=1","save_profile_with_actions=0",
+               "offline=1","threads=1"]
+        files={}
+        for n,(cls,spec) in enumerate(roster):
+            controls=sessions.standard_controls((cls,spec))
+            actor="defaults_"+str(n)
+            file=actor+".simc"
+            key=cls+"/"+spec
+            contract=representative.contracts.lookup(cls,spec)
+            info=season["specializations"][key]
+            hands=representative.contracts.WEAPON_FORMS[contract["weapon_form"]]
+            need(set(info["weapons"])==set(hands),
+                 "V785_REPRESENTATIVE_WEAPON_FORM_DRIFT")
+            files[key]=(file,spec)
+            lines.extend([cls+"="+actor,"spec="+spec,"level="+str(level),
+                          "race="+controls["race"],"load_default_talents=1",
+                          "role="+contract["role"],"position="+contract["position"],
+                          "flask=disabled","augmentation=disabled",
+                          "temporary_enchant=disabled","save="+file])
+            lines.extend(representative.items.equipment_line(
+                hand,info["weapons"][hand],season["target_ilevel"],
+                info.get("item_options",{}).get(hand,{})) for hand in hands)
+        input_path=root/"defaults_input.simc"
+        input_path.write_text("\n".join(lines)+"\n",encoding="utf8")
+        doc["profile_generation_processes"]=1
+        process=subprocess.run([str(binary),input_path.name],cwd=root,
+            capture_output=True,text=True,errors="replace",timeout=120)
+        output=process.stdout+"\n"+process.stderr
+        doc["returncode"]=process.returncode
+        doc["generation_branch_observed"]="Generating profiles" in output
+        doc["simulation_branch_observed"]="Simulating..." in output
+        if doc["simulation_branch_observed"]:
+            doc["dps_simulations"]=None
+            raise RuntimeError("V784_UNEXPECTED_SIMULATION_BRANCH")
+        doc["generated_profile_count"]=sum((root/f).is_file()
+                                            for f,_ in files.values())
+        doc["diagnostic_tail"]=output[-1800:]
+        observed={}
+        missing=[]
+        for key,(file,spec) in files.items():
+            path=root/file
+            if not path.is_file() or path.stat().st_size>500_000:
+                missing.append(key)
+                continue
+            values={}
+            for line in path.read_text(encoding="utf8").splitlines():
+                if "=" not in line or line.startswith("#"):
+                    continue
+                name,value=line.split("=",1)
+                if name in ("spec","level","food","potion"):
+                    if name in values:
+                        raise RuntimeError("V784_DUPLICATE_PROFILE_FIELD")
+                    values[name]=value.strip()
+            if (values.get("spec")!=spec or values.get("level")!=str(level) or
+                    not all(re.fullmatch(r"[a-z0-9_]{1,100}",values.get(k,""))
+                            for k in ("food","potion"))):
+                missing.append(key)
+                continue
+            observed[key]={k:values[k] for k in ("food","potion")}
+        doc["observed_defaults"]=observed
+        doc["missing_specs"]=missing
+        need(process.returncode==0 and doc["generation_branch_observed"]
+             and not missing and len(observed)==len(roster),
+             "V784_PROFILE_GENERATION_INCOMPLETE")
+        return observed
 
 def reviewed_apl_default_groups(game_build,simc_revision):
     """Exact reviewed level-90 APL input defaults (not numerical quality proof).
@@ -105,7 +201,8 @@ _REVIEWED_QUALITY_FAMILIES = (
 
 
 def _reviewed_quality_scope(game_build, simc_revision):
-    return bool(reviewed_apl_default_groups(game_build, simc_revision))
+    return (game_build=="12.1.5.70961" and
+            simc_revision=="9933ffb946fb55b1fa66657b848f519ac19006e1")
 
 
 def reviewed_quality_item_evidence(game_build, simc_revision, rows, metadata):

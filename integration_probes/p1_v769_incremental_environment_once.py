@@ -265,83 +265,19 @@ def observe_simc_defaults(args):
              "V785_DIAGNOSTIC_CATALOG_SCOPE_DRIFT")
         doc["initialization_weapons"]="existing_v139_v144_representative_catalog"
         doc["weapon_target_ilevel"]=season["target_ilevel"]
-        with tempfile.TemporaryDirectory(prefix="v784-") as td:
-            root=Path(td)
-            lines=["save_profiles=1","save_profile_with_actions=0",
-                   "offline=1","threads=1"]
-            files={}
-            for n,(cls,spec) in enumerate(roster):
-                controls=sessions.standard_controls((cls,spec))
-                actor="defaults_"+str(n)
-                file=actor+".simc"
-                key=cls+"/"+spec
-                contract=representative.contracts.lookup(cls,spec)
-                info=season["specializations"][key]
-                hands=representative.contracts.WEAPON_FORMS[contract["weapon_form"]]
-                need(set(info["weapons"])==set(hands),
-                     "V785_REPRESENTATIVE_WEAPON_FORM_DRIFT")
-                files[key]=(file,spec)
-                lines.extend([cls+"="+actor,"spec="+spec,"level=90",
-                              "race="+controls["race"],"load_default_talents=1",
-                              "role="+contract["role"],"position="+contract["position"],
-                              "flask=disabled","augmentation=disabled",
-                              "temporary_enchant=disabled","save="+file])
-                lines.extend(representative.items.equipment_line(
-                    hand,info["weapons"][hand],season["target_ilevel"],
-                    info.get("item_options",{}).get(hand,{})) for hand in hands)
-            input_path=root/"defaults_input.simc"
-            input_path.write_text("\n".join(lines)+"\n",encoding="utf8")
-            doc["profile_generation_processes"]=1
-            process=subprocess.run([str(binary),input_path.name],cwd=root,
-                capture_output=True,text=True,errors="replace",timeout=120)
-            output=process.stdout+"\n"+process.stderr
-            doc["returncode"]=process.returncode
-            doc["generation_branch_observed"]="Generating profiles" in output
-            doc["simulation_branch_observed"]="Simulating..." in output
-            if doc["simulation_branch_observed"]:
-                doc["dps_simulations"]=None
-                raise RuntimeError("V784_UNEXPECTED_SIMULATION_BRANCH")
-            doc["generated_profile_count"]=sum((root/f).is_file()
-                                                for f,_ in files.values())
-            doc["diagnostic_tail"]=output[-1800:]
-            observed={}
-            missing=[]
-            for key,(file,spec) in files.items():
-                path=root/file
-                if not path.is_file() or path.stat().st_size>500_000:
-                    missing.append(key)
-                    continue
-                values={}
-                for line in path.read_text(encoding="utf8").splitlines():
-                    if "=" not in line or line.startswith("#"):
-                        continue
-                    name,value=line.split("=",1)
-                    if name in ("spec","level","food","potion"):
-                        if name in values:
-                            raise RuntimeError("V784_DUPLICATE_PROFILE_FIELD")
-                        values[name]=value.strip()
-                if (values.get("spec")!=spec or values.get("level")!="90" or
-                        not all(re.fullmatch(r"[a-z0-9_]{1,100}",values.get(k,""))
-                                for k in ("food","potion"))):
-                    missing.append(key)
-                    continue
-                observed[key]={k:values[k] for k in ("food","potion")}
-            doc["observed_defaults"]=observed
-            doc["missing_specs"]=missing
-            expected={}
-            for kind,tokens in engine.optional_source_join.reviewed_apl_default_groups(BUILD,REV).items():
-                for token,specs in tokens.items():
-                    for spec in specs.split():
-                        expected.setdefault(spec,{})[kind]=token
-            doc["mismatches_against_reviewed_snapshot"]={
-                key:{"observed":observed.get(key),"reviewed":expected.get(key)}
-                for key in sorted(set(observed)|set(expected))
-                if observed.get(key)!=expected.get(key)}
-            need(process.returncode==0 and doc["generation_branch_observed"]
-                 and not missing and len(observed)==26,
-                 "V784_PROFILE_GENERATION_INCOMPLETE")
-            doc["status"]="PASS_REAL_SIMC_PROFILE_DEFAULT_EXTRACTION"
-            return 0
+        observed=engine.optional_source_join.extract_simc_profile_defaults(
+            binary=binary,season=season,receipt=doc)
+        expected={}
+        for kind,tokens in engine.optional_source_join.reviewed_apl_default_groups(BUILD,REV).items():
+            for token,specs in tokens.items():
+                for spec in specs.split():
+                    expected.setdefault(spec,{})[kind]=token
+        doc["mismatches_against_reviewed_snapshot"]={
+            key:{"observed":observed.get(key),"reviewed":expected.get(key)}
+            for key in sorted(set(observed)|set(expected))
+            if observed.get(key)!=expected.get(key)}
+        doc["status"]="PASS_REAL_SIMC_PROFILE_DEFAULT_EXTRACTION"
+        return 0
     except Exception as exc:
         doc["status"]="BLOCKED_PROFILE_DEFAULT_EXTRACTION"
         doc["first_blocker"]=bounded_code(exc)

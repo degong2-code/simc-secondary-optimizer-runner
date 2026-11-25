@@ -191,5 +191,61 @@ class ExactConsumableSourceJoin(unittest.TestCase):
         self.assertFalse(found["items"][0]["policy_A_eligible"])
 
 
+
+
+class SimcProfileDefaultExtraction(unittest.TestCase):
+    def test_shared_observer_uses_supplied_level_and_one_process(self):
+        import re
+        import subprocess
+        import v139_pure_target_profile_composer as representative
+        season=copy.deepcopy(representative.catalog())
+        season["character_level"]=89
+        season["target_ilevel"]=330
+        with tempfile.TemporaryDirectory() as td:
+            binary=pathlib.Path(td)/"simc"
+            binary.touch()
+            def generate(argv,**kwargs):
+                root=pathlib.Path(kwargs["cwd"])
+                raw=(root/argv[1]).read_text(encoding="utf8")
+                actors=re.findall(r"^spec=(\w+)\nlevel=89\n.*?^save=(defaults_\d+\.simc)$",
+                                  raw,re.M|re.S)
+                self.assertEqual(len(actors),26)
+                self.assertIn("ilevel=330",raw)
+                self.assertNotIn("\nfood=",raw)
+                self.assertNotIn("\npotion=",raw)
+                for spec,name in actors:
+                    (root/name).write_text("spec="+spec+"\nlevel=89\n"
+                        "food=synthetic_food\npotion=synthetic_potion\n",
+                        encoding="utf8")
+                return subprocess.CompletedProcess(argv,0,"Generating profiles","")
+            receipt={}
+            with mock.patch("subprocess.run",side_effect=generate) as run:
+                observed=subject.extract_simc_profile_defaults(
+                    binary=binary,season=season,receipt=receipt)
+            run.assert_called_once()
+            self.assertEqual(len(observed),26)
+            self.assertEqual(receipt["profile_generation_processes"],1)
+            self.assertEqual(receipt["dps_simulations"],0)
+            self.assertEqual(receipt["character_level"],89)
+
+    def test_shared_observer_rejects_incomplete_roster_before_process(self):
+        with tempfile.TemporaryDirectory() as td:
+            binary=pathlib.Path(td)/"simc"
+            binary.touch()
+            with mock.patch("subprocess.run") as run:
+                with self.assertRaises(subject.OptionalConsumableSourceBlocked):
+                    subject.extract_simc_profile_defaults(binary=binary,
+                        season={"character_level":90,"target_ilevel":334,
+                                "specializations":{}},receipt={})
+            run.assert_not_called()
+
+    def test_quality_scope_does_not_depend_on_default_lookup(self):
+        with mock.patch.object(subject,"reviewed_apl_default_groups",
+                               return_value={"food":{"future":"mage/fire"}}):
+            self.assertFalse(subject._reviewed_quality_scope(BUILD,REV))
+            self.assertTrue(subject._reviewed_quality_scope(
+                "12.1.5.70961","9933ffb946fb55b1fa66657b848f519ac19006e1"))
+
+
 if __name__=="__main__":
     unittest.main()
