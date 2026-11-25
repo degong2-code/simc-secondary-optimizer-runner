@@ -974,6 +974,17 @@ def preview_installed_selected_enchant_budget(*, document, slot,
     not suppress the SimC enchant itself or certify its spell/proc effect.
     """
     verify_fresh_installed_environment(document)
+    base=season_budget.retarget_verified_install(
+        document=document,manual_final_T=manual_final_T)
+    return _preview_verified_selected_enchant_budget(
+        document=document,base=base,slot=slot,item_id=item_id,
+        enchant_id=enchant_id,manual_final_T=manual_final_T)
+
+
+def _preview_verified_selected_enchant_budget(*, document,base,slot,
+                                               item_id,enchant_id,
+                                               manual_final_T):
+    """Private per-slot projection from one already verified installed base."""
     need(type(slot) is str and bool(slot)
          and type(item_id) is int and item_id>0
          and type(enchant_id) is int and enchant_id>0,
@@ -1000,8 +1011,6 @@ def preview_installed_selected_enchant_budget(*, document, slot,
     E=season_budget._vector(chosen["verified_fixed_E"],"SELECTED_E")
     need(valid_sha(chosen["chmv_budget_receipt_sha256"]),
          "FRESH_SELECTED_ENCHANT_CHMV_OWNER_RECEIPT_REQUIRED")
-    base=season_budget.retarget_verified_install(
-        document=document,manual_final_T=manual_final_T)
     # The plain representative budget cannot already own a different
     # enchant E; selected physical gear is not a general equipment picker.
     original_E=season_budget._vector(
@@ -1067,13 +1076,16 @@ def preview_installed_selected_enchants_budget(*, document, selected,
     ordered=sorted(selected,key=lambda row:row["slot"])
     need(len({row["slot"] for row in ordered})==len(ordered),
          "FRESH_MULTI_E_ONE_PER_PHYSICAL_SLOT")
-    verified=[]
-    for row in ordered:
-        verified.append(preview_installed_selected_enchant_budget(
-            document=document,slot=row["slot"],item_id=row["item_id"],
-            enchant_id=row["enchant_id"],manual_final_T=manual_final_T))
+    # All choices belong to the same immutable installed document and
+    # target. Verify its full digest/option inventory and retarget once.
+    verify_fresh_installed_environment(document)
     base=season_budget.retarget_verified_install(
         document=document,manual_final_T=manual_final_T)
+    verified=[]
+    for row in ordered:
+        verified.append(_preview_verified_selected_enchant_budget(
+            document=document,base=base,slot=row["slot"],item_id=row["item_id"],
+            enchant_id=row["enchant_id"],manual_final_T=manual_final_T))
     E={stat:sum(proof["fixed_E"][stat] for proof in verified)
        for stat in season_budget.STATS}
     need(all(0<=v<=100000 for v in E.values()),

@@ -1014,12 +1014,22 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         stage_root=self.root/"stage"
         stage_root.mkdir()
         kwargs={"stage_root":stage_root,"build":BUILD,
-            "one_spec":{"candidate_path":str(candidate),
-                "source_stage":{"receipt_sha256":"a"*64}},
+            # Independent candidate: no v217 producer seal was created.
+            # Full source replay remains required for this path.
+            "one_spec":{"candidate_path":str(candidate)},
             "fresh_gear":{"candidate_path":str(gear)},
             "tier_bridge":{"candidate_path":str(bridge)},
             "seed_directory":source_root,
             "character":{"race":"human"}}
+        fake_stage={**kwargs["one_spec"],"source_stage":{"receipt_sha256":"a"*64}}
+        with mock.patch.object(v216.g_probe_profile,"_render_verified_candidate") as render:
+            rejected=v216._one_spec_source_G_probe_stage(
+                **dict(kwargs,one_spec=fake_stage,
+                       character={"race":"human","talents":"fake_seal_test"}))
+            self.assertEqual(rejected["status"],
+                "FRESH_G_PROBE_SOURCE_OR_CHARACTER_PENDING")
+            self.assertEqual(rejected["reason"],"STAGE_RECEIPT_MISSING_OR_TOO_LARGE")
+            render.assert_not_called()
         with mock.patch.object(v216.tier_simc_bridge,"select_for_simc",
                                return_value={"v231_candidate":tier}) as match:
             first=v216._one_spec_source_G_probe_stage(**kwargs)

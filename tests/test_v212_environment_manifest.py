@@ -360,9 +360,19 @@ class SelectedPermanentEnchantE0BudgetTests(unittest.TestCase):
                 {"slot":"chest","item_id":260011,"enchant_id":7957},
                 {"slot":"finger1","item_id":268266,"enchant_id":8025}]
         with mock.patch.object(p,"verify_fresh_installed_environment",
-                               return_value=True):
+                               return_value=True) as verify, \
+             mock.patch.object(p.season_budget,"retarget_verified_install",
+                 wraps=p.season_budget.retarget_verified_install) as retarget:
             auto=p.preview_installed_selected_enchants_budget(
                 document=doc,selected=chosen)
+            verify.assert_called_once_with(doc)
+            retarget.assert_called_once_with(document=doc,manual_final_T=None)
+            # Preserve identical individual proof content and canonical
+            # identity relative to the independent single-slot path.
+            for row,proof in zip(sorted(chosen,key=lambda r:r["slot"]),
+                                 auto["selected_proofs"]):
+                self.assertEqual(proof,p.preview_installed_selected_enchant_budget(
+                    document=doc,**row))
             manual=p.preview_installed_selected_enchants_budget(
                 document=doc,selected=chosen,manual_final_T=3500)
             again=p.preview_installed_selected_enchants_budget(
