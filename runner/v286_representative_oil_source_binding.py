@@ -80,6 +80,20 @@ def _verified_candidate(root,row,label):
     need(type(data) is dict,"V286_"+label+"_CANDIDATE_OBJECT_REQUIRED")
     return data,stage["receipt_sha256"],registered["sha256"]
 
+def weapon_metadata_matches_masks(cls,sub,inv,masks):
+    """One original DB2 mask predicate for representative and final weapons."""
+    return (type(masks) is dict and cls==2 and
+            masks.get("equipped_item_class")==cls and
+            type(sub) is int and 0<=sub<32 and
+            type(inv) is int and 0<=inv<32 and
+            type(masks.get("inventory_type_mask")) is int and
+            masks["inventory_type_mask"]>0 and
+            type(masks.get("weapon_subclass_mask")) is int and
+            masks["weapon_subclass_mask"]>0 and
+            bool(masks["inventory_type_mask"]&(1<<inv)) and
+            bool(masks["weapon_subclass_mask"]&(1<<sub)))
+
+
 def match_collected(collected):
     """Report usable physical oil masks for the auto-selected representative.
 
@@ -185,10 +199,12 @@ def match_collected(collected):
         if not (cls==2 and type(inv_mask) is int and
                 type(sub_mask) is int and inv_mask>0 and sub_mask>0):
             continue
+        masks={"equipped_item_class":cls,
+               "inventory_type_mask":inv_mask,"weapon_subclass_mask":sub_mask}
         for hand,actual in sorted(weapon_info.items()):
-            matching=(actual["class_id"]==cls
-                and bool(inv_mask&(1<<actual["inventory_type"]))
-                and bool(sub_mask&(1<<actual["subclass_id"])))
+            matching=weapon_metadata_matches_masks(
+                actual["class_id"],actual["subclass_id"],
+                actual["inventory_type"],masks)
             if matching:
                 options.append({
                     "oil_item_id":item["item_id"],
@@ -199,6 +215,7 @@ def match_collected(collected):
                     "weapon_source_class":actual["class_id"],
                     "weapon_source_subclass":actual["subclass_id"],
                     "weapon_source_inventory_type":actual["inventory_type"],
+                    "weapon_use_masks_source_only":dict(masks),
                     "matched_same_build_spell_equipped_masks":True,
                     "game_weapon_ilevel_and_use_requirements_verified":False,
                     "quality_effect_equivalence_verified":False,

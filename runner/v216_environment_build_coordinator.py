@@ -6421,6 +6421,11 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
             "selected_representative_weapon_id_unadmitted":
                 selected["representative_weapon_id"]
                 if selected is not None else None,
+            **({"weapon_use_masks_source_only":
+                    dict(selected["weapon_use_masks_source_only"])}
+               if selected is not None and
+                  type(selected.get("weapon_use_masks_source_only")) is dict
+               else {}),
             "static_O_for_hand_unadmitted":(
                 dict(option["rating_candidate_unadmitted"])
                 if selected is not None and
@@ -6912,7 +6917,7 @@ def _automatic_environment_numeric_preview(numeric):
 
 
 def _zero_history_v098_profile_source_inputs(*, numeric_preview,
-                                             physical_sources):
+                                             physical_sources,weapon_source=None):
     """Direct v216 observed ItemID/token/O -> existing v098 source-only path.
 
     This is JSON plumbing of the already selected v281/v278/v286 receipts,
@@ -6932,6 +6937,7 @@ def _zero_history_v098_profile_source_inputs(*, numeric_preview,
          "V216_V098_SELECTED_FLASK_SOURCE_DRIFT")
     flask=flasks[0]
     by_hand={}
+    weapon_scope={}
     for hand,item_id in selected["oil_item_ids_by_hand"].items():
         options=[row for row in physical_sources.get("oil",[])
                  if row.get("physical_item_id")==item_id and
@@ -6945,8 +6951,29 @@ def _zero_history_v098_profile_source_inputs(*, numeric_preview,
             "physical_item_id":item_id,
             "simc_input_token":row["simc_input_token"],
             "static_CHMV_vector":dict(row["static_CHMV_vector_unadmitted"])}
+        # Carry the existing v286/v296 evidence into the exact saved
+        # runtime snapshot, not a second oil catalogue or budget owner.
+        if weapon_source is not None:
+            calc=numeric_preview["calculation"]
+            _,weapon_rows=_oil_weapon_source_rows(
+                weapon_source=weapon_source,game_build=calc["game_build"],
+                simc_revision=calc["simc_revision"])
+            matched=_oil_exact_weapon_match(row,weapon_rows)
+            masks=matched.get("weapon_use_masks_source_only") if matched else None
+            if type(masks) is dict:
+                weapon_scope[hand]={
+                    "physical_item_id":item_id,
+                    "simc_input_token":row["simc_input_token"],
+                    "masks":dict(masks),
+                    "source_min_ilevel":row["source_min_ilevel"],
+                    "source_max_ilevel":row["source_max_ilevel"],
+                    "scaled_rating_ilevel":(
+                        calc["target_ilevel"] if row["status"]==
+                        "SIMC_PRECOMBAT_GEAR_NUMBER_SOURCE_ONLY" else None)}
     return {
         "schema":"v098_internal_season_profile_inputs_v1",
+        **({"oil_weapon_scope_source_only":weapon_scope}
+           if weapon_scope and set(weapon_scope)==set(by_hand) else {}),
         "v216_numeric_preview":numeric_preview,
         "flask":{"physical_item_id":flask["physical_item_id"],
                  "simc_input_token":flask["simc_input_token"],
@@ -8975,6 +9002,18 @@ def _fresh_source_owner_selected_O_component(*, preflight, staged,
             "candidate_sha256":row[
                 "physical_item_source_candidate_sha256"],
             "representative_weapon_id":actual_weapon,
+            # New positive-O installs own a distinct identity when the
+            # final-weapon scope is present. Do not collide with an old
+            # immutable v113 profile under the same installed manifest.
+            **({"weapon_use_masks_source_only":
+                    weapon["weapon_use_masks_source_only"],
+                "source_min_ilevel":row["source_min_ilevel"],
+                "source_max_ilevel":row["source_max_ilevel"],
+                "scaled_rating_ilevel":(
+                    target_ilevel if row["status"]==
+                    "SIMC_PRECOMBAT_GEAR_NUMBER_SOURCE_ONLY" else None)}
+               if type(weapon.get("weapon_use_masks_source_only")) is dict
+               else {}),
             "native_receipts":list(row.get(
                 "simc_native_receipt_sha256",[])),
             "vector":dict(vec)})
@@ -10970,7 +11009,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             else:
                 profile_inputs=_zero_history_v098_profile_source_inputs(
                     numeric_preview=selected_numeric,
-                    physical_sources=native_F_O)
+                    physical_sources=native_F_O,
+                    weapon_source=source_compilation.get(
+                        "representative_oil_source_options_unadmitted"))
                 # A source-only v098 profile can now reuse the same exact
                 # ItemID/SimC receipt without manually assembling payloads.
                 # Never invoke v098 build/session from this unadmitted stage.

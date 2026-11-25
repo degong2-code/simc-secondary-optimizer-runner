@@ -143,6 +143,46 @@ class GearStatOwner(unittest.TestCase):
         with self.assertRaisesRegex(build.EnvironmentBuildBlocked,"DUPLICATE_WEAPON_MATCH"):
             check(chosen,raw,[row,row],334)
 
+    def test_v761_final_user_weapon_scope_uses_selected_weapon_and_level(self):
+        import v098_target_user_scenario_bootstrap as bootstrap
+        token="main_hand:example_oil_2"
+        inputs={"oil_by_hand":{"main_hand":{
+            "physical_item_id":101,"simc_input_token":token}},
+            "oil_weapon_scope_source_only":{"main_hand":{
+                "physical_item_id":101,"simc_input_token":token,
+                "masks":{"equipped_item_class":2,
+                         "inventory_type_mask":1<<13,
+                         "weapon_subclass_mask":(1<<7)|(1<<4)},
+                "source_min_ilevel":300,"source_max_ilevel":350,
+                "scaled_rating_ilevel":334}}}
+        gear={"items":[{"item_id":301,"class_id":2,"subclass_id":7,
+                         "inventory_type":13},
+                        {"item_id":302,"class_id":2,"subclass_id":4,
+                         "inventory_type":13},
+                        {"item_id":303,"class_id":2,"subclass_id":10,
+                         "inventory_type":13}]}
+        check=bootstrap._assert_final_season_oil_weapon_scope
+        def run(i,level=334,source=inputs,refresh=()):
+            return check(inputs=source,rows={"main_hand":{
+                "item_id":i,"ilevel":level}},gear=gear,refreshed_rows=refresh)
+        run(301);run(302)
+        with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
+                                    "WEAPON_MASK_MISMATCH"):
+            run(303)
+        with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
+                                    "SCALED_RATING_REMEASUREMENT"):
+            run(302,340)
+        with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
+                                    "ILEVEL_OUTSIDE_SOURCE"):
+            run(302,351)
+        run(304,refresh=[{"item_id":304,"class_id":2,"subclass_id":7,
+                          "inventory_type":13}])
+        with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
+                                    "METADATA_PENDING"):
+            run(304)
+        # Old sealed inputs remain usable without fabricating new evidence.
+        run(303,source={"oil_by_hand":inputs["oil_by_hand"]})
+
     def test_engine_source_owned_selected_O_updates_shared_v222_B_T_once(self):
         # Generic source/Native owner wiring, NOT a fresh proof about a
         # particular game's oil. Original source + hand mask + same gear
@@ -198,6 +238,14 @@ class GearStatOwner(unittest.TestCase):
                                       "measurement":measurement}],
                   target_ilevel=334)
         owner=build._fresh_source_owner_selected_O_component(**call)
+        scoped_masks={**masks,"oil_representative_weapon_matches_unadmitted":[
+            {**match,"weapon_use_masks_source_only":{
+                "equipped_item_class":2,"inventory_type_mask":1<<13,
+                "weapon_subclass_mask":1<<7}}]}
+        scoped=build._fresh_source_owner_selected_O_component(
+            **{**call,"choices":scoped_masks})
+        self.assertEqual(scoped["rating"],owner["rating"])
+        self.assertNotEqual(scoped["source_sha256"],owner["source_sha256"])
         self.assertEqual(owner["rating"],vec)
         self.assertTrue(owner["weapon_applicability_verified"])
         self.assertEqual(owner["selected_oil_item_ids_by_hand"],

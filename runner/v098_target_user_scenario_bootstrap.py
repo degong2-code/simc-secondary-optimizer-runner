@@ -572,6 +572,52 @@ def _verified_one_spec_G_profile_scope(*, source_bundle, candidate,
 
 
 
+def _assert_final_season_oil_weapon_scope(*, inputs, rows, gear,
+                                           refreshed_rows=()):
+    """Reuse original source masks on the final user physical weapon rows.
+
+    Historical inputs lack this additional scope and are left unchanged.
+    Newly observed scope is not a second game-effect or numeric owner.
+    A scaled rating measured at a different level must not be reused.
+    """
+    if inputs is None or "oil_weapon_scope_source_only" not in inputs:
+        return
+    scopes=inputs["oil_weapon_scope_source_only"]
+    by_hand=inputs["oil_by_hand"]
+    need(type(scopes) is dict and set(scopes)==set(by_hand),
+         "SEASON_FINAL_OIL_WEAPON_SCOPE_HAND_DRIFT")
+    need(type(gear) is dict,"SEASON_FINAL_OIL_WEAPON_SOURCE_MISSING")
+    wanted={rows[hand]["item_id"] for hand in scopes if hand in rows}
+    provider={}
+    for meta in (gear.get("items") or [])+(
+            gear.get("internal_conditional_mplus_plain_candidates") or [])+list(refreshed_rows or []):
+        if type(meta) is dict and meta.get("item_id") in wanted:
+            provider.setdefault(meta["item_id"],set()).add((
+                meta.get("class_id"),meta.get("subclass_id"),
+                meta.get("inventory_type")))
+    for hand,scope in scopes.items():
+        need(type(scope) is dict and hand in rows and
+             scope.get("physical_item_id")==by_hand[hand]["physical_item_id"] and
+             scope.get("simc_input_token")==by_hand[hand]["simc_input_token"],
+             "SEASON_FINAL_OIL_WEAPON_SCOPE_ITEM_DRIFT:"+hand)
+        row=rows[hand]
+        meta=provider.get(row["item_id"],set())
+        need(len(meta)==1,"SEASON_FINAL_OIL_WEAPON_METADATA_PENDING:"+hand)
+        cls,sub,inv=next(iter(meta))
+        from v286_representative_oil_source_binding import weapon_metadata_matches_masks
+        need(weapon_metadata_matches_masks(cls,sub,inv,scope.get("masks")),
+             "SEASON_FINAL_OIL_WEAPON_MASK_MISMATCH:"+hand)
+        level=row.get("ilevel")
+        low,high=scope.get("source_min_ilevel"),scope.get("source_max_ilevel")
+        need(type(level) is int and level>0 and
+             type(low) is int and low>=0 and type(high) is int and high>=0 and
+             (low==0 or level>=low) and (high==0 or level<=high),
+             "SEASON_FINAL_OIL_WEAPON_ILEVEL_OUTSIDE_SOURCE:"+hand)
+        measured=scope.get("scaled_rating_ilevel")
+        need(measured is None or (type(measured) is int and measured==level),
+             "SEASON_FINAL_OIL_SCALED_RATING_REMEASUREMENT_REQUIRED:"+hand)
+
+
 def season_profile_source_only(*, profile, cfg, weapon_layout, user,
                                season_profile_inputs, season_build,
                                simc_revision, fillers=None,
@@ -583,8 +629,10 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
     cannot be promoted into the old v096/v094 runtime or Policy A.
     """
     need(type(season_profile_inputs) is dict and
-         set(season_profile_inputs)=={
-             "schema","v216_numeric_preview","flask","oil_by_hand"}
+         set(season_profile_inputs) in ({
+             "schema","v216_numeric_preview","flask","oil_by_hand"},{
+             "schema","v216_numeric_preview","flask","oil_by_hand",
+             "oil_weapon_scope_source_only"})
          and season_profile_inputs["schema"]==
              "v098_internal_season_profile_inputs_v1",
          "SEASON_PROFILE_INPUT_SCHEMA_REQUIRED")
@@ -1659,6 +1707,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
     else:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need)
+    _assert_final_season_oil_weapon_scope(
+        inputs=season_profile_inputs,rows=rows,
+        gear=season_source_bundle["gear"] if season_source_bundle is not None else None,
+        refreshed_rows=selected_refresh_rows)
     actual_user_enchant_source=_final_user_enchant_source_mask(
         user=user,rows=rows,consumer=selected_user_enchant_source_consumer)
     if season_source_gem_tokens is not None:

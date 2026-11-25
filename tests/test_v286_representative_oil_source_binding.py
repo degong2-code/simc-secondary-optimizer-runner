@@ -85,6 +85,9 @@ class RepresentativeOilSource(unittest.TestCase):
         self.assertEqual(case["hand"],"main_hand")
         self.assertEqual(case["representative_weapon_id"],9101)
         self.assertEqual(case["quality_rank"],2)
+        self.assertEqual(case["weapon_use_masks_source_only"],{
+            "equipped_item_class":2,"inventory_type_mask":73572352,
+            "weapon_subclass_mask":983039})
         self.assertTrue(case["matched_same_build_spell_equipped_masks"])
         self.assertFalse(case["game_weapon_ilevel_and_use_requirements_verified"])
         self.assertFalse(case["quality_effect_equivalence_verified"])
