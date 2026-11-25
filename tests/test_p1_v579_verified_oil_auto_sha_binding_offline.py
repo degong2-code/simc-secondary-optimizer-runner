@@ -149,6 +149,31 @@ const funcs=Function(
   assert.strictEqual(state.seasonGearTargetIlevel,null,
     "Ambiguous F/J must invalidate old O=0 installed readiness");
   assert(notices.at(-1).includes("둘 이상"));
+  // Same oil, different physical F: the explicit F resolves only OIL.
+  // The grouped menu can represent another SHA without substituting it.
+  row.verified_variants=[
+    {installed_manifest_sha256:OLD,verified_flask_item_id:241325,
+     ordinary_four_gem_profile:true,reference_G_track:"general"},
+    {installed_manifest_sha256:OIL,verified_flask_item_id:241324,
+     ordinary_four_gem_profile:true,reference_G_track:"general"}
+  ];
+  row.installed_manifest_sha256=OLD;
+  $("oil_main").checked=false;
+  $("optimizer-oil-main-id").value="";
+  await funcs.refreshInstalledOilLoadouts();
+  assert.strictEqual(state.seasonGear.installed_manifest_sha256,OIL);
+  assert.strictEqual($("optimizer-oil-loadout").value,OLD);
+  assert.equal(urls.filter(x=>x.startsWith("/api/v1/season-gear?")).length,2);
+  // Two indistinguishable F/J variants with no active verified SHA
+  // still cannot authorize an arbitrary installation.
+  row.verified_variants[0].verified_flask_item_id=241324;
+  state.seasonGear.installed_manifest_sha256="c".repeat(64);
+  state.seasonGearTargetIlevel=334;
+  $("oil_main").checked=false;
+  $("optimizer-oil-main-id").value="";
+  await funcs.refreshInstalledOilLoadouts();
+  assert.strictEqual(state.seasonGearTargetIlevel,null);
+  assert.equal(urls.filter(x=>x.startsWith("/api/v1/season-gear?")).length,2);
   row.verified_variant_count=originalVariantCount;
   console.log("V579_UI_VERIFIED_POSITIVE_O_DEFAULT_EXACT_SHA_BIND_ONCE_PASS");
 })().catch(e=>{console.error(e.stack||e);process.exitCode=1});

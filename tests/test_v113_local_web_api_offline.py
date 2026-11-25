@@ -1272,6 +1272,14 @@ class LocalWebAPIOffline(unittest.TestCase):
                          data["items"])
         self.assertEqual(data["items"][0]["verified_variant_count"],2,
                          "Distinct F/J installs cannot use the newest oil SHA")
+        variants=data["items"][0]["verified_variants"]
+        self.assertEqual({(v["installed_manifest_sha256"],
+                           v["verified_flask_item_id"],
+                           v["reference_G_track"]) for v in variants},
+                         {("a"*64,241326,"general"),
+                          ("b"*64,241327,"general")})
+        self.assertTrue(all(not v["ordinary_four_gem_profile"]
+                            for v in variants))
         self.assertEqual(set(calls),{"a"*64,"b"*64})
         self.assertEqual(len(calls),2)
         self.assertEqual(data["native_calls"],0)

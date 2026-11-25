@@ -1882,6 +1882,17 @@ class LocalJobs:
                         else:
                             flasks_by_id[physical]=row
                 if not ids:continue
+                # Keep exact independently authenticated installations inside
+                # one physical oil menu entry. A user-selected F/G scope can
+                # resolve a unique variant without a fresh environment Build.
+                variant={
+                    "installed_manifest_sha256":doc["manifest_sha256"],
+                    "ordinary_four_gem_profile":ordinary_4_gems,
+                    "verified_flask_item_id":(
+                        flask.get("physical_item_id")
+                        if type(flask) is dict else None),
+                    "reference_G_track":doc.get("official_G_reference_track",
+                                                "general")}
                 key=tuple(sorted(ids.items()))
                 if key in seen:
                     # Same physical oil hands may have different sealed F/J
@@ -1891,6 +1902,7 @@ class LocalJobs:
                         if tuple(sorted(existing[
                                 "selected_oil_item_ids_by_hand"].items()))==key:
                             existing["verified_variant_count"]+=1
+                            existing["verified_variants"].append(variant)
                             break
                     continue
                 seen.add(key)
@@ -1906,6 +1918,7 @@ class LocalJobs:
                     "selected_oil_item_ids_by_hand":dict(ids),
                     "display_name":" / ".join(description),
                     "verified_variant_count":1,
+                    "verified_variants":[variant],
                     "ordinary_four_gem_profile":ordinary_4_gems,
                     "verified_flask_item_id":(
                         flask.get("physical_item_id")

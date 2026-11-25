@@ -1564,6 +1564,13 @@ async function chooseInstalledFlask() {
   }
   $("season-selected-flask-id").value=flask;
   refreshDefaultConsumableSummaries();
+  // A selected oil already has a verified physical menu choice. Resolve
+  // the explicit flask against its exact variants, not the O=0 list.
+  if(oilUseIntent && field("optimizer-oil-loadout") &&
+     selectedFullVerifiedOil()) {
+    await bindUniqueInstalledOilVariant();
+    return;
+  }
   // A verified physical F can belong to several installed J/F/O budgets.
   // Only a UNIQUE O=0, ordinary four-gem installation is auto-bound here;
   // other user-selected variants keep the original explicit validation.
@@ -1743,16 +1750,34 @@ function chooseInstalledOilLoadout() {
 // combination can be rebound here; other variants use the existing
 // explicit user-variant Environment Build. No G/F Native is started.
 async function bindUniqueInstalledOilVariant() {
-  const sha=field("optimizer-oil-loadout");
-  const candidate=state.oilLoadouts.find(x=>x.installed_manifest_sha256===sha);
+  const menuSha=field("optimizer-oil-loadout");
+  const candidate=state.oilLoadouts.find(x=>x.installed_manifest_sha256===menuSha);
   if(!candidate)return;
   const build=field("season-game-build")||
     state.verifiedInstalledBuildFromThisPage;
   const level=valueInt("ilevel");
   const flask=field("season-selected-flask-id");
-  const eligible=candidate.verified_variant_count===1 &&
-    candidate.ordinary_four_gem_profile===true &&
-    (!flask||Number(flask)===candidate.verified_flask_item_id) &&
+  const track=field("spec")==="warrior/fury"&&!$("manual-t-mode").checked?
+    "fury_dual_2h":"general";
+  // New server responses retain each exact verified F/G/J install.
+  // Legacy grouped responses remain usable only when unambiguous.
+  const variants=Array.isArray(candidate.verified_variants)?
+    candidate.verified_variants:
+    candidate.verified_variant_count===1?[candidate]:[];
+  const complete=variants.length===candidate.verified_variant_count &&
+    new Set(variants.map(v=>v.installed_manifest_sha256)).size===variants.length;
+  const matches=complete?variants.filter(v=>
+    /^[a-f0-9]{64}$/.test(v.installed_manifest_sha256||"") &&
+    v.ordinary_four_gem_profile===true &&
+    (!flask||Number(flask)===v.verified_flask_item_id) &&
+    (v.reference_G_track||"general")===track):[];
+  // Never guess between different F/J installs or replace an explicit F.
+  const current=matches.find(v=>v.installed_manifest_sha256===
+    state.seasonGear?.installed_manifest_sha256);
+  const exact=matches.length===1?matches[0]:
+    current&&verifiedInstalledGearScopeMatchesRun(build,level)?current:null;
+  const sha=exact?.installed_manifest_sha256;
+  const eligible=Boolean(exact) &&
     valueInt("season-target-socket-count")===4 &&
     !field("season-existing-special-gem-id") &&
     installedConsumableScopeMatches(state.oilCatalog) &&
@@ -1777,7 +1802,9 @@ async function bindUniqueInstalledOilVariant() {
     encodeURIComponent(build)+"&target_ilevel="+level+
     "&installed_manifest_sha256="+sha);
   if(seasonBuildInputScope(true)!==scope ||
-     field("optimizer-oil-loadout")!==sha){
+     field("optimizer-oil-loadout")!==menuSha ||
+     (field("spec")==="warrior/fury"&&!$("manual-t-mode").checked?
+       "fury_dual_2h":"general")!==track){
     setNotice("설치 장비 조회 중 기름·F/J·보석 또는 시즌 선택이 변경되었습니다. "+
       "현재 조건으로 다시 검증하세요.");
     return;
