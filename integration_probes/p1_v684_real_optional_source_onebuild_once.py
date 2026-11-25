@@ -266,6 +266,10 @@ def replay_ordered_lookup(previous, out):
             "source_receipt_sha256":old["exact_source_receipt_sha256"],
             "rows":rows,"parser_first_match_item_ids":first,
             "parser_shadowed_item_ids":shadowed}
+    quality=owner.reviewed_quality_item_evidence(BUILD,REV,rows,parsed)
+    if quality is None:
+        raise ValueError("V783_REVIEWED_QUALITY_SOURCE_MISMATCH")
+    bridge["reviewed_quality_item_evidence"]=quality
     projected=install.project_fresh_optional_consumables(
         game_build=BUILD,simc_revision=REV,source=bridge)
     install.verify_fresh_optional_consumables(
@@ -277,8 +281,44 @@ def replay_ordered_lookup(previous, out):
         defaults[kind]={token:next((r["item_id"] for r in options[kind]
                                     if r["simc_token"]==token),None)
                         for token in tokens}
+    # Exercise the existing API default preference with the actual projected
+    # tokens; this is not an authenticated installed manifest or UI run.
+    import v113_local_web_api as api
+    approved={kind:[r["simc_token"] for r in entries]
+              for kind,entries in options.items()}
+    preferences=api._v775_source_optional_defaults(
+        {"game_build":BUILD,"simc_revision":REV},approved)
+    expected={}
+    for kind,tokens in owner.reviewed_apl_default_groups(BUILD,REV).items():
+        for token,specs in tokens.items():
+            for spec in specs.split():
+                expected.setdefault(spec,{})[kind]=token
+    expected_potions={241288,241289,241308,271887}
+    rejected_lower={241309,271886}
+    actual_potions={r["item_id"] for r in options["potion"]}
+    joined_ids=set(ids)
+    quality_ids={241288,241289,241308,241309,271886,271887}
+    checks={
+        "all_26_spec_default_preferences":len(expected)==26 and
+            all(set(v)=={"food","potion"} for v in expected.values()) and
+            preferences==expected,
+        "all_seven_default_tokens_projected":
+            sum(len(v) for v in defaults.values())==7 and
+            all(i is not None for v in defaults.values() for i in v.values()),
+        "expected_potion_choices_present":expected_potions<=actual_potions,
+        "lower_dominated_potions_not_projected":not rejected_lower&actual_potions,
+        "no_parser_shadow":not shadowed,
+    }
+    success=all(checks.values())
     state={"schema":"p1_v780_ordered_optional_lookup_replay_v1",
-           "status":"PASS_PINNED_ORDERED_LOOKUP_REPLAY",
+           "status":("PASS_V783_RETAINED_SOURCE_DEFAULT_PREFERENCES" if success
+                     else "PENDING_V783_RETAINED_SOURCE_DEFAULT_PREFERENCES"),
+           "checks":checks,"recommended_tokens_by_spec":preferences,
+           "reviewed_quality_item_evidence":quality,
+           "quality_joined_item_ids":sorted(quality_ids&joined_ids),
+           "quality_missing_join_item_ids":sorted(quality_ids-joined_ids),
+           "actual_installed_environment_verified":False,
+           "actual_native_verified":False,
            "game_build":BUILD,"simc_revision":REV,
            "prior_run_id":45566131185,"prior_artifact_id":14999673517,
            "prior_receipt_sha256":hashlib.sha256(raw_receipt).hexdigest(),
@@ -302,7 +342,7 @@ def replay_ordered_lookup(previous, out):
         json.dumps(state,sort_keys=True,indent=2,ensure_ascii=False)+"\n",
         encoding="utf8")
     print("V780_REPLAY "+json.dumps(state,sort_keys=True,ensure_ascii=False),flush=True)
-    return 0
+    return 0 if success else 2
 
 
 if __name__=="__main__":
