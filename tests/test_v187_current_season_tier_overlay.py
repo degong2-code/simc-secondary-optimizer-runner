@@ -232,6 +232,40 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
         self.assertEqual(origin[0]["slot"],"chest")
         self.assert_four(rows,groups)
 
+    def test_alternate_fifth_catalyst_reuses_one_validated_source_pair(self):
+        import v167_product_season_gear_adapter as product_gear
+        gear=product_gear.read()
+        tier=season.load_tier()
+        user,rows,groups=self.setup_rows()
+        # Starting with ordinary legs, exact class chest tier.
+        leg=season.available_plain(gear,slot="legs",family="cloth",
+            class_mask=tier["classes"]["mage"]["allowed_class_mask"],
+            primary="intellect")[0]
+        rows["legs"]["item_id"]=leg
+        rows["chest"]["item_id"]=self.map["chest"]
+        del groups["legs"];groups["chest"]="tier"
+        user["special_items"]=[{"slot":"legs","item_id":self.map["legs"],
+            "options":{"redirected_base_stats":str(leg)}}]
+        require=lambda valid,why:self.fail(why) if not valid else None
+        with mock.patch.object(common,"_selected_current_season_sources",
+                wraps=common._selected_current_season_sources) as sources:
+            restored,origin=common.apply_user_equipment(
+                ("mage","frost"),rows,groups,user,334,require,
+                tier_override=self.map,fifth_override=("legs",self.map["legs"],leg),
+                flexible_current_tier=True,season_source_gear=gear,
+                season_source_tier=tier)
+            self.assertEqual(sources.call_count,1)
+        self.assertEqual(restored,[])
+        self.assertEqual(origin,[{"slot":"legs","tier_item_id":self.map["legs"],
+                                  "source_item_id":leg}])
+        self.assertEqual(groups["legs"],"tier")
+        self.assertNotIn("hands",groups)
+        self.assert_four(rows,groups)
+        equipment,fillers=common.physical_gear_groups(rows,groups,origin)
+        self.assertEqual(equipment["catalyst_special_tier_slots"],["legs"])
+        self.assertEqual(len(equipment["tier"]),4)
+        self.assertEqual(len([r for r in fillers if r["slot"]=="hands"]),1)
+
     def test_unselected_baseline_four_and_both_crafted_non_tier(self):
         u,rows,groups=self.setup_rows()
         u["embellishments"]=[

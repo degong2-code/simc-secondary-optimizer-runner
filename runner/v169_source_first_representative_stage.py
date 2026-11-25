@@ -110,7 +110,7 @@ def load_tier(path=TIER_PATH):
          "TIER_SOURCE_NOT_VERIFIED")
     return result
 
-def available_plain(db,*,slot,family=None,class_mask=None,used=()):
+def available_plain(db,*,slot,family=None,class_mask=None,used=(),primary=None):
     wanted=SLOT_TO_INV[slot]
     family_sub=gear.ARMOR_SUBCLASS.get(family)
     candidates=[]
@@ -125,6 +125,12 @@ def available_plain(db,*,slot,family=None,class_mask=None,used=()):
         if class_mask is not None and type(mask) is int and (
             mask&class_mask)!=class_mask:
             continue
+        if primary is not None:
+            codes=item.get("stat_modifier_codes")
+            if (type(codes) is not list or
+                    not any(code in PRIMARY_STAT_CODES[primary] for code in codes) or
+                    (class_mask is not None and mask is not None and type(mask) is not int)):
+                continue
         candidates.append(item["item_id"])
     return sorted(candidates)
 
@@ -238,12 +244,9 @@ def select_class_spec(db,tier,cls,spec):
     tier5=info["pieces"]
     need(set(tier5)==set(contracts.TIER_SLOTS),"TIER_FIVE_SLOTS_MISSING")
     used=set(tier5.values())
-    indexed={row["item_id"]:row for row in db["items"]}
     def armor_matches(slot):
-        return [iid for iid in available_plain(db,slot=slot,family=family,
-                    class_mask=class_mask,used=used)
-                if any(code in PRIMARY_STAT_CODES[contract["primary"]]
-                       for code in indexed[iid].get("stat_modifier_codes",[]))]
+        return available_plain(db,slot=slot,family=family,
+            class_mask=class_mask,used=used,primary=contract["primary"])
     fifth=choose_plain_fifth(armor_matches)
     need(fifth is not None,"PLAIN_BASE_NOT_AVAILABLE_"+family+"_chest")
     fifth_slot,fifth_id=fifth

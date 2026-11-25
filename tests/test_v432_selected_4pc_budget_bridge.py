@@ -140,6 +140,43 @@ class B8BudgetPreflight(unittest.TestCase):
                          2885)
         self.assertEqual(out["final_T"], 3142)
 
+    def test_alternate_fifth_catalyst_delta_and_L_counted_once(self):
+        # Original ordinary legs, chest tier; selecting catalyzed legs
+        # moves ordinary allocation to hands. Exact redirected identity
+        # owns L, not the origin or unmodified tier item.
+        self.base["chest"]["item_id"]=self.tier["chest"]
+        self.base["legs"]["item_id"]=290201
+        self.after=copy.deepcopy(self.base)
+        self.after["legs"]["item_id"]=self.tier["legs"]
+        self.after["legs"]["options"]={"redirected_base_stats":"290201",
+                                       "gem_id":"240983"}
+        self.after["hands"]["item_id"]=290202
+        self.groups={s:"tier" for s in ("head","shoulders","chest","legs")}
+        self.user["embellishments"]=[]
+        self.user["special_items"]=[{"slot":"legs","item_id":self.tier["legs"],
+            "options":{"redirected_base_stats":"290201"}}]
+        self.add(self.base["legs"],vec(crit_rating=120))
+        self.add(self.base["hands"],vec(haste_rating=130))
+        self.add(self.after["legs"],vec(crit_rating=70,mastery_rating=75))
+        self.add(self.after["hands"],vec(versatility_rating=160))
+        out=self.run_bridge()
+        self.assertEqual([x["slot"] for x in out["changed_physical_slots"]],
+                         ["hands","legs"])
+        self.assertEqual(out["changed_slots_exact_static_delta"],55)
+        self.assertEqual(out["G_projected_reference_not_native_exact"],2905)
+        self.assertEqual(out["fixed_L_in_G_once"],
+                         vec(crit_rating=70,mastery_rating=75))
+        self.assertEqual(out["final_T"],3162)
+        self.assertEqual(out["native_calls"],0)
+        self.user["target"]["final_T"]=3500
+        self.assertEqual(self.run_bridge()["final_T"],3500)
+        del self.cache["variants"][cache_mod.digest(
+            bridge._bare(self.after["legs"],self.cache["season"]))]
+        pending=self.run_bridge()
+        self.assertEqual([r["slot"] for r in pending["missing_exact_native_variants"]],
+                         ["legs"])
+        self.assertNotIn("base_B",pending)
+
     def test_manual_T_wins_and_fixed_oil_is_not_reallocated(self):
         self.doc["official_O"] = vec(crit_rating=16, haste_rating=16)
         self.doc["official_T"] = 3139
