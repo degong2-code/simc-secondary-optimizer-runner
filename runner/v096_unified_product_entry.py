@@ -6,7 +6,7 @@ Reference B is explicitly opt-in. Inclusive user manual T uses approved v092
 conversion to legacy B. Exact Native G remains open.
 """
 from __future__ import annotations
-import argparse,hashlib,json,pathlib,sys
+import argparse,copy,hashlib,json,pathlib,re,sys
 import v046_static_item_cache as item_cache
 import v061_scenario_contract as contract
 import v065_v015_scheduler_adapter as scheduler
@@ -679,6 +679,56 @@ def preflight_selected_fresh_source_only(*, selected, composed, fillers,
 
 
 
+def _selected_replay_origin(manifest_path, season, user_scenario):
+    """Resolve the original v436 owner for a normal v291 runtime fork.
+
+    A longrun stage changes ONLY max_native_calls. It is not a different
+    selected physical session. Reuse the parent's sealed replay bytes instead
+    of copying them or relaxing the v435 session identity.
+    """
+    directory=pathlib.Path(manifest_path).parent
+    match=re.fullmatch(r"v291_longrun_([1-9][0-9]*)",directory.name)
+    if match is None:
+        return directory,user_scenario
+    owner=directory.parent
+    need(owner.name=="generated" and not owner.is_symlink() and
+         not directory.is_symlink() and
+         pathlib.Path(manifest_path).name=="manifest.json",
+         "B8_SELECTED_LONGRUN_ORIGINAL_OWNER_REQUIRED")
+    parent_manifest=owner/"manifest.json"
+    parent_scenario=owner/"scenario.json"
+    need(all(path.is_file() and not path.is_symlink()
+             for path in (parent_manifest,parent_scenario)),
+         "B8_SELECTED_LONGRUN_ORIGINAL_INPUT_REQUIRED")
+    original=read_object(parent_manifest)
+    staged=read_object(pathlib.Path(manifest_path))
+    need(type(original) is dict and type(staged) is dict and
+         original.get(SELECTED_FRESH_SEASON_FIELD)==season and
+         original.get("scenario_json")=="scenario.json",
+         "B8_SELECTED_LONGRUN_ORIGINAL_SOURCE_DRIFT")
+    expected=dict(original)
+    expected.update(profile_simc="profile.simc",scenario_json="scenario.json",
+        fillers_json="fillers.json",
+        static_cache_json=str(path_for(owner,original.get("static_cache_json"))),
+        native_binary=str(path_for(owner,original.get("native_binary"))),
+        output_dir="simc_results",cancel_file="CANCEL")
+    need(staged==expected,"B8_SELECTED_LONGRUN_MANIFEST_SOURCE_DRIFT")
+    baseline=read_object(parent_scenario)
+    need(type(baseline) is dict and type(baseline.get("runtime")) is dict and
+         type(user_scenario) is dict and type(user_scenario.get("runtime")) is dict,
+         "B8_SELECTED_LONGRUN_RUNTIME_REQUIRED")
+    cap=baseline["runtime"].get("max_native_calls")
+    expanded=user_scenario["runtime"].get("max_native_calls")
+    need(type(cap) is int and type(expanded) is int and
+         6<=cap<expanded<=100000 and str(expanded)==match.group(1),
+         "B8_SELECTED_LONGRUN_RUNTIME_BUDGET_DRIFT")
+    expected_scenario=copy.deepcopy(baseline)
+    expected_scenario["runtime"]["max_native_calls"]=expanded
+    need(user_scenario==expected_scenario,
+         "B8_SELECTED_LONGRUN_ONLY_RUNTIME_CAP_MAY_CHANGE")
+    return owner,baseline
+
+
 def _admitted_selected_fresh_source(*, manifest_path, season, revision,
                                    user_scenario, flask_F, oil_hands,
                                    profile, fillers, cache_path, binary,
@@ -703,8 +753,9 @@ def _admitted_selected_fresh_source(*, manifest_path, season, revision,
         manifest_path=manifest_path,season=season)
     need(season["selected_replay_file"]=="v436_selected_source_replay.json",
          "B8_SELECTED_V096_REPLAY_FILENAME_FIXED")
-    replay_path=path_for(pathlib.Path(manifest_path).parent,
-                         season["selected_replay_file"])
+    replay_owner,original_scenario=_selected_replay_origin(
+        manifest_path,season,user_scenario)
+    replay_path=replay_owner/season["selected_replay_file"]
     need(replay_path.is_file() and not replay_path.is_symlink()
          and 0<replay_path.stat().st_size<=12_000_000,
          "B8_SELECTED_V096_REPLAY_BYTES_REQUIRED")
@@ -733,7 +784,7 @@ def _admitted_selected_fresh_source(*, manifest_path, season, revision,
          "B8_SELECTED_V096_USER_LAYOUT_OR_LEVEL_REQUIRED")
     import v098_target_user_scenario_bootstrap as bootstrap
     computed=bootstrap.preview_from_environment_build(
-        replay["user"],pathlib.Path(manifest_path).parent,binary,revision,
+        replay["user"],replay_owner,binary,revision,
         environment_result=replay["environment_result"],
         season_controls=replay["season_controls"],
         selected_static_cache_path=cache_path)
@@ -747,7 +798,7 @@ def _admitted_selected_fresh_source(*, manifest_path, season, revision,
          and computed.get("profile_simc")==profile
          and computed.get("selected_fillers_source_only")==fillers
          and computed.get("v096_typed_input_unadmitted",{}).get("scenario")==
-             contract.normalize(user_scenario)["scenario"]
+             contract.normalize(original_scenario)["scenario"]
          and computed.get("seed_targets_B_unadmitted")==seed_targets
          and computed.get("selected_weapon_layout_source_only")==
              weapon_layout
@@ -758,9 +809,8 @@ def _admitted_selected_fresh_source(*, manifest_path, season, revision,
          "B8_SELECTED_V096_RECOMPUTED_PHYSICAL_PROFILE_OR_BUDGET_DRIFT")
     future=computed["v435_future_v106_session_key_unadmitted"]
     need(type(future.get("session_key_preview")) is str and
-         pathlib.Path(manifest_path).parent.name=="generated" and
-         pathlib.Path(manifest_path).parent.parent.name==
-             future["session_key_preview"],
+         replay_owner.name=="generated" and
+         replay_owner.parent.name==future["session_key_preview"],
          "B8_SELECTED_V096_SEPARATE_FUTURE_SESSION_FOLDER_REQUIRED")
     preflight=computed["v096_selected_source_only_preflight"]
     budget=computed["budget_preflight"]

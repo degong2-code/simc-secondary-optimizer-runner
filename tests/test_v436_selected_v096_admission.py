@@ -5,6 +5,7 @@ where specified; these tests do not prove 70783 selected item DPS.
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import pathlib
@@ -186,6 +187,52 @@ class SelectedV436Receipt(unittest.TestCase):
             alt=self.args["manifest_path"].parent
             alt.mkdir(parents=True)
             (alt/self.receipt.name).write_bytes(self.receipt.read_bytes())
+            self.invoke()
+
+    def _stage_selected_longrun(self):
+        # Same layout as v291: only runtime budget differs, no duplicate v436.
+        self.cfg["runtime"]["max_native_calls"]=6
+        original={"profile_simc":"profile.simc","scenario_json":"scenario.json",
+                  "fillers_json":"fillers.json","static_cache_json":str(self.cache),
+                  "native_binary":str(self.binary),"output_dir":"simc_results",
+                  "cancel_file":"CANCEL",entry.SELECTED_FRESH_SEASON_FIELD:self.season}
+        (self.folder/"manifest.json").write_text(canonical(original)+"\n","utf8")
+        (self.folder/"scenario.json").write_text(canonical(self.cfg)+"\n","utf8")
+        stage=self.folder/"v291_longrun_12"
+        stage.mkdir()
+        manifest=stage/"manifest.json"
+        manifest.write_text(canonical(original)+"\n","utf8")
+        expanded=copy.deepcopy(self.cfg)
+        expanded["runtime"]["max_native_calls"]=12
+        (stage/"scenario.json").write_text(canonical(expanded)+"\n","utf8")
+        self.args.update(manifest_path=manifest,user_scenario=expanded)
+        return stage
+
+    def test_longrun_reuses_original_replay_and_preserves_selected_identity(self):
+        original,_,_=self.invoke()
+        stage=self._stage_selected_longrun()
+        staged,_,replayer=self.invoke()
+        self.assertEqual(original,staged)
+        self.assertEqual(replayer.call_args.args[1],self.folder)
+        self.assertFalse((stage/self.receipt.name).exists())
+
+    def test_longrun_rejects_any_non_cap_runtime_change(self):
+        self._stage_selected_longrun()
+        self.args["user_scenario"]["runtime"]["scout_iterations"]+=1
+        with self.assertRaisesRegex(entry.EntryBlocked,"ONLY_RUNTIME_CAP_MAY_CHANGE"):
+            self.invoke()
+
+    def test_longrun_rejects_changed_parent_replay_and_manifest(self):
+        stage=self._stage_selected_longrun()
+        self.receipt.write_bytes(self.receipt.read_bytes()+b"\n")
+        with self.assertRaisesRegex(entry.EntryBlocked,"REPLAY_BYTES_SHA_CHANGED"):
+            self.invoke()
+        self.receipt.write_text(canonical(self.replay)+"\n","utf8")
+        manifest=stage/"manifest.json"
+        changed=json.loads(manifest.read_text("utf8"))
+        changed["output_dir"]="other"
+        manifest.write_text(canonical(changed)+"\n","utf8")
+        with self.assertRaisesRegex(entry.EntryBlocked,"LONGRUN_MANIFEST_SOURCE_DRIFT"):
             self.invoke()
 
     def test_writer_creates_only_source_locked_manifest_and_plan(self):
