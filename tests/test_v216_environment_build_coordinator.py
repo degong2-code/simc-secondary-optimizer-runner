@@ -308,10 +308,10 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                     for s in (lead,partner)} if scaled else {}})
         for n,stat in enumerate(stats):
             add(330001+n,stat,stats[(n+1)%4],16,7)
-        add(330011,stats[0],stats[1],50,10,minimum=340)
+        add(330011,stats[0],stats[1],50,10,minimum=14277,low=340)
         add(330012,stats[0],stats[1],50,10,low=340)
         add(330013,stats[0],stats[1],50,10,high=330)
-        add(330014,stats[0],stats[1],.6,.2,scaled=True,minimum=340)
+        add(330014,stats[0],stats[1],.6,.2,scaled=True,minimum=14277,low=340)
         raw={"game_build":build,"simc_revision":rev,
              "source_sha256":"d"*64,"items":source}
         candidate={"status":"SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED",
@@ -331,7 +331,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         with mock.patch.object(v216.oil_raw_source,"from_v275",return_value=raw):
             static=v216._fresh_pinned_dbc_ordinary_gem_j_source(**args)
         self.assertEqual(static["J_candidate_unadmitted"],92)
-        add(330015,stats[0],stats[1],.6,.2,scaled=True)
+        add(330015,stats[0],stats[1],.6,.2,scaled=True,minimum=14277)
         candidate["candidate_count"]=len(rows)
         raw_vector=dict.fromkeys(stats,0)
         raw_vector.update({stats[0]:19,stats[1]:9})
@@ -678,6 +678,8 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         sources={1:source(.6,.2),2:source(.5,.3),3:source(.4,.1),
                  4:source(.4,.1,-8),5:source(.4,.1),
                  6:source(.6,.2),7:source(.4,.1,base=1)}
+        # Use a real enchant restriction, not the gem description ID.
+        sources[3]["source_min_ilevel"]=300
         plan=v216._fresh_two_stat_gem_named_tier_measurement_plan(
             rows=rows,by_enchant=sources)
         self.assertEqual(plan["status"],

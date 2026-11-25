@@ -72,11 +72,14 @@ def parse_generated(name,data):
                    "input_form":"temporary_enchant=weapon_slot:token",
                    "effect_magnitude":"UNRESOLVED"}
         else:
-            property_id,enchant_id,color_mask,min_ilevel=vals
+            property_id,enchant_id,color_mask,desc_id=vals
+            # Historical v191/v213 wire key is misnamed: SimC gem_data.hpp
+            # and GemPropertyDataGenerator define field 4 as desc_id.
+            # Preserve sealed catalog bytes; never use this as an ilvl bound.
             entry={"gem_property_id":int(property_id),
                    "enchant_id":int(enchant_id),
                    "color_mask":int(color_mask,16),
-                   "minimum_ilevel":int(min_ilevel),
+                   "minimum_ilevel":int(desc_id),
                    "gem_item_id":"UNRESOLVED"}
         parsed.append(entry)
     need(len(parsed)==total,"SIMC_GENERATED_ROW_COUNT_MISMATCH:"+name)

@@ -95,7 +95,7 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
             links["joins"].append({
                 "item_id":item,"gem_property_id":11+i,
                 "enchant_id":600+i,"color_mask":2,
-                "minimum_ilevel":340 if i in (5,8) else 0,"expansion_id":12,
+                "minimum_ilevel":14277 if i in (5,8) else 0,"expansion_id":12,
                 "socket_eligibility":"NOT_YET_VERIFIED",
                 "status":"EXACT_DB2_ITEMSPARSE_GEM_PROPERTY_RELATION",
                 "ui_selectable":False})
@@ -156,11 +156,11 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
             scoped=adapter.view(
                 stage_root=root,v221_candidate_path=path,build=BUILD,
                 target_ilevel=334,selected_gem_item_ids=[2105])
-            self.assertFalse(scoped["four_stat_ordinary_source_complete_unadmitted"])
+            self.assertTrue(scoped["four_stat_ordinary_source_complete_unadmitted"])
             self.assertEqual(scoped[
-                "ordinary_two_CHMV_scaled_shape_candidate_ids_source_only"],[2107])
-            self.assertNotIn("crit_rating",
-                             scoped["four_stat_ordinary_best_observed_unadmitted"])
+                "ordinary_two_CHMV_scaled_shape_candidate_ids_source_only"],[2107,2108])
+            self.assertEqual(scoped["four_stat_ordinary_best_observed_unadmitted"],
+                             first["four_stat_ordinary_best_observed_unadmitted"])
             self.assertEqual(scoped["selected_gem_raw_points_by_id_unadmitted"],
                              {"2105":52})
             boundary=adapter.view(stage_root=root,v221_candidate_path=path,

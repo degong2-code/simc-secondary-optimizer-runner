@@ -89,16 +89,6 @@ def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
-def _gem_selected_source_scope_conflicts(observed,target_ilevel):
-    """Only known same-build v221 contradictions, never infer missing as 0."""
-    if target_ilevel is None:
-        return set()
-    return {row["item_id"] for row in
-            (observed.get("selected_gem_v221_source_properties_unadmitted") or [])
-            if type(row.get("minimum_ilevel")) is int and
-            row["minimum_ilevel"]>target_ilevel}
-
-
 def _raw_four_stat_j_can_finish(observed):
     """A complete raw four-family projection is not a scaled comparison."""
     return (observed.get("four_stat_ordinary_source_complete_unadmitted")
@@ -833,14 +823,17 @@ def _one_build_gem_dbc_reader():
 
 
 def _gem_reference_ilevel_allowed(row,source,target_ilevel):
-    """Known source bounds on the uniform-ilvl representative gear only."""
+    """Only actual enchant DBC bounds on representative gear.
+
+    v191/v221's historical minimum_ilevel key contains SimC gem desc_id,
+    not an equipment restriction. Do not compare it to target ilvl.
+    """
     if target_ilevel is None:
         return True  # legacy diagnostic callers without a target
-    minimum=row.get("minimum_ilevel")
     low,high=source.get("source_min_ilevel"),source.get("source_max_ilevel")
     return (type(target_ilevel) is int and target_ilevel>0
-            and all(type(x) is int and x>=0 for x in (minimum,low,high))
-            and target_ilevel>=max(minimum,low)
+            and all(type(x) is int and x>=0 for x in (low,high))
+            and target_ilevel>=low
             and (high==0 or target_ilevel<=high))
 
 
@@ -1163,7 +1156,7 @@ def _gem_measurement_source_dominates(a,b):
     and numeric representation. Never compare coefficient sums between
     scaling IDs, or use rarity/item level/name as evidence of strength.
     """
-    scope=("lead","partner","color_mask","minimum_ilevel","expansion_id",
+    scope=("lead","partner","color_mask","expansion_id",
            "quality","numeric_kind")
     bounds=("source_min_ilevel","source_max_ilevel")
     if (any(k not in a or k not in b or a[k]!=b[k] for k in scope)
@@ -1235,7 +1228,10 @@ def _fresh_two_stat_gem_named_tier_measurement_plan(*, rows, by_enchant,
             # cannot share a new inferred numeric observation across IDs.
             base_minor=scaled[partner].get("dbc_base_amount")
             base_major=scaled[main].get("dbc_base_amount")
-            scope=(row.get("minimum_ilevel"),source.get("source_min_ilevel"),
+            # Preserve the 10-field receipt format; the old descriptor
+            # slot is neutral, not a claimed minimum item level. It must
+            # not split identical coefficients across gem colors.
+            scope=(0,source.get("source_min_ilevel"),
                    source.get("source_max_ilevel"))
             known=all(type(v) is int for v in
                       (base_minor,base_major,*scope))
@@ -1681,10 +1677,9 @@ def _selected_gem_quality_policy_A_preview(*, source_catalog,
         if item_id not in ordinary or item_id not in metadata:
             continue
         row=metadata[item_id]
-        # Compare only matching known source use conditions. Different
-        # minimum item levels describe different applicability ranges.
-        # Keep their independent source rows; this is not an extra
-        # game-effect certification gate or a user-option filter.
+        # Compare exact source identities. The historical minimum_ilevel
+        # key is gem desc_id, not evidence of a use restriction.
+        # Retain its value for source identity, not an applicability gate.
         key=(prop["enchant_id"],prop["color_mask"],
              prop["expansion_id"],row["quality"],
              row["class_id"],row["subclass_id"],prop["minimum_ilevel"])
@@ -1724,7 +1719,7 @@ def _selected_gem_quality_policy_A_preview(*, source_catalog,
         groups.append({
             "enchant_id":key[0],
             "same_v221_color_expansion_and_v230_class_source":True,
-            "minimum_ilevel_source_scope":key[6],
+            "gem_description_id_source_only":key[6],
             "observed_item_ids":[r["item_id"] for r in ranked],
             "observed_crafting_quality_ranks":[
                 r["crafting_quality"] for r in ranked],
@@ -2849,9 +2844,6 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
              type(gem_source.get("source_stage")) is dict and
              type(gem_source["source_stage"].get("receipt_sha256")) is str,
              "V216_V221_SELECTED_SAME_BUILD_GEM_ITEM_SOURCE_REQUIRED")
-        need(not _gem_selected_source_scope_conflicts(
-                 gem_enchant,target_ilevel),
-             "V216_SELECTED_GEM_MINIMUM_ILEVEL_CONFLICT")
         need(gem_enchant.get(
                  "selected_special_gem_two_CHMV_accounting_pending_source_only")
                  is not True,
@@ -10490,21 +10482,16 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             source_selected_gem_roles["special_gem_id"],
                         target_ilevel=fresh_collection_inputs[
                             "representative_request"]["target_ilevel"])
-                    target_gem_ilevel=fresh_collection_inputs[
-                        "representative_request"]["target_ilevel"]
-                    scope_conflicts=_gem_selected_source_scope_conflicts(
-                        observed,target_gem_ilevel)
                     missing_ids=set(observed.get(
                         "selected_gem_v221_missing_item_ids") or [])
-                    if reference_ids & (scope_conflicts|missing_ids):
+                    if reference_ids & missing_ids:
                         # Known invalid packaged IDs: use the existing
                         # current-build ordinary selection instead.
                         progress["nominal_gem_reference_scope_conflict_ids"]=sorted(
-                            reference_ids & (scope_conflicts|missing_ids))
+                            reference_ids & missing_ids)
                         nominal_four_stat_source=None
                     special_invalid=(special_id is not None and
-                        (special_id in scope_conflicts or
-                         special_id in reference_ids or
+                        (special_id in reference_ids or
                          observed.get(
                              "selected_special_gem_two_CHMV_accounting_pending_source_only")
                              is True))

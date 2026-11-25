@@ -41,15 +41,16 @@ class NormalBuildGemJ(unittest.TestCase):
                     manual_final_T=manual,gem_layout_receipt=layout,
                     gem_rating_by_id=ratings)
 
-    def test_v756_known_reference_ilevel_conflicts_only(self):
-        observed={"selected_gem_v221_source_properties_unadmitted":[
-            {"item_id":1,"minimum_ilevel":334},
-            {"item_id":2,"minimum_ilevel":335},
-            {"item_id":3,"minimum_ilevel":0}]}
-        self.assertEqual(build._gem_selected_source_scope_conflicts(observed,334),{2})
-        self.assertEqual(build._gem_selected_source_scope_conflicts(observed,335),set())
-        self.assertEqual(build._gem_selected_source_scope_conflicts({},334),set())
-        self.assertEqual(build._gem_selected_source_scope_conflicts(observed,None),set())
+    def test_v773_descriptor_is_not_ilevel_and_actual_bounds_preserved(self):
+        row={"item_id":240914,"minimum_ilevel":14277}
+        source={"source_min_ilevel":80,"source_max_ilevel":0}
+        self.assertTrue(build._gem_reference_ilevel_allowed(row,source,334))
+        self.assertTrue(build._gem_reference_ilevel_allowed(row,source,330))
+        self.assertFalse(build._gem_reference_ilevel_allowed(
+            row,{**source,"source_min_ilevel":335},334))
+        self.assertFalse(build._gem_reference_ilevel_allowed(
+            row,{**source,"source_max_ilevel":330},334))
+        self.assertFalse(build._gem_reference_ilevel_allowed(row,{},334))
 
     def test_default_measured_gem_uses_rating_not_rank_and_preserves_proofs(self):
         stats=list(gems.ORDINARY_FOUR_STATS)

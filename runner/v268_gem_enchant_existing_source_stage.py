@@ -207,16 +207,11 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
                 "mastery_rating","versatility_rating")
     four_stat_best={}
     scaled_candidate_ids=[]
-    # Only the automatic representative choice uses this known v221
-    # lower bound. The sealed join and explicitly selected rows stay intact.
-    minimum_by_id={r["item_id"]:r.get("minimum_ilevel")
-                   for r in records["joins"]} if target_ilevel is not None else {}
+    # Historical v221 minimum_ilevel carries gem_data.hpp desc_id.
+    # No equipment-level restriction is known from this raw join.
+    # The existing v216 pinned enchant DBC path handles actual bounds.
     for record in result["records"]:
         item_id=record["item_id"]
-        minimum=minimum_by_id.get(item_id)
-        if target_ilevel is not None and not (
-                type(minimum) is int and 0<=minimum<=target_ilevel):
-            continue
         if (item_id in (selected_special_gem_item_id,
                         excluded_ordinary_item_id) or
             item_id in (240967,240983)):
@@ -341,7 +336,7 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
         missing=sorted(set(requested)-set(exact))
         # v221 already supplied the physical ItemSparse->GemProperty join.
         # Project those SAME rows into the normal Build input contract.
-        # Color/minimum-level are source facts, not game-socket legality.
+        # Color and legacy-named desc_id are source identity, not socket legality.
         properties=[]
         unresolved_properties=[]
         for item_id in requested:
