@@ -237,6 +237,56 @@ def _v675_runtime_input_field_digests(snapshot_clean):
     return result
 
 
+def _verified_saved_profile_snapshot(docs, installed, snapshot):
+    """Read the exact v113 profile after original v212 install verification.
+
+    Return the already authenticated bytes' decoded payload, not an
+    equivalence digest. No new stage, cache, or live-season assertion.
+    """
+    try:
+        digest=installed["manifest_sha256"]
+        if (docs.is_symlink() or docs.parent.is_symlink() or
+                not re.fullmatch(r"[a-f0-9]{64}",digest)):
+            return None
+        if (snapshot.is_symlink() or not snapshot.is_file() or
+                snapshot.stat().st_size>8_000_000 or
+                snapshot!=docs/("v113_profile_"+digest[:20]+".json")):
+            return None
+        raw=snapshot.read_bytes()
+        snap=json.loads(raw.decode("utf8"))
+        if (type(snap) is not dict or
+                snap.get("schema")!=
+                    "v113_verified_v212_profile_source_snapshot_v1" or
+                snap.get("installed_manifest_sha256")!=digest or
+                snap.get("source_catalog_artifact_sha256")!=
+                    installed.get("source_catalog_artifact_sha256") or
+                raw!=(stage_engine.canonical(snap)+"\n").encode("utf8")):
+            return None
+        stage_engine.verify_stage(
+            root=docs.parent,
+            stage_id="fresh-v113-profile-"+digest[:20],
+            stage_version="v113-fresh-v212-profile-snapshot-1",
+            inputs={"installed_manifest_sha256":digest,
+                    "source_catalog_artifact_sha256":
+                        installed["source_catalog_artifact_sha256"],
+                    "snapshot_sha256":stage_engine.digest(raw)},
+            outputs={"snapshot":"fresh_source/"+snapshot.name})
+        runtime=snap.get("environment_result")
+        compilation=runtime.get("source_compilation") if type(runtime) is dict else None
+        linked=(compilation.get("verified_environment_install")
+                if type(compilation) is dict else None)
+        if (type(compilation) is not dict or type(linked) is not dict or
+                compilation.get("preflight_sha256")!=
+                    installed.get("original_v216_preflight_sha256") or
+                linked.get("manifest_sha256")!=digest):
+            return None
+        return snap
+    except (ValueError,TypeError,KeyError,UnicodeError,OSError,
+            stage_engine.StageExecutionBlocked,
+            environment_manifest.EnvironmentBlocked):
+        return None
+
+
 def _v672_verified_runtime_inputs_digest(docs, installed, snapshot, *,
                                         return_component_digests=False):
     """Prove saved runtime-input equivalence, NOT preflight or current Live.
@@ -280,38 +330,11 @@ def _v672_verified_runtime_inputs_digest(docs, installed, snapshot, *,
                     "v216_preflight_sha256":
                         stage_doc["original_v216_preflight_sha256"]},
             outputs={"environment":"fresh_source/"+stage_path.name})
-        if (snapshot.is_symlink() or not snapshot.is_file() or
-                snapshot.stat().st_size>8_000_000 or
-                snapshot!=docs/("v113_profile_"+digest[:20]+".json")):
+        snap=_verified_saved_profile_snapshot(docs,installed,snapshot)
+        if snap is None:
             return None
-        raw=snapshot.read_bytes()
-        snap=json.loads(raw.decode("utf8"))
-        if (type(snap) is not dict or
-                snap.get("schema")!=
-                    "v113_verified_v212_profile_source_snapshot_v1" or
-                snap.get("installed_manifest_sha256")!=digest or
-                snap.get("source_catalog_artifact_sha256")!=
-                    installed.get("source_catalog_artifact_sha256") or
-                raw!=(stage_engine.canonical(snap)+"\n").encode("utf8")):
-            return None
-        stage_engine.verify_stage(
-            root=docs.parent,
-            stage_id="fresh-v113-profile-"+digest[:20],
-            stage_version="v113-fresh-v212-profile-snapshot-1",
-            inputs={"installed_manifest_sha256":digest,
-                    "source_catalog_artifact_sha256":
-                        installed["source_catalog_artifact_sha256"],
-                    "snapshot_sha256":stage_engine.digest(raw)},
-            outputs={"snapshot":"fresh_source/"+snapshot.name})
-        runtime=snap.get("environment_result")
-        compilation=runtime.get("source_compilation") if type(runtime) is dict else None
-        linked=(compilation.get("verified_environment_install")
-                if type(compilation) is dict else None)
-        if (type(compilation) is not dict or type(linked) is not dict or
-                compilation.get("preflight_sha256")!=
-                    installed.get("original_v216_preflight_sha256") or
-                linked.get("manifest_sha256")!=digest):
-            return None
+        runtime=snap["environment_result"]
+        compilation=runtime["source_compilation"]
         # Compare all other sealed fields without reinterpreting values.
         # Only two preflight-derived *non-executable* status lists may
         # differ after two independent READY installations have each passed
@@ -1815,52 +1838,34 @@ class LocalJobs:
                     expected_installed_manifest_sha256=doc["manifest_sha256"])
                 if (match is None or match["installed_manifest_sha256"]
                     !=doc["manifest_sha256"]):continue
+                # v216 above already verifies the staged v212 source.
+                # Authenticate this exact saved runtime profile once and
+                # reuse it for ALL flask/oil/gem-layout projections.
+                profile_doc=_verified_saved_profile_snapshot(docs,doc,snapshot)
+                if profile_doc is None:
+                    continue
+                ordinary_4_gems=_verified_snapshot_gem_layout_matches(
+                    profile_doc.get("environment_result"),
+                    special_gem_id=None,socket_total=4)
                 flask=doc.get("official_F_physical_source")
-                if type(flask) is dict and not ids:
-                    # A verified base F may have several v212 J variants.
-                    # Offer the exact saved installation SHA only for the
-                    # ordinary 4-gem/no-oil profile; never infer the first
-                    # or newest F/J combination from the F item ID alone.
-                    # Full v113 stage verification still occurs on planning.
-                    try:
-                        profile_doc=json.loads(
-                            snapshot.read_text(encoding="utf8"))
-                        compatible=(type(profile_doc) is dict and
-                            _verified_snapshot_gem_layout_matches(
-                                profile_doc.get("environment_result"),
-                                special_gem_id=None,socket_total=4))
-                    except (ValueError,UnicodeError,OSError,TypeError):
-                        compatible=False
-                    if compatible:
-                        # v669: distinguish sealed same-F/J installations only
-                        # by their actual saved four physical gem ItemIDs.
-                        # Numeric J/F equality alone never authorizes a SHA
-                        # choice, and these IDs are labels, not new admission.
-                        layout=profile_doc["environment_result"][
-                            "source_compilation"]["physical_gem_layout_unadmitted"]
-                        gem_ids=layout["ordinary_gem_ids"][:4]
-                        quality=flask.get("crafting_quality")
-                        if (all(type(item_id) is int and item_id>0
-                                for item_id in gem_ids) and
-                                type(quality) is int and quality>=0):
-                            # v676: the exact-SHA v216/v212 lookup above
-                            # already authenticates the installed source.
-                            # Verify THIS original v212+v113 profile stage,
-                            # not an artificial equivalence with another
-                            # otherwise valid source installation.
-                            independent=_v672_verified_runtime_inputs_digest(
-                                docs,doc,snapshot)
-                            if independent is not None:
-                                result["verified_base_flask_installs"].append({
-                                    "installed_manifest_sha256":doc["manifest_sha256"],
-                                    "flask_item_id":flask["physical_item_id"],
-                                    "flask_quality":quality,
-                                    "ordinary_gem_item_ids":list(gem_ids),
-                                    "J":doc["official_J"],
-                                    "F":doc["official_F"],
-                                    "socket_total":4,
-                                    "simc_revision":doc["simc_revision"],
-                                    "individually_verified":True})
+                if type(flask) is dict and not ids and ordinary_4_gems:
+                    layout=profile_doc["environment_result"][
+                        "source_compilation"]["physical_gem_layout_unadmitted"]
+                    gem_ids=layout["ordinary_gem_ids"][:4]
+                    quality=flask.get("crafting_quality")
+                    if (all(type(item_id) is int and item_id>0
+                            for item_id in gem_ids) and
+                            type(quality) is int and quality>=0):
+                        result["verified_base_flask_installs"].append({
+                            "installed_manifest_sha256":doc["manifest_sha256"],
+                            "flask_item_id":flask["physical_item_id"],
+                            "flask_quality":quality,
+                            "ordinary_gem_item_ids":list(gem_ids),
+                            "J":doc["official_J"],
+                            "F":doc["official_F"],
+                            "socket_total":4,
+                            "simc_revision":doc["simc_revision"],
+                            "individually_verified":True})
                 if type(flask) is dict:
                     physical=flask["physical_item_id"]
                     if physical not in conflicting_flasks:
@@ -1889,17 +1894,6 @@ class LocalJobs:
                             break
                     continue
                 seen.add(key)
-                # An O>0 install can be connected without another Build only
-                # if it is the unambiguous four-gem/no-special profile.
-                # The selected session still authenticates this snapshot.
-                try:
-                    profile_doc=json.loads(snapshot.read_text(encoding="utf8"))
-                    ordinary_4_gems=(type(profile_doc) is dict and
-                        _verified_snapshot_gem_layout_matches(
-                            profile_doc.get("environment_result"),
-                            special_gem_id=None,socket_total=4))
-                except (ValueError,UnicodeError,OSError,TypeError):
-                    ordinary_4_gems=False
                 description=[]
                 for hand,row in sorted(positive["oil_by_hand"].items()):
                     token=row["simc_input_token"].rsplit(":",1)[-1]

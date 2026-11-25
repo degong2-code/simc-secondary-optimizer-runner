@@ -732,7 +732,9 @@ class LocalWebAPIOffline(unittest.TestCase):
              "official_F_physical_source":physical,
              "official_O_physical_source":None}
         proof={"installed_manifest_sha256":digest}
-        with (mock.patch.object(web.environment_manifest,"read_json",
+        with (mock.patch.object(web,"_verified_saved_profile_snapshot",
+                                return_value={"environment_result":{}}),
+              mock.patch.object(web.environment_manifest,"read_json",
                                 return_value=(doc,"sha")),
               mock.patch.object(web.environment_manifest,
                                 "verify_fresh_installed_environment",
@@ -755,6 +757,19 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.app.state.jobs.root,334,expected_game_build=build,
             selected_oil_item_ids_by_hand={},
             expected_installed_manifest_sha256=digest)
+        # File presence and a valid v212 receipt are insufficient.
+        # Use real v113 snapshot verification against the invalid {} file.
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                                return_value=(doc,"sha")),
+              mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment"),
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                return_value=proof)):
+            rejected=self.client.get(
+                "/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build,
+                headers=self.headers)
+        self.assertEqual(rejected.json()["verified_flasks"],[])
         proof["installed_manifest_sha256"]="e"*64
         with (mock.patch.object(web.environment_manifest,"read_json",
                                 return_value=(doc,"sha")),
@@ -822,9 +837,9 @@ class LocalWebAPIOffline(unittest.TestCase):
               mock.patch.object(web.environment_build,
                    "find_verified_installed_season_environment",
                    side_effect=exact),
-              mock.patch.object(web,"_v672_verified_runtime_inputs_digest",
+              mock.patch.object(web,"_verified_saved_profile_snapshot",
                    side_effect=lambda docs,document,snapshot:
-                       document["manifest_sha256"]),
+                       json.loads(snapshot.read_text("utf8"))),
               mock.patch.object(web.subprocess,"Popen",
                    side_effect=AssertionError("NO_NATIVE"))):
             res=self.client.get(
@@ -859,7 +874,9 @@ class LocalWebAPIOffline(unittest.TestCase):
         doc={"manifest_sha256":sha,"game_build":build,
              "target_ilevel":334,"official_O_physical_source":physical}
         proof={"installed_manifest_sha256":sha}
-        with (mock.patch.object(web.environment_manifest,"read_json",
+        with (mock.patch.object(web,"_verified_saved_profile_snapshot",
+                                return_value={"environment_result":{}}),
+              mock.patch.object(web.environment_manifest,"read_json",
                                 return_value=(doc,"sha")),
               mock.patch.object(web.environment_manifest,
                                 "verify_fresh_installed_environment",
@@ -1233,7 +1250,9 @@ class LocalWebAPIOffline(unittest.TestCase):
                 return None  # The previous ambiguous same-oil search fails.
             return {"installed_manifest_sha256":
                     expected_installed_manifest_sha256}
-        with (mock.patch.object(web.environment_manifest,"read_json",
+        with (mock.patch.object(web,"_verified_saved_profile_snapshot",
+                                return_value={"environment_result":{}}),
+              mock.patch.object(web.environment_manifest,"read_json",
                                 side_effect=installed_read),
               mock.patch.object(web.environment_manifest,
                                 "verify_fresh_installed_environment"),
@@ -1303,7 +1322,9 @@ class LocalWebAPIOffline(unittest.TestCase):
                 selected_oil_item_ids_by_hand)
             observed.append(digest)
             return {"installed_manifest_sha256":digest}
-        with (mock.patch.object(web.environment_manifest,"read_json",
+        with (mock.patch.object(web,"_verified_saved_profile_snapshot",
+                                return_value={"environment_result":{}}),
+              mock.patch.object(web.environment_manifest,"read_json",
                   side_effect=read_receipt),
               mock.patch.object(web.environment_manifest,
                   "verify_fresh_installed_environment"),

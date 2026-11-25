@@ -483,9 +483,16 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             rows,low=build._auto_F_native_from_sealed_v281(
                 collected=collected,compilation=compiled,
                 binary=self.root/"fake_simc",selected_item_id=8111)
-            self.assertEqual(rows,[])
-            self.assertIn("AUTO_F_SELECTED_ITEM_BELOW_OBSERVED_QUALITY",
-                          low["requires"])
+            # v758: rank alone is not same-effect/use-scope evidence.
+            self.assertEqual([x["physical_item_native_source_unadmitted"][
+                "physical_item_id"] for x in rows],[8111])
+            self.assertEqual(low["attempted"],1)
+            self.assertFalse(low["F_approved"])
+            exact.assert_called_once()
+            measure.assert_called_once()
+            self.assertEqual(measure.call_args.kwargs["token"],"flask_bloom_1")
+            exact.reset_mock()
+            measure.reset_mock()
             rows,missing=build._auto_F_native_from_sealed_v281(
                 collected=collected,compilation=compiled,
                 binary=self.root/"fake_simc",selected_item_id=9999)

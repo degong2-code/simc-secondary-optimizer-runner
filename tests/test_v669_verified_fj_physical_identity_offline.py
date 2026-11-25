@@ -76,9 +76,9 @@ class VerifiedPhysicalFJIdentity(unittest.TestCase):
                  mock.patch.object(web.official_ko_env, "read_names",
                                    return_value={}), \
                  mock.patch.object(web,
-                                   "_v672_verified_runtime_inputs_digest",
+                                   "_verified_saved_profile_snapshot",
                                    side_effect=lambda docs, doc, snapshot:
-                                       doc["manifest_sha256"]):
+                                       json.loads(snapshot.read_text("utf8"))):
                 result = jobs.installed_oil_loadouts(334, game_build=build)
             rows = result["verified_base_flask_installs"]
             self.assertEqual(len(rows), 2)
@@ -220,9 +220,9 @@ class SealedFJCollisionReceipt(unittest.TestCase):
                                    side_effect=exact), \
                  mock.patch.object(web.official_ko_env,"read_names",
                                    return_value={}), \
-                 mock.patch.object(web,"_v672_verified_runtime_inputs_digest",
+                 mock.patch.object(web,"_verified_saved_profile_snapshot",
                                    side_effect=lambda docs,document,snapshot:
-                                       document["manifest_sha256"]), \
+                                       json.loads(snapshot.read_text("utf8"))), \
                  mock.patch.object(web.subprocess,"Popen",
                                    side_effect=AssertionError("NO_NATIVE")):
                 data=jobs.installed_oil_loadouts(334,game_build=build)
