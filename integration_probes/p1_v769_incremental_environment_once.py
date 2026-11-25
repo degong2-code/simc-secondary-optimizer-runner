@@ -26,6 +26,64 @@ def need(ok,code):
     if not ok:
         raise RuntimeError(code)
 
+# v772: retain the existing J/F producer's decision evidence on failure.
+# No new source lookup, Native invocation, admission check or raw profile dump.
+def _diagnostic_fields(row):
+    if not isinstance(row,dict):
+        return None
+    keys=("status","reason","tier_source_status","requires","missing",
+          "new_native_calls","candidate_count","sample_count",
+          "selected_tier_candidate_count","selected_exact_item_id",
+          "selected_source_token","selected_source_quality",
+          "selected_physical_items_unadmitted","attempted","remaining",
+          "all_source_candidate_count","physical_item_id",
+          "ordinary_gem_id","failed_variant","native_status","native_returncode",
+          "F_candidate_unadmitted","J_candidate_unadmitted",
+          "simc_effective_two_stat_vector_unadmitted",
+          "simc_unbuffed_gear_two_stat_vector_unadmitted",
+          "simc_unbuffed_gear_rating_source","static_CHMV_candidate")
+    out={key:row[key] for key in keys if key in row}
+    if row.get("native_error"):
+        out["native_error_code"]=bounded_code(row["native_error"])
+    return out
+
+def _jf_failure_details(progress,compiler):
+    keys=("ordinary_gem_v221_v230_source_candidates_unadmitted",
+          "four_stat_pinned_dbc_j_source_unadmitted",
+          "four_stat_simc_native_j_source_unadmitted",
+          "automatic_default_F_source_selection_unadmitted",
+          "automatic_F_native_measurements_unadmitted",
+          "selected_J_F_source_owner_numeric_unadmitted",
+          "selected_J_F_source_owner_quality_unadmitted",
+          "selected_auto_v222_numeric_preview_unadmitted",
+          "selected_physical_F_O_budget_link_unadmitted")
+    out={}
+    for key in keys:
+        row=compiler.get(key)
+        if not isinstance(row,dict):
+            row=progress.get(key)
+        if not isinstance(row,dict):
+            continue
+        detail=_diagnostic_fields(row)
+        for field in ("per_item","native_observations_unadmitted"):
+            entries=row.get(field)
+            if isinstance(entries,list):
+                detail[field]=[_diagnostic_fields(entry)
+                               for entry in entries[:24]]
+        if key.startswith("selected_J_F_source_owner_"):
+            for component in ("J","F"):
+                item=row.get(component)
+                detail[component]=(None if not isinstance(item,dict) else
+                    {k:item[k] for k in ("rating","physical_item_id",
+                       "ordinary_gem_item_ids","crafting_quality",
+                       "simc_input_token","static_CHMV_vector",
+                       "numeric_source_owner","status","reason")
+                     if k in item})
+        out[key]=detail
+    out["original_J_F_verified_component_names"]=progress.get(
+        "original_J_F_verified_component_names")
+    return out
+
 def summary(r):
     progress=r.get("zero_history_build") or {}
     compiler=r.get("source_compilation") or {}
@@ -44,7 +102,9 @@ def summary(r):
         "compiler_status":compiler.get("status"),
         "catalog_receipt_sha256":(compiler.get("v213_stage") or {}).get("receipt_sha256"),
         "installed_manifest_sha256":(compiler.get("verified_environment_install") or {}).get("manifest_sha256",r.get("installed_manifest_sha256")),
-        "requires":list(progress.get("requires") or [])[:12],
+        "requires":list(progress.get("requires") or [])[:40],
+        **({"jf_failure_details":_jf_failure_details(progress,compiler)}
+           if r.get("environment_ready") is not True else {}),
         "dps_optimization_started":(r.get("web_environment_scope") or {}).get("dps_optimization_started"),
     }
 
