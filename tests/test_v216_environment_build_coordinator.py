@@ -346,7 +346,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             "observed":{"source":"SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS"},
             "ordinary_gem_id":330015,"new_native_calls":0,"native_case_receipts":[]}
         with mock.patch.object(v216.oil_raw_source,"from_v275",
-                               return_value=raw) as loader, \\
+                               return_value=raw) as loader, \
              mock.patch.object(v216.native_effect_pair,"measure_ordinary_gem",
                                return_value=measured) as native:
             reader=v216._one_build_gem_dbc_reader()
