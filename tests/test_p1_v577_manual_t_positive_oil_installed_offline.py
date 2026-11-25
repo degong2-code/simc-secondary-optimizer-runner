@@ -162,7 +162,7 @@ class ManualPositiveOilInstalledBridge(unittest.TestCase):
                 installed.canonical(payload).encode("utf8"))}
             path=pathlib.Path(selection["installed_environment_path"]).with_name(
                 "v212_installed_"+doc["manifest_sha256"][:20]+".json")
-            path.write_text(installed.canonical(doc)+"\\n",encoding="utf8")
+            path.write_text(installed.canonical(doc)+"\n",encoding="utf8")
             original=path.read_bytes()
             selection.update(installed_environment_path=str(path),
                              installed_manifest_sha256=doc["manifest_sha256"])

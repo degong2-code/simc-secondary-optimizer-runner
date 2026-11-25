@@ -6680,6 +6680,24 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
 
 
 
+def _automatic_environment_numeric_preview(numeric):
+    """Separate a reusable source reference from one user's manual target.
+
+    Retain the original diagnostic and exact F/O/source ownership. Only the
+    installation-facing B/T projection changes; this is not new evidence.
+    """
+    if (type(numeric) is not dict or
+            type(numeric.get("calculation")) is not dict or
+            numeric["calculation"].get("manual_final_T_authoritative") is not True):
+        return numeric
+    calc=numeric["calculation"]
+    B,T=season_budget_contract._target_total(
+        calc["reference_B"],calc["J"],calc["F"],
+        calc["fixed_L"],calc["fixed_E"],sum(calc["fixed_O"].values()),None)
+    return {**numeric,"calculation":{**calc,"base_B":B,"final_T":T,
+            "manual_final_T_authoritative":False}}
+
+
 def _zero_history_v098_profile_source_inputs(*, numeric_preview,
                                              physical_sources):
     """Direct v216 observed ItemID/token/O -> existing v098 source-only path.
@@ -10739,8 +10757,11 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             # Only the original v217 COMPLETE stage receipts can authorize
             # a versioned source manifest. An old/synthetic compiler summary
             # without sealed receipts remains a source-only diagnostic.
-            staged_numeric=source_compilation.get(
-                "selected_auto_v222_numeric_preview_unadmitted")
+            # Keep per-user numeric diagnostics outside the reusable
+            # environment seal. Physical F/O/gem/level variants remain scoped.
+            staged_numeric=_automatic_environment_numeric_preview(
+                source_compilation.get(
+                    "selected_auto_v222_numeric_preview_unadmitted"))
             staged=_stage_source_environment_only(
                 compilation=source_compilation,preflight=preflight,
                 target_ilevel=fresh_collection_inputs[
@@ -10889,8 +10910,19 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         trusted_policy_A_receipts_by_id=policy_A_receipts,
                         target_ilevel=fresh_collection_inputs[
                             "representative_request"]["target_ilevel"],
-                        manual_final_T=manual_T)
+                        manual_final_T=None)
                     source_compilation["verified_environment_install"]=installed
+                    # The persisted v098 input must match the installed
+                    # reference, not the requesting user's diagnostic T.
+                    # v098/v096 retarget the actual session independently.
+                    profile_inputs=source_compilation.get(
+                        "v098_source_only_profile_inputs_unadmitted")
+                    if type(profile_inputs) is dict:
+                        source_compilation[
+                            "v098_source_only_profile_inputs_unadmitted"]={
+                            **profile_inputs,"v216_numeric_preview":
+                                _automatic_environment_numeric_preview(
+                                    profile_inputs["v216_numeric_preview"])}
                     progress["source_only_pending_before_install"]=list(
                         progress["requires"])
                     progress.update({

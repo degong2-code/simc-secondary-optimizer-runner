@@ -1836,10 +1836,11 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                         build,"_fresh_source_owner_native_G_component",
                         return_value=original_G) as g_owner:
                     result=self.run_build(
-                        proof=False,trusted_provider=provider)
+                        proof=False,manual=3333,trusted_provider=provider)
                     g_owner.assert_called_once()
                 provider.assert_called_once()
                 installer.assert_called_once()
+                self.assertIsNone(installer.call_args.kwargs["manual_final_T"])
                 self.assertEqual(installer.call_args.kwargs[
                     "trusted_budget_evidence"],
                     {"components":{"G":original_G}})
@@ -2804,6 +2805,20 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertEqual(calc["fixed_O"]["mastery_rating"],0)
         self.assertFalse(calc["environment_ready"])
         self.assertFalse(auto["policy_A_registered"])
+        # Manual diagnostics remain intact; reusable environment preview is
+        # byte-for-byte the same arithmetic as direct automatic calculation.
+        direct=build._zero_history_auto_v222_numeric_preview(
+            preflight=preflight,native_numeric=numeric,
+            source_choices=choices,selected=selected,
+            gem_ratings=ratings,target_ilevel=334,manual_final_T=None)
+        restored=build._automatic_environment_numeric_preview(auto)
+        self.assertEqual(restored,direct)
+        self.assertEqual((restored["calculation"]["base_B"],
+                          restored["calculation"]["final_T"]),(3153,3185))
+        self.assertEqual(auto["calculation"]["final_T"],3333)
+        self.assertTrue(auto["calculation"]["manual_final_T_authoritative"])
+        self.assertFalse(restored["calculation"]["manual_final_T_authoritative"])
+        self.assertIs(build._automatic_environment_numeric_preview(direct),direct)
         no_oil=build._zero_history_auto_v222_numeric_preview(
             preflight=preflight,native_numeric=numeric,
             source_choices=choices,selected={"flask_item_id":241326,
