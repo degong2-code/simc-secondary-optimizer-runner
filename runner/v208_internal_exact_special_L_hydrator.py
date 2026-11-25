@@ -461,6 +461,10 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
         need(prior is None or prior==row,"SELECTED_G_FINAL_SPECIAL_DRIFT")
         final_by_slot[row["slot"]]=row
     final_rows=list(final_by_slot.values())
+    measured_oil_calls=0
+    if "selected_oil_measurement_request" in staged:
+        _,measured_oil_calls=bootstrap.resolve_selected_oil_measurements(
+            staged["selected_oil_measurement_request"],binary,revision,cache_only=False)
     final_missing=_missing_rows(initial,final_rows)
     merged=initial
     final_calls=before_calls=0
@@ -510,6 +514,11 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
             "total_static_native_calls_this_start":result["selected_static_native_calls"],
             "changed_slots":sorted(row["slot"] for row in before),
             "native_json2_sha256s":sorted({x for x in (final_hash,before_hash) if x})}
+        receipt["receipt_sha256"]=sha(canonical({
+            k:v for k,v in receipt.items() if k!="receipt_sha256"}))
+    if "selected_oil_measurement_request" in staged:
+        result["selected_oil_native_calls"]=measured_oil_calls
+        receipt["selected_oil_native_calls"]=measured_oil_calls
         receipt["receipt_sha256"]=sha(canonical({
             k:v for k,v in receipt.items() if k!="receipt_sha256"}))
     result["start_receipt"]=receipt

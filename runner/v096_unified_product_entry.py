@@ -581,7 +581,8 @@ def preflight_selected_fresh_source_only(*, selected, composed, fillers,
          and B+sum(O.values())==proof["final_T"]
          and installed_document["official_J"]==proof["J"]
          and installed_document["official_F"]==proof["F"]
-         and installed_document["official_O"]==O
+         and (proof.get("selected_measured_oil_by_hand") is not None or
+              installed_document["official_O"]==O)
          and installed_document["game_build"]==proof["game_build"]
          and installed_document["target_ilevel"]==proof["target_ilevel"],
          "B8_V096_SELECTED_PROFILE_J_F_O_B_T_OR_SHA_DRIFT")
@@ -603,11 +604,26 @@ def preflight_selected_fresh_source_only(*, selected, composed, fillers,
          "flask="+physical_f["simc_input_token"] in profile.splitlines(),
          "B8_V096_SELECTED_INSTALLED_F_ITEM_OR_TOKEN_DRIFT")
     by_hand=sources["oil_by_hand"]
-    need(type(oil_hands) is list
-         and set(by_hand)==set(oil_hands)
-         and (by_hand=={} and physical_o is None or
-              type(physical_o) is dict and
-              by_hand==physical_o.get("oil_by_hand")),
+    expected_oil=proof.get("selected_measured_oil_by_hand")
+    if expected_oil is not None:
+        original=physical_o.get("oil_by_hand") if type(physical_o) is dict else None
+        measured=proof.get("final_measured_oil_binding")
+        need(type(original) is dict and type(expected_oil) is dict and
+             type(measured) is dict and bool(measured) and
+             set(measured)<=set(original)==set(expected_oil) and
+             all(original[h]["physical_item_id"]==expected_oil[h]["physical_item_id"] and
+                 original[h]["simc_input_token"]==expected_oil[h]["simc_input_token"] and
+                 expected_oil[h]["static_CHMV_vector"]==(
+                     measured[h]["static_CHMV_vector_unadmitted"] if h in measured
+                     else original[h]["static_CHMV_vector"]) for h in original) and
+             all(sum(row["static_CHMV_vector"][stat] for row in expected_oil.values())==O[stat]
+                 for stat in contract.STATS),
+             "B8_V096_SELECTED_MEASURED_OIL_SOURCE_OR_SUM_DRIFT")
+    else:
+        expected_oil=(physical_o.get("oil_by_hand") if type(physical_o) is dict else {})
+    need(type(oil_hands) is list and set(by_hand)==set(oil_hands)
+         and by_hand==expected_oil and
+         (physical_o is not None or by_hand=={}),
          "B8_V096_SELECTED_INSTALLED_O_PHYSICAL_HAND_DRIFT")
     need(normalized["scenario"]["equipment"]==
              selected["selected_equipment"]==
@@ -753,8 +769,8 @@ def _admitted_selected_fresh_source(*, manifest_path, season, revision,
     need(preflight["base_B"]==budget["base_B"] and
          preflight["final_T"]==budget["final_T"] and
          preflight["flask_F"]==flask_F and
-         preflight["fixed_O"]==doc["official_O"] and
-         season["oil_by_hand"]==inputs["oil_by_hand"] and
+         preflight["fixed_O"]==budget["fixed_O"] and
+         season["oil_by_hand"]==budget.get("selected_measured_oil_by_hand",inputs["oil_by_hand"]) and
          set(season["oil_by_hand"])==set(oil_hands),
          "B8_SELECTED_V096_SAME_INSTALLED_F_O_B_T_REQUIRED")
     approved={"game_build":doc["game_build"],

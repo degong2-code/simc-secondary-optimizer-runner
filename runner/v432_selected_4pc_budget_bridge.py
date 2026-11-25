@@ -101,7 +101,8 @@ def _verified_direct_oil_for_changed_weapon(binding, hand, row, installed_docume
 def reconcile(*, baseline_rows, final_rows, final_groups,
               user, class_tier_five, baseline_slot_ids,
               installed_document, original_v191_link, native_cache,
-              expected_cache_season, final_direct_oil_binding=None):
+              expected_cache_season, final_direct_oil_binding=None,
+              final_measured_oil_binding=None):
     """Compute selected physical G delta and special L, without admission.
 
     The installed G may be a rounded same-season reference: its delta is
@@ -187,6 +188,7 @@ def reconcile(*, baseline_rows, final_rows, final_groups,
     fixed_O = budget_contract._vector(doc["official_O"], "O")
     changed = []
     changed_oil = {}
+    measured_oil = {}
     missing = []
     observed = {}
     season = native_cache["season"]
@@ -209,8 +211,36 @@ def reconcile(*, baseline_rows, final_rows, final_groups,
         if before != after:
             if (slot in ("main_hand", "off_hand") and
                     slot in user.get("oil_hands", [])):
-                changed_oil[slot]=_verified_direct_oil_for_changed_weapon(
-                    final_direct_oil_binding,slot,final_rows[slot],doc)
+                if type(final_measured_oil_binding) is dict and slot in final_measured_oil_binding:
+                    witness=final_measured_oil_binding[slot]
+                    original=doc["official_O_physical_source"]["oil_by_hand"][slot]
+                    need(type(final_direct_oil_binding) is dict and
+                         final_direct_oil_binding.get(slot)=={
+                             "weapon_id":final_rows[slot]["item_id"],
+                             "ilevel":final_rows[slot]["ilevel"],"oil":original,
+                             "requires_measurement":True} and
+                         type(witness) is dict and
+                         witness.get("selected_hand")==slot and
+                         witness.get("physical_oil_item_id")==original["physical_item_id"] and
+                         witness.get("simc_input_token")==original["simc_input_token"] and
+                         witness.get("representative_weapon_id")==final_rows[slot]["item_id"] and
+                         witness.get("target_ilevel")==final_rows[slot]["ilevel"] and
+                         witness.get("game_build")==doc["game_build"] and
+                         witness.get("simc_revision")==doc["simc_revision"] and
+                         all(type(witness.get(k)) is str and
+                             budget_contract.SHA.fullmatch(witness[k]) is not None
+                             for k in ("binary_sha256","source_profile_sha256")) and
+                         type(witness.get("native_case_receipt_sha256")) is list and
+                         len(witness["native_case_receipt_sha256"])==2 and
+                         all(type(x) is str and budget_contract.SHA.fullmatch(x) is not None
+                             for x in witness["native_case_receipt_sha256"]),
+                         "B8_SELECTED_MEASURED_OIL_SOURCE_DRIFT")
+                    vec=budget_contract._vector(witness.get("static_CHMV_vector_unadmitted"),"O")
+                    need(sum(vec.values())>0,"B8_SELECTED_MEASURED_OIL_POSITIVE_REQUIRED")
+                    measured_oil[slot]=witness
+                else:
+                    changed_oil[slot]=_verified_direct_oil_for_changed_weapon(
+                        final_direct_oil_binding,slot,final_rows[slot],doc)
             old_rating = lookup(baseline_rows[slot])
             new_rating = lookup(final_rows[slot])
             changed.append({
@@ -219,6 +249,16 @@ def reconcile(*, baseline_rows, final_rows, final_groups,
                 "selected_id": final_rows[slot]["item_id"],
                 "previous_static": old_rating,
                 "selected_static": new_rating})
+    selected_oil_by_hand=None
+    if measured_oil:
+        # Installed O stays immutable; only the selected user budget changes.
+        selected_oil_by_hand={hand:{**row} for hand,row in
+            doc["official_O_physical_source"]["oil_by_hand"].items()}
+        for hand,witness in measured_oil.items():
+            selected_oil_by_hand[hand]["static_CHMV_vector"]=dict(
+                witness["static_CHMV_vector_unadmitted"])
+        fixed_O={stat:sum(row["static_CHMV_vector"][stat]
+                          for row in selected_oil_by_hand.values()) for stat in STATS}
     L = {k: 0 for k in STATS}
     seen = set()
     for chosen in user["special_items"]:
@@ -259,6 +299,8 @@ def reconcile(*, baseline_rows, final_rows, final_groups,
         "four_tier_slots": tier_slots,
         "changed_physical_slots": changed,
         **({"final_direct_oil_binding":changed_oil} if changed_oil else {}),
+        **({"selected_measured_oil_by_hand":selected_oil_by_hand,
+            "final_measured_oil_binding":measured_oil} if measured_oil else {}),
         "missing_exact_native_variants": missing,
         "J": doc["official_J"],
         "F": doc["official_F"],
@@ -304,6 +346,8 @@ def reconcile(*, baseline_rows, final_rows, final_groups,
             link["raw_source_sha256"],
         "native_variants": changed,
         **({"final_direct_oil_binding":changed_oil} if changed_oil else {}),
+        **({"selected_measured_oil_by_hand":selected_oil_by_hand,
+            "final_measured_oil_binding":measured_oil} if measured_oil else {}),
         "selected_special_L": L,
         "target": user["target"],
         "G": G, "B": B, "T": T,

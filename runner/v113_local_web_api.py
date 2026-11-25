@@ -2909,6 +2909,8 @@ class LocalJobs:
                     hydrated["selected_static_native_calls"])
                 response["selected_G_delta_native_calls_this_start"]=(
                     hydrated["selected_G_delta_native_calls"])
+            if "selected_oil_native_calls" in hydrated:
+                response["selected_oil_native_calls_this_start"]=hydrated["selected_oil_native_calls"]
         response["environment_manifest"]=environment
         response["static_L_native_calls_this_start"]=(
             hydrated["native_new_calls"] if hydrated else 0)
@@ -3318,6 +3320,8 @@ class LocalJobs:
                     hydrated["selected_static_native_calls"])
                 response["selected_G_delta_native_calls_this_start"]=(
                     hydrated["selected_G_delta_native_calls"])
+            if "selected_oil_native_calls" in hydrated:
+                response["selected_oil_native_calls_this_start"]=hydrated["selected_oil_native_calls"]
         return response
 
     def longrun_start(self, request):

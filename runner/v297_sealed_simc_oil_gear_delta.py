@@ -80,7 +80,8 @@ def _actor_from_v233(source):
 
 def measure(*,stage_root,source_profile_path,binary,simc_revision,
             game_build,target_ilevel,oil_token,enchant_id,
-            timeout_seconds=180,expected_weapon_id=None):
+            timeout_seconds=180,expected_weapon_id=None,
+            cache_only=False,source_profile_text=None,physical_oil_item_id=None):
     """Measure only a selected upstream v281 exact hand token, at most 2 Native.
 
     run_case() owns the old v278 cache/attempt receipts, so repeated
@@ -92,27 +93,41 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
              "static_CHMV_vector_unadmitted":None,
              "new_native_calls":0,"environment_ready":False,
              "weapon_and_hand_applicability_verified":False}
-    if source_profile_path is None or binary is None:
+    if (source_profile_path is None and source_profile_text is None) or binary is None:
         return pending
+    selected=source_profile_text is not None
+    need(not selected or (source_profile_path is None and
+         type(physical_oil_item_id) is int and physical_oil_item_id>0 and
+         expected_weapon_id is not None and enchant_id is None),
+         "V297_SELECTED_OIL_PHYSICAL_SOURCE_REQUIRED")
+    need(selected or physical_oil_item_id is None,
+         "V297_LEGACY_ENCHANT_SOURCE_REQUIRED")
     need(type(simc_revision) is str and REV.fullmatch(simc_revision)
          and type(game_build) is str and bool(game_build)
          and type(target_ilevel) is int and 1<=target_ilevel<=1000
-         and type(enchant_id) is int and enchant_id>0
+         and (selected or type(enchant_id) is int and enchant_id>0)
          and (expected_weapon_id is None or
               type(expected_weapon_id) is int and expected_weapon_id>0)
          and type(oil_token) is str and OIL.fullmatch(oil_token)
          and type(timeout_seconds) is int and 1<=timeout_seconds<=900,
          "V297_OIL_MEASUREMENT_IDENTITY_INVALID")
     root=pathlib.Path(stage_root).resolve(strict=True)
-    profile=pathlib.Path(source_profile_path).resolve(strict=True)
     exe=pathlib.Path(binary).expanduser().resolve(strict=True)
     need(root.is_dir() and not root.is_symlink()
-         and profile.is_file() and not profile.is_symlink()
-         and profile.is_relative_to(root)
-         and 0<profile.stat().st_size<=MAX_PROFILE
          and exe.is_file() and not exe.is_symlink(),
          "V297_ORIGINAL_PROFILE_OR_BINARY_NOT_SEALED")
-    source_bytes=profile.read_bytes()
+    if selected:
+        need(type(source_profile_text) is str,
+             "V297_SELECTED_PROFILE_TEXT_REQUIRED")
+        source_bytes=source_profile_text.encode("utf8")
+    else:
+        profile=pathlib.Path(source_profile_path).resolve(strict=True)
+        need(profile.is_file() and not profile.is_symlink()
+             and profile.is_relative_to(root)
+             and 0<profile.stat().st_size<=MAX_PROFILE,
+             "V297_ORIGINAL_PROFILE_OR_BINARY_NOT_SEALED")
+        source_bytes=profile.read_bytes()
+    need(0<len(source_bytes)<=MAX_PROFILE,"V297_ORIGINAL_PROFILE_SIZE")
     source=source_bytes.decode("utf8")
     actor=_actor_from_v233(source)
     lines=source.splitlines()
@@ -156,7 +171,8 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
             source_identity=source_sha,
             binary=exe,binary_sha256=binary_sha,
             revision=simc_revision,variant=variant,
-            timeout_seconds=timeout_seconds)
+            timeout_seconds=timeout_seconds,
+            **({"cache_only":True} if cache_only else {}))
         new_calls+=case["new_native_calls"]
         outcomes.append(case)
         if case["receipt"]["status"]!="NATIVE_JSON2_CAPTURED":
@@ -191,6 +207,7 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
         "selected_hand":hand,
         "representative_weapon_id":int(weapon_id.group(1)),
         "enchant_id":enchant_id,"simc_input_token":oil_token,
+        **({"physical_oil_item_id":physical_oil_item_id} if selected else {}),
         "binary_sha256":binary_sha,
         "source_profile_sha256":source_sha,
         "static_CHMV_vector_unadmitted":vector,
@@ -198,3 +215,46 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
         "precombat_total_gear_lines":[x["line"] for x in reports],
         "talent_buffed_stats_not_used":True,
         "new_native_calls":new_calls}
+
+
+def measure_final_weapon(*,stage_root,profile,weapon,oil,binary,simc_revision,
+                         game_build,cache_only=True,timeout_seconds=180):
+    """Existing v297 measurement on the final v098 physical profile.
+
+    Caller owns installed ItemID/token/mask admission. No enchant-ID guess:
+    the actual selected physical oil and its original SimC token identify O.
+    The same in-memory source and v278 pair are used by Start and read-only
+    plan/replay; no temporary source file or new measuring engine.
+    """
+    import v046_static_item_cache as item_cache
+    need(type(weapon) is dict and weapon.get("slot") in
+         ("main_hand","off_hand") and type(oil) is dict and
+         type(oil.get("physical_item_id")) is int and oil["physical_item_id"]>0
+         and type(oil.get("simc_input_token")) is str and
+         type(profile) is str,"V297_FINAL_SELECTED_WEAPON_OIL_REQUIRED")
+    hand=weapon["slot"]
+    token=oil["simc_input_token"]
+    need(OIL.fullmatch(token) is not None and
+         ("/off_hand:" in token)==(hand=="off_hand"),
+         "V297_FINAL_SELECTED_OIL_HAND_DRIFT")
+    lines=profile.splitlines()
+    matches=[s for s in lines if s.startswith(hand+"=")]
+    need(len(matches)==1,"V297_FINAL_SELECTED_WEAPON_SLOT_REQUIRED")
+    _,encoded=item_cache.parse_encoded(matches[0].split("=",1)[1])
+    need(int(encoded["id"])==weapon["item_id"] and
+         int(encoded["ilevel"])==weapon["ilevel"] and
+         {k:v for k,v in encoded.items() if k not in ("id","ilevel","source")}
+             ==weapon["options"],"V297_FINAL_SELECTED_WEAPON_VARIANT_DRIFT")
+    # Remove only runtime overrides/consumables owned by the original pair.
+    # Keep exact character, equipment, talents and other profile settings.
+    remove=("temporary_enchant=","flask=","food=","potion=","augmentation=",
+            "gear_crit_rating=","gear_haste_rating=","gear_mastery_rating=",
+            "gear_versatility_rating=","json2=","iterations=","threads=",
+            "debug=","max_time=")
+    source="\n".join(s for s in lines if not s.startswith(remove))+"\nmax_time=2\n"
+    return measure(stage_root=stage_root,source_profile_path=None,binary=binary,
+        simc_revision=simc_revision,game_build=game_build,
+        target_ilevel=weapon["ilevel"],oil_token=token,enchant_id=None,
+        expected_weapon_id=weapon["item_id"],timeout_seconds=timeout_seconds,
+        cache_only=cache_only,source_profile_text=source,
+        physical_oil_item_id=oil["physical_item_id"])

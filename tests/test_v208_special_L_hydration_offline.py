@@ -469,4 +469,106 @@ class FinalWeaponDirectOilContract(unittest.TestCase):
             hydrate.bootstrap._assert_final_season_oil_weapon_scope(
                 inputs=inputs,rows={"main_hand":{**row,"ilevel":331}},gear=gear)
 
+class SelectedMeasuredOilContract(unittest.TestCase):
+    def test_final_weapon_measurement_cache_only_and_exact_variant(self):
+        import v297_sealed_simc_oil_gear_delta as owner
+        weapon={"slot":"main_hand","item_id":456,"ilevel":330,"options":{}}
+        oil={"physical_item_id":123,"simc_input_token":"main_hand:test"}
+        profile=("warrior=actor\nmain_hand=selected_456,id=456,ilevel=330,source=local\n"
+                 "iterations=1000\ngear_crit_rating=400\ntemporary_enchant=main_hand:test\n")
+        with mock.patch.object(owner,"measure",return_value={"new_native_calls":0}) as measured:
+            owner.measure_final_weapon(stage_root=".",profile=profile,weapon=weapon,
+                oil=oil,binary="unused",simc_revision="a"*40,game_build="12.1.5.70961")
+            args=measured.call_args.kwargs
+            self.assertTrue(args["cache_only"])
+            self.assertEqual(args["physical_oil_item_id"],123)
+            self.assertEqual(args["target_ilevel"],330)
+            self.assertEqual(args["expected_weapon_id"],456)
+            self.assertNotIn("gear_crit_rating=",args["source_profile_text"])
+            self.assertNotIn("temporary_enchant=",args["source_profile_text"])
+            with self.assertRaisesRegex(ValueError,"VARIANT_DRIFT"):
+                owner.measure_final_weapon(stage_root=".",profile=profile,
+                    weapon={**weapon,"ilevel":331},oil=oil,binary="unused",
+                    simc_revision="a"*40,game_build="12.1.5.70961")
+            self.assertEqual(measured.call_count,1)
+
+    def test_cache_only_native_miss_has_no_write_or_process(self):
+        import v278_sealed_simc_consumable_native_pair as pair
+        with tempfile.TemporaryDirectory() as tmp:
+            root=pathlib.Path(tmp)
+            with mock.patch.object(pair.subprocess,"run") as native:
+                with self.assertRaisesRegex(ValueError,"CACHED_NATIVE_REQUIRED_NO_EXECUTION"):
+                    pair.run_case(stage_root=root,profile="warrior=actor\n",
+                        source_identity="a"*64,binary=root/"unused",binary_sha256="b"*64,
+                        revision="a"*40,variant="baseline",timeout_seconds=1,cache_only=True)
+                native.assert_not_called()
+            self.assertEqual(list(root.iterdir()),[])
+
+    def test_measured_selected_oil_retargets_only_user_budget(self):
+        import v432_selected_4pc_budget_bridge as bridge
+        zero={k:0 for k in bridge.STATS}
+        old_o={**zero,"crit_rating":16,"haste_rating":16}
+        new_o={**zero,"crit_rating":18,"haste_rating":17}
+        oil={"physical_item_id":123,"simc_input_token":"main_hand:test",
+             "static_CHMV_vector":old_o}
+        slots={"head":101,"shoulders":102,"chest":103,"hands":104,"legs":105,
+               "main_hand":456}
+        base={slot:{"slot":slot,"item_id":iid,"ilevel":334,"options":{}}
+              for slot,iid in slots.items()}
+        final=copy.deepcopy(base)
+        final["main_hand"].update(item_id=457,ilevel=330)
+        groups={slot:"tier" for slot in ("head","shoulders","chest","hands")}
+        groups["main_hand"]="special"
+        user={"target":{"ilevel":334,"final_T":None},"oil_hands":["main_hand"],
+              "special_items":[{"slot":"main_hand","item_id":457,
+                                "ilevel":330,"options":{}}],"embellishments":[]}
+        doc={"game_build":"12.1.5.70961","simc_revision":"a"*40,"target_ilevel":334,
+             "manifest_sha256":"b"*64,"source_catalog_manifest_sha256":"c"*64,
+             "source_catalog_artifact_sha256":"d"*64,"official_G":1000,
+             "official_effective_G":1000,"official_J":92,"official_F":165,
+             "official_B":1257,"official_O":old_o,
+             "official_O_physical_source":{"oil_by_hand":{"main_hand":oil}},
+             "v222_reconciled_budget":{"reference_G":1000,"effective_G":1000,
+                "J":92,"F":165,"fixed_O":old_o,"base_B":1257,
+                "fixed_L":zero,"fixed_E":zero}}
+        original=copy.deepcopy(doc)
+        link={"schema":"v098_v191_original_gear_tier_link_v1",
+              "status":"ORIGINAL_GEAR_TIER_RAW_SHA_LINKED_PREVIEW_ONLY",
+              "raw_source_sha256":{"gear":"e"*64,"tier":"f"*64},
+              "source_catalog_manifest_sha256":"c"*64,
+              "source_catalog_artifact_sha256":"d"*64}
+        scope={"main_hand":{"weapon_id":457,"ilevel":330,"oil":oil,
+                            "requires_measurement":True}}
+        witness={"main_hand":{"physical_oil_item_id":123,
+            "simc_input_token":"main_hand:test","selected_hand":"main_hand",
+            "representative_weapon_id":457,"target_ilevel":330,
+            "game_build":doc["game_build"],"simc_revision":doc["simc_revision"],
+            "binary_sha256":"a"*64,"source_profile_sha256":"b"*64,
+            "native_case_receipt_sha256":["c"*64,"d"*64],
+            "static_CHMV_vector_unadmitted":new_o}}
+        def read_variant(_cache,identity):
+            return {"rating":{**zero,"crit_rating":
+                    100 if identity["item_id"]==456 else 80},
+                    "static_digest":"a"*64}
+        with mock.patch.object(bridge.installed_manifest,"verify_fresh_installed_environment"), \
+             mock.patch.object(bridge,"_native",side_effect=read_variant):
+            kw=dict(baseline_rows=base,final_rows=final,final_groups=groups,
+                user=user,class_tier_five={k:v for k,v in slots.items() if k!="main_hand"},
+                baseline_slot_ids=slots,installed_document=doc,original_v191_link=link,
+                native_cache=cache.empty_cache(),expected_cache_season=cache.SEASON,
+                final_direct_oil_binding=scope,final_measured_oil_binding=witness)
+            auto=bridge.reconcile(**kw)
+            self.assertEqual((auto["base_B"],auto["final_T"]),(1237,1272))
+            self.assertEqual(auto["fixed_O"],new_o)
+            self.assertEqual(auto["fixed_L_in_G_once"]["crit_rating"],80)
+            user["target"]["final_T"]=1300
+            manual=bridge.reconcile(**kw)
+            self.assertEqual((manual["base_B"],manual["final_T"]),(1265,1300))
+            self.assertEqual(doc,original)
+            self.assertNotEqual(auto["selected_budget_identity_sha256"],
+                                manual["selected_budget_identity_sha256"])
+            kw["final_measured_oil_binding"]=None
+            with self.assertRaisesRegex(ValueError,"APPLICABILITY_RECHECK_REQUIRED"):
+                bridge.reconcile(**kw)
+
 if __name__=="__main__":unittest.main()

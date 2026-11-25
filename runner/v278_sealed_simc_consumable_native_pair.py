@@ -64,7 +64,7 @@ def log_excerpt(folder):
 
 
 def run_case(*,stage_root,profile,source_identity,binary,binary_sha256,
-             revision,variant,timeout_seconds):
+             revision,variant,timeout_seconds,cache_only=False):
     """Content key owns immutable attempted run; cache hits never reexecute."""
     need(variant in ("baseline","active"),"V278_CASE_KIND_REQUIRED")
     need(type(timeout_seconds) is int and 1<=timeout_seconds<=900,
@@ -129,6 +129,7 @@ def run_case(*,stage_root,profile,source_identity,binary,binary_sha256,
              "V278_CACHED_NATIVE_COMPLETION_NOT_TRUSTED")
         return {"receipt":prior,"folder":folder,
                 "new_native_calls":0,"cache_reused":True}
+    need(not cache_only,"V278_CACHED_NATIVE_REQUIRED_NO_EXECUTION")
     # Create scratch only on cache miss, before acquiring the immutable
     # attempt lock. A too-long TEMP is an actionable setup failure, not a
     # SimC call. No global cwd, alias drive, or persistent temp cache.

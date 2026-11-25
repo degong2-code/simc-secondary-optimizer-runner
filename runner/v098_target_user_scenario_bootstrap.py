@@ -337,7 +337,8 @@ def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
                                               installed_path, cache_path,
                                               season_profile_inputs=None,
                                               weapon_layout=None,fillers=None,
-                                              final_direct_oil_binding=None):
+                                              final_direct_oil_binding=None,
+                                              final_measured_oil_binding=None):
     """Bind actual v101 overlaid user profile to v432 G/L: NO session/Native.
 
     This is deliberately separate from v096. Existing v212 installed G is a
@@ -394,7 +395,8 @@ def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
             original_v191_link=original_v191_link,
             native_cache=cached,
             expected_cache_season=cache_mod.SEASON,
-            final_direct_oil_binding=final_direct_oil_binding)
+            final_direct_oil_binding=final_direct_oil_binding,
+            final_measured_oil_binding=final_measured_oil_binding)
     except selected_budget.SelectedBudgetBlocked as exc:
         raise UserScenarioBlocked(
             "B8_SELECTED_G_L_PREFLIGHT_BLOCKED:"+str(exc)) from exc
@@ -455,9 +457,12 @@ def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
          and calc.get("source_catalog_artifact_sha256")==
              doc["source_catalog_artifact_sha256"]
          and calc.get("J")==proof["J"] and calc.get("F")==proof["F"]
-         and calc.get("fixed_O")==proof["fixed_O"],
+         and calc.get("fixed_O")==doc["official_O"],
          "B8_SELECTED_BASELINE_V216_J_F_O_SOURCE_DRIFT")
+    if "selected_measured_oil_by_hand" in proof:
+        adjusted["oil_by_hand"]=copy.deepcopy(proof["selected_measured_oil_by_hand"])
     calc.update({
+        "fixed_O":proof["fixed_O"],
         "base_B":proof["base_B"],"final_T":proof["final_T"],
         "manual_final_T_authoritative":
             proof["manual_final_T_authoritative"]})
@@ -575,7 +580,7 @@ def _verified_one_spec_G_profile_scope(*, source_bundle, candidate,
 
 
 def _assert_final_season_oil_weapon_scope(*, inputs, rows, gear,
-                                           refreshed_rows=()):
+                                           refreshed_rows=(),changed_hands=()):
     """Reuse original source masks on the final user physical weapon rows.
 
     Historical inputs lack this additional scope and are left unchanged.
@@ -618,14 +623,43 @@ def _assert_final_season_oil_weapon_scope(*, inputs, rows, gear,
              "SEASON_FINAL_OIL_WEAPON_ILEVEL_OUTSIDE_SOURCE:"+hand)
         measured=scope.get("scaled_rating_ilevel")
         need("scaled_rating_ilevel" in scope and
-             (measured is None or (type(measured) is int and measured==level)),
+             (measured is None or (type(measured) is int and
+              (measured==level or hand in changed_hands))),
              "SEASON_FINAL_OIL_SCALED_RATING_REMEASUREMENT_REQUIRED:"+hand)
         if measured is None:
             # v216 only emits None for its original direct static O owner.
             # Do not extend a measured representative weapon receipt here.
             direct[hand]={"weapon_id":row["item_id"],"ilevel":level,
                           "oil":copy.deepcopy(by_hand[hand])}
+        elif hand in changed_hands:
+            direct[hand]={"weapon_id":row["item_id"],"ilevel":level,
+                          "oil":copy.deepcopy(by_hand[hand]),
+                          "requires_measurement":True}
     return direct
+
+
+def resolve_selected_oil_measurements(request,binary,revision,*,cache_only):
+    """Original v297/v278 pair; Start may execute, plan/replay never may."""
+    import v297_sealed_simc_oil_gear_delta as owner
+    bindings={};calls=0
+    for hand,source in sorted(request["hands"].items()):
+        result=owner.measure_final_weapon(stage_root=request["stage_root"],
+            profile=request["profile"],weapon=source["weapon"],oil=source["oil"],
+            binary=binary,simc_revision=revision,game_build=request["game_build"],
+            cache_only=cache_only)
+        calls+=result["new_native_calls"]
+        need(result["status"]=="SIMC_PRECOMBAT_TOTAL_GEAR_STATIC_NUMBER_SOURCE_ONLY",
+             "B8_SELECTED_OIL_NATIVE_PENDING:"+str(result.get("reason") or
+                 result.get("native_log_excerpt") or result["status"])[:400])
+        need(not cache_only or result["new_native_calls"]==0,
+             "B8_SELECTED_OIL_REPLAY_MUST_NOT_EXECUTE")
+        # Exclude attempt counts/log text from durable selected identity.
+        bindings[hand]={k:result[k] for k in (
+            "physical_oil_item_id","simc_input_token","selected_hand",
+            "representative_weapon_id","target_ilevel","game_build",
+            "simc_revision","binary_sha256","source_profile_sha256",
+            "static_CHMV_vector_unadmitted","native_case_receipt_sha256")}
+    return bindings,calls
 
 
 def season_profile_source_only(*, profile, cfg, weapon_layout, user,
@@ -1725,19 +1759,21 @@ def build(user,folder,binary,revision,static_cache_path=None,
     else:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need)
-    final_direct_oil_binding=_assert_final_season_oil_weapon_scope(
-        inputs=season_profile_inputs,rows=rows,
-        gear=season_source_bundle["gear"] if season_source_bundle is not None else None,
-        refreshed_rows=selected_refresh_rows)
     changed_oiled_hands=[]
     if original_selected_baseline_rows is not None:
         for hand in user["oil_hands"]:
             if hand in rows and selected_budget._bare(
                     original_selected_baseline_rows[hand],cache_mod.SEASON)!=selected_budget._bare(
                     rows[hand],cache_mod.SEASON):
-                need(hand in final_direct_oil_binding,
-                     "B8_SELECTED_WEAPON_OIL_APPLICABILITY_RECHECK_REQUIRED")
                 changed_oiled_hands.append(hand)
+    final_direct_oil_binding=_assert_final_season_oil_weapon_scope(
+        inputs=season_profile_inputs,rows=rows,
+        gear=season_source_bundle["gear"] if season_source_bundle is not None else None,
+        refreshed_rows=selected_refresh_rows,changed_hands=changed_oiled_hands)
+    need(all(hand in final_direct_oil_binding for hand in changed_oiled_hands),
+         "B8_SELECTED_WEAPON_OIL_APPLICABILITY_RECHECK_REQUIRED")
+    measured_hands=[hand for hand in changed_oiled_hands
+                    if final_direct_oil_binding[hand].get("requires_measurement")]
     actual_user_enchant_source=_final_user_enchant_source_mask(
         user=user,rows=rows,consumer=selected_user_enchant_source_consumer)
     if season_source_gem_tokens is not None:
@@ -1906,6 +1942,28 @@ def build(user,folder,binary,revision,static_cache_path=None,
     cfg["source"]={"kind":"user_supplied",
                    "profile_sha256":hashlib.sha256(profile.encode("utf8")).hexdigest()}
     scenario.normalize(cfg)
+    selected_oil_request=None
+    final_measured_oil_binding=None
+    if measured_hands:
+        # Exact installed physical oil authority before any Start request.
+        # Plan and replay only read the original v278 receipts.
+        install_path=pathlib.Path(fresh_installed_environment_path).resolve()
+        install_doc,_=installed_manifest.read_json(install_path)
+        installed_manifest.verify_fresh_installed_environment(install_doc)
+        physical_o=install_doc.get("official_O_physical_source")
+        need(install_doc.get("game_build")==actual_season_build and
+             install_doc.get("simc_revision")==revision and
+             type(physical_o) is dict and physical_o.get("oil_by_hand")
+                 ==season_profile_inputs["oil_by_hand"],
+             "B8_SELECTED_MEASURED_OIL_INSTALLED_SOURCE_DRIFT")
+        selected_oil_request={"stage_root":str(install_path.parent.parent),
+            "game_build":actual_season_build,"profile":profile,
+            "hands":{hand:{"weapon":copy.deepcopy(rows[hand]),
+                          "oil":final_direct_oil_binding[hand]["oil"]}
+                     for hand in measured_hands}}
+        if not static_special_probe_only:
+            final_measured_oil_binding,_=resolve_selected_oil_measurements(
+                selected_oil_request,binary,revision,cache_only=True)
     if static_special_probe_only:
         # v208 internal on-demand static-L source, never a product plan.
         # Reuses exactly the real user/gear/consumables profile composition
@@ -1952,7 +2010,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
                           for slot in changed],
                 "after":[copy.deepcopy(rows[slot]) for slot in changed]}}
         return {"schema":"v208_exact_current_special_static_source_v1",
-                **delta,"profile":probe_profile,
+                **delta,
+                **({"selected_oil_measurement_request":selected_oil_request}
+                   if selected_oil_request is not None else {}),
+                "profile":probe_profile,
                 "special_rows":[copy.deepcopy(rows[s]) for s in sorted(chosen_slots)],
                 "source_profile_sha256":hashlib.sha256(
                     probe_profile.encode("utf8")).hexdigest(),
@@ -1969,7 +2030,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
             cache_path=season_selected_static_cache_path,
             season_profile_inputs=season_profile_inputs,
             weapon_layout=weapon_layout,fillers=fillers,
-            final_direct_oil_binding=final_direct_oil_binding)
+            final_direct_oil_binding=final_direct_oil_binding,
+            final_measured_oil_binding=final_measured_oil_binding)
         if season_socket_origin is not None:
             selected_result[
                 "v232_final_socket_item_source_comparison_unadmitted"]=(
@@ -2929,7 +2991,8 @@ def materialize_selected_verified_environment(*,user,folder,binary,revision,
         "selected_replay_file":"v436_selected_source_replay.json",
         "selected_replay_sha256":hashlib.sha256(
             replay_text.encode("utf8")).hexdigest(),
-        "oil_by_hand":copy.deepcopy(selected_inputs["oil_by_hand"]),
+        "oil_by_hand":copy.deepcopy(result["budget_preflight"].get(
+            "selected_measured_oil_by_hand",selected_inputs["oil_by_hand"])),
         "selected_v435_identity_sha256":future["identity_sha256"]}
     typed=result["v096_typed_input_unadmitted"]
     manifest={
