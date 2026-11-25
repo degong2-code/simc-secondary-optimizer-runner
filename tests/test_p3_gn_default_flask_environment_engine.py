@@ -33,6 +33,22 @@ class FAutomaticSourceChoice(unittest.TestCase):
         self.assertIsNone(selected["selected_physical_items_unadmitted"])
         self.assertIn("AUTO_F_HIGHEST_SOURCE_QUALITY_UNAMBIGUOUS_ITEM_PENDING",
                       selected["requires"])
+    def test_v757_unranked_exact_flask_can_supply_default(self):
+        result=v._auto_default_F_from_sealed_v281_worklist(self.plan([
+            self.row(1,"flask_unranked",0)]))
+        self.assertEqual(result["selected_physical_items_unadmitted"],
+                         {"flask_item_id":1,"oil_item_ids_by_hand":{}})
+        self.assertFalse(result["environment_ready"])
+        self.assertEqual(result["new_native_calls"],0)
+        ambiguous=v._auto_default_F_from_sealed_v281_worklist(self.plan([
+            self.row(1,"flask_unranked",0),
+            self.row(2,"flask_unranked",0)]))
+        self.assertIsNone(ambiguous["selected_physical_items_unadmitted"])
+        collision=v._auto_default_F_from_sealed_v281_worklist(self.plan([
+            self.row(1,"flask_ranked_2",0),
+            self.row(2,"flask_ranked_2",2)]))
+        self.assertIsNone(collision["selected_physical_items_unadmitted"])
+
     def test_unknown_family_name_does_not_get_assumed_quality(self):
         selected=v._auto_default_F_from_sealed_v281_worklist(self.plan([
             self.row(1,"unlabelled",3)]))

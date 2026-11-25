@@ -467,22 +467,10 @@ def plan_physical_native_measurements(*,stage_root,relation,build,
     if (type(stage) is not dict or stage.get("status") not in STAGED
             or not row.get("candidate_path")):
         return output
-    root=Path(stage_root).resolve(strict=True)
-    need(root.is_dir() and not root.is_symlink(),
-         "V281_AUTO_MEASUREMENT_STAGE_ROOT_INVALID")
-    candidate=_safe_path(root,row["candidate_path"])
-    need(0<candidate.stat().st_size<=_SOURCE_LIMIT,
-         "V281_AUTO_MEASUREMENT_CANDIDATE_SIZE_INVALID")
-    try:
-        source=json.loads(candidate.read_bytes())
-    except (ValueError,UnicodeError) as exc:
-        raise SimCRelationBlocked(
-            "V281_AUTO_MEASUREMENT_SOURCE_JSON_INVALID") from exc
-    need(type(source) is dict and
-         source.get("schema")==physical.SCHEMA and
-         type(source.get("items")) is list and
-         len(source["items"])<=10000,
-         "V281_AUTO_MEASUREMENT_CANDIDATE_SCHEMA_INVALID")
+    loaded=_load_native_item_source(
+        stage_root=stage_root,relation=relation,build=build,
+        simc_revision=simc_revision)
+    source=loaded[0]
     # A candidate row is an unadmitted source observation, not a default.
     # Only rows with all original v281 prerequisites may be measured.
     to_resolve=[]
@@ -515,9 +503,9 @@ def plan_physical_native_measurements(*,stage_root,relation,build,
         key=(kind,item_id,hand)
         need(key not in seen,"V281_AUTO_MEASUREMENT_DUPLICATE_ITEM_HAND")
         seen.add(key)
-        exact=resolve_native_input(
-            stage_root=stage_root,relation=relation,build=build,
-            simc_revision=simc_revision,kind=kind,item_id=item_id,hand=hand)
+        exact=_resolve_loaded_native_item(
+            loaded=loaded,build=build,simc_revision=simc_revision,
+            kind=kind,item_id=item_id,hand=hand)
         need(exact is not None,
              "V281_AUTO_MEASUREMENT_SOURCE_CHANGED_AFTER_SELECTION")
         item={"physical_item_id":exact["physical_item_id"],
@@ -542,14 +530,8 @@ def plan_physical_native_measurements(*,stage_root,relation,build,
             "candidate_count":len(flasks)+len(oils)}
 
 
-def resolve_native_input(*,stage_root,relation,build,simc_revision,
-                         kind,item_id,hand=None):
-    """Resolve one exact physical ID from the v217 sealed v281 successor.
-
-    Returns None when sources are genuinely unavailable. Complete stages
-    with a bad item/receipt fail closed; no Native is called here. A source
-    token that SimC actually accepts is checked later by original v278.
-    """
+def _load_native_item_source(*,stage_root,relation,build,simc_revision):
+    """Authenticate the original sealed candidate once per local projection."""
     row=relation or {}
     stage=row.get("source_stage") if type(row) is dict else None
     if (type(stage) is not dict or stage.get("status") not in STAGED
@@ -557,14 +539,8 @@ def resolve_native_input(*,stage_root,relation,build,simc_revision,
         return None
     need(type(build) is str and bool(build)
          and type(simc_revision) is str and
-         re.fullmatch(r"[0-9a-f]{40}",simc_revision) is not None
-         and type(item_id) is int and item_id>0
-         and kind in ("flask","temporary_enchant"),
+         re.fullmatch(r"[0-9a-f]{40}",simc_revision) is not None,
          "V281_NATIVE_ITEM_REQUEST_IDENTITY_INVALID")
-    need((kind=="flask" and hand is None) or
-         (kind=="temporary_enchant"
-          and hand in ("main_hand","off_hand")),
-         "V281_NATIVE_ITEM_HAND_SELECTION_INVALID")
     root=Path(stage_root).resolve(strict=True)
     need(root.is_dir() and not root.is_symlink(),
          "V281_NATIVE_ITEM_STAGE_ROOT_INVALID")
@@ -620,8 +596,54 @@ def resolve_native_input(*,stage_root,relation,build,simc_revision,
     items=source.get("items")
     need(type(items) is list and len(items)<=10000,
          "V281_NATIVE_ITEM_LIST_INVALID")
-    matches=[x for x in items if type(x) is dict and
-             x.get("item_id")==item_id]
+    by_id={}
+    for item in items:
+        if type(item) is dict and type(item.get("item_id")) is int:
+            by_id.setdefault(item["item_id"],[]).append(item)
+    return source,by_id,stage["receipt_sha256"],output["sha256"]
+
+
+def resolve_native_input(*,stage_root,relation,build,simc_revision,
+                         kind,item_id,hand=None):
+    """Resolve one exact physical ID from the v217 sealed v281 successor.
+
+    Returns None when sources are genuinely unavailable. Complete stages
+    with a bad item/receipt fail closed; no Native is called here. A source
+    token that SimC actually accepts is checked later by original v278.
+    """
+    row=relation or {}
+    stage=row.get("source_stage") if type(row) is dict else None
+    if (type(stage) is not dict or stage.get("status") not in STAGED
+            or not row.get("candidate_path")):
+        return None
+    need(type(build) is str and bool(build)
+         and type(simc_revision) is str and
+         re.fullmatch(r"[0-9a-f]{40}",simc_revision) is not None
+         and type(item_id) is int and item_id>0
+         and kind in ("flask","temporary_enchant"),
+         "V281_NATIVE_ITEM_REQUEST_IDENTITY_INVALID")
+    need((kind=="flask" and hand is None) or
+         (kind=="temporary_enchant"
+          and hand in ("main_hand","off_hand")),
+         "V281_NATIVE_ITEM_HAND_SELECTION_INVALID")
+    loaded=_load_native_item_source(
+        stage_root=stage_root,relation=relation,build=build,
+        simc_revision=simc_revision)
+    return _resolve_loaded_native_item(
+        loaded=loaded,build=build,simc_revision=simc_revision,
+        kind=kind,item_id=item_id,hand=hand)
+
+
+def _resolve_loaded_native_item(*,loaded,build,simc_revision,kind,item_id,hand):
+    """Project only from bytes authenticated in this same call."""
+    need(type(item_id) is int and item_id>0
+         and kind in ("flask","temporary_enchant"),
+         "V281_NATIVE_ITEM_REQUEST_IDENTITY_INVALID")
+    need((kind=="flask" and hand is None) or
+         (kind=="temporary_enchant" and hand in ("main_hand","off_hand")),
+         "V281_NATIVE_ITEM_HAND_SELECTION_INVALID")
+    _,by_id,receipt_sha,candidate_sha=loaded
+    matches=by_id.get(item_id,[])
     need(len(matches)==1 and matches[0].get("ui_selectable") is False
          and matches[0].get("simc_token")=="UNRESOLVED",
          "V281_NATIVE_ITEM_ID_NOT_EXACTLY_ONE_SOURCE_CANDIDATE")
@@ -678,8 +700,8 @@ def resolve_native_input(*,stage_root,relation,build,simc_revision,
         "physical_item_id":item_id,"kind":kind,
         "simc_input_token":token,"crafting_quality":quality,
         "simc_enchant_id":enchant_id,"selected_hand":hand,
-        "source_stage_receipt_sha256":stage["receipt_sha256"],
-        "source_candidate_sha256":output["sha256"],
+        "source_stage_receipt_sha256":receipt_sha,
+        "source_candidate_sha256":candidate_sha,
         "same_effect_quality_group_verified":False,
         "weapon_oil_identity_verified":False,
         "weapon_and_hand_applicability_verified":False,

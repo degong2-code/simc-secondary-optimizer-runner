@@ -60,9 +60,14 @@ class ExactPhysicalNativeInput(unittest.TestCase):
             build=build_arg,simc_revision=REV,
             kind=kind,item_id=item_id,hand=hand)
     def test_auto_measurement_plan_uses_original_exact_source_without_manual_ids(self):
-        planned=relation.plan_physical_native_measurements(
-            stage_root=self.root,relation=self.source,
-            build=BUILD,simc_revision=REV)
+        with mock.patch.object(relation.stages,"_read_receipt",
+                               wraps=relation.stages._read_receipt) as receipt, \
+             mock.patch.object(relation,"digest",wraps=relation.digest) as hash_raw:
+            planned=relation.plan_physical_native_measurements(
+                stage_root=self.root,relation=self.source,
+                build=BUILD,simc_revision=REV)
+            self.assertEqual(receipt.call_count,1)
+            self.assertEqual(hash_raw.call_count,1)
         self.assertEqual(
             planned["status"],"MEASURABLE_PHYSICAL_F_O_CANDIDATES_UNADMITTED")
         self.assertEqual(planned["candidate_count"],3)
@@ -88,7 +93,7 @@ class ExactPhysicalNativeInput(unittest.TestCase):
         self.output.write_text("{}",encoding="utf8")
         with self.assertRaisesRegex(
                 relation.SimCRelationBlocked,
-                "AUTO_MEASUREMENT_CANDIDATE_SCHEMA_INVALID"):
+                "NATIVE_ITEM_CANDIDATE_SIZE_DRIFT|NATIVE_ITEM_CANDIDATE_SHA_DRIFT"):
             relation.plan_physical_native_measurements(
                 stage_root=self.root,relation=self.source,
                 build=BUILD,simc_revision=REV)

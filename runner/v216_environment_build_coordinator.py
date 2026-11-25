@@ -7024,15 +7024,23 @@ def _auto_default_F_from_sealed_v281_worklist(plan):
     for item in prioritized["selected"]:
         token,quality=item["simc_input_token"],item["crafting_quality"]
         suffix="_"+str(quality)
-        # No guessed family: a token without a verified quality suffix is
-        # still measurable by explicit physical ID, not auto selectable.
-        if not token.endswith(suffix) or len(token)<=len(suffix):
-            continue
-        by_family.setdefault(token[:-len(suffix)],[]).append(item)
+        # v281 emits the exact unranked token for crafting_quality=0.
+        # A genuine unranked item can be the season baseline too. Keep
+        # these independent from ranked stems, and reject token collisions.
+        if quality==0:
+            if not consumable_simc_relation.TOKEN_CHARS.fullmatch(token):
+                continue
+            by_family.setdefault(("unranked",token),[]).append(item)
+        elif token.endswith(suffix) and len(token)>len(suffix):
+            by_family.setdefault(("ranked",token[:-len(suffix)]),[]).append(item)
     # A tied physical product with the same highest-quality SimC token
     # requires an explicit selection rather than an arbitrary ItemID.
+    token_counts={}
+    for item in plan["flask"]:
+        token=item["simc_input_token"]
+        token_counts[token]=token_counts.get(token,0)+1
     eligible=[item for group in by_family.values() if len(group)==1
-              for item in group]
+              for item in group if token_counts[item["simc_input_token"]]==1]
     if not eligible:
         out["requires"].append("AUTO_F_HIGHEST_SOURCE_QUALITY_UNAMBIGUOUS_ITEM_PENDING")
         return out
