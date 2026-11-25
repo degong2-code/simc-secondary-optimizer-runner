@@ -232,4 +232,70 @@ assert(!diagnose({source_compilation:{missing:["GENERATED_PERMANENT"],
         self.assertEqual(completed.returncode,0,
                          completed.stdout+"\\n"+completed.stderr)
 
+
+class SelectedOilPreparationRouting(unittest.TestCase):
+    def test_actual_js_select_and_start_reuse_or_build_selected_only(self):
+        import shutil, subprocess
+        from pathlib import Path
+        node=shutil.which("node")
+        if node is None:self.skipTest("Node required")
+        raw=Path(__file__).resolve().parents[1]/"runner/webui/app.js"
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const src=fs.readFileSync(process.argv[1],"utf8");
+const block=(a,b)=>{
+ const start=src.indexOf(a),end=src.indexOf(b,start+a.length);
+ assert(start>=0&&end>start,"missing JS block: "+a);return src.slice(start,end);
+};
+const sections=[
+ block("function chooseOilPreparationCandidate(hand) {","function renderInstalledOilLoadouts(data)"),
+ block("function explicitOilPreparationRequested() {","function buildRequest()")
+].join("\n");
+const nodes={},$=id=>nodes[id]??=( {value:"",checked:false} );
+const field=id=>String($(id).value).trim();
+const sha="a".repeat(64);
+const state={seasonGearTargetIlevel:334,verifiedExistingBudget:{sha},
+ verifiedBaseFlaskInstalls:[],oilCatalog:{oil_preparation_source:{
+ status:"OIL_PREPARATION_SOURCE_IDENTIFIED",items:[{physical_item_id:243734,
+ status:"SOURCE_IDENTIFIED_PREPARATION_ONLY",user_selectable:false}]}}};
+$("season-verified-budget").value=sha;
+$("season-selected-flask-id").value="241324";
+$("oil-preparation-main").value="243734";
+$("ilevel").value="334";
+$("season-target-socket-count").value="4";
+const calls=[];let reusable=false,match=false,valid=true;
+const run=Function("state","$","field","installedConsumableScopeMatches",
+ "oilNeedsOffhand","syncOilUseToggle","updateBudgetPreview","buttonState",
+ "setNotice","reuseVerifiedGemVariant","buildSeasonEnvironment",
+ "prepareSelectedExistingEnvironment","validTargetIlevel",
+ "verifiedInstalledGearScopeMatchesRun","switchView",
+ "let oilUseIntent=true;"+sections+"\nreturn {chooseOilPreparationCandidate,prepareUserSelectedEnvironment,prepareSeasonBeforeOptimizerStart};"
+)(state,$,field,()=>valid,()=>false,()=>{},()=>{},()=>{},()=>{},
+ async()=>{calls.push("reuse");if(reusable)match=true;return reusable;},
+ async selected=>{calls.push("build:"+selected);match=true;return {web_environment_scope:{environment_ready:true,environment_installed:true}};},
+ async()=>{calls.push("old-budget");match=true;},()=>true,()=>match,()=>{});
+(async()=>{
+ run.chooseOilPreparationCandidate("main");
+ assert.equal(field("optimizer-oil-main-id"),"243734","physical oil intent");
+ assert.equal(field("season-oil-main-id"),"243734","Build physical oil");
+ assert.equal(field("season-selected-flask-id"),"241324","explicit F preserved");
+ assert.equal(field("season-verified-budget"),"","old O=0 SHA cleared");
+ assert.equal(state.verifiedExistingBudget,null,"old budget object cleared");
+ assert.equal(state.seasonGearTargetIlevel,null,"old ready scope revoked");
+ assert.equal(await run.prepareSeasonBeforeOptimizerStart(),true);
+ assert.deepStrictEqual(calls,["reuse","build:true"],"selected-only Build on real miss");
+ calls.length=0;match=false;reusable=true;
+ assert.equal(await run.prepareSeasonBeforeOptimizerStart(),true);
+ assert.deepStrictEqual(calls,["reuse"],"exact existing layout, no Build");
+ calls.length=0;match=false;valid=false;
+ $("oil-preparation-main").value="999999";
+ run.chooseOilPreparationCandidate("main");
+ assert.equal(field("optimizer-oil-main-id"),"243734","stale catalog cannot replace intent");
+ assert.deepStrictEqual(calls,[]);
+})().catch(e=>{console.error(e.stack);process.exit(1)});
+"""
+        result=subprocess.run([node,"-e",script,str(raw)],capture_output=True,
+                              text=True,encoding="utf8",timeout=20)
+        self.assertEqual(result.returncode,0,result.stdout+"\n"+result.stderr)
+
 if __name__=="__main__":unittest.main()

@@ -1275,6 +1275,14 @@ function applyOilUseToggle(){
     $("oil_main").checked=false;$("oil_off").checked=false;
     $("optimizer-oil-main-id").value="";
     $("optimizer-oil-off-id").value="";
+    // Advanced preparation fields must not silently reactivate an oil
+    // during a later selected environment Build.
+    for(const hand of ["main","off"]){
+      const advanced=$("season-oil-"+hand+"-id");
+      if(advanced)advanced.value="";
+      const menu=$("oil-preparation-"+hand);
+      if(menu)menu.value="";
+    }
     oilCompatibility();syncOilUseToggle();updateBudgetPreview();
     if(boundOil){
       const flask=boundOil.verified_flask_item_id;
@@ -1730,8 +1738,13 @@ function chooseOilPreparationCandidate(hand) {
   $("oil_"+hand).checked=Boolean(row);
   oilUseIntent=$("oil_main").checked||$("oil_off").checked;
   $("optimizer-oil-loadout").value="";
+  // The old O=0 exact budget cannot own a new physical oil request.
+  // Retain its explicit F selection, but drop the incompatible install bind.
+  $("season-verified-budget").value="";
+  state.verifiedExistingBudget=null;
   state.seasonGearTargetIlevel=null;
   syncOilUseToggle();updateBudgetPreview();
+  buttonState(state.running,state.longrunResultReady);
   setNotice("기름 검증 준비 대상 변경 · 영약과 보석 구성을 확인한 후 ‘선택 환경 검증·준비’를 실행하세요. 아직 검증 설치되지 않았습니다.");
 }
 function renderInstalledOilLoadouts(data) {
@@ -2550,7 +2563,20 @@ async function prepareSelectedExistingEnvironment() {
     void refreshExistingSeasonTrinkets(state.seasonGear,level);
   return true;
 }
+function explicitOilPreparationRequested() {
+  return typeof oilUseIntent==="boolean" && oilUseIntent &&
+    ["main","off"].some(hand=>Boolean(field("optimizer-oil-"+hand+"-id")||
+                                      field("season-oil-"+hand+"-id")));
+}
 async function prepareUserSelectedEnvironment() {
+  // A new explicit oil is incompatible with an O=0 installed-budget SHA.
+  // Reuse an exact already installed F/J/O layout even for four sockets;
+  // only a genuine miss uses the existing user-variant Build.
+  if(explicitOilPreparationRequested()){
+    if(typeof reuseVerifiedGemVariant==="function" &&
+       await reuseVerifiedGemVariant())return true;
+    return buildSeasonEnvironment(true);
+  }
   if(field("season-verified-budget"))
     return prepareSelectedExistingEnvironment();
   // Non-default layouts use an exact installed snapshot before any Build.
@@ -2588,8 +2614,16 @@ async function prepareSeasonBeforeOptimizerStart() {
     setNotice("기존 설치본 연결 완료 · 장신구·특성을 확인한 뒤 최적 스탯 찾기를 다시 눌러 주세요.");
     return true;
   }
-  const report=await buildSeasonEnvironment(false);
+  const selectedOil=explicitOilPreparationRequested();
+  const report=selectedOil?
+    await prepareUserSelectedEnvironment():await buildSeasonEnvironment(false);
   if(report===null)return true; // cancellation or stale response
+  // The exact installed read-only path returns true, not a Build receipt.
+  if(selectedOil&&report===true&&!optimizerNeedsSeasonPreparation()){
+    switchView("optimizer");
+    setNotice("선택한 기름의 기존 검증 환경 연결 완료 · 장신구·특성을 확인한 뒤 최적 스탯 찾기를 다시 눌러 주세요.");
+    return true;
+  }
   if(report?.web_environment_scope?.environment_ready!==true ||
      report?.web_environment_scope?.environment_installed!==true ||
      optimizerNeedsSeasonPreparation()) {
@@ -2973,7 +3007,8 @@ function buttonState(active=false,ready=false) {
   }
   const needsEnvironment=Boolean(state.token)&&optimizerNeedsSeasonPreparation();
   $("start-btn").textContent=needsEnvironment?
-    "시즌 환경 준비 · 장신구 목록 불러오기":"최적 스탯 찾기";
+    (typeof explicitOilPreparationRequested==="function"&&explicitOilPreparationRequested()?
+      "선택 환경 검증·준비":"시즌 환경 준비 · 장신구 목록 불러오기"):"최적 스탯 찾기";
   // An unavailable oil is a real executable-profile blocker, not a button
   // condition the user should discover only after a failed click. The
   // environment-preparation button still works before an install exists.
