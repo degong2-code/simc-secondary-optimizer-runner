@@ -268,9 +268,23 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
             (root/"source/v254_ItemXItemEffect.csv").write_bytes(relation)
             candidate=root/"source/v282_v190_items.json"
             candidate.write_text(json.dumps(source),encoding="utf8")
+            # Real new raw-source seal, not a fabricated effect output
+            # on the derived gear receipt.
+            from urllib.parse import urlencode
+            from runner import v217_stage_execution_engine as stages
+            raw_path=root/"source/raw_gear_effect.csv"
+            raw_stage=stages.execute_stage(
+                root=root,stage_id="season-gear-effect-raw",
+                stage_version="same-build-raw-v1",
+                inputs={"game_build":BUILD,"source_url":
+                    "https://wago.tools/db2/ItemXItemEffect/csv?"+urlencode(
+                        {"build":BUILD,"locale":"enUS"})},
+                outputs={"raw":"source/raw_gear_effect.csv"},
+                execute=lambda:raw_path.write_bytes(relation))
             gear={"source_stage":{"status":"EXECUTED_AND_SEALED",
                 "receipt_sha256":"1"*64,
-                "output_paths":{"effect":"source/v254_ItemXItemEffect.csv"}}}
+                "output_paths":{"candidate":"source/catalog.json"}},
+                "item_effect_relation_source_receipt_sha256":raw_stage["receipt_sha256"]}
             consumables={"candidate_path":str(candidate),"source_stage":{
                 "status":"EXECUTED_AND_SEALED","receipt_sha256":"2"*64,
                 "stage_id":"fresh-v189-v190-consumable-physical-other"}}
@@ -301,6 +315,13 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                              "REUSED_VERIFIED")
             self.assertEqual(len(fetched),1,
                              "The original v280 fetched once; optional bridge none")
+            raw_path.write_bytes(relation+b"tampered")
+            blocked=wago_effects.collect(
+                stage_root=root,build=BUILD,fresh_gear=gear,
+                consumables=consumables,transport=original_transport)
+            self.assertEqual(blocked["status"],"ITEM_USE_SPELL_SOURCE_PENDING")
+            self.assertEqual(blocked["reason"],"STAGE_OUTPUT_HASH_MISMATCH")
+            self.assertEqual(len(fetched),1)
 
     def test_one_original_environment_build_links_wago_and_pinned_simc_source(self):
         """Synthetic zero-source seam: Wago IDs/spells + SimC handlers/DBC.

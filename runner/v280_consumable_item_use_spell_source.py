@@ -155,6 +155,36 @@ def pending(reason):
             "network_calls_by_stage":0,"native_calls":0,
             "F":None,"O":None,"environment_ready":False}
 
+def item_effect_relation_owner(root,build,fresh_gear):
+    """Resolve the original raw owner after the gear catalog split.
+
+    Legacy callers keep their original v254 combined stage contract.
+    The current producer returns the exact independently sealed raw receipt.
+    Never infer the relation from an unsealed path or a derived gear seal.
+    """
+    root=Path(root).resolve()
+    gear=(fresh_gear or {}).get("source_stage") or {}
+    expected=(fresh_gear or {}).get("item_effect_relation_source_receipt_sha256")
+    if expected is not None:
+        relative="source/raw_gear_effect.csv"
+        stage_id="season-gear-effect-raw"
+        url="https://wago.tools/db2/ItemXItemEffect/csv?"+urlencode(
+            {"build":build,"locale":"enUS"})
+        checked=stages.verify_stage(
+            root=root,stage_id=stage_id,stage_version="same-build-raw-v1",
+            inputs={"game_build":build,"source_url":url},
+            outputs={"raw":relative})
+        need(checked["receipt_sha256"]==expected,
+             "V770_RAW_ITEM_EFFECT_RECEIPT_DRIFT")
+        return checked,"raw",root/relative
+    relative=gear.get("output_paths",{}).get("effect")
+    need(type(relative) is str and
+         not Path(relative).is_absolute() and
+         ".." not in Path(relative).parts,
+         "V280_V254_RELATION_PATH_INVALID")
+    return gear,"effect",root/relative
+
+
 def collect(*, stage_root, build, fresh_gear, consumables, transport=None):
     """Seal the ONE additional DB2 table and joined source in v217.
 
@@ -177,12 +207,10 @@ def collect(*, stage_root, build, fresh_gear, consumables, transport=None):
             consumable_stage.get("status") not in STAGED or
             not (consumables or {}).get("candidate_path")):
         return pending("V280_V254_OR_V279_SEALED_INPUT_PENDING")
-    relation_relative=gear_stage.get("output_paths",{}).get("effect")
-    need(type(relation_relative) is str and
-         not Path(relation_relative).is_absolute() and
-         ".." not in Path(relation_relative).parts,
-         "V280_V254_RELATION_PATH_INVALID")
-    relation=root/relation_relative
+    try:
+        relation_stage,_,relation=item_effect_relation_owner(root,build,fresh_gear)
+    except (stages.StageExecutionBlocked,ItemSpellBlocked,OSError,ValueError,TypeError,KeyError) as exc:
+        return pending(str(exc).split(":",1)[0])
     candidate=Path(consumables["candidate_path"]).resolve()
     need(relation.is_file() and not relation.is_symlink() and
          relation.is_relative_to(root) and
@@ -197,7 +225,8 @@ def collect(*, stage_root, build, fresh_gear, consumables, transport=None):
          "V280_V190_BUILD_DRIFT")
     # The original v217 stage already verified its outputs. Read this small
     # relation once on a fresh join to validate FK values; no network replay.
-    relation_sha=sha(relation.read_bytes())
+    relation_raw=relation.read_bytes()
+    relation_sha=sha(relation_raw)
     calls=[0]
     def execute():
         url="https://wago.tools/db2/ItemEffect/csv?"+urlencode(
@@ -213,7 +242,7 @@ def collect(*, stage_root, build, fresh_gear, consumables, transport=None):
         output=root/outputs["item_effect"]
         output.parent.mkdir(parents=True,exist_ok=True)
         output.write_bytes(raw)
-        joined=join(physical_source,relation.read_bytes(),raw,build=build,
+        joined=join(physical_source,relation_raw,raw,build=build,
                     relation_sha256=relation_sha,effect_sha256=sha(raw))
         (root/outputs["candidate"]).write_text(
             json.dumps(joined,sort_keys=True,ensure_ascii=False,
@@ -239,7 +268,7 @@ def collect(*, stage_root, build, fresh_gear, consumables, transport=None):
             root=root,stage_id=stage_id,
             stage_version=stage_version,
             inputs={"game_build":build,
-                    "v254_stage_sha256":gear_stage.get("receipt_sha256"),
+                    "v254_stage_sha256":relation_stage.get("receipt_sha256"),
                     "v279_stage_sha256":consumable_stage.get("receipt_sha256"),
                     "v190_candidate_sha256":sha(raw_source),
                     "item_x_item_effect_sha256":relation_sha,
@@ -281,7 +310,8 @@ def collect_optional_food_potion_from_existing(*,stage_root,build,
                 "candidate_path":None,"network_calls_by_stage":0,
                 "native_calls":0}
     try:
-        paths=(root/gear["output_paths"]["effect"],
+        relation_stage,_,relation=item_effect_relation_owner(root,build,fresh_gear)
+        paths=(relation,
                root/original["output_paths"]["item_effect"],
                Path(consumables["candidate_path"]))
         # Existing v217 source receipts own the input byte identities.
@@ -335,7 +365,7 @@ def collect_optional_food_potion_from_existing(*,stage_root,build,
             root=root,stage_id="fresh-v680-optional-food-potion-use-spells-v2",
             stage_version="v680-reuse-original-v280-csv-v2",
             inputs={"game_build":build,
-                "v254_source_receipt_sha256":gear.get("receipt_sha256"),
+                "v254_source_receipt_sha256":relation_stage.get("receipt_sha256"),
                 "v190_source_receipt_sha256":source.get("receipt_sha256"),
                 "v280_original_receipt_sha256":
                     original.get("receipt_sha256"),

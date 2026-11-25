@@ -224,6 +224,15 @@ class FreshOrdinaryGearSource(unittest.TestCase):
             **args,transport=no_fetch,include_delve=True)
         self.assertEqual(second["network_calls_by_stage"],0)
         self.assertEqual(second["candidate_path"],new["candidate_path"])
+        # The actual split producer exports the raw owner; downstream
+        # v280 must not look for an effect output on the catalog receipt.
+        self.assertNotIn("effect",new["source_stage"]["output_paths"])
+        owner,key,path=build.item_spell_bridge.item_effect_relation_owner(
+            self.root,self.BUILD,new)
+        self.assertEqual(key,"raw")
+        self.assertEqual(owner["receipt_sha256"],
+                         new["item_effect_relation_source_receipt_sha256"])
+        self.assertEqual(path.read_bytes(),b"ID,ItemID,ItemEffectID\n1,299903,12345\n")
         self.assertEqual(len(calls),2)
         # A new classifier generation consumes exactly the same sealed
         # upstream bytes. No DB2 or provider HTTP, no old output mutation.

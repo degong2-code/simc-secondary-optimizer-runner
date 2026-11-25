@@ -3507,6 +3507,7 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
     raw_delve=None
     wcl_report=None
     effect=None
+    effect_receipt=None
     stage_id="fresh-ordinary-gear-source-candidates"
     stage_version="v165-v167-wago-no-legacy-budget-v1"
     if include_delve:
@@ -3778,6 +3779,11 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
                 for x in plain+internal),
             "network_calls_by_stage":attempted[0],
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
+            # Raw relation ownership was split from the derived gear
+            # catalog. Export its actual receipt, not a fake output path
+            # on the catalog seal. Legacy combined stages retain effect.
+            **({"item_effect_relation_source_receipt_sha256":effect_receipt}
+               if include_delve else {}),
             "a7_auto_source_choice_provenance":a7_info,
             "selectable_source_extension":extension,
             "mplus_trinket_coverage":coverage,

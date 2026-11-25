@@ -140,6 +140,30 @@ class TestV583(unittest.TestCase):
         self.assertEqual(doc["matches"][1]["physical_items"][0]["quality_rank_wago"],14)
         self.assertFalse(doc["automatic_ui_promotion"])
 
+    def test_v770_independent_raw_relation_feeds_permanent_enchant_join(self):
+        from urllib.parse import urlencode
+        raw=self.root/"source/raw_gear_effect.csv"
+        original=(self.root/self.gear["output_paths"]["effect"]).read_bytes()
+        relation=stage.execute_stage(
+            root=self.root,stage_id="season-gear-effect-raw",
+            stage_version="same-build-raw-v1",
+            inputs={"game_build":BUILD,"source_url":
+                "https://wago.tools/db2/ItemXItemEffect/csv?"+urlencode(
+                    {"build":BUILD,"locale":"enUS"})},
+            outputs={"raw":"source/raw_gear_effect.csv"},
+            execute=lambda:raw.write_bytes(original))
+        gear=fake_stage(self.root,"derived-gear",{
+            "candidate":("source/derived-gear.json",b"{}")})
+        args={**self.args,"fresh_gear":{"source_stage":gear,
+            "item_effect_relation_source_receipt_sha256":relation["receipt_sha256"]}}
+        result=v583.collect(**args,transport=lambda *_,**__:Resp(self.quality))
+        self.assertEqual(result["status"],"PERMANENT_ENCHANT_EXACT_WAGO_SIMC_SOURCE_ONLY",result)
+        doc=json.loads(Path(result["candidate_path"]).read_text())
+        self.assertEqual(doc["source_stage_receipts"]["gear"],relation["receipt_sha256"])
+        self.assertEqual(result["counts"]["all_rank_simc_id_linked"],2)
+        again=v583.collect(**args,transport=lambda *_,**__:self.fail("NO_HTTP"))
+        self.assertEqual(again["source_stage"]["status"],"REUSED_VERIFIED")
+
     def test_unchanged_build_reuses_quality_and_projection_with_no_network(self):
         first=v583.collect(**self.args,transport=lambda *_, **__:Resp(self.quality))
         self.assertIsNotNone(first["candidate_path"])

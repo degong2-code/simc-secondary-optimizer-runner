@@ -20,6 +20,7 @@ import v190_consumable_item_snapshot_join as csvsource
 import v191_unified_season_data_update as simc
 import v217_stage_execution_engine as stages
 import v281_consumable_simc_relation as spells
+import v280_consumable_item_use_spell_source as relation_owner
 import v584_supplemental_permanent_enchant_classification as supplemental
 
 SCHEMA = "v583_same_build_permanent_enchant_item_relation_v1"
@@ -331,6 +332,11 @@ def collect(*, stage_root, build, expansion_id, wago_stage, fresh_gear,
         return pending("V583_EXISTING_SEALED_SOURCES_OR_EXPANSION_PENDING")
     calls=[0]
     try:
+        relation_stage,relation_key,relation_path=relation_owner.item_effect_relation_owner(
+            root,build,fresh_gear)
+        # The relation receipt, not the replaceable gear projection,
+        # owns this exact physical input.
+        deps["gear"]=relation_stage
         identity={k:_identity(root,s) for k,s in deps.items()}
         wago=root/"wago"
         source_receipt=json.loads((wago/"receipt.json").read_text("utf8"))
@@ -340,7 +346,7 @@ def collect(*, stage_root, build, expansion_id, wago_stage, fresh_gear,
         original={
             "item":wago/"Item.csv","sparse":wago/"ItemSparse.csv",
             "crafting":wago/"CraftingData.csv",
-            "relation":_source_path(root,deps["gear"],"effect"),
+            "relation":_source_path(root,deps["gear"],relation_key),
             "effect":_source_path(root,deps["item_effect"],"item_effect"),
             "spell_effect":_source_path(root,deps["spell_effect"],"spell_effect"),
             "simc_enchants":_source_path(root,deps["simc"],"permanent_enchant.inc")}
