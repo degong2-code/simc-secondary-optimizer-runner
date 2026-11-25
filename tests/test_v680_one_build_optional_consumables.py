@@ -244,10 +244,11 @@ class OneBuildOptionalChoices(unittest.TestCase):
             root=pathlib.Path(td)
             candidates=root/"physical.json"
             handlers=root/"handlers.json"
-            ids=[501,502,503,504]
+            ids=[501,502,503,504,505,506]
             candidates.write_text(json.dumps({
                 "game_build":BUILD,"source_only":True,
-                "items":[{"item_id":i,"kind":"potion","on_use_spell_ids":[i+1000],
+                "items":[{"item_id":i,"kind":"potion",
+                    "on_use_spell_ids":[1501 if i in (501,503,506) else i+1000],
                     "source_status":"EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"}
                     for i in ids]}),encoding="utf8")
             collected={
@@ -275,7 +276,9 @@ class OneBuildOptionalChoices(unittest.TestCase):
                            (501,"Light's Potential",2),
                            (502,"Random Mana Potion",2),
                            (503,"Light's Potential",1),
-                           (504,"Liquid Luster",2))]}
+                           (504,"Liquid Luster",2),
+                           (505,"Light's Potential",3),
+                           (506,"Other Potion",1))]}
                 meta["consumable_parser_name_rows"]=[
                     {k:row[k] for k in ("item_id","name","subclass_id",
                                         "crafting_quality")}
@@ -286,12 +289,18 @@ class OneBuildOptionalChoices(unittest.TestCase):
                         collected=collected,compilation={
                             "stage_root":str(root),"simc_revision":revision})
                 self.assertEqual([row["physical_item_id"] for row in source["rows"]],
-                                 [501,504] if revision==rev else [])
+                                 [501,503,504] if revision==rev else [])
                 if revision==rev:
                     self.assertEqual(source["rows"][0]["effect_identity"],
                                      "simc:reviewed_apl_input:spell:1501")
                     self.assertEqual(source["rows"][0]["simc_input_token"],
                                      "lights_potential_2")
+                    projected=manifest.project_fresh_optional_consumables(
+                        game_build=BUILD,simc_revision=revision,source=source)
+                    self.assertEqual(projected["categories"]["potion"][
+                        "quality_comparison_pending_item_ids"],[501,503])
+                    self.assertEqual([r["item_id"] for r in
+                        projected["categories"]["potion"]["options"]],[504])
 
     def test_actual_user_ui_consumes_only_the_exact_installed_source(self):
         node=shutil.which("node")

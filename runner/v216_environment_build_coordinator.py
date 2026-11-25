@@ -9840,6 +9840,12 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
         # are a second source of input identity, not a DPS or quality proof.
         reviewed=optional_source_join.reviewed_apl_default_groups(
             build,revision)
+        # First collect exact physical candidates without discarding lower
+        # ranks of a generic APL-selected item. The reviewed token anchors
+        # a family only when both the same Wago on-use spell and exact
+        # generated name stem match. Rank itself proves no magnitude.
+        candidates=[]
+        reviewed_families=set()
         for origin in items:
             item_id=origin.get("item_id")
             if item_id not in simc:continue
@@ -9858,9 +9864,13 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
             if (token is None or len(token)>100 or
                     not 0<len(row["name"])<=200):
                 continue
-            apl_source=token in reviewed.get(kind,{})
-            if not names and not apl_source:continue
             stem=optional_source_join.parser_name_stem(row["name"])
+            family=(kind,spell,stem)
+            if token in reviewed.get(kind,{}):
+                reviewed_families.add(family)
+            candidates.append((item_id,kind,spell,names,row,token,stem,family))
+        for item_id,kind,spell,names,row,token,stem,family in candidates:
+            if not names and family not in reviewed_families:continue
             # Actual pinned consumable.cpp + sc_item_data.cpp +
             # client_data.hpp: first matching item in the filtered DBC.
             # Keep rank 0/1 in original interleaved order, not rank buckets.
