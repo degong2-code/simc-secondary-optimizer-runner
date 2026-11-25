@@ -89,6 +89,16 @@ def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
+def _gem_selected_source_scope_conflicts(observed,target_ilevel):
+    """Only known same-build v221 contradictions, never infer missing as 0."""
+    if target_ilevel is None:
+        return set()
+    return {row["item_id"] for row in
+            (observed.get("selected_gem_v221_source_properties_unadmitted") or [])
+            if type(row.get("minimum_ilevel")) is int and
+            row["minimum_ilevel"]>target_ilevel}
+
+
 def _raw_four_stat_j_can_finish(observed):
     """A complete raw four-family projection is not a scaled comparison."""
     return (observed.get("four_stat_ordinary_source_complete_unadmitted")
@@ -2839,6 +2849,13 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
              type(gem_source.get("source_stage")) is dict and
              type(gem_source["source_stage"].get("receipt_sha256")) is str,
              "V216_V221_SELECTED_SAME_BUILD_GEM_ITEM_SOURCE_REQUIRED")
+        need(not _gem_selected_source_scope_conflicts(
+                 gem_enchant,target_ilevel),
+             "V216_SELECTED_GEM_MINIMUM_ILEVEL_CONFLICT")
+        need(gem_enchant.get(
+                 "selected_special_gem_two_CHMV_accounting_pending_source_only")
+                 is not True,
+             "V216_SELECTED_SPECIAL_GEM_TWO_CHMV_ACCOUNTING_PENDING")
         source_properties=None
         if gem_enchant.get("selected_gem_v221_source_properties_complete") is True:
             props=gem_enchant.get(
@@ -10184,18 +10201,42 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         source_catalog_path=source_compilation[
                             "source_catalog_path"],
                         expected_game_build=collected["expected_game_build"])
+                    special_id=source_selected_gem_roles["special_gem_id"]
+                    reference_ids=(
+                        {r["item_id"] for r in nominal_four_stat_source["by_stat"].values()}
+                        if nominal_four_stat_source is not None else set())
+                    scope_ids=sorted(reference_ids|({special_id}
+                                     if special_id is not None else set()))
                     observed=gem_enchant_stage.view(
                         stage_root=source_compilation["stage_root"],
                         v221_candidate_path=src["candidate_path"],
                         build=collected["expected_game_build"],
-                        selected_source_gem_item_ids=(
-                            [source_selected_gem_roles["special_gem_id"]]
-                            if source_selected_gem_roles["special_gem_id"]
-                               is not None else None),
+                        selected_source_gem_item_ids=scope_ids or None,
                         excluded_ordinary_item_id=
                             source_selected_gem_roles["special_gem_id"],
                         target_ilevel=fresh_collection_inputs[
                             "representative_request"]["target_ilevel"])
+                    target_gem_ilevel=fresh_collection_inputs[
+                        "representative_request"]["target_ilevel"]
+                    scope_conflicts=_gem_selected_source_scope_conflicts(
+                        observed,target_gem_ilevel)
+                    missing_ids=set(observed.get(
+                        "selected_gem_v221_missing_item_ids") or [])
+                    if reference_ids & (scope_conflicts|missing_ids):
+                        # Known invalid packaged IDs: use the existing
+                        # current-build ordinary selection instead.
+                        progress["nominal_gem_reference_scope_conflict_ids"]=sorted(
+                            reference_ids & (scope_conflicts|missing_ids))
+                        nominal_four_stat_source=None
+                    special_invalid=(special_id is not None and
+                        (special_id in scope_conflicts or
+                         special_id in reference_ids or
+                         observed.get(
+                             "selected_special_gem_two_CHMV_accounting_pending_source_only")
+                             is True))
+                    if special_invalid:
+                        progress["requires"].append(
+                            "SELECTED_SPECIAL_GEM_ACCOUNTING_OR_TARGET_ILEVEL_PENDING")
                     j_owner_diagnostic=(
                         _existing_v268_four_stat_source_diagnostic(
                             observed=observed,csv_source=src))
@@ -10302,11 +10343,10 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             "simc_declared_full_socket_counts_source_only"]=(
                                 dict(declared_counts))
                     ordinary=None
-                    if declared_counts is not None and (
-                            source_selected_gem_roles["special_gem_id"] is None
-                            or observed.get(
-                                "selected_gem_v221_same_build_items_all_present")
-                            is True):
+                    if declared_counts is not None and not special_invalid and (
+                            special_id is None or special_id in
+                                (observed.get(
+                                    "selected_gem_v221_item_ids_unadmitted") or [])):
                         if nominal_four_stat_source is not None:
                             # Reuse independently sourced per-gem nominal
                             # totals. Raw EffectPointsMin interpretation is

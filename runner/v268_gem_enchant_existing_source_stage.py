@@ -321,6 +321,17 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
             "missing_or_nonstatic_never_assumed_zero":True,
             "simc_effective_rating_verified":False,
             "J_budget_attribution_verified":False}
+    # The current special-role route excludes the selected special from J.
+    # A two-CHMV source cannot use that accounting without further evidence.
+    # Shape alone proves neither a gem's actual role nor socket applicability.
+    role_id=(selected_special_gem_item_id if selected_special_gem_item_id
+             is not None else excluded_ordinary_item_id)
+    role_row=by_id.get(role_id) or {}
+    role_vec=role_row.get("raw_static_points_candidate")
+    special_two_stat_accounting_pending=(
+        role_row.get("pure_two_CHMV_scaled_shape_source_only") is True or
+        (type(role_vec) is dict and
+         sum(type(n) is int and n>0 for n in role_vec.values())==2))
     source_membership={}
     if selected_source_gem_item_ids is not None:
         # The v221 candidate and same-build source relation were already
@@ -372,6 +383,8 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
         "selected_gem_raw_points_by_id_unadmitted":selected,
         "selected_gem_raw_CHMV_vectors_by_id_unadmitted":selected_vectors,
         "selected_special_gem_raw_effect_unadmitted":special_effect,
+        "selected_special_gem_two_CHMV_accounting_pending_source_only":
+            bool(special_two_stat_accounting_pending),
         "selected_gem_unresolved_item_ids":unresolved,
         "selected_gem_all_raw_points_known":(
             selected_gem_item_ids is not None and not unresolved and

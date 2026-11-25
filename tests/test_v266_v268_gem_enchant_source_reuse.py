@@ -169,6 +169,15 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                              first["four_stat_ordinary_best_observed_unadmitted"])
             self.assertEqual(boundary[
                 "ordinary_two_CHMV_scaled_shape_candidate_ids_source_only"],[2107,2108])
+            for invalid in (2105,2107):
+                role=adapter.view(stage_root=root,v221_candidate_path=path,
+                    build=BUILD,selected_source_gem_item_ids=[invalid],
+                    excluded_ordinary_item_id=invalid,target_ilevel=340)
+                self.assertTrue(role[
+                    "selected_special_gem_two_CHMV_accounting_pending_source_only"])
+            # A missing or non-CHMV shape is not a positive role proof.
+            self.assertFalse(first[
+                "selected_special_gem_two_CHMV_accounting_pending_source_only"])
             chosen=adapter.view(
                 stage_root=root,v221_candidate_path=path,build=BUILD,
                 selected_gem_item_ids=[2102,2103,2104,2105],
