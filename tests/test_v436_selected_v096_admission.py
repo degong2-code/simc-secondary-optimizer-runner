@@ -32,7 +32,9 @@ class SelectedV436Receipt(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root=pathlib.Path(self.temp.name)
+        # Windows TEMP may use an 8.3 alias. Match the real v098/v291
+        # writers, which resolve paths before sealing exact source bytes.
+        self.root=pathlib.Path(self.temp.name).resolve()
         base=FreshInstalledV096Bridge()
         (self.installed,self.doc,self.cfg,self.flask,self.profile,
          self.unselected,self.attested)=base.make_case(self.root)
@@ -42,7 +44,7 @@ class SelectedV436Receipt(unittest.TestCase):
         self.binary=self.root/"native-not-used.exe"
         self.binary.write_bytes(b"TEST-NO-SIMC")
         self.cache=self.root/"static.json"
-        self.cache.write_text(canonical(static.empty_cache())+"\n")
+        self.cache.write_bytes((canonical(static.empty_cache())+"\n").encode("utf8"))
         self.digest=hashlib.sha256(self.profile.encode("utf8")).hexdigest()
         self.cfg["source"]["profile_sha256"]=self.digest
         self.user={"character":{"class":"mage","spec":"frost"},
@@ -96,7 +98,8 @@ class SelectedV436Receipt(unittest.TestCase):
                      "selected_final_source_sha256":"d"*64,
                      "selected_v435_identity_sha256":self.future}
         self.receipt=self.folder/"v436_selected_source_replay.json"
-        self.receipt.write_text(canonical(self.replay)+"\n",encoding="utf8")
+        # v098 seals UTF-8 LF bytes, not platform-translated text.
+        self.receipt.write_bytes((canonical(self.replay)+"\n").encode("utf8"))
         self.season={
             "schema":entry.SELECTED_FRESH_SEASON_SCHEMA,
             "installed_environment_path":str(self.installed),
@@ -196,15 +199,15 @@ class SelectedV436Receipt(unittest.TestCase):
                   "fillers_json":"fillers.json","static_cache_json":str(self.cache),
                   "native_binary":str(self.binary),"output_dir":"simc_results",
                   "cancel_file":"CANCEL",entry.SELECTED_FRESH_SEASON_FIELD:self.season}
-        (self.folder/"manifest.json").write_text(canonical(original)+"\n","utf8")
-        (self.folder/"scenario.json").write_text(canonical(self.cfg)+"\n","utf8")
+        (self.folder/"manifest.json").write_bytes((canonical(original)+"\n").encode("utf8"))
+        (self.folder/"scenario.json").write_bytes((canonical(self.cfg)+"\n").encode("utf8"))
         stage=self.folder/"v291_longrun_12"
         stage.mkdir()
         manifest=stage/"manifest.json"
-        manifest.write_text(canonical(original)+"\n","utf8")
+        manifest.write_bytes((canonical(original)+"\n").encode("utf8"))
         expanded=copy.deepcopy(self.cfg)
         expanded["runtime"]["max_native_calls"]=12
-        (stage/"scenario.json").write_text(canonical(expanded)+"\n","utf8")
+        (stage/"scenario.json").write_bytes((canonical(expanded)+"\n").encode("utf8"))
         self.args.update(manifest_path=manifest,user_scenario=expanded)
         return stage
 
@@ -214,6 +217,42 @@ class SelectedV436Receipt(unittest.TestCase):
         staged,_,replayer=self.invoke()
         self.assertEqual(original,staged)
         self.assertEqual(replayer.call_args.args[1],self.folder)
+        self.assertFalse((stage/self.receipt.name).exists())
+
+    def test_actual_v291_stage_writer_reuses_original_v436(self):
+        import v291_durable_multiscale_native_runner as durable
+        # Reuse the same original verified-source fixture; remove the
+        # hand-authored child so actual v291 must produce its own stage.
+        stage=self._stage_selected_longrun()
+        for path in stage.iterdir():
+            path.unlink()
+        stage.rmdir()
+        original_manifest=json.loads((self.folder/"manifest.json").read_bytes())
+        original_manifest["native_limit"]=6
+        (self.folder/"manifest.json").write_bytes(
+            (canonical(original_manifest)+"\n").encode("utf8"))
+        (self.folder/"profile.simc").write_bytes(self.profile.encode("utf8"))
+        (self.folder/"fillers.json").write_bytes(b"[]\n")
+        plan={"base_B":3150,"fixed_O":self.doc["official_O"],"final_T":3150,
+              "source_profile_sha256":self.digest,"budget_source":"selected",
+              "binary_sha256":hashlib.sha256(self.binary.read_bytes()).hexdigest(),
+              "scenario_digest":"original"}
+        ready={"manifest":original_manifest,"plan":plan,
+               "paths":{"scenario_json":self.folder/"scenario.json",
+                        "profile_simc":self.folder/"profile.simc",
+                        "fillers_json":self.folder/"fillers.json",
+                        "static_cache_json":self.cache,"native_binary":self.binary}}
+        def verify_child(path):
+            cfg=json.loads((path.parent/"scenario.json").read_bytes())
+            self.args.update(manifest_path=path,user_scenario=cfg)
+            verified,_,replayer=self.invoke()
+            self.assertEqual(verified["selected_session_identity_sha256"],self.future)
+            self.assertEqual(replayer.call_args.args[1],self.folder)
+            return {"plan":dict(plan,scenario_digest="expanded"),
+                    "context":{"bundle":{"prepared":{"scenario":{"scenario":cfg}}}}}
+        _,manifest=durable.stage_extended_manifest(
+            ready,self.folder/"manifest.json",12,source_loader=verify_child)
+        self.assertEqual(manifest,stage/"manifest.json")
         self.assertFalse((stage/self.receipt.name).exists())
 
     def test_longrun_rejects_any_non_cap_runtime_change(self):
@@ -227,11 +266,11 @@ class SelectedV436Receipt(unittest.TestCase):
         self.receipt.write_bytes(self.receipt.read_bytes()+b"\n")
         with self.assertRaisesRegex(entry.EntryBlocked,"REPLAY_BYTES_SHA_CHANGED"):
             self.invoke()
-        self.receipt.write_text(canonical(self.replay)+"\n","utf8")
+        self.receipt.write_bytes((canonical(self.replay)+"\n").encode("utf8"))
         manifest=stage/"manifest.json"
         changed=json.loads(manifest.read_text("utf8"))
         changed["output_dir"]="other"
-        manifest.write_text(canonical(changed)+"\n","utf8")
+        manifest.write_bytes((canonical(changed)+"\n").encode("utf8"))
         with self.assertRaisesRegex(entry.EntryBlocked,"LONGRUN_MANIFEST_SOURCE_DRIFT"):
             self.invoke()
 
