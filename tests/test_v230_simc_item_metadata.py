@@ -109,6 +109,26 @@ class SimCExactItemMetadataTests(unittest.TestCase):
                              candidate_filter=lambda fields:True,
                              allow_missing=True)
 
+    def test_v764_parser_names_include_unrequested_consumables_in_same_pass(self):
+        raw=synthetic_item_data().decode()
+        lines=raw.splitlines()
+        for n,line in enumerate(lines):
+            if '"simc_item_9001"' in line or '"simc_item_9002"' in line:
+                fields=item.split_cpp_record(line)
+                fields[0]='"Royal Roast"' if fields[1]=="9001" else '"Old Royal Roast"'
+                fields[10]="0";fields[11]="0";fields[12]="5";fields[27]="3"
+                lines[n]="  { "+", ".join(fields)+" },"
+        raw=("\n".join(lines)+"\n").encode()
+        normal=item.parse_exact(raw,build=BUILD,item_ids=[9001])
+        self.assertNotIn("consumable_parser_name_rows",normal)
+        result=item.parse_exact(raw,build=BUILD,item_ids=[9001],
+                                include_consumable_parser_names=True)
+        self.assertEqual(result["items"],normal["items"])
+        self.assertEqual(result["full_generated_item_rows_scanned"],8)
+        self.assertEqual(result["consumable_parser_name_rows"],[
+            {"item_id":9001,"name":"Royal Roast","subclass_id":5,"crafting_quality":3},
+            {"item_id":9002,"name":"Old Royal Roast","subclass_id":5,"crafting_quality":3}])
+
     def test_item_stat_pointer_and_chunk_count_must_be_exact(self):
         raw=synthetic_item_data().replace(
             b"&__item_stats_data[0]",b"&__item_stats_data[4]",1)

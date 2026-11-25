@@ -353,13 +353,16 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                     {"item_id":203,"name":"Potion of Recklessness",
                      "class_id":0,"subclass_id":1,"inventory_type":0,
                      "crafting_quality":3}]}
+            meta["consumable_parser_name_rows"]=[
+                {k:row[k] for k in ("item_id","name","subclass_id","crafting_quality")}
+                for row in meta["items"]]
             with mock.patch.object(fresh_build.simc_item_metadata,
                                    "from_seed",return_value=meta) as lookup:
                 source=fresh_build._fresh_v680_source_owned_food_potion(
                     collected=collected,compilation=comp)
             lookup.assert_called_once_with(
                 directory=str(root),item_ids=[201,202,203,204],
-                allow_missing=True)
+                allow_missing=True,include_consumable_parser_names=True)
             # Same sealed Wago/SimC identities: reuse the compact output,
             # never read the large pinned item_data.inc a second time.
             with mock.patch.object(fresh_build.simc_item_metadata,
@@ -382,6 +385,28 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                 [r["item_id"] for r in
                  ready["categories"]["potion"]["options"]],[203])
             self.assertTrue(ready["optional_items_do_not_block_base"])
+            # A generated DBC item outside the Wago active-season list
+            # can still shadow the new option in SimC's substring parser.
+            # The name-only index is transient; the sealed projection
+            # excludes that item without discarding independent options.
+            meta["consumable_parser_name_rows"].append({
+                "item_id":999,"name":"Old Royal Roast","subclass_id":5,
+                "crafting_quality":3})
+            with mock.patch.object(fresh_build.simc_item_metadata,
+                                   "from_seed",return_value=meta) as scan:
+                shadowed=fresh_build._fresh_v680_source_owned_food_potion_uncached(
+                    collected=collected,compilation=comp)
+            scan.assert_called_once()
+            self.assertEqual(
+                sorted(r["physical_item_id"] for r in shadowed["rows"]),
+                [201,202,203])
+            self.assertEqual(shadowed["parser_shadowed_item_ids"],[202])
+            projected=manifest.project_fresh_optional_consumables(
+                game_build=BUILD,simc_revision=REV,source=shadowed)
+            self.assertEqual(projected["categories"]["food"]["options"],[],
+                             "Do not replace a shadowed top quality with lower rank")
+            self.assertEqual([r["item_id"] for r in
+                             projected["categories"]["potion"]["options"]],[203])
 
     def test_no_native_and_no_separate_approval_engine(self):
         with mock.patch("subprocess.Popen",

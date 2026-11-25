@@ -9655,7 +9655,8 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
         # Keep exact matched IDs in one authenticated pass; one unsupported
         # optional item must not erase the remaining valid choices.
         metadata=simc_item_metadata.from_seed(
-            directory=seed["source_dir"],item_ids=ids,allow_missing=True)
+            directory=seed["source_dir"],item_ids=ids,allow_missing=True,
+            include_consumable_parser_names=True)
         need(metadata.get("game_build")==build and
              metadata.get("simc_revision")==revision and
              metadata.get("source_receipt_sha256") and
@@ -9665,6 +9666,26 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
                  .issubset(ids),
              "V680_SIMC_GENERATED_ITEM_BUILD_MISMATCH")
         simc={row["item_id"]:row for row in metadata["items"]}
+        # A source-known handler is not the set searched by the SimC
+        # consumable parser. Include the same-revision generated DBC name
+        # keys, even outside the active-season Wago candidate list.
+        parser_rows=metadata.get("consumable_parser_name_rows")
+        need(type(parser_rows) is list and
+             len(parser_rows)<=20000,
+             "V764_OPTIONAL_PARSER_NAME_SOURCE_PENDING")
+        parser_names={}
+        for row in parser_rows:
+            need(type(row) is dict and
+                 type(row.get("item_id")) is int and row["item_id"]>0 and
+                 row.get("subclass_id") in (1,5) and
+                 type(row.get("crafting_quality")) is int and
+                 row["crafting_quality"]>=0 and
+                 type(row.get("name")) is str,
+                 "V764_OPTIONAL_PARSER_NAME_ROW_INVALID")
+            stem=optional_source_join.parser_name_stem(row["name"])
+            if stem is not None:
+                key=(row["subclass_id"],row["crafting_quality"])
+                parser_names.setdefault(key,[]).append((row["item_id"],stem))
         needed={kind:{} for kind in ("food","potion")}
         current_version=tuple(int(x) for x in build.split(".")[:3])
         for kind in needed:
@@ -9681,6 +9702,7 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
                 for spell in row.get("spell_ids",[]):
                     needed[kind].setdefault(spell,set()).add(handler)
         rows=[]
+        shadowed=[]
         classes={"food":5,"potion":1}
         for origin in items:
             item_id=origin.get("item_id")
@@ -9697,13 +9719,27 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
                     row["crafting_quality"]<0):continue
             token=optional_source_join.candidate_token(
                 row["name"],row["crafting_quality"])
-            if token is None:continue
+            if (token is None or len(token)>100 or
+                    not 0<len(row["name"])<=200):
+                continue
+            stem=optional_source_join.parser_name_stem(row["name"])
+            names_for_parser=parser_names.get(
+                (classes[kind],row["crafting_quality"]),[])
+            # Only a unique ASCII name needle in the complete collected
+            # subclass/quality key is projected. Unknown/non-ASCII
+            # tokenizer behavior is not claimed as Native acceptance.
+            if (not any(i==item_id and name==stem
+                        for i,name in names_for_parser) or
+                    any(i!=item_id and stem in name
+                        for i,name in names_for_parser)):
+                shadowed.append(item_id)
+            effect="simc:"+next(iter(names))+":spell:"+str(spell)
+            if len(effect)>180:continue
             rows.append({
                 "kind":kind,"physical_item_id":item_id,
                 "simc_input_token":token,
                 "crafting_quality":row["crafting_quality"],
-                "effect_identity":"simc:"+next(iter(names))+
-                    ":spell:"+str(spell),
+                "effect_identity":effect,
                 "use_condition_identity":"wago_on_use_0",
                 "name_enUS":row["name"]})
         return {"game_build":build,"simc_revision":revision,
@@ -9711,7 +9747,9 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
                     "wago_stage":original["source_stage"]["receipt_sha256"],
                     "simc_item_source":metadata["source_receipt_sha256"],
                     "handler_stage":source["source_stage"]["receipt_sha256"]
-                }).encode("utf8")),"rows":rows}
+                }).encode("utf8")),"rows":rows,
+                "parser_shadowed_item_ids":sorted(
+                    set(shadowed)&{r["physical_item_id"] for r in rows})}
     except (EnvironmentBuildBlocked,simc_item_metadata.ItemMetadataBlocked,
             OSError,ValueError,TypeError,KeyError) as exc:
         # Missing optional data is not the same as failed CORE G/J/F/O.

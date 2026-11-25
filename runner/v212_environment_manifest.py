@@ -661,6 +661,19 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
                                  "crafting_quality":row["quality"]}) in other_name
                     for other_id,other_name in known_parser_names.get(
                         (name,row["quality"]),[]))]
+        # The v216 same-pass DBC inventory may identify a shadow from an
+        # item outside the active-season candidate list. Remove only the
+        # chosen winner, never silently substitute a lower quality.
+        shadowed=source.get("parser_shadowed_item_ids",[])
+        need(type(shadowed) is list and
+             all(type(i) is int and i>0 for i in shadowed) and
+             set(shadowed)<={row["physical_item_id"] for row in source["rows"]},
+             "OPTIONAL_SOURCE_PARSER_SHADOW_SCOPE_INVALID")
+        shadowed=set(shadowed)
+        for name in ("food","potion"):
+            kinds[name]["options"]=[
+                row for row in kinds[name]["options"]
+                if row["item_id"] not in shadowed]
         # Ambiguous parser token or physical ID is an *optional* omission,
         # not an error that prevents core G/J/F/O from installing.
         seen_token={}

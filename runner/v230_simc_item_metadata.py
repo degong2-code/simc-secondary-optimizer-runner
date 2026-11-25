@@ -76,7 +76,7 @@ def split_cpp_record(line):
 
 def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
                 candidate_limit=4000, max_bytes=seed.MAX_ITEM_FILE,
-                allow_missing=False):
+                allow_missing=False,include_consumable_parser_names=False):
     """One streaming pass for either exact IDs or bounded candidate selection.
 
     Candidate mode reuses all existing C++ layout, generated-stat pointer and
@@ -87,7 +87,8 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
          "V230_ITEM_DATA_BYTES_OR_BUILD_INVALID")
     candidate_mode=item_ids is None
     need(type(allow_missing) is bool and
-         not (candidate_mode and allow_missing),
+         type(include_consumable_parser_names) is bool and
+         not (candidate_mode and (allow_missing or include_consumable_parser_names)),
          "V230_MISSING_ITEM_SCOPE_INVALID")
     need((candidate_mode and callable(candidate_filter) and
           type(candidate_limit) is int and 1<=candidate_limit<=5000) or
@@ -106,6 +107,7 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
     chunks=0;item_count=0;declared_items=0;current_items=0
     inside_chunk=False;built=False;min_ilevel=None;max_ilevel=None
     found={}
+    parser_names=[]
     for raw_line in lines:
         line=raw_line.rstrip("\r\n")
         if (m:=BUILD_HEADER.fullmatch(line)):
@@ -164,6 +166,21 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
             current_items+=1
             item_count+=1
             iid=number(fields[1],"V230_ITEM_ID_UNRECOGNIZED")
+            # Optional food/potion lookup is a substring search in SimC's
+            # item DBC, not restricted to the active-season requested IDs.
+            # Keep only transient name/class/quality keys during THIS pass.
+            if (include_consumable_parser_names and
+                    number(fields[11],"V230_ITEM_CLASS_INVALID")==0):
+                sub=number(fields[12],"V230_ITEM_SUBCLASS_INVALID")
+                if sub in (1,5):
+                    name=fields[0]
+                    need(name.startswith('"') and name.endswith('"') and
+                         len(name)<=300 and len(parser_names)<20000,
+                         "V230_CONSUMABLE_PARSER_NAME_SCOPE_INVALID")
+                    parser_names.append({
+                        "item_id":iid,"name":name[1:-1],"subclass_id":sub,
+                        "crafting_quality":number(fields[27],
+                            "V230_ITEM_CRAFTING_QUALITY_INVALID")})
             if candidate_mode:
                 try:
                     include=candidate_filter(fields)
@@ -240,11 +257,14 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
             "source_matched_item_count":len(found)}
            if allow_missing else {}),
         "items":sorted(found.values(),key=lambda row:row["item_id"]),
+        **({"consumable_parser_name_rows":parser_names}
+           if include_consumable_parser_names else {}),
         "native_calls":0,"G":None,"environment_ready":False,
     }
 
 
-def from_seed(*, directory, item_ids, allow_missing=False):
+def from_seed(*, directory, item_ids, allow_missing=False,
+              include_consumable_parser_names=False):
     root=pathlib.Path(directory)
     receipt=json.loads(seed.bounded_read(root/seed.RECEIPT,2_000_000))
     need(receipt.get("schema")==seed.SCHEMA and
@@ -263,7 +283,9 @@ def from_seed(*, directory, item_ids, allow_missing=False):
          seed.git_blob(raw)==meta.get("git_blob_sha1"),
          "V230_ITEM_DATA_BYTES_NOT_IN_PINNED_SEED")
     value=parse_exact(raw,build=receipt["simc_generated_build"],
-                      item_ids=item_ids,allow_missing=allow_missing)
+                      item_ids=item_ids,allow_missing=allow_missing,
+                      include_consumable_parser_names=
+                          include_consumable_parser_names)
     value.update({"source_receipt_sha256":receipt["receipt_sha256"],
                   "simc_revision":receipt["simc_revision"]})
     return value
