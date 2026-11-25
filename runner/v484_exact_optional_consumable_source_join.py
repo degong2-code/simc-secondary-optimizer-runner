@@ -547,7 +547,8 @@ def pending_direct_quality_families(rows,metadata,known):
                     for row in group)):
             continue
         items=[by_id.get(row["physical_item_id"],{}) for row in group]
-        scopes=[row.get("quality_physical_scope_sha256") for row in items]
+        scopes=[metadata.get("consumable_quality_physical_scopes",{}).get(
+            str(row["physical_item_id"])) for row in group]
         if (any(type(s) is not str or not HEX64.fullmatch(s) for s in scopes) or
                 len(set(scopes))!=1 or
                 any(row.get("stat_modifier_codes") or row.get("item_set_id")!=0 or
@@ -734,7 +735,8 @@ def direct_quality_source_families(*,game_build,simc_revision,rows,metadata,
                 continue
             proof={"game_build":game_build,"simc_revision":simc_revision,
                    "rows":group,"signed_components":components,
-                   "physical_scope_sha256":by_id[ids[0]]["quality_physical_scope_sha256"],
+                   "physical_scope_sha256":metadata[
+                       "consumable_quality_physical_scopes"][str(ids[0])],
                    "source_hashes":source_hashes,"spell_id":sid}
             output.append({"rows":group,"signed_components":components,
                 "effect_and_use_scope_verified":True,

@@ -357,8 +357,8 @@ class DirectQualitySource(unittest.TestCase):
               {"kind":"potion","physical_item_id":102,"simc_input_token":"test_2",
                "crafting_quality":2,"effect_identity":"simc:reviewed_apl_input:spell:1000",
                "use_condition_identity":"wago_on_use_0","name_enUS":"Test"}]
-        metadata={"items":[{"item_id":iid,"ilevel_unscaled":lvl,
-                            "quality_physical_scope_sha256":"a"*64,
+        metadata={"consumable_quality_physical_scopes":{"101":"a"*64,"102":"a"*64},
+                  "items":[{"item_id":iid,"ilevel_unscaled":lvl,
                             "stat_modifier_codes":[],"item_set_id":0,
                             "intrinsic_socket_count_from_simc_source":0}
                            for iid,lvl in ((101,1),(102,2))]}
@@ -421,7 +421,7 @@ class DirectQualitySource(unittest.TestCase):
         source["item_effect.inc"]=source["item_effect.inc"].replace(
             b"102, 0, 0, 1, 300000, 300000",b"102, 0, 0, 1, 300000, 200000")
         self.assertEqual(self.extract(rows,meta,source),[])
-        meta["items"][1]["quality_physical_scope_sha256"]="b"*64
+        meta["consumable_quality_physical_scopes"]["102"]="b"*64
         self.assertEqual(subject.pending_direct_quality_families(rows,meta,None),[])
 
     def test_no_source_reads_for_already_proven_family(self):

@@ -124,6 +124,10 @@ class SimCExactItemMetadataTests(unittest.TestCase):
         result=item.parse_exact(raw,build=BUILD,item_ids=[9001],
                                 include_consumable_parser_names=True)
         self.assertEqual(result["items"],normal["items"])
+        self.assertNotIn("consumable_quality_physical_scopes",normal)
+        self.assertEqual(set(result["consumable_quality_physical_scopes"]),{"9001"})
+        self.assertRegex(result["consumable_quality_physical_scopes"]["9001"],
+                         r"^[a-f0-9]{64}$")
         self.assertEqual(result["full_generated_item_rows_scanned"],8)
         self.assertEqual(result["consumable_parser_name_rows"],[
             {"item_id":9001,"name":"Royal Roast","subclass_id":5,"crafting_quality":3},

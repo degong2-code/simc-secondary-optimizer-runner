@@ -108,6 +108,7 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
     inside_chunk=False;built=False;min_ilevel=None;max_ilevel=None
     found={}
     parser_names=[]
+    quality_physical_scopes={}
     for raw_line in lines:
         line=raw_line.rstrip("\r\n")
         if (m:=BUILD_HEADER.fullmatch(line)):
@@ -242,7 +243,7 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
                 # Compare the entire physical use/requirement/flag shape,
                 # not only item name, class and rank. Only ID, ilevel and
                 # crafting rank may differ in this conservative proof.
-                found[iid]["quality_physical_scope_sha256"]=hashlib.sha256(
+                quality_physical_scopes[str(iid)]=hashlib.sha256(
                     json.dumps([v for n,v in enumerate(fields)
                                 if n not in (1,5,27)],
                                separators=(",",":")).encode("utf8")).hexdigest()
@@ -267,7 +268,8 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
             "source_matched_item_count":len(found)}
            if allow_missing else {}),
         "items":sorted(found.values(),key=lambda row:row["item_id"]),
-        **({"consumable_parser_name_rows":parser_names}
+        **({"consumable_parser_name_rows":parser_names,
+            "consumable_quality_physical_scopes":quality_physical_scopes}
            if include_consumable_parser_names else {}),
         "native_calls":0,"G":None,"environment_ready":False,
     }

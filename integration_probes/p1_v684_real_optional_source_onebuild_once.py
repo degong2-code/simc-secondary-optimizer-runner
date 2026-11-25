@@ -209,7 +209,7 @@ def observe(out):
         },ensure_ascii=False,sort_keys=True),flush=True)
 
 
-def replay_ordered_lookup(previous, out):
+def replay_ordered_lookup(previous, out, *, quality_replay=False):
     """Reuse real v778 joined rows; fetch only exact item_data.inc.
 
     No original v216 Build, Wago, Blizzard, WCL, binary or Native.
@@ -236,7 +236,8 @@ def replay_ordered_lookup(previous, out):
         raise ValueError("V780_ORIGINAL_JOIN_COVERAGE_MISMATCH")
     # The Git tree is immutable. Authenticate only the needed generated
     # blob, not every other season input that v229 can collect.
-    meta=seed.discover_generated_tree(REV)["item_data.inc"]
+    tree=seed.discover_generated_tree(REV,quality_files=quality_replay)
+    meta=tree["item_data.inc"]
     raw=seed.fetch_generated_blob(revision=REV,name="item_data.inc",
         expected_sha=meta["sha"],expected_size=meta["size"])
     if len(raw)!=meta["size"] or seed.git_blob(raw)!=meta["sha"]:
@@ -266,6 +267,12 @@ def replay_ordered_lookup(previous, out):
             "source_receipt_sha256":old["exact_source_receipt_sha256"],
             "rows":rows,"parser_first_match_item_ids":first,
             "parser_shadowed_item_ids":shadowed}
+    if quality_replay:
+        # Diagnostic only: deliberately do NOT reuse reviewed magnitudes
+        # when testing the new extraction. The retained Wago join is not a
+        # new install and the resulting numeric data cannot publish options.
+        parsed["source_receipt_sha256"]=old["exact_source_receipt_sha256"]
+        return replay_direct_quality(out,rows,parsed,tree,owner,seed)
     quality=owner.reviewed_quality_item_evidence(BUILD,REV,rows,parsed)
     if quality is None:
         raise ValueError("V783_REVIEWED_QUALITY_SOURCE_MISMATCH")
@@ -345,10 +352,73 @@ def replay_ordered_lookup(previous, out):
     return 0 if success else 2
 
 
+
+def replay_direct_quality(out,rows,metadata,tree,owner,seed):
+    """Actual exact generated files, no Build, Native or source-join repeat."""
+    out=pathlib.Path(out)
+    out.mkdir(parents=True,exist_ok=True)
+    state={"schema":"p1_v795_direct_quality_actual_source_replay_v1",
+           "game_build":BUILD,"simc_revision":REV,
+           "prior_run_id":45566131185,"prior_artifact_id":14999673517,
+           "source_only_not_installed":True,"full_environment_builds":0,
+           "wago_network_calls":0,"simc_native_calls":0,"dps_native_calls":0,
+           "status":"STARTED","source_files":{},
+           "retained_join_rows":len(rows)}
+    def save():
+        (out/"V795_DIRECT_QUALITY_REPLAY.json").write_text(
+            json.dumps(state,sort_keys=True,indent=2,ensure_ascii=False)+"\n",
+            encoding="utf8")
+        print("V795_QUALITY_REPLAY "+json.dumps(state,sort_keys=True,
+              ensure_ascii=False),flush=True)
+    groups=owner.pending_direct_quality_families(rows,metadata,None)
+    state["eligible_groups"]=[[r["physical_item_id"] for r in g] for g in groups]
+    # Even if no current family qualifies, validate the real table format
+    # and exact Light's Potential spell/effect rows independently. Do not
+    # force a missing physical rank into an admitted family.
+    sid=1236616
+    raw={}
+    try:
+        for name,limit in seed.OPTIONAL_QUALITY_FILES.items():
+            meta=tree[name]
+            if not 0<meta["size"]<=limit:
+                raise ValueError("V795_SOURCE_SIZE_DRIFT:"+name)
+            data=seed.fetch_generated_blob(revision=REV,name=name,
+                expected_sha=meta["sha"],expected_size=meta["size"])
+            if len(data)!=meta["size"] or seed.git_blob(data)!=meta["sha"]:
+                raise ValueError("V795_SOURCE_BLOB_DRIFT:"+name)
+            raw[name]=data
+            state["source_files"][name]={"size":len(data),
+                 "git_blob_sha1":meta["sha"],"sha256":seed.digest(data)}
+        save()
+        spells,effects=owner._quality_spell_fields(raw["sc_spell_data.inc"],BUILD,{sid})
+        state["observed_direct_spell"]={"spell_id":sid,
+            "spell_rows":spells.get(sid,[]),"effect_rows":effects.get(sid,[])}
+        if len(spells.get(sid,[]))!=1 or not effects.get(sid):
+            raise ValueError("V795_REAL_SPELL_ROWS_MISSING")
+        # Validate real physical item relations / scaling tables even when
+        # the original 60-row join contains no complete eligible family.
+        # Only complete groups are passed to the actual new producer.
+        found=owner.direct_quality_source_families(game_build=BUILD,
+            simc_revision=REV,rows=rows,metadata=metadata,
+            families=groups,source_bytes=raw)
+        state["observed_families"]=found
+        state["actual_complete_family_count"]=len(found)
+        state["status"]=("PASS_ACTUAL_DIRECT_SOURCE_FAMILIES_OBSERVED" if found
+                         else "PASS_REAL_SPELL_LAYOUT_NO_COMPLETE_DIRECT_FAMILY")
+        save()
+        return 0
+    except (ValueError,TypeError,KeyError,OSError,IndexError,OverflowError) as exc:
+        state["status"]="BLOCKED_ACTUAL_DIRECT_SOURCE"
+        state["first_blocker"]=str(exc)[:300]
+        save()
+        return 2
+
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--out",type=pathlib.Path,required=True)
     parser.add_argument("--replay-v778",type=pathlib.Path)
+    parser.add_argument("--quality-replay",action="store_true")
     args=parser.parse_args()
-    raise SystemExit(replay_ordered_lookup(args.replay_v778,args.out)
+    raise SystemExit(replay_ordered_lookup(args.replay_v778,args.out,
+                         quality_replay=args.quality_replay)
                      if args.replay_v778 else observe(args.out))
