@@ -59,9 +59,9 @@ class OneBuildOptionalChoices(unittest.TestCase):
         # Spelling is only a candidate: actual SimC input acceptance and
         # numerical quality dominance remain distinct, unproven boundaries.
 
-    def test_same_effect_and_use_condition_best_quality_is_only_one_option(self):
-        # Same spell/use family: lower rank excluded. Different effects and
-        # different use conditions remain independently selectable.
+    def test_same_effect_and_use_condition_requires_numeric_quality_comparison(self):
+        # Rank alone cannot prove dominance. Hold that family, while
+        # different effects and different use scopes remain selectable.
         rows=[
             exact_row("food",11,"food_a_1",1,"spell:111"),
             exact_row("food",12,"food_a_3",3,"spell:111"),
@@ -74,7 +74,8 @@ class OneBuildOptionalChoices(unittest.TestCase):
             built,game_build=BUILD,simc_revision=REV))
         f=built["categories"]["food"]
         self.assertEqual(
-            [x["item_id"] for x in f["options"]],[12,13,14])
+            [x["item_id"] for x in f["options"]],[13,14])
+        self.assertEqual(f["quality_comparison_pending_item_ids"],[11,12])
         self.assertEqual(f["status"],"SOURCE_BACKED_OPTIONS_READY")
         self.assertEqual([x["item_id"] for x in
                           built["categories"]["potion"]["options"]],[15])
@@ -108,10 +109,16 @@ class OneBuildOptionalChoices(unittest.TestCase):
                           built["categories"]["food"]["options"]],[302,303,304])
 
     def test_same_effect_equal_quality_ambiguous_is_not_auto_picked(self):
-        # Do not pick either a tie or a guessed text token.
-        built=self.registry([
+        # Identical parser name/rank is ambiguous; separate names with a
+        # shared spell are not automatically the same physical effect.
+        separate=self.registry([
             exact_row("food",11,"food_a_3",3,"spell:111"),
             exact_row("food",12,"food_b_3",3,"spell:111")])
+        self.assertEqual([r["item_id"] for r in
+                          separate["categories"]["food"]["options"]],[11,12])
+        built=self.registry([
+            exact_row("food",11,"food_a_3",3,"spell:111"),
+            exact_row("food",12,"food_a_3",3,"spell:111")])
         self.assertEqual(built["categories"]["food"]["options"],[])
         self.assertEqual(built["categories"]["food"]["status"],
                          "SOURCE_OPTIONS_UNAVAILABLE")
@@ -160,7 +167,6 @@ class OneBuildOptionalChoices(unittest.TestCase):
 
     def test_ui_and_runtime_consumers_share_same_installed_projection(self):
         built=self.registry([
-            exact_row("food",101,"food_1",1,"spell:11"),
             exact_row("food",102,"food_3",3,"spell:11"),
             exact_row("potion",103,"potion_3",3,"spell:22")])
         doc={"installed_optional_consumables":built}
@@ -454,9 +460,9 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                 [201,202,203])
             ready=manifest.project_fresh_optional_consumables(
                 game_build=BUILD,simc_revision=REV,source=source)
-            self.assertEqual(
-                [r["item_id"] for r in
-                 ready["categories"]["food"]["options"]],[202])
+            self.assertEqual(ready["categories"]["food"]["options"],[])
+            self.assertEqual(ready["categories"]["food"][
+                "quality_comparison_pending_item_ids"],[201,202])
             self.assertEqual(
                 [r["item_id"] for r in
                  ready["categories"]["potion"]["options"]],[203])

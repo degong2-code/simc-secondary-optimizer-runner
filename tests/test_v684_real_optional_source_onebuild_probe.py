@@ -97,10 +97,10 @@ class V684OneBuildReceiptTests(unittest.TestCase):
         self.assertNotIn("same_build_budget_evidence",options)
 
     def test_multiple_joined_rows_but_zero_user_choices_are_pending(self):
-        # v212 correctly rejects an equal-quality same-effect tie. A nonzero
-        # Wago/SimC join is NOT proof that the menu has options.
-        two=[row(111,token="food_equal_a_3",effect="simc:same"),
-             row(112,token="food_equal_b_3",effect="simc:same")]
+        # Same parser family with unproven quality dominance stays pending.
+        # Nonzero Wago/SimC joins are not proof of available menu options.
+        two=[row(111,token="food_equal_1",effect="simc:same",quality=1),
+             row(112,token="food_equal_3",effect="simc:same")]
         status,doc,_=self.invoke(original_result(two))
         self.assertEqual(status,2)
         self.assertEqual(doc["simc_wago_joined_rows"],2)

@@ -574,8 +574,11 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
 
     Rows must originate from the same-build Wago ID + pinned SimC input
     bridge. In particular a normalized item NAME is not an input token.
-    A shared effect identity may coalesce qualities only when the source
-    declares the same effect AND use conditions, never by name/rank alone.
+    An exact physical source row is not a numerical quality comparison.
+    Retain independently named physical choices; withhold unresolved
+    same-name rank families until the source establishes numerical
+    dominance over the complete comparable use scope. Do not infer this
+    from crafting rank, spell/handler identity or item level alone.
     """
     need(type(game_build) is str and type(simc_revision) is str,
          "OPTIONAL_SOURCE_SEASON_IDENTITY_REQUIRED")
@@ -592,6 +595,15 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
              "OPTIONAL_SOURCE_SAME_BUILD_AND_RECEIPT_REQUIRED")
         origin=source["source_receipt_sha256"]
         groups={}
+        # Same spelling as the existing parser ambiguity check. This groups
+        # candidate rank families, not asserted effect equivalence.
+        def parser_name(row):
+            token=row["simc_input_token"]
+            quality=row["crafting_quality"]
+            suffix="_"+str(quality)
+            if 1<=quality<=9 and token.endswith(suffix):
+                return token[:-len(suffix)]
+            return token
         for row in source["rows"]:
             need(type(row) is dict and
                  set(row)=={"kind","physical_item_id","simc_input_token",
@@ -615,38 +627,36 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
                  0<len(row["use_condition_identity"])<=180,
                  "OPTIONAL_SOURCE_EXACT_WAGO_SIMC_ROW_REQUIRED")
             group=(row["kind"],row["effect_identity"],
-                   row["use_condition_identity"])
+                   row["use_condition_identity"],parser_name(row))
             groups.setdefault(group,[]).append(row)
-        # When equally ranked distinct items cannot be separated, preserve
-        # the entire group as unavailable rather than picking arbitrarily.
+        # Existing v680 source rows have no authenticated numerical
+        # comparison. A shared handler/spell + generic ON_USE is not proof
+        # that higher rank dominates every benefit, penalty or condition.
+        # Hold only unresolved rank families, not all optional choices.
         for key,rows in groups.items():
-            ranks=sorted(rows,key=lambda row:(-row["crafting_quality"],
-                                               row["physical_item_id"]))
-            highest=ranks[0]["crafting_quality"]
-            champions=[row for row in ranks if
-                       row["crafting_quality"]==highest]
-            if len(champions)!=1:continue
-            chosen=champions[0]
+            if len(rows)!=1:
+                pending=kinds[key[0]].setdefault(
+                    "quality_comparison_pending_item_ids",[])
+                pending.extend(row["physical_item_id"] for row in rows)
+                continue
+            chosen=rows[0]
             kinds[key[0]]["options"].append({
                 "item_id":chosen["physical_item_id"],
                 "label":chosen["name_enUS"],
                 "simc_token":chosen["simc_input_token"],
-                "quality":highest,
+                "quality":chosen["crafting_quality"],
                 "effect_identity":key[1],
                 "use_condition_identity":key[2]})
+        for group in kinds.values():
+            if "quality_comparison_pending_item_ids" in group:
+                group["quality_comparison_pending_item_ids"]=sorted(set(
+                    group["quality_comparison_pending_item_ids"]))
         # The pinned SimC consumable parser searches substrings, not exact
         # item names (consumable.cpp::find_consumable). A short token can
         # match a different known physical item with the same crafting rank.
         # Reject only that ambiguous choice. This guard covers SOURCE-KNOWN
         # rows, not every item in SimC's complete DBC; native acceptance and
         # full parser uniqueness remain outside this offline projection.
-        def parser_name(row):
-            token=row["simc_input_token"]
-            quality=row["crafting_quality"]
-            suffix="_"+str(quality)
-            if 1<=quality<=9 and token.endswith(suffix):
-                return token[:-len(suffix)]
-            return token
         known_parser_names={}
         for row in source["rows"]:
             key=(row["kind"],row["crafting_quality"])
@@ -665,7 +675,7 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
                          if row["quality"]==0 else []))]
         # The v216 same-pass DBC inventory may identify a shadow from an
         # item outside the active-season candidate list. Remove only the
-        # chosen winner, never silently substitute a lower quality.
+        # affected option, never silently substitute a lower quality.
         shadowed=source.get("parser_shadowed_item_ids",[])
         need(type(shadowed) is list and
              all(type(i) is int and i>0 for i in shadowed) and
@@ -726,6 +736,11 @@ def verify_fresh_optional_consumables(doc,*,game_build,simc_revision):
              (doc["source_receipt_sha256"] is not None or
               not group["options"]),
              "OPTIONAL_INSTALLED_CHOICES_STATUS_INVALID")
+        pending=group.get("quality_comparison_pending_item_ids",[])
+        need(type(pending) is list and
+             all(type(i) is int and i>0 for i in pending) and
+             pending==sorted(set(pending)),
+             "OPTIONAL_INSTALLED_QUALITY_PENDING_IDS_INVALID")
         for row in group["options"]:
             need(type(row) is dict and
                  set(row)=={"item_id","label","simc_token","quality",
