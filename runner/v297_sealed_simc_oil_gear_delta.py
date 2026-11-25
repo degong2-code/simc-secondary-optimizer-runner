@@ -80,7 +80,7 @@ def _actor_from_v233(source):
 
 def measure(*,stage_root,source_profile_path,binary,simc_revision,
             game_build,target_ilevel,oil_token,enchant_id,
-            timeout_seconds=180):
+            timeout_seconds=180,expected_weapon_id=None):
     """Measure only a selected upstream v281 exact hand token, at most 2 Native.
 
     run_case() owns the old v278 cache/attempt receipts, so repeated
@@ -98,6 +98,8 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
          and type(game_build) is str and bool(game_build)
          and type(target_ilevel) is int and 1<=target_ilevel<=1000
          and type(enchant_id) is int and enchant_id>0
+         and (expected_weapon_id is None or
+              type(expected_weapon_id) is int and expected_weapon_id>0)
          and type(oil_token) is str and OIL.fullmatch(oil_token)
          and type(timeout_seconds) is int and 1<=timeout_seconds<=900,
          "V297_OIL_MEASUREMENT_IDENTITY_INVALID")
@@ -110,7 +112,8 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
          and 0<profile.stat().st_size<=MAX_PROFILE
          and exe.is_file() and not exe.is_symlink(),
          "V297_ORIGINAL_PROFILE_OR_BINARY_NOT_SEALED")
-    source=profile.read_text(encoding="utf8")
+    source_bytes=profile.read_bytes()
+    source=source_bytes.decode("utf8")
     actor=_actor_from_v233(source)
     lines=source.splitlines()
     hand=("off_hand" if "/off_hand:" in oil_token else "main_hand")
@@ -125,6 +128,8 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
          and int(weapon_id.group(1))>0
          and int(weapon_ilvl.group(1))==target_ilevel,
          "V297_SELECTED_ORIGINAL_WEAPON_ID_OR_ILEVEL_DRIFT")
+    need(expected_weapon_id is None or int(weapon_id.group(1))==expected_weapon_id,
+         "V297_SELECTED_WEAPON_SOURCE_MASK_ID_DRIFT")
     need(any(line.startswith("main_hand=") for line in lines)
          and ("/off_hand:" not in oil_token or
               any(line.startswith("off_hand=") for line in lines))
@@ -135,7 +140,7 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
              "json2=","iterations=","threads=","debug=",
              "profileset.","copy=")) for line in lines),
          "V297_ORIGINAL_PHYSICAL_GEAR_REQUIRED")
-    source_sha=digest(profile.read_bytes())
+    source_sha=digest(source_bytes)
     binary_sha=native_pair.file_sha(exe)
     options=source.rstrip()+"\n"+"".join(
         name+"=disabled\n" for name in
@@ -162,17 +167,23 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
                         case["folder"]),
                     "new_native_calls":new_calls}
     reports=[]
-    for case in outcomes:
-        path=case["folder"]/"simc.log"
-        need(path.is_file() and path.stat().st_size<=MAX_LOG,
-             "V297_SIMC_GEAR_DEBUG_LOG_MISSING_OR_TOO_LARGE")
-        log=path.read_text("utf8",errors="replace")
-        need("invalid temporary enchant" not in log.lower(),
-             "V297_SIMC_OIL_TOKEN_IGNORED")
-        reports.append(parse_total_gear(log,actor))
-    vector=compare(off=reports[0],on=reports[1])
-    receipt_shas=[native_pair.file_sha(x["folder"]/"receipt.json")
-                  for x in outcomes]
+    try:
+        for case in outcomes:
+            path=case["folder"]/"simc.log"
+            need(path.is_file() and path.stat().st_size<=MAX_LOG,
+                 "V297_SIMC_GEAR_DEBUG_LOG_MISSING_OR_TOO_LARGE")
+            log=path.read_text("utf8",errors="replace")
+            need("invalid temporary enchant" not in log.lower(),
+                 "V297_SIMC_OIL_TOKEN_IGNORED")
+            reports.append(parse_total_gear(log,actor))
+        vector=compare(off=reports[0],on=reports[1])
+        receipt_shas=[native_pair.file_sha(x["folder"]/"receipt.json")
+                      for x in outcomes]
+    except (OilGearBlocked,OSError,ValueError) as exc:
+        # Preserve the actual process count even when the completed
+        # cases cannot prove a clean positive static CHMV delta.
+        return {**pending,"status":"SIMC_PRECOMBAT_GEAR_NUMERIC_PENDING",
+                "reason":str(exc)[:400],"new_native_calls":new_calls}
     return {**pending,
         "status":"SIMC_PRECOMBAT_TOTAL_GEAR_STATIC_NUMBER_SOURCE_ONLY",
         "simc_revision":simc_revision,"game_build":game_build,

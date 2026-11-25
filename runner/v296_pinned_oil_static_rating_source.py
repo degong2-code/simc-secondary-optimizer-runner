@@ -29,13 +29,16 @@ def canonical(row):
                       separators=(",",":"),allow_nan=False)
 
 def extract(*,generated_text,game_build,simc_revision,enchant_ids,
-            original_git_blob_sha1=None):
+            original_git_blob_sha1=None,oil_application=False):
     """One pass of v211's exact generated DBC for selected original v281 IDs.
 
     Return only integer, unscaled ITEM_ENCHANTMENT_STAT points. Any mixed,
     scaled, unknown, absent or zero-only record stays explicitly unadmitted.
+    oil_application selects the actual player-overload stat enchant path.
+    The shared gem raw-source caller retains its separate existing policy.
     """
-    need(type(generated_text) is str and bool(generated_text) and
+    need(type(oil_application) is bool and
+         type(generated_text) is str and bool(generated_text) and
          len(generated_text.encode("utf8"))<=enchant.MAX_SOURCE
          and type(game_build) is str and bool(game_build)
          and type(simc_revision) is str and REV.fullmatch(simc_revision)
@@ -66,26 +69,38 @@ def extract(*,generated_text,game_build,simc_revision,enchant_ids,
         reasons=[]
         if not exact:reasons.append("REQUIRED_PROFESSION_CONDITION_PENDING")
         scaled={}
+        # In initialize_item_enchant, STAT calls the player-overload of
+        # item_enchantment_effect_stats, NOT the DAMAGE branch that treats
+        # -1 as fixed. The player-overload first tries an associated
+        # E_ENCHANT_ITEM spell, then id_scaling==0 or player-level scaling.
+        # Do not assume a nonzero spell has no override; reuse v297 for
+        # just the selected item/hand rather than implement spell effects.
+        needs_player_numeric=(oil_application and
+            (row["id_scaling"]!=0 or row["id_spell"]>0))
         known_stat_count=0
         for typ,amount,property_id,coeff in zip(
                 row["ench_type"],row["ench_amount"],
                 row["ench_prop"],row["ench_coeff"]):
             if typ==0:continue
             if (typ!=KIND or property_id not in MAPPING or
-                    amount<0 or coeff<0 or (amount==0 and coeff==0)):
+                    amount<0 or coeff<0 or
+                    (amount==0 and coeff==0 and not (
+                        oil_application and row["id_spell"]>0))):
                 exact=False
                 reasons.append("NOT_A_PURE_STATIC_CHMV_COMPONENT")
                 continue
             known_stat_count+=1
             stat=MAPPING[property_id]
-            if row["id_scaling"] not in (0,-1):
+            if needs_player_numeric or row["id_scaling"] not in (0,-1):
                 # v296 must never approximate the SimC-owned negative
                 # spell-scaling ID/coefficient, even when a tooltip says 16.
                 exact=False
                 reasons.append("SIMC_ITEM_ENCHANT_SCALING_REQUIRED")
                 scaled[stat]={"dbc_base_amount":amount,
                               "simc_scaling_id":row["id_scaling"],
-                              "simc_coefficient":coeff}
+                              "simc_coefficient":coeff,
+                              **({"simc_enchant_spell_id":row["id_spell"]}
+                                 if oil_application else {})}
             else:
                 vector[stat]+=amount
         if not known_stat_count:
@@ -122,7 +137,7 @@ def extract(*,generated_text,game_build,simc_revision,enchant_ids,
     return {**doc,"manifest_sha256":sha(canonical(doc).encode("utf8"))}
 
 def from_v275(*,pinned_source,stage_root,game_build,
-              simc_revision,enchant_ids):
+              simc_revision,enchant_ids,oil_application=False):
     """Consume the original v275 compiled source from its v217 workspace.
 
     Fail-closed on source drift. No network, Native, new DB, or extra Gate.
@@ -151,7 +166,8 @@ def from_v275(*,pinned_source,stage_root,game_build,
         generated_text=sources["spell_item_enchantment.inc"],
         game_build=game_build,simc_revision=simc_revision,
         enchant_ids=enchant_ids,
-        original_git_blob_sha1=original["git_blob_sha1"])
+        original_git_blob_sha1=original["git_blob_sha1"],
+        oil_application=oil_application)
     need(answer["source_sha256"]==original["sha256"],
          "O_RAW_V275_SOURCE_SHA_DRIFT")
     return answer

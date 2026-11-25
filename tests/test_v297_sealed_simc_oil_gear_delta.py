@@ -85,6 +85,43 @@ class GearStatOwner(unittest.TestCase):
             self.assertTrue(all("flask=disabled" in r["profile"]
                                 for r in used))
             self.assertFalse(got["weapon_and_hand_applicability_verified"])
+    def test_selected_weapon_identity_rejects_before_any_native_and_counts_failed_delta(self):
+        import tempfile
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            profile=root/"original.simc"
+            profile.write_text("paladin=source_actor\n"
+                "main_hand=weapon,id=9010,ilevel=334,source=local\n")
+            binary=root/"simc"
+            binary.write_bytes(b"test binary")
+            args=dict(stage_root=root,source_profile_path=profile,binary=binary,
+                simc_revision="c"*40,game_build="12.1.5.70783",
+                target_ilevel=334,oil_token="main_hand:example_2",enchant_id=8052)
+            with mock.patch.object(simc.native_pair,"run_case") as run:
+                with self.assertRaisesRegex(simc.OilGearBlocked,"MASK_ID_DRIFT"):
+                    simc.measure(**args,expected_weapon_id=9011)
+                run.assert_not_called()
+            folders={}
+            for variant,line in (("baseline",OFF),("active",OFF)):
+                folder=root/variant
+                folder.mkdir()
+                (folder/"simc.log").write_text(line+"\n")
+                (folder/"receipt.json").write_text("{}")
+                folders[variant]=folder
+            def observed(**kwargs):
+                return {"receipt":{"status":"NATIVE_JSON2_CAPTURED"},
+                        "folder":folders[kwargs["variant"]],
+                        "new_native_calls":1}
+            with mock.patch.object(simc.native_pair,"run_case",
+                                   side_effect=observed) as run:
+                got=simc.measure(**args,expected_weapon_id=9010)
+            self.assertEqual(run.call_count,2)
+            self.assertEqual(got["new_native_calls"],2)
+            self.assertEqual(got["status"],"SIMC_PRECOMBAT_GEAR_NUMERIC_PENDING")
+            self.assertIn("NO_POSITIVE_STATIC_O",got["reason"])
+            self.assertIsNone(got["static_CHMV_vector_unadmitted"])
+
     def test_v216_original_oil_mask_accepts_only_numeric_source_candidate(self):
         import v216_environment_build_coordinator as build
         vector={"crit_rating":16,"haste_rating":16,

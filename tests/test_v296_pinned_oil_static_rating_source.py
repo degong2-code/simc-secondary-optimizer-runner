@@ -58,6 +58,31 @@ class SeasonOilStaticSource(unittest.TestCase):
                         simc_revision=REV,enchant_ids=[8052])
         self.assertIsNone(doc["items"][0]["static_CHMV_vector"])
 
+    def test_oil_stat_player_overload_does_not_treat_minus_one_as_fixed(self):
+        direct=FIXTURE.replace('1237006, "Thalassian','0, "Thalassian')
+        def extract(text):
+            return oil.extract(generated_text=text,game_build=BUILD,
+                simc_revision=REV,enchant_ids={8052},oil_application=True)["items"][0]
+        self.assertEqual(extract(direct)["static_CHMV_vector"],{
+            "crit_rating":16,"haste_rating":16,"mastery_rating":0,
+            "versatility_rating":0})
+        scaled=direct.replace("{ 8052, 0, 0,","{ 8052, 0, -1,").replace(
+            "{ 0, 0, 0 }, 0,","{ 0.4757, 0.4757, 0 }, 0,")
+        out=extract(scaled)
+        self.assertIsNone(out["static_CHMV_vector"])
+        self.assertEqual(out["source_reason_codes"],
+                         ["SIMC_ITEM_ENCHANT_SCALING_REQUIRED"])
+        self.assertEqual(out["unresolved_simc_scaled_static_stats"][
+            "crit_rating"]["simc_scaling_id"],-1)
+        # A linked spell can override base points even with scaling ID=0.
+        linked=extract(FIXTURE)
+        self.assertIsNone(linked["static_CHMV_vector"])
+        self.assertEqual(linked["unresolved_simc_scaled_static_stats"][
+            "haste_rating"]["simc_enchant_spell_id"],1237006)
+        zero=FIXTURE.replace("{ 16, 16, 0 }","{ 0, 0, 0 }")
+        self.assertEqual(extract(zero)["source_reason_codes"],
+                         ["SIMC_ITEM_ENCHANT_SCALING_REQUIRED"])
+
     def test_real_70783_scaled_source_stays_pending_not_12_or_16_or_17(self):
         # Simplified verbatim field-shape from 70783 generated DBC. The
         # -7 scaling ID and 0.4757 coefficients are SimC-owned operations.

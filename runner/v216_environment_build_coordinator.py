@@ -11008,7 +11008,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             game_build=collected["expected_game_build"],
                             simc_revision=source_compilation["simc_revision"],
                             enchant_ids={r["simc_enchant_id"]
-                                         for r in oil_work})
+                                         for r in oil_work},
+                            oil_application=True)
                     except (oil_raw_source.OilSourceBlocked,
                             OSError,ValueError,KeyError,TypeError) as exc:
                         raise EnvironmentBuildBlocked(
@@ -11142,7 +11143,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             target_ilevel=fresh_collection_inputs[
                                 "representative_request"]["target_ilevel"],
                             oil_token=chosen["simc_input_token"],
-                            enchant_id=chosen["simc_enchant_id"])
+                            enchant_id=chosen["simc_enchant_id"],
+                            expected_weapon_id=_oil_exact_weapon_match(
+                                chosen,weapon_rows)["representative_weapon_id"])
                     except (oil_precombat_gear.OilGearBlocked,
                             OSError,ValueError,KeyError,TypeError) as exc:
                         pending_hands.append(hand)
@@ -11155,6 +11158,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     measured.append({
                         "physical_item_id":item_id,"hand":hand,
                         "status":observation["status"],
+                        **({"reason":observation["reason"]}
+                           if observation.get("reason") else {}),
                         "new_native_calls":observation["new_native_calls"]})
                     if observation["status"]!=(
                             "SIMC_PRECOMBAT_TOTAL_GEAR_STATIC_NUMBER_SOURCE_ONLY"):
