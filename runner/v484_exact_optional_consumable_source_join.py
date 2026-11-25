@@ -71,7 +71,7 @@ def extract_simc_profile_defaults(*, binary, season, receipt):
                weapon_target_ilevel=season["target_ilevel"],
                profile_generation_processes=0,dps_simulations=0)
     with tempfile.TemporaryDirectory(prefix="v784-") as td:
-        root=Path(td)
+        root=pathlib.Path(td)
         lines=["save_profiles=1","save_profile_with_actions=0",
                "offline=1","threads=1"]
         files={}
