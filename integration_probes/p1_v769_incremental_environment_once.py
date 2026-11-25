@@ -225,9 +225,117 @@ def run(args):
     finally:
         save()
 
+def observe_simc_defaults(args):
+    """One profile-generation process; never enter the optimizer or Build.
+
+    Read only the exact default food/potion emitted by SimC. Generated
+    character profiles are ephemeral, not representative equipment inputs.
+    """
+    import re
+    import v106_user_session_controller as sessions
+    out=Path(args.out).resolve()
+    out.mkdir(parents=True,exist_ok=True)
+    dest=out/"V784_SIMC_DEFAULTS.json"
+    doc={"schema":"p1_v784_simc_native_profile_defaults_v1",
+         "game_build":BUILD,"simc_revision":REV,"character_level":90,
+         "status":"STARTED","profile_generation_processes":0,
+         "environment_builds":0,"dps_simulations":0,
+         "actual_installed_environment_verified":False}
+    try:
+        binary=Path(args.simc).resolve()
+        identity_path=Path(args.identity).resolve()
+        if not binary.is_file() or not identity_path.is_file():
+            doc["status"]="PENDING_EXISTING_SOURCE_BOUND_BINARY_CACHE_MISSING"
+            return 2
+        identity=json.loads(identity_path.read_text(encoding="utf-8-sig"))
+        need(identity["game_build"]==BUILD and identity["source_commit"]==REV
+             and identity["binary_sha256"]==digest(binary),
+             "V784_EXISTING_BINARY_IDENTITY_DRIFT")
+        doc["binary_sha256"]=identity["binary_sha256"]
+        roster=sorted(sessions.SUPPORTED)
+        need(len(roster)==26,"V784_DPS_ROSTER_DRIFT")
+        with tempfile.TemporaryDirectory(prefix="v784-") as td:
+            root=Path(td)
+            lines=["save_profiles=1","save_profile_with_actions=0",
+                   "offline=1","threads=1"]
+            files={}
+            for n,(cls,spec) in enumerate(roster):
+                controls=sessions.standard_controls((cls,spec))
+                actor="defaults_"+str(n)
+                file=actor+".simc"
+                files[cls+"/"+spec]=(file,spec)
+                lines.extend([cls+"="+actor,"spec="+spec,"level=90",
+                              "race="+controls["race"],"load_default_talents=1",
+                              "flask=disabled","augmentation=disabled",
+                              "temporary_enchant=disabled","save="+file])
+            input_path=root/"defaults_input.simc"
+            input_path.write_text("\n".join(lines)+"\n",encoding="utf8")
+            doc["profile_generation_processes"]=1
+            process=subprocess.run([str(binary),input_path.name],cwd=root,
+                capture_output=True,text=True,errors="replace",timeout=120)
+            output=process.stdout+"\n"+process.stderr
+            doc["returncode"]=process.returncode
+            doc["generation_branch_observed"]="Generating profiles" in output
+            doc["simulation_branch_observed"]="Simulating..." in output
+            if doc["simulation_branch_observed"]:
+                doc["dps_simulations"]=None
+                raise RuntimeError("V784_UNEXPECTED_SIMULATION_BRANCH")
+            doc["generated_profile_count"]=sum((root/f).is_file()
+                                                for f,_ in files.values())
+            doc["diagnostic_tail"]=output[-1800:]
+            observed={}
+            missing=[]
+            for key,(file,spec) in files.items():
+                path=root/file
+                if not path.is_file() or path.stat().st_size>500_000:
+                    missing.append(key)
+                    continue
+                values={}
+                for line in path.read_text(encoding="utf8").splitlines():
+                    if "=" not in line or line.startswith("#"):
+                        continue
+                    name,value=line.split("=",1)
+                    if name in ("spec","level","food","potion"):
+                        if name in values:
+                            raise RuntimeError("V784_DUPLICATE_PROFILE_FIELD")
+                        values[name]=value.strip()
+                if (values.get("spec")!=spec or values.get("level")!="90" or
+                        not all(re.fullmatch(r"[a-z0-9_]{1,100}",values.get(k,""))
+                                for k in ("food","potion"))):
+                    missing.append(key)
+                    continue
+                observed[key]={k:values[k] for k in ("food","potion")}
+            doc["observed_defaults"]=observed
+            doc["missing_specs"]=missing
+            expected={}
+            for kind,tokens in engine.optional_source_join.reviewed_apl_default_groups(BUILD,REV).items():
+                for token,specs in tokens.items():
+                    for spec in specs.split():
+                        expected.setdefault(spec,{})[kind]=token
+            doc["mismatches_against_reviewed_snapshot"]={
+                key:{"observed":observed.get(key),"reviewed":expected.get(key)}
+                for key in sorted(set(observed)|set(expected))
+                if observed.get(key)!=expected.get(key)}
+            need(process.returncode==0 and doc["generation_branch_observed"]
+                 and not missing and len(observed)==26,
+                 "V784_PROFILE_GENERATION_INCOMPLETE")
+            doc["status"]="PASS_REAL_SIMC_PROFILE_DEFAULT_EXTRACTION"
+            return 0
+    except Exception as exc:
+        doc["status"]="BLOCKED_PROFILE_DEFAULT_EXTRACTION"
+        doc["first_blocker"]=bounded_code(exc)
+        return 2
+    finally:
+        dest.write_text(json.dumps(doc,ensure_ascii=False,sort_keys=True,
+                                   indent=2)+"\n",encoding="utf8")
+        print("V784_DEFAULTS "+json.dumps(doc,sort_keys=True),flush=True)
+
+
 if __name__=="__main__":
     p=argparse.ArgumentParser()
     p.add_argument("--simc",required=True)
     p.add_argument("--identity",required=True)
     p.add_argument("--out",required=True)
-    sys.exit(run(p.parse_args()))
+    p.add_argument("--defaults-only",action="store_true")
+    args=p.parse_args()
+    sys.exit(observe_simc_defaults(args) if args.defaults_only else run(args))

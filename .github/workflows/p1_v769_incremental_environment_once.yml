@@ -58,3 +58,42 @@ jobs:
           path: out/v769/V769_INCREMENTAL_ENVIRONMENT.json
           retention-days: 14
           if-no-files-found: warn
+
+  profile-defaults-only:
+    if: contains(github.event.head_commit.message, '[v784-defaults-once]')
+    runs-on: windows-2022
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: runner;integration_probes;.
+    steps:
+      - name: Preserve source byte identity
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Restore existing exact CLI, never compile
+        uses: actions/cache/restore@v4
+        with:
+          path: .v618-simc-cache
+          key: v618-simc70961-source-9933ffb946fb55b1fa66657b848f519ac19006e1-win2022-msvc-cli
+      - name: Existing web dependencies and syntax
+        run: |
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m py_compile integration_probes/p1_v769_incremental_environment_once.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: One SimC profile generation, no Build or DPS
+        timeout-minutes: 4
+        run: |
+          python -u integration_probes/p1_v769_incremental_environment_once.py --defaults-only --simc .v618-simc-cache/simc.exe --identity .v618-simc-cache/identity.json --out out/v784
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: p1-v784-simc-profile-defaults
+          path: out/v784/V784_SIMC_DEFAULTS.json
+          if-no-files-found: warn
+          retention-days: 30
