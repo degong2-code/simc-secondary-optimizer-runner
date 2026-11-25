@@ -41,6 +41,7 @@ on:
       - runner/webui/index.html
       - runner/webui/styles.css
       - runner/webui/app.js
+      - tests/test_p1_v568_first_user_environment_bridge_offline.py
       - tests/test_p1_v576_manual_t_ui_intent_offline.py
       - tests/test_p1_v577_manual_t_positive_oil_installed_offline.py
       - tests/test_p1_v579_verified_oil_auto_sha_binding_offline.py

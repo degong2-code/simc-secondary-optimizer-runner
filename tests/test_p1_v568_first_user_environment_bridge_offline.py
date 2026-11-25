@@ -22,7 +22,7 @@ class FirstUserBridge(unittest.TestCase):
         harness=r"""
 const fs=require("fs"), assert=require("assert");
 const raw=fs.readFileSync(process.argv[1],"utf8");
-const a=raw.indexOf("function optimizerNeedsSeasonPreparation()");
+const a=raw.indexOf("function explicitOilPreparationRequested()");
 const b=raw.indexOf("\nfunction buildRequest()",a);
 assert(a>=0 && b>a);
 // The real UI now shares nonthrowing ilvl validation between button state
@@ -30,7 +30,10 @@ assert(a>=0 && b>a);
 const helperA=raw.indexOf("function validTargetIlevel()");
 const helperB=raw.indexOf("\nfunction hasRequiredSelections()",helperA);
 assert(helperA>=0 && helperB>helperA);
-const src=raw.slice(helperA,helperB)+"\n"+raw.slice(a,b);
+// Load the complete actual preparation dependency chain, not a stub for
+// the newly introduced oil predicate. Default-on with NO explicit physical
+// ID must still use the normal initial season Build.
+const src=raw.slice(helperA,helperB)+"\nlet oilUseIntent=true;\n"+raw.slice(a,b);
 assert(!src.includes("/api/v1/longrun/start"));
 const factory=Function("field","valueInt","state",
   "verifiedInstalledGearScopeMatchesRun","buildSeasonEnvironment",
@@ -41,10 +44,12 @@ const pending={web_environment_scope:{environment_ready:false,environment_instal
 (async()=>{
   let calls=0,views=[],notices=[],response=good,linkReady=true;
   const state={verifiedInstalledBuildFromThisPage:null,ready:false};
-  const f=factory(id=>id==="season-game-build"?"":"334",
+  const f=factory(id=>id==="ilevel"?"334":"",
     ()=>334,state,
     (build,ilvl)=>state.ready && build==="12.1.5.70783" && ilvl===334,
-    async()=>{calls++;if(linkReady&&response===good){
+    async selected=>{assert.strictEqual(selected,false,
+      "default-on without a physical oil ID must use base Build");
+      calls++;if(linkReady&&response===good){
       state.ready=true;state.verifiedInstalledBuildFromThisPage="12.1.5.70783";
     }return response;},
     v=>views.push(v),v=>notices.push(v));
