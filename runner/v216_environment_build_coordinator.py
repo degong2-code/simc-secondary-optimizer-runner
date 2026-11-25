@@ -5030,7 +5030,43 @@ def _lazy_full_pinned_simc_item_stage(*, stage_root, build, small_seed_dir,
             "environment_ready":False,"G":None}
 
 
-def _one_spec_representative_stage_contract(*, build, request, gear_bytes,
+def _immutable_G_derived_stage_contract(root,contract):
+    """A changed derived input gets its own generation, not a stale hit.
+
+    Preserve the existing v217 identities and paths for unchanged inputs
+    and legacy installations. Only a COMPLETE, intact prior generation
+    with different inputs permits a new generation. No raw acquisition,
+    receipt rewrite, interrupted-stage bypass or Native approval here.
+    """
+    stage_id=contract["stage_id"]
+    version=contract["stage_version"]
+    inputs=contract["inputs"]
+    outputs=contract["outputs"]
+    paths,receipt_path=stage_engine._safe_paths(root,stage_id,outputs)
+    if not receipt_path.exists():
+        # execute_stage owns unreceipted-output and incomplete-write checks.
+        return contract
+    prior=stage_engine._read_receipt(receipt_path)
+    fingerprint=stage_engine._input_sha(stage_id,version,inputs)
+    if prior.get("input_fingerprint")==fingerprint:
+        return contract
+    old_fingerprint=prior.get("input_fingerprint")
+    need(type(old_fingerprint) is str and
+         season_budget_contract.SHA.fullmatch(old_fingerprint) is not None,
+         "V767_G_DERIVED_ORIGINAL_FINGERPRINT_INVALID")
+    stage_engine._check_identity(prior,stage_id,version,old_fingerprint,paths)
+    need(prior.get("status")=="COMPLETE",
+         "V767_G_DERIVED_PREVIOUS_GENERATION_INCOMPLETE")
+    stage_engine._verify_outputs(prior,paths)
+    suffix="-g"+fingerprint[:20]
+    return {**contract,"stage_id":stage_id+suffix,
+            "outputs":{name:str(pathlib.PurePosixPath(relative).with_name(
+                pathlib.PurePosixPath(relative).stem+suffix+
+                pathlib.PurePosixPath(relative).suffix))
+                for name,relative in outputs.items()}}
+
+
+def _one_spec_representative_stage_contract(*, root, build, request, gear_bytes,
         tier_bytes, source_receipt_bytes, item_data):
     """Same exact v217 input identity for producer and downstream consumer."""
     need(item_data.is_file() and not item_data.is_symlink(),
@@ -5055,7 +5091,8 @@ def _one_spec_representative_stage_contract(*, build, request, gear_bytes,
         pathlib.Path(simc_representative.chooser.__file__),
         pathlib.Path(product_gear_db.__file__),
         pathlib.Path(stage_engine.__file__)])
-    return {"stage_id":"fresh-one-spec-generic-G-representative-"+one_spec_key,
+    return _immutable_G_derived_stage_contract(root,{
+            "stage_id":"fresh-one-spec-generic-G-representative-"+one_spec_key,
             "stage_version":"v251-v232-generic-G-physical-v1",
             "inputs":{"game_build":build,"request":request,
                     "gear_sha256":digest(gear_bytes),
@@ -5063,7 +5100,7 @@ def _one_spec_representative_stage_contract(*, build, request, gear_bytes,
                     "seed_receipt_sha256":digest(source_receipt_bytes),
                     "simc_item_data_sha256":item_sha,
                     "code_sha256":code["sha256"]},
-            "outputs":{"candidate":output}}
+            "outputs":{"candidate":output}})
 
 
 def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
@@ -5129,9 +5166,17 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
     need(receipt_path.is_file() and not receipt_path.is_symlink(),
          "V216_ONE_SPEC_SIMC_RECEIPT_REQUIRED")
     source_receipt_bytes=receipt_path.read_bytes()
-    contract=_one_spec_representative_stage_contract(build=build,request=request,
-        gear_bytes=gear_bytes,tier_bytes=tier_bytes,
-        source_receipt_bytes=source_receipt_bytes,item_data=item_data)
+    try:
+        contract=_one_spec_representative_stage_contract(
+            root=root,build=build,request=request,
+            gear_bytes=gear_bytes,tier_bytes=tier_bytes,
+            source_receipt_bytes=source_receipt_bytes,item_data=item_data)
+    except (stage_engine.StageExecutionBlocked,EnvironmentBuildBlocked,
+            OSError,ValueError,KeyError,TypeError) as exc:
+        return {"status":"FRESH_ONE_SPEC_PHYSICAL_SOURCE_OR_COVERAGE_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "network_calls_by_stage":0,"native_calls":0,
+                "environment_ready":False}
     path=root/contract["outputs"]["candidate"]
     def execute():
         source_tier=tier_simc_bridge.select_for_simc(
@@ -5322,14 +5367,35 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
     outputs={"input":"source/v257_one_spec_G_probe_"+probe_key+".simc",
              "receipt":"source/v257_one_spec_G_probe_receipt_"+
                        probe_key+".json"}
-    profile_path=root/outputs["input"]
-    receipt_path=root/outputs["receipt"]
     code=stage_engine.module_dependency_fingerprint([
         pathlib.Path(__file__),
         pathlib.Path(g_probe_profile.__file__),
         pathlib.Path(simc_representative.__file__),
         pathlib.Path(tier_simc_bridge.__file__),
         pathlib.Path(stage_engine.__file__)])
+    try:
+        contract=_immutable_G_derived_stage_contract(root,{
+            "stage_id":"fresh-one-spec-physical-G-probe-"+probe_key,
+            "stage_version":"v232-v233-source-profile-v3",
+            "inputs":{"game_build":build,
+                    "candidate_sha256":digest(rep_raw),
+                    "gear_sha256":digest(gear_raw),
+                    "tier_sha256":digest(tier_raw),
+                    "simc_seed_receipt_sha256":digest(receipt_raw),
+                    "source_stage_sha256":one_spec.get(
+                        "source_stage",{}).get("receipt_sha256"),
+                    "character":character,
+                    "level_policy":"SIMC_COMPILED_DEFAULT_MAX_LEVEL",
+                    "code_sha256":code["sha256"]},
+            "outputs":outputs})
+    except (stage_engine.StageExecutionBlocked,EnvironmentBuildBlocked,
+            OSError,ValueError,KeyError,TypeError) as exc:
+        return {"status":"FRESH_G_PROBE_SOURCE_OR_CHARACTER_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "network_calls_by_stage":0,"native_calls":0,
+                "G":None,"environment_ready":False}
+    profile_path=root/contract["outputs"]["input"]
+    receipt_path=root/contract["outputs"]["receipt"]
     def execute():
         source_stage=one_spec.get("source_stage")
         if source_stage is not None:
@@ -5341,7 +5407,7 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
                      "spec":rep["character"]["spec"],
                      "target_ilevel":rep["target_ilevel"]}
             source_contract=_one_spec_representative_stage_contract(
-                build=build,request=request,gear_bytes=gear_raw,
+                root=root,build=build,request=request,gear_bytes=gear_raw,
                 tier_bytes=tier_raw,source_receipt_bytes=receipt_raw,
                 item_data=seed_dir/"item_data.inc")
             checked=stage_engine.verify_stage(root=root,**source_contract)
@@ -5416,19 +5482,7 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
                     if k!="receipt_sha256"}).encode("utf8")))
     try:
         stage=stage_engine.execute_stage(
-            root=root,stage_id="fresh-one-spec-physical-G-probe-"+probe_key,
-            stage_version="v232-v233-source-profile-v3",
-            inputs={"game_build":build,
-                    "candidate_sha256":digest(rep_raw),
-                    "gear_sha256":digest(gear_raw),
-                    "tier_sha256":digest(tier_raw),
-                    "simc_seed_receipt_sha256":digest(receipt_raw),
-                    "source_stage_sha256":one_spec.get(
-                        "source_stage",{}).get("receipt_sha256"),
-                    "character":character,
-                    "level_policy":"SIMC_COMPILED_DEFAULT_MAX_LEVEL",
-                    "code_sha256":code["sha256"]},
-            outputs=outputs,execute=execute,validate=validate)
+            root=root,**contract,execute=execute,validate=validate)
     except (stage_engine.StageExecutionBlocked,
             tier_simc_bridge.BridgeBlocked,
             simc_representative.SourceRepresentativeBlocked,

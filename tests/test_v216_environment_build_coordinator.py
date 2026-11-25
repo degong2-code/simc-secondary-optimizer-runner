@@ -1298,6 +1298,64 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 output_dir=self.root/"missing_v167_plan",
                 max_new=0)
 
+        # Actual v251/v232 -> v233 path after an unrelated package-code
+        # fingerprint change. Keep old generation and identical Native
+        # input identity; the new generation is independently sealed.
+        generation_root=self.root/"derived_generations"
+        generation_root.mkdir()
+        rep_args={"stage_root":generation_root,"build":BUILD,
+                  "fresh_gear":kwargs["fresh_gear"],
+                  "tier_bridge":kwargs["tier_bridge"],
+                  "seed_directory":source_root,
+                  "request":{"class":"paladin","spec":"retribution",
+                             "target_ilevel":334}}
+        def generation(code):
+            with (mock.patch.object(v216.stage_engine,
+                    "module_dependency_fingerprint",return_value={"sha256":code}),
+                  mock.patch.object(v216.tier_simc_bridge,"select_for_simc",
+                    return_value={"v231_candidate":tier})):
+                selected=v216._one_spec_ordinary_simc_stage(**rep_args)
+                self.assertEqual(selected["status"],
+                    "FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE",
+                    str(selected))
+                profile=v216._one_spec_source_G_probe_stage(**dict(kwargs,
+                    stage_root=generation_root,one_spec=selected))
+                self.assertEqual(profile["status"],
+                    "FRESH_ONE_SPEC_PHYSICAL_G_PROFILE_PREPARED_NATIVE_PENDING",
+                    str(profile))
+                return selected,profile
+        prior_rep,prior_profile=generation("a"*64)
+        old_paths=[pathlib.Path(prior_rep["candidate_path"]),
+                   pathlib.Path(prior_profile["profile_path"]),
+                   pathlib.Path(prior_profile["profile_receipt_path"])]
+        original_bytes=[p.read_bytes() for p in old_paths]
+        updated_rep,updated_profile=generation("b"*64)
+        cached_rep,cached_profile=generation("b"*64)
+        self.assertNotEqual(prior_rep["candidate_path"],
+                            updated_rep["candidate_path"])
+        self.assertNotEqual(prior_profile["profile_path"],
+                            updated_profile["profile_path"])
+        self.assertEqual([p.read_bytes() for p in old_paths],original_bytes)
+        self.assertEqual(updated_profile["physical_profile_sha256"],
+                         prior_profile["physical_profile_sha256"])
+        self.assertEqual(pathlib.Path(updated_profile["profile_receipt_path"])
+                         .read_bytes(),original_bytes[2])
+        for current,cached in ((updated_rep,cached_rep),
+                               (updated_profile,cached_profile)):
+            self.assertEqual(current["source_stage"]["status"],
+                             "EXECUTED_AND_SEALED")
+            self.assertEqual(cached["source_stage"]["status"],"REUSED_VERIFIED")
+            self.assertEqual(current["native_calls"],0)
+            self.assertEqual(current["network_calls_by_stage"],0)
+        # A damaged prior output cannot be used to bypass a same-scope
+        # stage mismatch by generating another derived receipt.
+        old_paths[0].write_text("tampered",encoding="utf8")
+        with mock.patch.object(v216.stage_engine,"module_dependency_fingerprint",
+                               return_value={"sha256":"c"*64}):
+            blocked=v216._one_spec_ordinary_simc_stage(**rep_args)
+        self.assertEqual(blocked["reason"],"STAGE_OUTPUT_HASH_MISMATCH")
+        self.assertNotIn("candidate_path",blocked)
+
         pathlib.Path(first["profile_path"]).write_text(
             "tampered",encoding="utf8")
         rejected=v216._one_spec_source_G_probe_stage(**kwargs)
