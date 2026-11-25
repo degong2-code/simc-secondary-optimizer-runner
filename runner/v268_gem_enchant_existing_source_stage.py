@@ -72,13 +72,16 @@ def collect(*,stage_root,build,transport=None):
 
 def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
          selected_source_gem_item_ids=None,selected_special_gem_item_id=None,
-         excluded_ordinary_item_id=None):
+         excluded_ordinary_item_id=None,target_ilevel=None):
     """Reuse a sealed v266 source view and only project selected raw gem IDs.
 
     Raw EffectPointsMin values are NOT proven effective rating, best quality,
     legal sockets or Native accepted gems. No network or SimC run. The CSV
     bytes are still hashed each time, but the full parse is cached by v217.
     """
+    if target_ilevel is not None and (
+            type(target_ilevel) is not int or target_ilevel<=0):
+        raise ValueError("V268_TARGET_ILEVEL_INVALID")
     if selected_gem_item_ids is not None:
         if (type(selected_gem_item_ids) is not list or
                 len(selected_gem_item_ids)>64 or
@@ -203,8 +206,16 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
     stat_types=("crit_rating","haste_rating",
                 "mastery_rating","versatility_rating")
     four_stat_best={}
+    # Only the automatic representative choice uses this known v221
+    # lower bound. The sealed join and explicitly selected rows stay intact.
+    minimum_by_id={r["item_id"]:r.get("minimum_ilevel")
+                   for r in records["joins"]} if target_ilevel is not None else {}
     for record in result["records"]:
         item_id=record["item_id"]
+        minimum=minimum_by_id.get(item_id)
+        if target_ilevel is not None and not (
+                type(minimum) is int and 0<=minimum<=target_ilevel):
+            continue
         if (item_id in (selected_special_gem_item_id,
                         excluded_ordinary_item_id) or
             item_id in (240967,240983) or

@@ -283,6 +283,93 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertFalse(pending["highest_quality_verified"])
         self.assertFalse(pending["environment_ready"])
 
+    def test_v754_mixed_j_reference_bounds_and_unbuffed_comparison(self):
+        build="12.2.0.99999";rev="a"*40
+        stats=list(v216.physical_gems.ORDINARY_FOUR_STATS)
+        rows=[];source=[]
+        def add(i,lead,partner,major,minor,*,scaled=False,minimum=0,
+                low=0,high=0):
+            rows.append({"item_id":i,"enchant_id":i,"gem_property_id":i,
+                "color_mask":2,"minimum_ilevel":minimum,"expansion_id":13,
+                "quality":4,"crafting_quality":2,"item_name":"Gem "+str(i),
+                "item_ilevel_unscaled":333})
+            vector=dict.fromkeys(stats,0)
+            vector.update({lead:major,partner:minor})
+            source.append({"enchant_id":i,
+                "status":v216.oil_raw_source.PENDING if scaled else
+                    v216.oil_raw_source.STATUS,
+                "source_min_ilevel":low,"source_max_ilevel":high,
+                "static_CHMV_vector":None if scaled else vector,
+                "source_reason_codes":["SIMC_ITEM_ENCHANT_SCALING_REQUIRED"]
+                    if scaled else [],
+                "unresolved_simc_scaled_static_stats":{
+                    s:{"simc_scaling_id":-7,"dbc_base_amount":0,
+                       "simc_coefficient":vector[s]}
+                    for s in (lead,partner)} if scaled else {}})
+        for n,stat in enumerate(stats):
+            add(330001+n,stat,stats[(n+1)%4],16,7)
+        add(330011,stats[0],stats[1],50,10,minimum=340)
+        add(330012,stats[0],stats[1],50,10,low=340)
+        add(330013,stats[0],stats[1],50,10,high=330)
+        add(330014,stats[0],stats[1],.6,.2,scaled=True,minimum=340)
+        raw={"game_build":build,"simc_revision":rev,
+             "source_sha256":"d"*64,"items":source}
+        candidate={"status":"SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED",
+            "game_build":build,"simc_revision":rev,
+            "v221_stage_receipt_sha256":"1"*64,
+            "v230_stage_receipt_sha256":"2"*64,
+            "v230_original_item_data_sha256":"3"*64,
+            "candidates_unadmitted":rows,"candidate_count":len(rows)}
+        profile=self.root/"source_G.simc"
+        profile.write_text("paladin=test\\nhead=source,id=33221\\n",encoding="utf8")
+        args=dict(candidates=candidate,stage_root=self.root,
+            simc_revision=rev,target_ilevel=334,
+            collected={"expected_game_build":build,
+                "fresh_pinned_v211_source":{
+                    "status":"PINNED_V211_AND_GENERATED_SOURCES_SEALED"},
+                "fresh_one_spec_physical_G_probe":{"profile_path":str(profile)}})
+        with mock.patch.object(v216.oil_raw_source,"from_v275",return_value=raw):
+            static=v216._fresh_pinned_dbc_ordinary_gem_j_source(**args)
+        self.assertEqual(static["J_candidate_unadmitted"],92)
+        add(330015,stats[0],stats[1],.6,.2,scaled=True)
+        candidate["candidate_count"]=len(rows)
+        raw_vector=dict.fromkeys(stats,0)
+        raw_vector.update({stats[0]:19,stats[1]:9})
+        buffed=dict(raw_vector);buffed[stats[0]]=40
+        measured={
+            "status":"SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED",
+            "simc_effective_two_stat_vector_unadmitted":buffed,
+            "simc_effective_two_stat_rating_unadmitted":49,
+            "simc_unbuffed_gear_two_stat_vector_unadmitted":raw_vector,
+            "simc_unbuffed_gear_two_stat_rating_unadmitted":28,
+            "simc_unbuffed_gear_rating_source":"V046_JSON2_RESOLVED_ITEM_STATIC_CHMV",
+            "observed":{"source":"SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS"},
+            "ordinary_gem_id":330015,"new_native_calls":0,"native_case_receipts":[]}
+        with mock.patch.object(v216.oil_raw_source,"from_v275",
+                               return_value=raw) as loader, \\
+             mock.patch.object(v216.native_effect_pair,"measure_ordinary_gem",
+                               return_value=measured) as native:
+            reader=v216._one_build_gem_dbc_reader()
+            pending=v216._fresh_pinned_dbc_ordinary_gem_j_source(
+                **args,_read_dbc=reader)
+            self.assertEqual(pending["reason"],
+                             "GEM_ELIGIBLE_SCALED_COMPARISON_PENDING")
+            native_args=dict(args,binary=object(),_read_dbc=reader,
+                native_G_status="G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING")
+            actual=v216._fresh_four_stat_simc_observed_j_preview(**native_args)
+            self.assertEqual(loader.call_count,1)
+            self.assertEqual(native.call_count,1)
+            self.assertEqual(actual["J_candidate_unadmitted"],97)
+            self.assertEqual(actual["by_stat"][stats[0]]["item_id"],330015)
+            self.assertEqual(actual["selected_numeric_source_proofs_by_item_id"][
+                "330015"]["numeric_source"],
+                "EXACT_CONTROLLED_SIMC_NATIVE_UNBUFFED_GEAR_DELTA")
+            self.assertFalse(actual["environment_ready"])
+            native.return_value={**measured,
+                "simc_unbuffed_gear_two_stat_vector_unadmitted":None}
+            blocked=v216._fresh_four_stat_simc_observed_j_preview(**native_args)
+            self.assertEqual(blocked["reason"],"GEM_MIXED_UNBUFFED_RATING_PENDING")
+
     def test_v551_static_j_original_owner_repeats_and_rejects_drift(self):
         """Existing v271 repeated J is preserved without quality admission."""
         build="12.2.0.99999"
@@ -446,6 +533,25 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             preview=preview,layout=layout,ratings=ratings,
             link=link,game_build=build,simc_revision=rev)
         self.assertEqual(chosen,ids)
+        # The same sealed receipt reader must bind the unbuffed vector,
+        # not the legacy talent-modified snapshot, for a new mixed proof.
+        mixed=copy.deepcopy(preview)
+        item=mixed["native_observations_unadmitted"][0]
+        item["simc_unbuffed_gear_two_stat_vector_unadmitted"]=dict(
+            item["simc_effective_two_stat_vector_unadmitted"])
+        item["simc_unbuffed_gear_rating_source"]="V046_JSON2_RESOLVED_ITEM_STATIC_CHMV"
+        item["simc_effective_two_stat_vector_unadmitted"][stats[0]]=40
+        mixed["selected_numeric_source_proofs_by_item_id"][str(ids[0])][
+            "numeric_source"]="EXACT_CONTROLLED_SIMC_NATIVE_UNBUFFED_GEAR_DELTA"
+        self.assertEqual(v216._fresh_match_simc_native_ordinary_j(
+            preview=mixed,layout=layout,ratings=ratings,link=link,
+            game_build=build,simc_revision=rev),ids)
+        item["simc_unbuffed_gear_two_stat_vector_unadmitted"][stats[0]]=15
+        with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                "V216_NATIVE_J_SOURCE_REPRESENTATIVE_RATING_OR_ID_DRIFT"):
+            v216._fresh_match_simc_native_ordinary_j(
+                preview=mixed,layout=layout,ratings=ratings,link=link,
+                game_build=build,simc_revision=rev)
         candidate={"status":"SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED",
                    "game_build":build,"simc_revision":rev,
                    "v221_stage_receipt_sha256":"1"*64,
