@@ -2826,7 +2826,10 @@ class LocalJobs:
             raise blocked(exc) from None
         hydrated=None
         prepared_params=params
-        if params.current_season_product and user["special_items"]:
+        if params.current_season_product and (
+                user["special_items"] or
+                (user["embellishments"] and
+                 params.installed_season_game_build is not None)):
             # v475 must apply BEFORE optional exact-L Native/cache hydration,
             # not only in the later plan() call. On a restarted server the
             # saved v113 snapshot is also evidence that a stale installed
@@ -2847,6 +2850,9 @@ class LocalJobs:
             binary=pathlib.Path(params.binary).expanduser().resolve()
             with self.static_lock:
                 source=self.default_static_cache(user,params.static_cache)
+                if source is None and not user["special_items"]:
+                    candidate=exact_L.source_cache(self.root,None)
+                    source=str(candidate) if candidate is not None else None
                 try:
                     selected_catalog,verified=self._catalog_for_selected_special_L(
                         user,params,with_environment=True)

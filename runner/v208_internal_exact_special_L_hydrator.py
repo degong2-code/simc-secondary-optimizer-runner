@@ -71,7 +71,8 @@ def missing_specials(saved,staged):
          and staged.get("native_calls")==0,
          "PREBUDGET_SOURCE_INVALID")
     rows=staged["special_rows"]
-    need(type(rows) is list and 1<=len(rows)<=MAX_SPECIALS,
+    need(type(rows) is list and len(rows)<=MAX_SPECIALS and
+         (bool(rows) or type(staged.get("changed_G_rows")) is dict),
          "SELECTED_SPECIAL_COUNT_INVALID")
     missing=[]
     for row in rows:
@@ -193,7 +194,8 @@ def build_start_receipt(staged,before_cache,after_cache,result,cache_path,
     item_cache.check_cache(before_cache)
     item_cache.check_cache(after_cache)
     rows=staged.get("special_rows")
-    need(type(rows) is list and 1<=len(rows)<=MAX_SPECIALS,
+    need(type(rows) is list and len(rows)<=MAX_SPECIALS and
+         (bool(rows) or type(staged.get("changed_G_rows")) is dict),
          "V208_RECEIPT_SELECTED_SPECIAL_ROWS_INVALID")
     selected=[]
     hits=0
@@ -417,7 +419,9 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
     """Return snapshot path and Native count; NEVER mutate earlier cache bytes."""
     root=pathlib.Path(root).expanduser().resolve()
     binary=pathlib.Path(binary).expanduser().resolve()
-    need(type(user) is dict and bool(user.get("special_items")),
+    need(type(user) is dict and
+         (bool(user.get("special_items")) or
+          (environment_result is not None and bool(user.get("embellishments")))),
          "EXPLICIT_SELECTED_SPECIAL_REQUIRED")
     need(binary.is_file(),"SIMC_BINARY_NOT_PRESENT")
     need(type(revision) is str and len(revision)>=7,"SIMC_REVISION_REQUIRED")
@@ -436,6 +440,11 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
     special_missing=missing_specials(initial,staged)
     specials=staged["special_rows"]
     delta=staged.get("changed_G_rows")
+    # Crafted-only is a verified fresh G-delta query, not a special L
+    # query. A legacy or incomplete preview must not enter this route.
+    if not user.get("special_items"):
+        need(not specials and type(delta) is dict,
+             "SELECTED_CRAFTED_G_DELTA_SOURCE_REQUIRED")
     before=[];after=[]
     if delta is not None:
         need(type(delta) is dict and set(delta)=={"before","after"} and
@@ -470,10 +479,14 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
             root,binary,revision,timeout,baseline,before,before_missing)
         if merged is initial:merged=copy.deepcopy(initial)
         item_cache.merge_native(merged,records)
-    if merged is initial:
-        need(existing is not None,"NATIVE_L_CACHE_HIT_PATH_REQUIRED")
+    if merged is initial and existing is not None:
         target=pathlib.Path(existing).resolve()
     else:
+        # An unchanged crafted-only profile can legitimately have no
+        # changed bare variants. Seal the empty cache for v432 replay;
+        # no Native and no fabricated L. Keep legacy no-cache guard.
+        need(merged is not initial or (not specials and delta is not None),
+             "NATIVE_L_CACHE_HIT_PATH_REQUIRED")
         target=snapshot(root,merged)
     # Preserve the existing L receipt's 0/1 count and selected-only hash.
     # Extra G-delta queries are explicitly accounted for, not called L/DPS.

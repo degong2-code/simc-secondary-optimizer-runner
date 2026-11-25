@@ -1449,7 +1449,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
           and not source_first_stage and not pure_stage
           and (not static_special_probe_only or
                (fresh_installed_environment_path is not None and
-                bool(user["special_items"]) and
+                selected_season_items and
                 season_selected_static_cache_path is None))
           and ENCHANT_FIELD not in user
           and (SEASON_ENCHANT_FIELD not in user or
@@ -1884,8 +1884,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
         # Reuses exactly the real user/gear/consumables profile composition
         # above, before v062 rejects a cache-missing selected L. Nothing is
         # written, no SimC is executed, and no optimizer or result is seeded.
-        need(current_season_product and bool(user["special_items"])
-             and static_cache_path is None,
+        need(current_season_product and
+             (bool(user["special_items"]) or
+              (fresh_installed_environment_path is not None and
+               bool(user["embellishments"]))) and static_cache_path is None,
              "STATIC_SPECIAL_PROBE_ONLY_EXACT_CURRENT_USER")
         if season_profile_inputs is None:
             probe_profile=oil_mod.configure(
@@ -1900,8 +1902,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
                 fillers=None)["profile_simc"]
         chosen_slots=({r["slot"] for r in cfg["equipment"]["special"]} |
                       set(cfg["equipment"].get("catalyst_special_tier_slots",[])))
-        need(chosen_slots and
-             chosen_slots=={r["slot"] for r in user["special_items"]},
+        need(chosen_slots=={r["slot"] for r in user["special_items"]},
              "STATIC_SPECIAL_PROBE_SLOTS_NOT_SOURCE_BOUND")
         delta={}
         if original_selected_baseline_rows is not None:
@@ -2612,7 +2613,7 @@ def preview_from_environment_build(user,folder,binary,revision,*,
         installed_path=installed["stage_output_path"]
     selected_items=bool(user.get("special_items") or user.get("embellishments"))
     if static_special_probe_only:
-        need(installed_path is not None and bool(user.get("special_items"))
+        need(installed_path is not None and selected_items
              and selected_static_cache_path is None,
              "STATIC_SPECIAL_PROBE_REQUIRES_VERIFIED_INSTALL")
     if selected_items and (installed_path is None or

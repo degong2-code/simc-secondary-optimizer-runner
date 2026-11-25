@@ -165,6 +165,70 @@ class OneExactSpecialHydration(unittest.TestCase):
         self.assertEqual(path.read_bytes(),oldbytes)
         self.assertEqual(len(cache.load(path)["variants"]),2)
 
+    def test_crafted_only_fresh_delta_two_batches_then_cache_zero_L(self):
+        # Exercise existing batch/receipt owner using exact physical
+        # source fixture, with no special slots. Native remains mocked.
+        staged=hydrate.bootstrap.build(
+            self.user,self.root/"unwritten",self.binary,"710c2408bf",
+            static_special_probe_only=True,current_season_product=True)
+        final=staged["special_rows"][0]
+        before={**final,"item_id":271876,"options":{}}
+        staged["special_rows"]=[]
+        staged["changed_G_rows"]={"before":[before],"after":[final]}
+        crafted={**self.user,"special_items":[],
+                 "embellishments":[{"slot":"chest","item_id":271486}]}
+        observed=[]
+        def native(cmd,**kwargs):
+            physical=pathlib.Path(cmd[1]).read_text("utf8")
+            line=next(x for x in physical.splitlines() if x.startswith("chest="))
+            encoded=line.split("=",1)[1]
+            _,opts=cache.parse_encoded(encoded)
+            iid=int(opts["id"]);observed.append(iid)
+            target=pathlib.Path(next(x.split("=",1)[1] for x in
+                physical.splitlines() if x.startswith("json2=")))
+            target.write_text(json.dumps({"report_version":"2.0.0",
+                "git_revision":"710c2408bf","sim":{"players":[{"gear":{
+                    "chest":{"ilevel":331,"encoded_item":encoded,
+                    "haste_rating":175 if iid==271486 else 130}}}]}}),encoding="utf8")
+            return FakeNativeCompleted()
+        env={"normal_build_entry":True,"zero_history_build":{"environment_ready":True}}
+        with (mock.patch.object(hydrate.bootstrap,"preview_from_environment_build",
+                                return_value=staged),
+              mock.patch.object(hydrate.subprocess,"run",side_effect=native)):
+            first=hydrate.hydrate(crafted,self.root/"runs",self.binary,
+                "710c2408bf",environment_result=env)
+            again=hydrate.hydrate(crafted,self.root/"runs",self.binary,
+                "710c2408bf",existing=first["static_cache_path"],
+                environment_result=env)
+        self.assertEqual(observed,[271486,271876])
+        self.assertEqual(first["native_new_calls"],0)
+        self.assertEqual(first["selected_G_delta_native_calls"],2)
+        self.assertEqual(first["selected_static_native_calls"],2)
+        self.assertEqual(first["start_receipt"]["selected_specials"],[])
+        self.assertEqual(first["start_receipt"]["selected_special_count"],0)
+        self.assertEqual(again["selected_static_native_calls"],0)
+        self.assertEqual(first["static_cache_path"],again["static_cache_path"])
+        self.assertEqual(len(cache.load(pathlib.Path(first["static_cache_path"]))["variants"]),2)
+        with self.assertRaisesRegex(hydrate.StaticLBlocked,
+                                    "EXPLICIT_SELECTED_SPECIAL_REQUIRED"):
+            hydrate.hydrate(crafted,self.root/"runs",self.binary,"710c2408bf")
+
+    def test_crafted_only_unchanged_delta_empty_cache_zero_native(self):
+        crafted={**self.user,"special_items":[],
+                 "embellishments":[{"slot":"chest","item_id":271486}]}
+        staged={"schema":"v208_exact_current_special_static_source_v1",
+                "native_calls":0,"special_rows":[],"profile":"unused",
+                "changed_G_rows":{"before":[],"after":[]}}
+        with (mock.patch.object(hydrate.bootstrap,"preview_from_environment_build",
+                                return_value=staged),
+              mock.patch.object(hydrate.subprocess,"run") as native):
+            result=hydrate.hydrate(crafted,self.root/"runs",self.binary,
+                "710c2408bf",environment_result={})
+        native.assert_not_called()
+        self.assertEqual(result["selected_static_native_calls"],0)
+        self.assertEqual(result["start_receipt"]["selected_special_count"],0)
+        self.assertEqual(cache.load(pathlib.Path(result["static_cache_path"]))["variants"],{})
+
     def test_verified_probe_without_install_never_falls_back(self):
         env={"normal_build_entry":True,
              "zero_history_build":{"environment_ready":False},
