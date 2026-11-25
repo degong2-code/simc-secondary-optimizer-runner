@@ -9999,6 +9999,8 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation,defaul
                 "name_enUS":row["name"]})
         quality_evidence=optional_source_join.reviewed_quality_item_evidence(
             build,revision,rows,metadata)
+        source_quality=optional_source_join.reviewed_as_source_quality_evidence(
+            build,revision,rows,metadata,quality_evidence)
         return {"game_build":build,"simc_revision":revision,
                 "source_receipt_sha256":digest(canonical({
                     "wago_stage":original["source_stage"]["receipt_sha256"],
@@ -10007,8 +10009,12 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation,defaul
                     **({"native_default_observation":default_observation}
                        if default_observation is not None else {}),
                     **({"reviewed_quality_item_evidence":quality_evidence}
-                       if quality_evidence is not None else {})
+                       if quality_evidence is not None else {}),
+                    **({"signed_quality_source_evidence":source_quality}
+                       if source_quality is not None else {})
                 }).encode("utf8")),"rows":rows,
+                **({"signed_quality_source_evidence":source_quality}
+                   if source_quality is not None else {}),
                 **({"reviewed_quality_item_evidence":quality_evidence}
                    if quality_evidence is not None else {}),
                 "parser_first_match_item_ids":{

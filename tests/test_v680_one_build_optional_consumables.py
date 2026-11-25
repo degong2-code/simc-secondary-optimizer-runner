@@ -115,6 +115,12 @@ class OneBuildOptionalChoices(unittest.TestCase):
         self.assertEqual([r["item_id"] for r in project(source)["options"]],
                          [241288,241289,241308,271887])
         self.assertNotIn("quality_comparison_pending_item_ids",project(source))
+        # Actual v216 new evidence adapter, using the same historical source.
+        generic=fresh_build.optional_source_join.reviewed_as_source_quality_evidence(
+            BUILD,rev,rows,{**metadata,"source_receipt_sha256":"c"*64},evidence)
+        self.assertEqual(len(generic["families"]),3)
+        self.assertEqual(project({**source,"signed_quality_source_evidence":generic}),
+                         project(source))
         self.assertTrue(manifest.verify_fresh_optional_consumables(
             manifest.project_fresh_optional_consumables(
                 game_build=BUILD,simc_revision=rev,source=source),
@@ -139,6 +145,55 @@ class OneBuildOptionalChoices(unittest.TestCase):
         shadow["parser_shadowed_item_ids"]=[241308]
         self.assertNotIn(241309,[r["item_id"] for r in project(shadow)["options"]])
         self.assertNotIn(241308,[r["item_id"] for r in project(shadow)["options"]])
+
+
+    def test_v792_shared_numeric_evidence_matches_full_family_and_scope(self):
+        rows=[exact_row("food",101,"future_food_1",1,"spell:101"),
+              exact_row("food",102,"future_food_2",2,"spell:101")]
+        families=[{"rows":rows,
+                   "effect_and_use_scope_verified":True,
+                   "signed_component_coverage_complete":True,
+                   "source_evidence_sha256":"e"*64,
+                   "signed_components":{"101":{"benefit":10,"penalty":-2},
+                                        "102":{"benefit":12,"penalty":-2}}}]
+        evidence={"schema":fresh_build.optional_source_join.QUALITY_EVIDENCE_SCHEMA,
+                  "game_build":BUILD,"simc_revision":REV,
+                  "item_data_sha256":SHA,"item_source_receipt_sha256":"d"*64,
+                  "families":families}
+        source={**self.source(rows),"signed_quality_source_evidence":evidence}
+        def result():
+            return manifest.project_fresh_optional_consumables(
+                game_build=BUILD,simc_revision=REV,source=source)["categories"]["food"]
+        self.assertEqual([r["item_id"] for r in result()["options"]],[102])
+        families[0]["signed_components"]["102"]["penalty"]=-3
+        self.assertEqual([r["item_id"] for r in result()["options"]],[101,102])
+        families[0]["signed_components"]["102"].pop("penalty")
+        self.assertEqual(result()["quality_comparison_pending_item_ids"],[101,102])
+        families[0]["signed_components"]["102"]["penalty"]=-2
+        evidence["simc_revision"]="f"*40
+        self.assertEqual(result()["quality_comparison_pending_item_ids"],[101,102])
+        evidence["simc_revision"]=REV
+        families[0]["signed_component_coverage_complete"]=False
+        self.assertEqual(result()["quality_comparison_pending_item_ids"],[101,102])
+
+    def test_v792_source_proof_requires_exact_row_identity(self):
+        rows=[exact_row("potion",101,"future_potion_1",1,"spell:101"),
+              exact_row("potion",102,"future_potion_2",2,"spell:101")]
+        evidence={"schema":fresh_build.optional_source_join.QUALITY_EVIDENCE_SCHEMA,
+                  "game_build":BUILD,"simc_revision":REV,
+                  "item_data_sha256":SHA,"item_source_receipt_sha256":"d"*64,
+                  "families":[{"rows":copy.deepcopy(rows),
+                    "effect_and_use_scope_verified":True,
+                    "signed_component_coverage_complete":True,
+                    "source_evidence_sha256":"e"*64,
+                    "signed_components":{"101":{"benefit":10},"102":{"benefit":12}}}]}
+        rows[1]["name_enUS"]="changed identity"
+        projected=manifest.project_fresh_optional_consumables(
+            game_build=BUILD,simc_revision=REV,
+            source={**self.source(rows),"signed_quality_source_evidence":evidence})
+        self.assertEqual(projected["categories"]["potion"]["options"],[])
+        self.assertEqual(projected["categories"]["potion"][
+            "quality_comparison_pending_item_ids"],[101,102])
 
     def test_simc_consumable_substring_parser_omits_shadowed_known_item(self):
         # Actual same-revision consumable.cpp uses str_in_str_ci(full, needle).

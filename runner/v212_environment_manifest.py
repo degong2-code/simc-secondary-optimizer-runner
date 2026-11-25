@@ -630,13 +630,20 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
             group=(row["kind"],row["effect_identity"],
                    row["use_condition_identity"],parser_name(row))
             groups.setdefault(group,[]).append(row)
-        # Use only the exact reviewed signed numerical comparison from the
-        # existing source owner. Otherwise retain the previous pending rule.
+        # Source-owned numerical evidence, with exact row/scope matching.
+        # Old projections remain readable through the exact legacy adapter.
+        # Never fall back to rank-only if current evidence is insufficient.
         for key,rows in groups.items():
-            chosen_rows=rows if len(rows)==1 else (
-                optional_source_join.reviewed_quality_family_winners(
+            if len(rows)==1:
+                chosen_rows=rows
+            elif "signed_quality_source_evidence" in source:
+                chosen_rows=optional_source_join.source_quality_family_winners(
                     game_build,simc_revision,rows,
-                    source.get("reviewed_quality_item_evidence")))
+                    source["signed_quality_source_evidence"])
+            else:
+                chosen_rows=optional_source_join.reviewed_quality_family_winners(
+                    game_build,simc_revision,rows,
+                    source.get("reviewed_quality_item_evidence"))
             if chosen_rows is None:
                 pending=kinds[key[0]].setdefault(
                     "quality_comparison_pending_item_ids",[])

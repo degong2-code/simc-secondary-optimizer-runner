@@ -376,13 +376,8 @@ def reviewed_quality_item_evidence(game_build, simc_revision, rows, metadata):
     return {"item_data_sha256": _REVIEWED_ITEM_DATA_SHA, "item_levels": levels}
 
 
-def reviewed_quality_family_winners(game_build, simc_revision, rows, evidence):
-    """Return comparable non-dominated choices, or None if not proven.
-
-    Every signed component must be noninferior before removing a lower
-    rank. A larger negative penalty is worse; trade-offs stay selectable.
-    The reviewed record is exact-source data, not a universal rank rule.
-    """
+def _reviewed_quality_family_components(game_build, simc_revision, rows, evidence):
+    """Adapt the old exact reviewed snapshot; never extend its source scope."""
     if (not _reviewed_quality_scope(game_build, simc_revision) or
             type(evidence) is not dict or
             evidence.get("item_data_sha256") != _REVIEWED_ITEM_DATA_SHA or
@@ -402,12 +397,124 @@ def reviewed_quality_family_winners(game_build, simc_revision, rows, evidence):
                     row["use_condition_identity"] != "wago_on_use_0" or
                     evidence["item_levels"].get(str(iid)) != level):
                 return None
-        return [row for row in rows if not any(
-            other["crafting_quality"] > row["crafting_quality"] and
-            all(a >= b for a, b in zip(expected[other["physical_item_id"]][2],
-                                       expected[row["physical_item_id"]][2]))
-            for other in rows)]
+        # Positional component identities are confined to this exact
+        # reviewed family. No guessed stat/effect meaning for future data.
+        return {str(iid):{"reviewed_component_"+str(n):v
+                          for n,v in enumerate(values[2])}
+                for iid,values in expected.items()}
     return None
+
+
+def signed_quality_family_winners(rows, components):
+    """Compare complete, direction-normalized signed component maps.
+
+    Internal source owners establish equivalent effects/use scope and
+    complete component coverage before calling this function. Every
+    component is oriented so a greater value is noninferior (penalties
+    are negative). Never infer the orientation from a tooltip or name.
+    No numerical rounding/tolerance, no DPS/effect simulation.
+    """
+    import math
+    if (type(rows) is not list or len(rows)<2 or type(components) is not dict):
+        return None
+    ids=[str(row["physical_item_id"]) for row in rows]
+    ranks=[row["crafting_quality"] for row in rows]
+    if (len(set(ids))!=len(ids) or len(set(ranks))!=len(ranks) or
+            any(type(rank) is not int or rank<1 for rank in ranks) or
+            set(components)!=set(ids)):
+        return None
+    keys=None
+    for values in components.values():
+        if (type(values) is not dict or not values or
+                any(type(k) is not str or not 0<len(k)<=160 for k in values) or
+                any(type(v) not in (int,float) or abs(v)>1e15 or
+                    not math.isfinite(v) for v in values.values())):
+            return None
+        if keys is None:
+            keys=set(values)
+        elif set(values)!=keys:
+            return None
+    return [row for row in rows if not any(
+        other["crafting_quality"] > row["crafting_quality"] and
+        all(components[str(other["physical_item_id"])][key] >=
+            components[str(row["physical_item_id"])][key] for key in keys)
+        for other in rows)]
+
+
+QUALITY_EVIDENCE_SCHEMA="v792_optional_signed_quality_source_v1"
+
+
+def source_quality_family_winners(game_build, simc_revision, rows, evidence):
+    """Consume one source-owned comparable family, not a caller rank guess.
+
+    v216 seals this internal evidence with the exact item/effect source.
+    The consumer rechecks complete row identity and component coverage.
+    A missing/mismatched family is optional PENDING, not BASE failure.
+    """
+    if (type(evidence) is not dict or
+            evidence.get("schema")!=QUALITY_EVIDENCE_SCHEMA or
+            evidence.get("game_build")!=game_build or
+            evidence.get("simc_revision")!=simc_revision or
+            any(type(evidence.get(k)) is not str or not HEX64.fullmatch(evidence[k])
+                for k in ("item_data_sha256","item_source_receipt_sha256")) or
+            type(evidence.get("families")) is not list):
+        return None
+    ordered=sorted(rows,key=lambda row:row["physical_item_id"])
+    matches=[family for family in evidence["families"]
+             if type(family) is dict and family.get("rows")==ordered]
+    if len(matches)!=1:
+        return None
+    family=matches[0]
+    if (family.get("effect_and_use_scope_verified") is not True or
+            family.get("signed_component_coverage_complete") is not True or
+            type(family.get("source_evidence_sha256")) is not str or
+            not HEX64.fullmatch(family["source_evidence_sha256"])):
+        return None
+    return signed_quality_family_winners(rows,family.get("signed_components"))
+
+
+def reviewed_quality_family_winners(game_build, simc_revision, rows, evidence):
+    """Legacy exact-source adapter; preserve historical installed choices."""
+    return signed_quality_family_winners(rows,
+        _reviewed_quality_family_components(game_build,simc_revision,rows,evidence))
+
+
+def reviewed_as_source_quality_evidence(game_build,simc_revision,rows,metadata,
+                                        reviewed):
+    """Convert only the already-proven exact snapshot into the shared shape.
+
+    This is the first source owner of the v792 format. Future-season
+    numeric extraction must supply its own actual authenticated proof;
+    never synthesize this proof from same-name, ilvl or quality alone.
+    """
+    import hashlib
+    receipt=metadata.get("source_receipt_sha256")
+    if (type(reviewed) is not dict or
+            type(receipt) is not str or not HEX64.fullmatch(receipt)):
+        return None
+    by_id={row["physical_item_id"]:row for row in rows}
+    families=[]
+    for _,_,_,variants in _REVIEWED_QUALITY_FAMILIES:
+        if any(v[0] not in by_id for v in variants):
+            continue
+        group=sorted((by_id[v[0]] for v in variants),
+                     key=lambda row:row["physical_item_id"])
+        components=_reviewed_quality_family_components(
+            game_build,simc_revision,group,reviewed)
+        if signed_quality_family_winners(group,components) is None:
+            continue
+        proof={"rows":group,"signed_components":components,
+               "reviewed_item_evidence":reviewed,
+               "game_build":game_build,"simc_revision":simc_revision}
+        proof_sha=hashlib.sha256(json.dumps(proof,sort_keys=True,
+            separators=(",",":"),ensure_ascii=False,allow_nan=False).encode("utf8")).hexdigest()
+        families.append({"rows":group,"signed_components":components,
+            "effect_and_use_scope_verified":True,
+            "signed_component_coverage_complete":True,
+            "source_evidence_sha256":proof_sha})
+    return {"schema":QUALITY_EVIDENCE_SCHEMA,"game_build":game_build,
+            "simc_revision":simc_revision,"item_data_sha256":metadata["source_sha256"],
+            "item_source_receipt_sha256":receipt,"families":families} if families else None
 
 
 def candidate_token(name, rank):
