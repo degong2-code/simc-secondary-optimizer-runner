@@ -285,7 +285,7 @@ def observe_simc_defaults(args):
                               "race="+controls["race"],"load_default_talents=1",
                               "role="+contract["role"],"position="+contract["position"],
                               "flask=disabled","augmentation=disabled",
-                              "temporary_enchant=disabled","save="+file"])
+                              "temporary_enchant=disabled","save="+file])
                 lines.extend(representative.items.equipment_line(
                     hand,info["weapons"][hand],season["target_ilevel"],
                     info.get("item_options",{}).get(hand,{})) for hand in hands)
