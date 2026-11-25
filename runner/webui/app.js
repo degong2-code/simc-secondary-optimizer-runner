@@ -1915,18 +1915,24 @@ async function reuseVerifiedGemVariant(){
   const active=rows.find(v=>v.installed_manifest_sha256===
     state.seasonGear?.installed_manifest_sha256);
   if(!rows.length)return false;
-  if(rows.length!==1&&!active)
+  if(rows.length!==1&&!active){
+    state.seasonGearTargetIlevel=null;
     throw Error("같은 보석 구성의 검증 설치본이 여러 개입니다. 정확한 환경을 선택해 주세요.");
+  }
   const chosen=rows.length===1?rows[0]:active;
   const sha=chosen.installed_manifest_sha256;
   const build=field("season-game-build")||state.verifiedInstalledBuildFromThisPage;
   const level=valueInt("ilevel");
-  return bindExactInstalledGearVariant({sha,build,level,
+  const bound=await bindExactInstalledGearVariant({sha,build,level,
     stillMatches:()=>matchingInstalledGemVariants().some(v=>
       v.installed_manifest_sha256===sha&&
       v.special_gem_id===(field("season-existing-special-gem-id")?
         Number(field("season-existing-special-gem-id")):null)&&
       v.socket_total===valueInt("season-target-socket-count"))});
+  // An attempted but stale read is NOT a cache miss. Do not fall through
+  // to an automatic Build after the user has changed the request scope.
+  if(!bound)throw Error("보석 구성 조회 중 선택 조건이 변경되었습니다. 다시 선택하세요.");
+  return true;
 }
 async function chooseVerifiedGem(){
   const value=field("season-verified-special-gem");
