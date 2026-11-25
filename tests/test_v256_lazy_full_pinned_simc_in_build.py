@@ -7,6 +7,7 @@ import pathlib
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from urllib.error import HTTPError
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -82,6 +83,43 @@ class LazyFullPinnedSource(unittest.TestCase):
         self.assertIsNone(first["G"])
         self.assertFalse(first["environment_ready"])
         self.assertEqual(first["native_calls"],0)
+
+    def test_v766_new_level_and_track_reuse_original_static_bytes_after_code_update(self):
+        # A previous package's raw stage used a different coordinator hash.
+        with mock.patch.object(build.stage_engine,"module_dependency_fingerprint",
+                               return_value={"sha256":"a"*64}):
+            first=self.run_stage()
+        self.assertEqual(first["status"],
+                         "FRESH_FULL_PINNED_SIMC_ITEM_DATA_SOURCE_ONLY")
+        seal=self.root/".stage_receipts"/"fresh-v229-full-item-data-for-one-spec.json"
+        original=seal.read_bytes()
+        self.request={"class":"warrior","spec":"fury","target_ilevel":340}
+        with mock.patch.object(build.stage_engine,"module_dependency_fingerprint",
+                               side_effect=AssertionError("NO_CODE_CLOSURE_ON_RAW_REUSE")):
+            second=self.run_stage()
+        self.assertEqual(second["status"],first["status"])
+        self.assertEqual(second["receipt_sha256"],first["receipt_sha256"])
+        self.assertEqual(second["source_stage"]["receipt_sha256"],
+                         first["source_stage"]["receipt_sha256"])
+        self.assertEqual(second["source_stage"]["receipt_writes"],0)
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(second["native_calls"],0)
+        self.assertEqual(seal.read_bytes(),original)
+        self.assertEqual(len(self.calls),5)
+
+    def test_v766_changed_full_source_is_not_refetched_or_resealed(self):
+        first=self.run_stage()
+        path=pathlib.Path(first["source_dir"])/"item_data.inc"
+        path.write_bytes(path.read_bytes()+b"tamper")
+        seal=self.root/".stage_receipts"/"fresh-v229-full-item-data-for-one-spec.json"
+        original=seal.read_bytes()
+        again=self.run_stage()
+        self.assertEqual(again["status"],"FRESH_FULL_PINNED_SIMC_SOURCE_PENDING")
+        self.assertIsNone(again["source_dir"])
+        self.assertEqual(again["network_calls_by_stage"],0)
+        self.assertEqual(again["native_calls"],0)
+        self.assertEqual(seal.read_bytes(),original)
+        self.assertEqual(len(self.calls),5)
 
     def test_no_eligible_candidate_or_no_request_causes_zero_http(self):
         self.gear={"candidate_path":None}

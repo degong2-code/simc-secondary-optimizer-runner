@@ -4792,6 +4792,81 @@ def _resolve_one_spec_simc_commit_stage(*, stage_root, build, gear, tier,
             "binary_attested":False,"season_verified":False}
 
 
+def _reuse_complete_full_pinned_item_source(*, root, outputs, small_receipt,
+                                           small_raws, pinned):
+    """Read the ORIGINAL sealed v256 raw Git blobs, independent of code edits.
+
+    v217's normal derived-stage input fingerprint is deliberately unchanged.
+    For this one immutable raw-source owner the exact source identity is the
+    authenticated build/revision/Git blobs and original output bytes, not the
+    current version of the entire v216 coordinator. Never recover RUNNING
+    or modify any old receipt via this read-only path.
+    """
+    stage_id="fresh-v229-full-item-data-for-one-spec"
+    version="v229-reuse-three-download-one-v1"
+    paths,receipt_path=stage_engine._safe_paths(root,stage_id,outputs)
+    if not receipt_path.is_file():
+        return None
+    stage=stage_engine._read_receipt(receipt_path)
+    if stage.get("status")!="COMPLETE":
+        return None
+    fingerprint=stage.get("input_fingerprint")
+    need(type(fingerprint) is str and
+         season_budget_contract.SHA.fullmatch(fingerprint) is not None,
+         "V766_ORIGINAL_FULL_SOURCE_STAGE_FINGERPRINT_INVALID")
+    # Keep original stage/path identity. Do not pretend the old producer's
+    # code fingerprint equals today's or authorize derived results with it.
+    stage_engine._check_identity(stage,stage_id,version,fingerprint,paths)
+    receipt_rel,receipt_file=paths[simc_source.RECEIPT]
+    receipt_raw=simc_source.bounded_read(receipt_file,2_000_000)
+    full=json.loads(receipt_raw)
+    names=tuple((*simc_source.SOURCE_FILES,simc_source.OPTIONAL_ITEM_FILE))
+    need(type(full) is dict and
+         full.get("schema")==simc_source.SCHEMA and
+         full.get("simc_revision")==small_receipt["simc_revision"] and
+         full.get("simc_generated_build")==
+             small_receipt["simc_generated_build"] and
+         full.get("previous_game_build")==small_receipt["previous_game_build"] and
+         full.get("season_event")==small_receipt["season_event"] and
+         full.get("item_data_present") is True and
+         full.get("provenance_tree_blob_authenticated") is True and
+         type(full.get("source_files")) is dict and
+         set(full["source_files"])==set(names),
+         "V766_ORIGINAL_FULL_SOURCE_SCOPE_DRIFT")
+    merged={}
+    for name in names:
+        _,path=paths[name]
+        data=simc_source.bounded_read(path,simc_source.SOURCE_FILES.get(
+            name,simc_source.MAX_ITEM_FILE))
+        if name in small_raws:
+            need(data==small_raws[name] and
+                 full["source_files"][name]["git_blob_sha1"]==pinned[name],
+                 "V766_ORIGINAL_FULL_SOURCE_SMALL_BLOB_DRIFT")
+        merged[name]=data
+    # Original v229 validates build headers, blob hashes and the complete
+    # raw source inventory. The original v217 COMPLETE seal is checked using
+    # the same bytes, rather than reading/hashing item_data.inc a second time.
+    reconstructed=simc_source.inventory(
+        merged,simc_revision=small_receipt["simc_revision"],
+        expected_build=small_receipt["simc_generated_build"],
+        previous_game_build=small_receipt["previous_game_build"],
+        season_event=small_receipt["season_event"],
+        expected_git_blob={name:full["source_files"][name]["git_blob_sha1"]
+                           for name in names})
+    need(reconstructed==full,"V766_ORIGINAL_FULL_SOURCE_INVENTORY_DRIFT")
+    records={name:{"path":paths[name][0],
+                   "size":full["source_files"][name]["bytes"],
+                   "sha256":full["source_files"][name]["sha256"]}
+             for name in names}
+    records[simc_source.RECEIPT]={"path":receipt_rel,"size":len(receipt_raw),
+                                  "sha256":digest(receipt_raw)}
+    need(stage.get("outputs")==records,
+         "V766_ORIGINAL_FULL_SOURCE_OUTPUT_SEAL_DRIFT")
+    return (stage_engine._summary(stage,"REUSED_VERIFIED",False,False,0,
+                                   sum(row["size"] for row in records.values())),
+            full)
+
+
 def _lazy_full_pinned_simc_item_stage(*, stage_root, build, small_seed_dir,
                                       gear_candidate, tier_bridge, request,
                                       transport=None):
@@ -4851,6 +4926,24 @@ def _lazy_full_pinned_simc_item_stage(*, stage_root, build, small_seed_dir,
     folder=root/rel
     need(not folder.is_symlink(),"V216_FULL_SIMC_OUTPUT_SYMLINK_BLOCKED")
     calls=[0]
+    # Target ilvl/spec changes and unrelated product code edits must not
+    # invalidate exact same-build raw Git source. No network or code-closure
+    # scan on this verified reuse path; derived stages still own their inputs.
+    try:
+        reused=_reuse_complete_full_pinned_item_source(
+            root=root,outputs=output,small_receipt=receipt,
+            small_raws=raws,pinned=pinned)
+        if reused is not None:
+            stage,full=reused
+            return {"status":"FRESH_FULL_PINNED_SIMC_ITEM_DATA_SOURCE_ONLY",
+                    "source_dir":str(folder.resolve()),
+                    "receipt_sha256":full["receipt_sha256"],
+                    "source_stage":stage,"network_calls_by_stage":0,
+                    "native_calls":0,"environment_ready":False,"G":None}
+    except (simc_source.SimCSourceBlocked,stage_engine.StageExecutionBlocked,
+            EnvironmentBuildBlocked,ValueError,OSError,TypeError,KeyError) as exc:
+        return {**pending,"status":"FRESH_FULL_PINNED_SIMC_SOURCE_PENDING",
+                "reason":str(exc).split(":",1)[0]}
     def fetch(req,timeout):
         calls[0]+=1
         return (simc_source.urlopen if transport is None else transport)(
