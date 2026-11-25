@@ -8,6 +8,7 @@ historical sessions. Existing v098 and v212 components remain authoritative.
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
