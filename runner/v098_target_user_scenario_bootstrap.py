@@ -336,7 +336,8 @@ def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
                                               candidate, class_tier_five, original_v191_link,
                                               installed_path, cache_path,
                                               season_profile_inputs=None,
-                                              weapon_layout=None,fillers=None):
+                                              weapon_layout=None,fillers=None,
+                                              final_direct_oil_binding=None):
     """Bind actual v101 overlaid user profile to v432 G/L: NO session/Native.
 
     This is deliberately separate from v096. Existing v212 installed G is a
@@ -392,7 +393,8 @@ def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
             installed_document=doc,
             original_v191_link=original_v191_link,
             native_cache=cached,
-            expected_cache_season=cache_mod.SEASON)
+            expected_cache_season=cache_mod.SEASON,
+            final_direct_oil_binding=final_direct_oil_binding)
     except selected_budget.SelectedBudgetBlocked as exc:
         raise UserScenarioBlocked(
             "B8_SELECTED_G_L_PREFLIGHT_BLOCKED:"+str(exc)) from exc
@@ -581,7 +583,7 @@ def _assert_final_season_oil_weapon_scope(*, inputs, rows, gear,
     A scaled rating measured at a different level must not be reused.
     """
     if inputs is None or "oil_weapon_scope_source_only" not in inputs:
-        return
+        return {}
     scopes=inputs["oil_weapon_scope_source_only"]
     by_hand=inputs["oil_by_hand"]
     need(type(scopes) is dict and set(scopes)==set(by_hand),
@@ -595,6 +597,7 @@ def _assert_final_season_oil_weapon_scope(*, inputs, rows, gear,
             provider.setdefault(meta["item_id"],set()).add((
                 meta.get("class_id"),meta.get("subclass_id"),
                 meta.get("inventory_type")))
+    direct={}
     for hand,scope in scopes.items():
         need(type(scope) is dict and hand in rows and
              scope.get("physical_item_id")==by_hand[hand]["physical_item_id"] and
@@ -614,8 +617,15 @@ def _assert_final_season_oil_weapon_scope(*, inputs, rows, gear,
              (low==0 or level>=low) and (high==0 or level<=high),
              "SEASON_FINAL_OIL_WEAPON_ILEVEL_OUTSIDE_SOURCE:"+hand)
         measured=scope.get("scaled_rating_ilevel")
-        need(measured is None or (type(measured) is int and measured==level),
+        need("scaled_rating_ilevel" in scope and
+             (measured is None or (type(measured) is int and measured==level)),
              "SEASON_FINAL_OIL_SCALED_RATING_REMEASUREMENT_REQUIRED:"+hand)
+        if measured is None:
+            # v216 only emits None for its original direct static O owner.
+            # Do not extend a measured representative weapon receipt here.
+            direct[hand]={"weapon_id":row["item_id"],"ilevel":level,
+                          "oil":copy.deepcopy(by_hand[hand])}
+    return direct
 
 
 def season_profile_source_only(*, profile, cfg, weapon_layout, user,
@@ -1715,10 +1725,19 @@ def build(user,folder,binary,revision,static_cache_path=None,
     else:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need)
-    _assert_final_season_oil_weapon_scope(
+    final_direct_oil_binding=_assert_final_season_oil_weapon_scope(
         inputs=season_profile_inputs,rows=rows,
         gear=season_source_bundle["gear"] if season_source_bundle is not None else None,
         refreshed_rows=selected_refresh_rows)
+    changed_oiled_hands=[]
+    if original_selected_baseline_rows is not None:
+        for hand in user["oil_hands"]:
+            if hand in rows and selected_budget._bare(
+                    original_selected_baseline_rows[hand],cache_mod.SEASON)!=selected_budget._bare(
+                    rows[hand],cache_mod.SEASON):
+                need(hand in final_direct_oil_binding,
+                     "B8_SELECTED_WEAPON_OIL_APPLICABILITY_RECHECK_REQUIRED")
+                changed_oiled_hands.append(hand)
     actual_user_enchant_source=_final_user_enchant_source_mask(
         user=user,rows=rows,consumer=selected_user_enchant_source_consumer)
     if season_source_gem_tokens is not None:
@@ -1908,6 +1927,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
                 season_profile_inputs=season_profile_inputs,
                 season_build=actual_season_build,simc_revision=revision,
                 fillers=None)["profile_simc"]
+        if changed_oiled_hands:
+            # This probe measures bare G/L, never O. The actual DPS profile
+            # is independently composed with the original verified oil.
+            oil_lines=[line for line in probe_profile.splitlines()
+                       if line.startswith("temporary_enchant=")]
+            need(len(oil_lines)==1,"SELECTED_STATIC_OIL_PROFILE_TOKEN_REQUIRED")
+            probe_profile=probe_profile.replace(oil_lines[0]+"\n",
+                                                "temporary_enchant=disabled\n",1)
         chosen_slots=({r["slot"] for r in cfg["equipment"]["special"]} |
                       set(cfg["equipment"].get("catalyst_special_tier_slots",[])))
         need(chosen_slots=={r["slot"] for r in user["special_items"]},
@@ -1941,7 +1968,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
             installed_path=fresh_installed_environment_path,
             cache_path=season_selected_static_cache_path,
             season_profile_inputs=season_profile_inputs,
-            weapon_layout=weapon_layout,fillers=fillers)
+            weapon_layout=weapon_layout,fillers=fillers,
+            final_direct_oil_binding=final_direct_oil_binding)
         if season_socket_origin is not None:
             selected_result[
                 "v232_final_socket_item_source_comparison_unadmitted"]=(

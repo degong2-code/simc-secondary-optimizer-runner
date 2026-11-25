@@ -135,8 +135,8 @@ const classArmor={mage:1,warlock:1,priest:1,
 const armorCraftSlots = new Set(["head","shoulders","back","chest",
  "wrists","hands","waist","legs","feet"]);
 const gearGroups = {
-  "special-rows":{title:"특수효과 장비",fields:["slot","item_id","bonus_id","redirected_base_stats"]},
-  "crafted-rows":{title:"장식 제작장비",fields:["slot","embellishment","stat_a","stat_b","item_id","bonus_id"]}
+  "special-rows":{title:"특수효과 장비",fields:["slot","item_id","ilevel","bonus_id","redirected_base_stats"]},
+  "crafted-rows":{title:"장식 제작장비",fields:["slot","embellishment","stat_a","stat_b","item_id","ilevel","bonus_id"]}
 };
 const names = {
   slot:"부위",item_id:"아이템 ID",bonus_id:"bonus_id",
@@ -1660,6 +1660,7 @@ async function chooseInstalledFlask() {
     .map(row=>{
       const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
       return {slot:read("slot"),item_id:Number(read("item_id")),
+              ...(read("ilevel")?{ilevel:Number(read("ilevel"))}:{}),
               options:{bonus_id:read("bonus_id"),
                        redirected_base_stats:read("redirected_base_stats")}};
     }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
@@ -1851,6 +1852,7 @@ async function bindExactInstalledGearVariant({sha,build,level,stillMatches}) {
     .map(row=>{
       const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
       return {slot:read("slot"),item_id:Number(read("item_id")),
+              ...(read("ilevel")?{ilevel:Number(read("ilevel"))}:{}),
         options:{bonus_id:read("bonus_id"),
                  redirected_base_stats:read("redirected_base_stats")}};
     }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
@@ -2038,6 +2040,7 @@ function gearInputs(nodeId, config) {
       label.hidden=isPrivate;
       label.textContent=name==="item_id"?(isSpecial?"이번 시즌 장비":
         "정확한 제작장비 ItemID (선택 · 비우면 자동)"):
+        name==="ilevel"?"아이템 레벨 (선택 사항)":
         name==="stat_a"?"제작 스탯 1":
         name==="stat_b"?"제작 스탯 2":
         name==="embellishment"?"장식 종류":(names[name]||name);
@@ -2059,6 +2062,9 @@ function gearInputs(nodeId, config) {
         input.appendChild(option("","스탯 선택"));
         for(const [value,labelName] of Object.entries(statNames))
           input.appendChild(option(value,labelName));
+      }else if(name==="ilevel") {
+        input.type="number";input.min="1";input.max="1000";input.step="1";
+        input.placeholder="비우면 목표 아이템 레벨";
       }else if(name==="item_id"&&!isSpecial) {
         input.type="number";input.min="1";input.max="999999999";
         input.step="1";input.placeholder="미입력 시 시즌 목록에서 자동 선택";
@@ -2105,6 +2111,7 @@ function fillGearRows(nodeId, entries) {
       const name=input.dataset.field;
       const value=!entry?"":name==="slot"?entry.slot:
         name==="item_id"?String(entry.item_id):
+        name==="ilevel"?String(entry.ilevel??""):
         name==="stat_a"?byCode[stats[0]]||"":
         name==="stat_b"?byCode[stats[1]]||"":
         String(entry.options?.[name]??"");
@@ -2316,6 +2323,11 @@ function selectedGear(nodeId, group) {
     for(const input of row.querySelectorAll("[data-field]"))
       fields[input.dataset.field]=input.value.trim();
     if(!Object.values(fields).some(Boolean))continue;
+    const selectedLevel=fields.ilevel?Number(fields.ilevel):null;
+    if(selectedLevel!==null&&(!/^[1-9][0-9]{0,3}$/.test(fields.ilevel)||
+        !Number.isSafeInteger(selectedLevel)||selectedLevel>1000))
+      throw Error("장비 아이템 레벨은 1~1000의 정수여야 합니다.");
+    const levelField=selectedLevel===null?{}:{ilevel:selectedLevel};
     if(isCraft) {
       if(!fields.slot||!fields.embellishment||!fields.stat_a||!fields.stat_b)
         throw Error("장식 종류·호환 부위·제작 스탯 2개를 선택해 주세요.");
@@ -2338,7 +2350,7 @@ function selectedGear(nodeId, group) {
       // Existing restored bonus IDs are kept only for the EXACT same item.
       if(fields.bonus_id&&Number(fields.item_id)===resolved.item_id)
         raw.bonus_id=fields.bonus_id;
-      result.push({slot:fields.slot,item_id:resolved.item_id,options:raw});
+      result.push({slot:fields.slot,item_id:resolved.item_id,...levelField,options:raw});
     }else {
       if(!fields.slot||!/^[0-9]+$/.test(fields.item_id))
         throw Error("시즌 특수장비를 선택해 주세요. 부위가 불가능하거나 중복됐을 수 있습니다.");
@@ -2347,7 +2359,7 @@ function selectedGear(nodeId, group) {
       const options={};
       for(const k of ["bonus_id","redirected_base_stats"])
         if(fields[k])options[k]=fields[k];
-      result.push({slot:fields.slot,item_id:Number(fields.item_id),options});
+      result.push({slot:fields.slot,item_id:Number(fields.item_id),...levelField,options});
     }
   }
   if(result.length>(isCraft?2:8))throw Error("선택한 장비 수가 제한을 초과했습니다.");
@@ -4000,6 +4012,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
         .map(row=>{
           const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
           return {slot:read("slot"),item_id:Number(read("item_id")),
+              ...(read("ilevel")?{ilevel:Number(read("ilevel"))}:{}),
             options:{bonus_id:read("bonus_id"),
                      redirected_base_stats:read("redirected_base_stats")}};
         }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);

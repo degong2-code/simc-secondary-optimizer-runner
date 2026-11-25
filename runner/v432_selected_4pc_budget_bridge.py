@@ -86,10 +86,22 @@ def _final_levels_match_user(final_rows, user, target_ilevel):
                for slot,row in final_rows.items())
 
 
+def _verified_direct_oil_for_changed_weapon(binding, hand, row, installed_document):
+    """Consume v098 final physical mask check, not a new O number owner."""
+    source=installed_document.get("official_O_physical_source")
+    installed=(source.get("oil_by_hand",{}) if type(source) is dict else {})
+    proof=binding.get(hand) if type(binding) is dict else None
+    need(type(proof) is dict and set(proof)=={"weapon_id","ilevel","oil"}
+         and proof["weapon_id"]==row["item_id"] and proof["ilevel"]==row["ilevel"]
+         and type(proof["oil"]) is dict and proof["oil"]==installed.get(hand),
+         "B8_SELECTED_WEAPON_OIL_APPLICABILITY_RECHECK_REQUIRED")
+    return proof
+
+
 def reconcile(*, baseline_rows, final_rows, final_groups,
               user, class_tier_five, baseline_slot_ids,
               installed_document, original_v191_link, native_cache,
-              expected_cache_season):
+              expected_cache_season, final_direct_oil_binding=None):
     """Compute selected physical G delta and special L, without admission.
 
     The installed G may be a rounded same-season reference: its delta is
@@ -174,6 +186,7 @@ def reconcile(*, baseline_rows, final_rows, final_groups,
     fixed_E = budget_contract._vector(original.get("fixed_E"), "E")
     fixed_O = budget_contract._vector(doc["official_O"], "O")
     changed = []
+    changed_oil = {}
     missing = []
     observed = {}
     season = native_cache["season"]
@@ -196,8 +209,8 @@ def reconcile(*, baseline_rows, final_rows, final_groups,
         if before != after:
             if (slot in ("main_hand", "off_hand") and
                     slot in user.get("oil_hands", [])):
-                need(False,
-                     "B8_SELECTED_WEAPON_OIL_APPLICABILITY_RECHECK_REQUIRED")
+                changed_oil[slot]=_verified_direct_oil_for_changed_weapon(
+                    final_direct_oil_binding,slot,final_rows[slot],doc)
             old_rating = lookup(baseline_rows[slot])
             new_rating = lookup(final_rows[slot])
             changed.append({
@@ -245,6 +258,7 @@ def reconcile(*, baseline_rows, final_rows, final_groups,
         "static_cache_season": season,
         "four_tier_slots": tier_slots,
         "changed_physical_slots": changed,
+        **({"final_direct_oil_binding":changed_oil} if changed_oil else {}),
         "missing_exact_native_variants": missing,
         "J": doc["official_J"],
         "F": doc["official_F"],
@@ -289,6 +303,7 @@ def reconcile(*, baseline_rows, final_rows, final_groups,
         "original_v191_raw_gear_tier_sha256":
             link["raw_source_sha256"],
         "native_variants": changed,
+        **({"final_direct_oil_binding":changed_oil} if changed_oil else {}),
         "selected_special_L": L,
         "target": user["target"],
         "G": G, "B": B, "T": T,

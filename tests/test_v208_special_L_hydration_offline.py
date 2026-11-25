@@ -433,4 +433,40 @@ class MixedSelectedLevelContract(unittest.TestCase):
         rows["head"]["ilevel"]=330
         self.assertFalse(_final_levels_match_user(rows,user,331))
 
+class FinalWeaponDirectOilContract(unittest.TestCase):
+    def test_direct_oil_scope_final_weapon_only_and_installed_vector(self):
+        from v432_selected_4pc_budget_bridge import (
+            _verified_direct_oil_for_changed_weapon,SelectedBudgetBlocked)
+        oil={"physical_item_id":123,"simc_input_token":"main_hand:test",
+             "static_CHMV_vector":{"crit_rating":16,"haste_rating":16,
+                                   "mastery_rating":0,"versatility_rating":0}}
+        row={"slot":"main_hand","item_id":456,"ilevel":330,"options":{}}
+        masks={"equipped_item_class":2,"inventory_type_mask":1<<13,
+               "weapon_subclass_mask":1<<7}
+        gear={"items":[{"item_id":456,"class_id":2,"subclass_id":7,
+                         "inventory_type":13}]}
+        inputs={"oil_by_hand":{"main_hand":oil},
+                "oil_weapon_scope_source_only":{"main_hand":{
+                    "physical_item_id":123,"simc_input_token":"main_hand:test",
+                    "masks":masks,"source_min_ilevel":300,
+                    "source_max_ilevel":350,"scaled_rating_ilevel":None}}}
+        doc={"official_O_physical_source":{"oil_by_hand":{"main_hand":oil}}}
+        binding=hydrate.bootstrap._assert_final_season_oil_weapon_scope(
+            inputs=inputs,rows={"main_hand":row},gear=gear)
+        self.assertEqual(_verified_direct_oil_for_changed_weapon(
+            binding,"main_hand",row,doc)["oil"],oil)
+        for changed in ({**row,"ilevel":331},{**row,"item_id":457}):
+            with self.assertRaises(SelectedBudgetBlocked):
+                _verified_direct_oil_for_changed_weapon(binding,"main_hand",changed,doc)
+        bad=copy.deepcopy(doc)
+        bad["official_O_physical_source"]["oil_by_hand"]["main_hand"]["static_CHMV_vector"]["crit_rating"]=17
+        with self.assertRaises(SelectedBudgetBlocked):
+            _verified_direct_oil_for_changed_weapon(binding,"main_hand",row,bad)
+        inputs["oil_weapon_scope_source_only"]["main_hand"]["scaled_rating_ilevel"]=330
+        self.assertEqual(hydrate.bootstrap._assert_final_season_oil_weapon_scope(
+            inputs=inputs,rows={"main_hand":row},gear=gear),{})
+        with self.assertRaisesRegex(ValueError,"REMEASUREMENT_REQUIRED"):
+            hydrate.bootstrap._assert_final_season_oil_weapon_scope(
+                inputs=inputs,rows={"main_hand":{**row,"ilevel":331}},gear=gear)
+
 if __name__=="__main__":unittest.main()
