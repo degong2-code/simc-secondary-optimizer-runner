@@ -1200,7 +1200,9 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         bridge=self.root/"v251.json"
         bridge.write_text(json.dumps({
             "schema":v216.tier_simc_bridge.SCHEMA,
-            "game_build":BUILD}),encoding="utf8")
+            "game_build":BUILD,
+            "season_membership_verified":False,
+            "environment_ready":False}),encoding="utf8")
         stage_root=self.root/"stage"
         stage_root.mkdir()
         kwargs={"stage_root":stage_root,"build":BUILD,
