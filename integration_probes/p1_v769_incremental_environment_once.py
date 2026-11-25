@@ -119,6 +119,114 @@ def verify_ready(r):
     need((r.get("web_environment_scope") or {}).get(
         "dps_optimization_started") is False,"V769_UNEXPECTED_DPS")
 
+
+def verify_installed_defaults(*, first, root, jobs, base, binary, doc, save):
+    """One actual Build, then original compact cache, installed UI/plan/reopen.
+
+    No second target-level G/F/J build and no DPS. Historical defaults
+    are compared only as a diagnostic; real installed choices are the owner.
+    """
+    import v106_user_session_controller as sessions
+    import v218_v098_profile_stage_adapter as profile
+    import v098_target_user_scenario_bootstrap as bootstrap
+    compilation=first["source_compilation"]
+    progress=first["zero_history_build"]
+    result=progress.get("optional_profile_defaults") or {}
+    doc["optional_default_stage"]={k:result[k] for k in
+        ("status","reason","diagnostic_tail","stage_status",
+         "stage_receipt_sha256","new_profile_generation_processes",
+         "missing_specializations","observation") if k in result}
+    save()
+    need(result.get("status")=="OBSERVED" and
+         result.get("new_profile_generation_processes")==1,
+         "V789_ACTUAL_DEFAULT_OBSERVATION_MISSING")
+    observed=result["observation"]
+    need(observed["binary_sha256"]==doc["binary_sha256"] and
+         observed["game_build"]==BUILD and observed["simc_revision"]==REV,
+         "V789_DEFAULT_IDENTITY_DRIFT")
+    need(len(observed["observed_defaults"])==26 and
+         not result.get("missing_specializations"),
+         "V789_ACTUAL_CURRENT_WEAPON_COVERAGE_INCOMPLETE")
+    installed_path=Path(compilation["verified_environment_install"]["stage_output_path"])
+    installed,_=engine.environment_manifest.read_json(installed_path)
+    engine.environment_manifest.verify_fresh_installed_environment(installed)
+    need(installed["installed_optional_consumables"].get(
+         "native_default_observation")==observed,
+         "V789_INSTALLED_OBSERVATION_DRIFT")
+    public=web._v680_public_installed_optional_choices(installed)
+    recommendations=public["recommended_tokens_by_spec"]
+    doc["installed_recommendations"]=recommendations
+    doc["installed_menu_counts"]={kind:len(
+        installed["installed_optional_consumables"]["categories"][kind]["options"])
+        for kind in ("food","potion")}
+    save()
+    need(recommendations==observed["observed_defaults"],
+         "V789_OBSERVED_DEFAULT_NOT_IN_VERIFIED_MENU")
+    # Reuse the exact existing v217 stage instead of another G/F build.
+    doc["stage"]="EXACT_DEFAULT_CACHE_REPLAY"
+    again=engine._fresh_v788_profile_default_observation(
+        collected=first,compilation=compilation,binary=binary,target_ilevel=334)
+    doc["default_cache_replay"]={k:again.get(k) for k in
+        ("status","stage_status","stage_receipt_sha256","new_profile_generation_processes")}
+    save()
+    need(again.get("observation")==observed and
+         again.get("stage_receipt_sha256")==result["stage_receipt_sha256"] and
+         again.get("new_profile_generation_processes")==0,
+         "V789_DEFAULT_CACHE_REPLAY_DRIFT")
+    # Use the ordinary G reference specialization, no new spec rebuild.
+    doc["stage"]="ORIGINAL_PROFILE_PLAN"
+    controls=sessions.standard_controls(("paladin","retribution"))
+    controls["oil_hands"]=[]
+    choices=recommendations["paladin/retribution"]
+    controls["consumable_choices"].update(choices)
+    user=sessions.user_scenario(controls)
+    selected=profile._verified_fresh_season_consumables(
+        user,installed_environment=installed)
+    need(all(selected[k]==v for k,v in choices.items()),
+         "V789_PROFILE_ADAPTER_DEFAULT_DRIFT")
+    off=sessions.standard_controls(("paladin","retribution"))
+    off["oil_hands"]=[]
+    off["consumable_choices"].update(food="disabled",potion="disabled")
+    need(profile._verified_fresh_season_consumables(
+        sessions.user_scenario(off),installed_environment=installed)==
+        {"food":"disabled","potion":"disabled","augmentation":"disabled"},
+        "V789_EXPLICIT_OFF_DRIFT")
+    folder=root/"v789-plan"
+    plan=bootstrap.run_from_verified_environment_build(
+        user,folder,binary,REV,environment_result=first,
+        season_controls=selected,execute=False)
+    need(plan.get("status")=="READY_SOURCE_BOUND_SEASON_MANIFEST_ZERO_NATIVE"
+         and plan.get("native_calls")==0 and
+         plan.get("fresh_v212_installed_proof_reused") is True,
+         "V789_ORIGINAL_PROFILE_NOT_READY")
+    profile_text=(Path(plan["generated_manifest"]).parent/"profile.simc").read_text("utf8")
+    for kind,token in choices.items():
+        need([line for line in profile_text.splitlines()
+              if line.startswith(kind+"=")]==[kind+"="+token],
+             "V789_GENERATED_PROFILE_DEFAULT_DRIFT:"+kind)
+    doc["profile_plan"]={"status":plan["status"],"native_calls":0,
+                         "food":choices["food"],"potion":choices["potion"],
+                         "explicit_off_preserved":True}
+    save()
+    doc["stage"]="INSTALLED_REOPEN"
+    jobs=web.LocalJobs(root,source_credential_store=EphemeralActionsCredentials())
+    restored=jobs.restore_verified_fresh_profile(
+        target_ilevel=334,game_build=BUILD,
+        expected_installed_manifest_sha256=installed["manifest_sha256"])
+    need(restored is not None,"V789_INSTALLED_PROFILE_RESTORE_MISSING")
+    repeat=jobs.build_season_environment(target_ilevel=334,**base)
+    doc["reopen"]=summary(repeat)
+    need(repeat.get("native_calls")==0 and
+         repeat["web_environment_scope"].get("reused_verified_installed_season") is True
+         and repeat["T"]==first["T"],
+         "V789_REOPEN_NOT_ZERO_NATIVE")
+    after,_=engine.environment_manifest.read_json(installed_path)
+    need(after==installed,"V789_INSTALLED_DEFAULTS_MODIFIED")
+    doc["actual_installed_environment_verified"]=True
+    doc["status"]="PASS_REAL_INSTALLED_SIMC_DEFAULTS_PROFILE_AND_REOPEN"
+    return 0
+
+
 def run(args):
     out=Path(args.out).resolve()
     out.mkdir(parents=True,exist_ok=True)
@@ -169,6 +277,9 @@ def run(args):
             doc["baseline"]=summary(first)
             save()
             verify_ready(first)
+            if args.installed_defaults_once:
+                return verify_installed_defaults(first=first,root=root,jobs=jobs,
+                    base=base,binary=binary,doc=doc,save=save)
             first_sha=doc["baseline"]["installed_manifest_sha256"]
             need(isinstance(first_sha,str) and len(first_sha)==64,
                  "V769_BASELINE_INSTALL_SHA_MISSING")
@@ -294,5 +405,6 @@ if __name__=="__main__":
     p.add_argument("--identity",required=True)
     p.add_argument("--out",required=True)
     p.add_argument("--defaults-only",action="store_true")
+    p.add_argument("--installed-defaults-once",action="store_true")
     args=p.parse_args()
     sys.exit(observe_simc_defaults(args) if args.defaults_only else run(args))

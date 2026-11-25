@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   same-season-target-increment:
-    if: contains(github.event.head_commit.message, '[v769-increment-once]')
+    if: contains(github.event.head_commit.message, '[v769-increment-once]') || contains(github.event.head_commit.message, '[v789-installed-defaults-once]')
     runs-on: windows-2022
     timeout-minutes: 30
     env:
@@ -45,10 +45,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -m py_compile integration_probes/p1_v769_incremental_environment_once.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: One baseline and one target increment via actual v113, then reopen
+      - name: Existing actual v113 Build; one installed-default verification or legacy increment
         timeout-minutes: 24
+        env:
+          INSTALLED_DEFAULTS_ONCE: ${{ contains(github.event.head_commit.message, '[v789-installed-defaults-once]') }}
         run: |
-          python -u integration_probes/p1_v769_incremental_environment_once.py --simc .v618-simc-cache/simc.exe --identity .v618-simc-cache/identity.json --out out/v769
+          $extra = @()
+          if ($env:INSTALLED_DEFAULTS_ONCE -eq 'true') { $extra += '--installed-defaults-once' }
+          python -u integration_probes/p1_v769_incremental_environment_once.py --simc .v618-simc-cache/simc.exe --identity .v618-simc-cache/identity.json --out out/v769 @extra
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Retain compact receipt only
         if: always()
