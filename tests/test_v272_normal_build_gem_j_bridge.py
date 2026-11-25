@@ -41,6 +41,36 @@ class NormalBuildGemJ(unittest.TestCase):
                     manual_final_T=manual,gem_layout_receipt=layout,
                     gem_rating_by_id=ratings)
 
+    def test_default_measured_gem_uses_rating_not_rank_and_preserves_proofs(self):
+        stats=list(gems.ORDINARY_FOUR_STATS)
+        items=[]
+        proofs={}
+        def add(i,lead,partner,major,minor,rank):
+            item={"item_id":i,"lead":lead,"partner":partner,
+                  "crafting_quality":rank}
+            vec={stat:0 for stat in stats}
+            vec.update({lead:major,partner:minor})
+            items.append(item)
+            proofs[str(i)]={"resolved_two_secondary_vector":vec}
+        for index,lead in enumerate(stats):
+            add(311100+index,lead,stats[(index+1)%4],20,5,3)
+        # Higher-quality item has lower actual rating. Another partner
+        # remains a distinct effect; no effect equivalence is asserted.
+        add(311200,stats[0],stats[1],25,6,1)
+        add(311201,stats[0],stats[2],24,7,2)
+        original=copy.deepcopy(proofs)
+        selected=build._default_measured_ordinary_gems(items=items,proofs=proofs)
+        self.assertEqual(selected[stats[0]],{"item_id":311201,"raw_nominal_points":31})
+        self.assertEqual(sum(x["raw_nominal_points"] for x in selected.values()),106)
+        self.assertEqual(proofs,original)
+        self.assertEqual(len(items),6)
+        # Equal-total ties use quality then stable physical ID.
+        add(311199,stats[0],stats[1],25,6,2)
+        self.assertEqual(build._default_measured_ordinary_gems(
+            items=items,proofs=proofs)[stats[0]]["item_id"],311199)
+        self.assertIsNone(build._default_measured_ordinary_gems(
+            items=[x for x in items if x["lead"]!=stats[-1]],proofs=proofs))
+
     def test_static_and_scaled_gem_paths_share_exact_dbc_projection_once(self):
         catalog,_,_=prepared()
         game_build,revision=catalog["game_build"],catalog["simc_revision"]

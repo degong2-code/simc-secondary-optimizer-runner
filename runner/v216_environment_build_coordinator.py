@@ -1252,6 +1252,30 @@ def _fresh_two_stat_gem_named_tier_measurement_plan(*, rows, by_enchant):
         "unresolved_item_ids":unresolved}
 
 
+def _default_measured_ordinary_gems(*,items,proofs):
+    """One nominal CHMV representative per leading stat, not UI pruning.
+
+    Every already resolved candidate in the measured tier is considered.
+    Compare actual total rating first, consistent with the raw v268
+    representative policy; craft rank only breaks equal-total ties. Distinct
+    partners, tradeoffs and use conditions are not certified equivalent.
+    """
+    groups={stat:[] for stat in season_budget_contract.STATS}
+    for item in items:
+        vector=proofs[str(item["item_id"])]["resolved_two_secondary_vector"]
+        groups[item["lead"]].append((item,vector))
+    if any(not group for group in groups.values()):
+        return None
+    selected={}
+    for lead,options in groups.items():
+        item,vector=max(options,key=lambda pair:(
+            sum(pair[1].values()),pair[0]["crafting_quality"],
+            -pair[0]["item_id"]))
+        selected[lead]={"item_id":item["item_id"],
+                        "raw_nominal_points":sum(vector.values())}
+    return selected
+
+
 def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
                                              stage_root, binary, simc_revision,
                                              native_G_status,_read_dbc=None):
@@ -1407,7 +1431,7 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
         numeric_by_signature[signature]=sample
     # Confirm exact scaling SOURCE equivalence for every inferred item.
     # This never claims an unseen item's own SimC Native was executed.
-    proofs={};by_direction={}
+    proofs={}
     for item in plan["selected_tier_candidates"]:
         sample=numeric_by_signature[item["signature"]]
         vector={stat:0 for stat in stats}
@@ -1427,28 +1451,13 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
             "same_signature_not_independently_native_measured":
                 item["item_id"]!=sample["item_id"]}
         proofs[str(item["item_id"])]=proof
-        by_direction.setdefault((item["lead"],item["partner"]),[]).append(item)
-    by_lead={stat:[] for stat in stats}
-    for (lead,partner),options in by_direction.items():
-        highest=max(x["crafting_quality"] for x in options)
-        for item in options:
-            if item["crafting_quality"]!=highest:
-                continue
-            vec=proofs[str(item["item_id"])][
-                "resolved_two_secondary_vector"]
-            by_lead[lead].append((item,vec))
-    if any(not group for group in by_lead.values()):
+    selected=_default_measured_ordinary_gems(
+        items=plan["selected_tier_candidates"],proofs=proofs)
+    if selected is None:
         return {**pending,
                 "reason":"GEM_FOUR_LEADING_STATS_NOT_FOUND_IN_SOURCE",
                 "new_native_calls":calls,
                 "native_observations_unadmitted":observed}
-    selected={}
-    for lead,options in by_lead.items():
-        item,vector=max(options,key=lambda pair:(
-            pair[0]["crafting_quality"],sum(pair[1].values()),
-            -pair[0]["item_id"]))
-        selected[lead]={"item_id":item["item_id"],
-                        "raw_nominal_points":sum(vector.values())}
     chosen_ids={v["item_id"] for v in selected.values()}
     selected_proofs={str(i):proofs[str(i)] for i in sorted(chosen_ids)}
     return {**pending,
@@ -1555,13 +1564,13 @@ def _selected_gem_quality_policy_A_preview(*, source_catalog,
         if item_id not in ordinary or item_id not in metadata:
             continue
         row=metadata[item_id]
-        # Exact source enchant/color/class/expansion identify a comparable
-        # effect family. Minimum item level is NOT a separate quality gate:
-        # variants may have different level restrictions, and SimC owns use.
-        # Do not group merely by matching a name or quality rank.
+        # Compare only matching known source use conditions. Different
+        # minimum item levels describe different applicability ranges.
+        # Keep their independent source rows; this is not an extra
+        # game-effect certification gate or a user-option filter.
         key=(prop["enchant_id"],prop["color_mask"],
              prop["expansion_id"],row["quality"],
-             row["class_id"],row["subclass_id"])
+             row["class_id"],row["subclass_id"],prop["minimum_ilevel"])
         if prop["enchant_id"]>0 and prop["color_mask"]>0:
             source_groups.setdefault(key,[]).append({
                 "item_id":item_id,
@@ -1598,6 +1607,7 @@ def _selected_gem_quality_policy_A_preview(*, source_catalog,
         groups.append({
             "enchant_id":key[0],
             "same_v221_color_expansion_and_v230_class_source":True,
+            "minimum_ilevel_source_scope":key[6],
             "observed_item_ids":[r["item_id"] for r in ranked],
             "observed_crafting_quality_ranks":[
                 r["crafting_quality"] for r in ranked],

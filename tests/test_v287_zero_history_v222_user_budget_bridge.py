@@ -984,18 +984,15 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertFalse(no_merge["same_raw_four_stat_vector_source_only"])
         self.assertIsNone(no_merge[
             "highest_observed_quality_item_id_unadmitted"])
-        # The strongest observed comparable rating wins even when the
-        # weaker candidate has a higher craft rank and a different minimum
-        # item level. No exhaustive quality/use-condition certification.
+        # Stronger rating can beat craft rank only in the same known
+        # source use scope. Distinct minimum levels must stay separate.
         dominant={**raw,
           "selected_gem_raw_points_by_id_unadmitted":{
               "311001":26,"311002":20},
           "selected_gem_raw_CHMV_vectors_by_id_unadmitted":{
               "311001":{**vec,"crit_rating":26},
               "311002":dict(vec)},
-          "selected_gem_v221_source_properties_unadmitted":[
-              {**properties[0],"minimum_ilevel":315},
-              properties[1],properties[2]]}
+          "selected_gem_v221_source_properties_unadmitted":properties}
         with mock.patch.object(
                 build,"_fresh_selected_gem_simc_quality_stage",
                 return_value=quality):
@@ -1009,6 +1006,21 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertTrue(preferred[
             "observed_strongest_effect_sufficient_quality_policy"])
         self.assertFalse(preferred["same_raw_four_stat_vector_source_only"])
+        self.assertEqual(preferred["minimum_ilevel_source_scope"],300)
+        distinct_level={**dominant,
+            "selected_gem_v221_source_properties_unadmitted":[
+                {**properties[0],"minimum_ilevel":315},
+                properties[1],properties[2]]}
+        with mock.patch.object(
+                build,"_fresh_selected_gem_simc_quality_stage",
+                return_value=quality):
+            separate= self.preflight_with_sealed_gem_raw(
+                layout,distinct_level,pinned_seed=self.root)
+        distinct=separate["selected_v221_gem_item_relation_unadmitted"][
+            "gem_policy_A_source_and_quality_unadmitted"]
+        self.assertEqual(distinct["quality_source_groups_unadmitted"],[])
+        self.assertEqual(len(distinct["per_item_policy_A_source_only"]),3)
+        self.assertFalse(distinct["environment_ready"])
         different={**raw,"selected_gem_v221_source_properties_unadmitted":
             [properties[0],{**properties[1],"enchant_id":993},
              properties[2]]}
