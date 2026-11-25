@@ -209,8 +209,106 @@ def observe(out):
         },ensure_ascii=False,sort_keys=True),flush=True)
 
 
+def replay_ordered_lookup(previous, out):
+    """Reuse real v778 joined rows; fetch only exact item_data.inc.
+
+    No original v216 Build, Wago, Blizzard, WCL, binary or Native.
+    The old Actions artifact is evidence for the prior source join, not
+    a replacement for an installed season or a fresh physical-source check.
+    """
+    import hashlib
+    import v229_simc_only_source_seed as seed
+    import v230_simc_item_metadata as metadata
+    previous=pathlib.Path(previous)
+    raw_receipt=previous.read_bytes()
+    old=json.loads(raw_receipt)
+    if (old.get("schema")!=SCHEMA or old.get("game_build")!=BUILD or
+        old.get("simc_revision")!=REV or
+        old.get("status")!="PASS_REAL_V216_SOURCE_TO_V212_OPTION_PROJECTION" or
+        old.get("native_calls_reported")!=0 or
+        old.get("source_only_not_installed") is not True or
+        old.get("simc_wago_joined_rows")!=60 or
+        not re.fullmatch(r"[a-f0-9]{64}",old.get("exact_source_receipt_sha256",""))):
+        raise ValueError("V780_ORIGINAL_V778_RECEIPT_SCOPE_MISMATCH")
+    rows=old["joined_item_rows"]
+    ids=[r["physical_item_id"] for r in rows]
+    if len(rows)!=60 or len(set(ids))!=60:
+        raise ValueError("V780_ORIGINAL_JOIN_COVERAGE_MISMATCH")
+    # The Git tree is immutable. Authenticate only the needed generated
+    # blob, not every other season input that v229 can collect.
+    meta=seed.discover_generated_tree(REV)["item_data.inc"]
+    raw=seed.fetch_generated_blob(revision=REV,name="item_data.inc",
+        expected_sha=meta["sha"],expected_size=meta["size"])
+    if len(raw)!=meta["size"] or seed.git_blob(raw)!=meta["sha"]:
+        raise ValueError("V780_PINNED_ITEM_BLOB_MISMATCH")
+    parsed=metadata.parse_exact(raw,build=BUILD,item_ids=ids,
+        include_consumable_parser_names=True)
+    del raw
+    by_id={row["item_id"]:row for row in parsed["items"]}
+    owner=original.optional_source_join
+    index=owner.ordered_consumable_parser_index(
+        parsed["consumable_parser_name_rows"])
+    first={}
+    for row in rows:
+        item_id=row["physical_item_id"]
+        item=by_id[item_id]
+        kind=row["kind"]
+        rank=item["crafting_quality"]
+        if (item["class_id"]!=0 or item["inventory_type"]!=0 or
+            item["subclass_id"]!=owner.SUBCLASS[kind] or
+            rank!=row["crafting_quality"] or item["name"]!=row["name_enUS"] or
+            owner.candidate_token(item["name"],rank)!=row["simc_input_token"]):
+            raise ValueError("V780_ORIGINAL_JOIN_ITEM_DRIFT")
+        first[str(item_id)]=owner.first_consumable_match(
+            index,kind,owner.parser_name_stem(item["name"]),rank)
+    shadowed=sorted(int(i) for i,match in first.items() if match!=int(i))
+    bridge={"game_build":BUILD,"simc_revision":REV,
+            "source_receipt_sha256":old["exact_source_receipt_sha256"],
+            "rows":rows,"parser_first_match_item_ids":first,
+            "parser_shadowed_item_ids":shadowed}
+    projected=install.project_fresh_optional_consumables(
+        game_build=BUILD,simc_revision=REV,source=bridge)
+    install.verify_fresh_optional_consumables(
+        projected,game_build=BUILD,simc_revision=REV)
+    options={kind:entry["options"]
+             for kind,entry in projected["categories"].items()}
+    defaults={}
+    for kind,tokens in owner.reviewed_apl_default_groups(BUILD,REV).items():
+        defaults[kind]={token:next((r["item_id"] for r in options[kind]
+                                    if r["simc_token"]==token),None)
+                        for token in tokens}
+    state={"schema":"p1_v780_ordered_optional_lookup_replay_v1",
+           "status":"PASS_PINNED_ORDERED_LOOKUP_REPLAY",
+           "game_build":BUILD,"simc_revision":REV,
+           "prior_run_id":45566131185,"prior_artifact_id":14999673517,
+           "prior_receipt_sha256":hashlib.sha256(raw_receipt).hexdigest(),
+           "item_data_git_blob":meta["sha"],"item_data_sha256":parsed["source_sha256"],
+           "item_data_bytes":meta["size"],"reused_joined_rows":len(rows),
+           "full_environment_builds":0,"wago_network_calls":0,
+           "simc_native_calls":0,"dps_native_calls":0,
+           "source_only_not_installed":True,
+           "all_quality_numeric_noninferiority_proven":False,
+           "parser_first_match_item_ids":first,
+           "parser_shadowed_item_ids":shadowed,
+           "quality_pending_ids_by_kind":{
+               kind:entry.get("quality_comparison_pending_item_ids",[])
+               for kind,entry in projected["categories"].items()},
+           "option_counts":{kind:len(items) for kind,items in options.items()},
+           "projected_options_by_kind":options,
+           "reviewed_default_projected_item_ids":defaults}
+    out=pathlib.Path(out)
+    out.mkdir(parents=True,exist_ok=True)
+    (out/"V780_ORDERED_LOOKUP_REPLAY.json").write_text(
+        json.dumps(state,sort_keys=True,indent=2,ensure_ascii=False)+"\\n",
+        encoding="utf8")
+    print("V780_REPLAY "+json.dumps(state,sort_keys=True,ensure_ascii=False),flush=True)
+    return 0
+
+
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--out",type=pathlib.Path,required=True)
+    parser.add_argument("--replay-v778",type=pathlib.Path)
     args=parser.parse_args()
-    raise SystemExit(observe(args.out))
+    raise SystemExit(replay_ordered_lookup(args.replay_v778,args.out)
+                     if args.replay_v778 else observe(args.out))

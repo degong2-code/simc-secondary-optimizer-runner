@@ -9814,26 +9814,8 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
         # A source-known handler is not the set searched by the SimC
         # consumable parser. Include the same-revision generated DBC name
         # keys, even outside the active-season Wago candidate list.
-        parser_rows=metadata.get("consumable_parser_name_rows")
-        need(type(parser_rows) is list and
-             len(parser_rows)<=20000,
-             "V764_OPTIONAL_PARSER_NAME_SOURCE_PENDING")
-        parser_names={}
-        for row in parser_rows:
-            need(type(row) is dict and
-                 type(row.get("item_id")) is int and row["item_id"]>0 and
-                 row.get("subclass_id") in (1,5,8) and
-                 type(row.get("crafting_quality")) is int and
-                 row["crafting_quality"]>=0 and
-                 type(row.get("name")) is str,
-                 "V764_OPTIONAL_PARSER_NAME_ROW_INVALID")
-            stem=optional_source_join.parser_name_stem(row["name"])
-            if stem is not None:
-                # filtered_dbc_index_t::init appends in source order;
-                # ::get returns range::find_if, not all possible matches.
-                key="food" if row["subclass_id"]==5 else "potion"
-                parser_names.setdefault(key,[]).append(
-                    (row["item_id"],stem,row["crafting_quality"]))
+        parser_names=optional_source_join.ordered_consumable_parser_index(
+            metadata.get("consumable_parser_name_rows"))
         needed={kind:{} for kind in ("food","potion")}
         current_version=tuple(int(x) for x in build.split(".")[:3])
         for kind in needed:
@@ -9883,9 +9865,8 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
             # client_data.hpp: first matching item in the filtered DBC.
             # Keep rank 0/1 in original interleaved order, not rank buckets.
             rank=row["crafting_quality"]
-            first=next((i for i,name,q in parser_names.get(kind,[])
-                        if stem in name and (q==rank or (rank==0 and q==1))),
-                       None)
+            first=optional_source_join.first_consumable_match(
+                parser_names,kind,stem,rank)
             first_matches[str(item_id)]=first
             # Later matches cannot shadow the first item.
             if first!=item_id:

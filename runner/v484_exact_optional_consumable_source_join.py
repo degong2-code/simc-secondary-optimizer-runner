@@ -120,6 +120,37 @@ def parser_name_stem(name):
     return "".join(chars)
 
 
+def ordered_consumable_parser_index(parser_rows):
+    """Same generated order as SimC's filtered_dbc_index_t."""
+    need(type(parser_rows) is list and
+         len(parser_rows)<=20000,
+         "V764_OPTIONAL_PARSER_NAME_SOURCE_PENDING")
+    parser_names={}
+    for row in parser_rows:
+        need(type(row) is dict and
+             type(row.get("item_id")) is int and row["item_id"]>0 and
+             row.get("subclass_id") in (1,5,8) and
+             type(row.get("crafting_quality")) is int and
+             row["crafting_quality"]>=0 and
+             type(row.get("name")) is str,
+             "V764_OPTIONAL_PARSER_NAME_ROW_INVALID")
+        stem=parser_name_stem(row["name"])
+        if stem is not None:
+            # filtered_dbc_index_t::init appends in source order;
+            # ::get returns range::find_if, not all possible matches.
+            key="food" if row["subclass_id"]==5 else "potion"
+            parser_names.setdefault(key,[]).append(
+                (row["item_id"],stem,row["crafting_quality"]))
+    return parser_names
+
+
+def first_consumable_match(parser_names,kind,stem,rank):
+    """Return the actual first matching physical ID, not a uniqueness guess."""
+    return next((i for i,name,q in parser_names.get(kind,[])
+                 if stem in name and (q==rank or (rank==0 and q==1))),
+                None)
+
+
 def match_selected_physical_items(*, stage_root, v190_stage,
                                   simc_seed_dir, game_build,
                                   simc_revision, selected_item_ids):

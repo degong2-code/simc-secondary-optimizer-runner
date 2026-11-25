@@ -96,6 +96,18 @@ class V684OneBuildReceiptTests(unittest.TestCase):
         self.assertNotIn("fetch",options)
         self.assertNotIn("same_build_budget_evidence",options)
 
+    def test_v780_shared_ordered_lookup_uses_real_index_order(self):
+        owner=diagnostic.original.optional_source_join
+        rows=[
+            {"item_id":10,"name":"Old Royal Roast","subclass_id":5,"crafting_quality":1},
+            {"item_id":11,"name":"Royal Roast","subclass_id":5,"crafting_quality":0},
+            {"item_id":12,"name":"Light's Potential","subclass_id":8,"crafting_quality":2},
+            {"item_id":13,"name":"Light's Potential","subclass_id":1,"crafting_quality":2}]
+        index=owner.ordered_consumable_parser_index(rows)
+        self.assertEqual(owner.first_consumable_match(index,"food","royal_roast",0),10)
+        self.assertEqual(owner.first_consumable_match(index,"potion","lights_potential",2),12)
+        self.assertIsNone(owner.first_consumable_match(index,"potion","lights_potential",1))
+
     def test_v778_receipt_distinguishes_default_join_and_projection(self):
         rows=[row(201,kind="potion",token="lights_potential_2",quality=2),
               row(202,kind="potion",token="liquid_luster_2",
