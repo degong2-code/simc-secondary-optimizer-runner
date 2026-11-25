@@ -120,6 +120,62 @@ class OneSpecInBuild(unittest.TestCase):
         self.assertFalse(result["environment_ready"])
         self.assertTrue(result["same_season_membership_not_proven"])
 
+    def test_sealed_candidate_profile_reuses_source_without_reselection(self):
+        with mock.patch.object(build.tier_simc_bridge,"select_for_simc",
+                               return_value={"v231_candidate":self.simc_tier}) as select, \
+             mock.patch.object(build.simc_representative,"find_candidate",
+                 wraps=build.simc_representative.find_candidate) as find:
+            first=self.invoke(self.seed)
+            self.assertEqual(find.call_count,1)
+            result=build._one_spec_source_G_probe_stage(
+                stage_root=self.stage,build=BUILD,one_spec=first,
+                fresh_gear=self.fresh_gear,tier_bridge=self.tier_bridge,
+                seed_directory=self.seed,character={"race":"human"})
+            self.assertEqual(result["status"],
+                "FRESH_ONE_SPEC_PHYSICAL_G_PROFILE_PREPARED_NATIVE_PENDING")
+            self.assertEqual(select.call_count,1)
+            self.assertEqual(find.call_count,1)
+        # Independent v233 still does full replay and produces identical bytes.
+        rep=json.loads(Path(first["candidate_path"]).read_text())
+        text,receipt=build.g_probe_profile.build(
+            source_directory=self.seed,tier_candidate=self.simc_tier,
+            representative_candidate=rep,race="human",
+            season_gear_db=json.loads(self.gear_path.read_text()))
+        self.assertEqual(Path(result["profile_path"]).read_bytes(),text.encode())
+        self.assertEqual(json.loads(Path(result["profile_receipt_path"]).read_text()),receipt)
+        # A different race creates a distinct input; raw drift must fail
+        # before rendering, even with a genuine earlier stage summary.
+        for name in ("item_data.inc","item_set_bonus.inc"):
+            path=self.seed/name
+            original=path.read_bytes()
+            try:
+                path.write_bytes(original+b"\\n")
+                with mock.patch.object(build.g_probe_profile,"_render_verified_candidate") as render:
+                    blocked=build._one_spec_source_G_probe_stage(
+                        stage_root=self.stage,build=BUILD,one_spec=first,
+                        fresh_gear=self.fresh_gear,tier_bridge=self.tier_bridge,
+                        seed_directory=self.seed,character={"race":"dwarf","talents":name})
+                    self.assertEqual(blocked["status"],
+                        "FRESH_G_PROBE_SOURCE_OR_CHARACTER_PENDING")
+                    render.assert_not_called()
+            finally:
+                path.write_bytes(original)
+        # Modified candidate with recomputed self-hash cannot replace the
+        # original sealed stage output.
+        path=Path(first["candidate_path"])
+        rep["selected_G_slot_ids"]["main_hand"]=999999
+        rep["receipt_sha256"]=seed.digest(seed.canonical({
+            k:v for k,v in rep.items() if k!="receipt_sha256"}).encode())
+        path.write_text(json.dumps(rep),encoding="utf8")
+        with mock.patch.object(build.g_probe_profile,"_render_verified_candidate") as render:
+            blocked=build._one_spec_source_G_probe_stage(
+                stage_root=self.stage,build=BUILD,one_spec=first,
+                fresh_gear=self.fresh_gear,tier_bridge=self.tier_bridge,
+                seed_directory=self.seed,character={"race":"dwarf"})
+            self.assertEqual(blocked["status"],
+                "FRESH_G_PROBE_SOURCE_OR_CHARACTER_PENDING")
+            render.assert_not_called()
+
     def test_full_simc_item_source_absence_is_zero_network_pending(self):
         status=self.invoke()
         self.assertEqual(status["status"],

@@ -4768,6 +4768,42 @@ def _lazy_full_pinned_simc_item_stage(*, stage_root, build, small_seed_dir,
             "environment_ready":False,"G":None}
 
 
+def _one_spec_representative_stage_contract(*, build, request, gear_bytes,
+        tier_bytes, source_receipt_bytes, item_data):
+    """Same exact v217 input identity for producer and downstream consumer."""
+    need(item_data.is_file() and not item_data.is_symlink(),
+         "V216_ONE_SPEC_ITEM_DATA_MISSING_OR_UNSAFE")
+    item_digest=hashlib.sha256()
+    with item_data.open("rb") as stream:
+        for chunk in iter(lambda:stream.read(1024*1024),b""):
+            item_digest.update(chunk)
+    item_sha=item_digest.hexdigest()
+    one_spec_key=digest(canonical({"game_build":build,
+        "request":request}).encode("utf8"))[:16]
+    output="source/v265_one_spec_generic_G_representative_"+one_spec_key+".json"
+    # Include transitive source parser/chooser and the adapter itself.
+    # An implementation change must not silently reuse an old candidate.
+    code=stage_engine.module_dependency_fingerprint([
+        pathlib.Path(__file__),
+        pathlib.Path(tier_simc_bridge.__file__),
+        pathlib.Path(tier_simc_bridge.simc_tier.__file__),
+        pathlib.Path(simc_source.__file__),
+        pathlib.Path(simc_representative.__file__),
+        pathlib.Path(simc_representative.metadata.__file__),
+        pathlib.Path(simc_representative.chooser.__file__),
+        pathlib.Path(product_gear_db.__file__),
+        pathlib.Path(stage_engine.__file__)])
+    return {"stage_id":"fresh-one-spec-generic-G-representative-"+one_spec_key,
+            "stage_version":"v251-v232-generic-G-physical-v1",
+            "inputs":{"game_build":build,"request":request,
+                    "gear_sha256":digest(gear_bytes),
+                    "tier_sha256":digest(tier_bytes),
+                    "seed_receipt_sha256":digest(source_receipt_bytes),
+                    "simc_item_data_sha256":item_sha,
+                    "code_sha256":code["sha256"]},
+            "outputs":{"candidate":output}}
+
+
 def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
                                   tier_bridge, seed_directory=None,
                                   request=None):
@@ -4831,32 +4867,10 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
     need(receipt_path.is_file() and not receipt_path.is_symlink(),
          "V216_ONE_SPEC_SIMC_RECEIPT_REQUIRED")
     source_receipt_bytes=receipt_path.read_bytes()
-    item_digest=hashlib.sha256()
-    with item_data.open("rb") as stream:
-        for chunk in iter(lambda:stream.read(1024*1024),b""):
-            item_digest.update(chunk)
-    item_sha=item_digest.hexdigest()
-    # One physical gear source can serve 26 specs and many target ilvls.
-    # Key only the requested physical source shape, NOT race/talents or
-    # historical session identity, so the costly pinned SimC source is reused.
-    one_spec_key=digest(canonical({"game_build":build,
-        "request":request}).encode("utf8"))[:16]
-    # New physical-budget semantics must not overwrite earlier v255 sealed
-    # receipts or force re-downloading build-wide Wago/SimC source bytes.
-    output="source/v265_one_spec_generic_G_representative_"+one_spec_key+".json"
-    path=root/output
-    # Include transitive source parser/chooser and the adapter itself.
-    # An implementation change must not silently reuse an old candidate.
-    code=stage_engine.module_dependency_fingerprint([
-        pathlib.Path(__file__),
-        pathlib.Path(tier_simc_bridge.__file__),
-        pathlib.Path(tier_simc_bridge.simc_tier.__file__),
-        pathlib.Path(simc_source.__file__),
-        pathlib.Path(simc_representative.__file__),
-        pathlib.Path(simc_representative.metadata.__file__),
-        pathlib.Path(simc_representative.chooser.__file__),
-        pathlib.Path(product_gear_db.__file__),
-        pathlib.Path(stage_engine.__file__)])
+    contract=_one_spec_representative_stage_contract(build=build,request=request,
+        gear_bytes=gear_bytes,tier_bytes=tier_bytes,
+        source_receipt_bytes=source_receipt_bytes,item_data=item_data)
+    path=root/contract["outputs"]["candidate"]
     def execute():
         source_tier=tier_simc_bridge.select_for_simc(
             candidate=tier,seed_directory=seed_dir,
@@ -4913,16 +4927,7 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
                         if k!="receipt_sha256"}).encode("utf8")))
     try:
         staged=stage_engine.execute_stage(
-            root=root,
-            stage_id="fresh-one-spec-generic-G-representative-"+one_spec_key,
-            stage_version="v251-v232-generic-G-physical-v1",
-            inputs={"game_build":build,"request":request,
-                    "gear_sha256":digest(gear_bytes),
-                    "tier_sha256":digest(tier_bytes),
-                    "seed_receipt_sha256":digest(source_receipt_bytes),
-                    "simc_item_data_sha256":item_sha,
-                    "code_sha256":code["sha256"]},
-            outputs={"candidate":output},execute=execute,validate=validate)
+            root=root,**contract,execute=execute,validate=validate)
     except (stage_engine.StageExecutionBlocked,
             tier_simc_bridge.BridgeBlocked,
             simc_representative.SourceRepresentativeBlocked,
@@ -5005,8 +5010,9 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
     """Same original source Build -> v233 profile, only when asked.
 
     This is a physical G *measurement input* (not G or an approved
-    production user profile). v233 itself rebuilds the v232 candidate
-    from exact pinned sources. Seal the small input+receipt with v217;
+    production user profile). A verified v217 producer can reuse its v232
+    output; standalone candidates still require full v233 source replay.
+    Seal the small input+receipt with v217;
     never call Native or duplicate the Wago/SimC source downloader.
     """
     if character is None:
@@ -5063,16 +5069,52 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
         pathlib.Path(tier_simc_bridge.__file__),
         pathlib.Path(stage_engine.__file__)])
     def execute():
-        physical=tier_simc_bridge.select_for_simc(
-            candidate=tier,seed_directory=seed_dir,
-            cls=rep["character"]["class"],
-            spec=rep["character"]["spec"])
-        profile,proof=g_probe_profile.build(
-            source_directory=seed_dir,
-            tier_candidate=physical["v231_candidate"],
-            representative_candidate=rep,
-            race=character["race"],level=character.get("level"),
-            talents=character.get("talents"),season_gear_db=gear)
+        source_stage=one_spec.get("source_stage")
+        if source_stage is not None:
+            # Never accept a candidate's self-hash or a supplied summary as
+            # authority. Reconstruct the exact upstream v217 contract from
+            # current bytes and code, check the on-disk COMPLETE receipt,
+            # then bind the very bytes that will be serialized.
+            request={"class":rep["character"]["class"],
+                     "spec":rep["character"]["spec"],
+                     "target_ilevel":rep["target_ilevel"]}
+            source_contract=_one_spec_representative_stage_contract(
+                build=build,request=request,gear_bytes=gear_raw,
+                tier_bytes=tier_raw,source_receipt_bytes=receipt_raw,
+                item_data=seed_dir/"item_data.inc")
+            checked=stage_engine.verify_stage(root=root,**source_contract)
+            expected=root/source_contract["outputs"]["candidate"]
+            need(type(source_stage) is dict and
+                 checked["receipt_sha256"]==source_stage.get("receipt_sha256") and
+                 paths[0].resolve()==expected.resolve() and
+                 expected.read_bytes()==rep_raw,
+                 "V216_G_PROBE_UPSTREAM_STAGE_IDENTITY_DRIFT")
+            # v231's small set source is not part of the large item hash.
+            # Check the exact pinned set blob and receipt; no item parsing.
+            seed_doc,_=tier_simc_bridge.simc_tier.read_receipt(seed_dir)
+            need(seed_doc["receipt_sha256"]==rep["source_seed_receipt_sha256"] and
+                 seed_doc["simc_revision"]==rep["simc_revision"] and
+                 seed_doc["simc_generated_build"]==build and
+                 source_contract["inputs"]["simc_item_data_sha256"]==
+                    rep["item_data_sha256"]==
+                    seed_doc["source_files"]["item_data.inc"]["sha256"] and
+                 rep["season_gear_db_digest_sha256"]==
+                    simc_source.digest(simc_source.canonical(gear).encode("utf8")),
+                 "V216_G_PROBE_UPSTREAM_RAW_SOURCE_DRIFT")
+            profile,proof=g_probe_profile._render_verified_candidate(
+                rep,race=character["race"],level=character.get("level"),
+                talents=character.get("talents"))
+        else:
+            physical=tier_simc_bridge.select_for_simc(
+                candidate=tier,seed_directory=seed_dir,
+                cls=rep["character"]["class"],
+                spec=rep["character"]["spec"])
+            profile,proof=g_probe_profile.build(
+                source_directory=seed_dir,
+                tier_candidate=physical["v231_candidate"],
+                representative_candidate=rep,
+                race=character["race"],level=character.get("level"),
+                talents=character.get("talents"),season_gear_db=gear)
         profile_path.parent.mkdir(parents=True,exist_ok=True)
         profile_path.write_bytes(profile.encode("utf8"))
         receipt_path.write_text(json.dumps(

@@ -67,6 +67,11 @@ def build(*, source_directory, tier_candidate, representative_candidate,
         raise ProbeBlocked("V233_REGENERATED_SIMC_SOURCE_REJECTED") from exc
     need(rebuilt==representative_candidate,
          "V233_REPRESENTATIVE_SOURCE_CANDIDATE_REPLAY_DRIFT")
+    return _render_verified_candidate(rebuilt,race=race,level=level,talents=talents)
+
+
+def _render_verified_candidate(rebuilt,*,race,level=None,talents=None):
+    """Internal serialization only; caller owns full source verification."""
     character=rebuilt["character"]
     class_name=character["class"]
     spec_name=character["spec"]
