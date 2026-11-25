@@ -79,6 +79,93 @@ def reviewed_apl_default_groups(game_build,simc_revision):
     return groups
 
 
+# Reviewed source evidence, NOT a runtime spell calculator. Keep this
+# revision-bound snapshot alongside the existing reviewed APL input owner.
+# Git blobs: item_effect f1d6075fd0649be30cc555284e71fc2add112ec0;
+# sc_spell_data a18f81b125eb775651c8db27354030399a12e730;
+# rand_prop_points 7923a7ca1fc975a26a9e160059930256ac07dca8;
+# sc_scale_data f9f4386ff4e4d074a8340dc847db8dc65befbf69.
+# Signed magnitudes from those exact source rows, rounded here ONLY for
+# comparison. Same driver, duration (30s), cooldown (300s), physical
+# requirements and identical item-effect fields for each pair. Liquid
+# Luster shares its 6s period/5 stack trigger; Recklessness has four
+# positive and four negative rating effects (crit penalty differs slightly).
+# No claim about relative DPS, or reuse on another build/revision.
+_REVIEWED_ITEM_DATA_SHA = "52bdeaeaf67992680f9b873c77181fe96f14f862a1e4a944b4b272c0f3fe0588"
+_REVIEWED_QUALITY_FAMILIES = (
+    ("Light's Potential", "lights_potential", "simc:reviewed_apl_input:spell:1236616",
+     ((241309, 278, (593.190106,)), (241308, 295, (695.000005,)))),
+    ("Potion of Recklessness", "potion_of_recklessness",
+     "simc:consumables::potion_of_recklessness:spell:1236994",
+     ((241289, 278, (1584.980031,)*4+(-213.462422, -213.168311, -213.168311, -213.168311)),
+      (241288, 295, (1724.999824,)*4+(-232.320050, -231.999957, -231.999957, -231.999957)))),
+    ("Liquid Luster", "liquid_luster", "simc:consumables::liquid_luster:spell:1295132",
+     ((271886, 278, (358.474601,)), (271887, 295, (420.000009,)))),
+)
+
+
+def _reviewed_quality_scope(game_build, simc_revision):
+    return bool(reviewed_apl_default_groups(game_build, simc_revision))
+
+
+def reviewed_quality_item_evidence(game_build, simc_revision, rows, metadata):
+    """Bind the reviewed numerical source to the EXISTING exact item join.
+
+    No raw file read, source download, Native or extra item scan. A source
+    mismatch leaves the corresponding quality comparison pending.
+    """
+    if (not _reviewed_quality_scope(game_build, simc_revision) or
+            metadata.get("source_sha256") != _REVIEWED_ITEM_DATA_SHA):
+        return None
+    by_id = {row["item_id"]: row for row in metadata["items"]}
+    joined = {row["physical_item_id"] for row in rows}
+    levels = {}
+    for name, stem, effect, variants in _REVIEWED_QUALITY_FAMILIES:
+        for rank, (iid, level, _) in enumerate(variants, 1):
+            row = by_id.get(iid, {})
+            if (iid in joined and row.get("name") == name and
+                    row.get("ilevel_unscaled") == level and
+                    row.get("crafting_quality") == rank and
+                    row.get("class_id") == 0 and row.get("subclass_id") == 1 and
+                    row.get("inventory_type") == 0):
+                levels[str(iid)] = level
+    return {"item_data_sha256": _REVIEWED_ITEM_DATA_SHA, "item_levels": levels}
+
+
+def reviewed_quality_family_winners(game_build, simc_revision, rows, evidence):
+    """Return comparable non-dominated choices, or None if not proven.
+
+    Every signed component must be noninferior before removing a lower
+    rank. A larger negative penalty is worse; trade-offs stay selectable.
+    The reviewed record is exact-source data, not a universal rank rule.
+    """
+    if (not _reviewed_quality_scope(game_build, simc_revision) or
+            type(evidence) is not dict or
+            evidence.get("item_data_sha256") != _REVIEWED_ITEM_DATA_SHA or
+            type(evidence.get("item_levels")) is not dict):
+        return None
+    for name, stem, effect, variants in _REVIEWED_QUALITY_FAMILIES:
+        expected = {iid: (rank, level, vector)
+                    for rank, (iid, level, vector) in enumerate(variants, 1)}
+        if len(rows) != len(expected) or {r["physical_item_id"] for r in rows} != set(expected):
+            continue
+        for row in rows:
+            iid = row["physical_item_id"]
+            rank, level, vector = expected[iid]
+            if (row["kind"] != "potion" or row["name_enUS"] != name or
+                    row["simc_input_token"] != stem+"_"+str(rank) or
+                    row["crafting_quality"] != rank or row["effect_identity"] != effect or
+                    row["use_condition_identity"] != "wago_on_use_0" or
+                    evidence["item_levels"].get(str(iid)) != level):
+                return None
+        return [row for row in rows if not any(
+            other["crafting_quality"] > row["crafting_quality"] and
+            all(a >= b for a, b in zip(expected[other["physical_item_id"]][2],
+                                       expected[row["physical_item_id"]][2]))
+            for other in rows)]
+    return None
+
+
 def candidate_token(name, rank):
     """Conservative SimC parser spelling, NOT proof that a token selects an item.
 

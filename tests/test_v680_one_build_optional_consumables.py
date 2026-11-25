@@ -82,6 +82,64 @@ class OneBuildOptionalChoices(unittest.TestCase):
         self.assertEqual(built["source_receipt_sha256"],SHA)
         self.assertTrue(built["optional_items_do_not_block_base"])
 
+    def test_v782_reviewed_numeric_quality_projects_dominance_and_tradeoff(self):
+        rev="9933ffb946fb55b1fa66657b848f519ac19006e1"
+        source_sha="52bdeaeaf67992680f9b873c77181fe96f14f862a1e4a944b4b272c0f3fe0588"
+        families=[
+            ("Light's Potential","lights_potential",241309,241308,
+             "simc:reviewed_apl_input:spell:1236616"),
+            ("Potion of Recklessness","potion_of_recklessness",241289,241288,
+             "simc:consumables::potion_of_recklessness:spell:1236994"),
+            ("Liquid Luster","liquid_luster",271886,271887,
+             "simc:consumables::liquid_luster:spell:1295132")]
+        rows=[]
+        items=[]
+        for name,stem,low,high,effect in families:
+            for rank,iid,level in ((1,low,278),(2,high,295)):
+                rows.append({**exact_row("potion",iid,stem+"_"+str(rank),rank,
+                                        effect,"wago_on_use_0"),"name_enUS":name})
+                items.append({"item_id":iid,"name":name,"ilevel_unscaled":level,
+                              "crafting_quality":rank,"class_id":0,
+                              "subclass_id":1,"inventory_type":0})
+        metadata={"source_sha256":source_sha,"items":items}
+        evidence=fresh_build.optional_source_join.reviewed_quality_item_evidence(
+            BUILD,rev,rows,metadata)
+        source={**self.source(rows),"simc_revision":rev,
+                "reviewed_quality_item_evidence":evidence,
+                "parser_first_match_item_ids":{str(r["physical_item_id"]):
+                    r["physical_item_id"] for r in rows},
+                "parser_shadowed_item_ids":[]}
+        def project(s, revision=rev):
+            return manifest.project_fresh_optional_consumables(
+                game_build=BUILD,simc_revision=revision,source=s)["categories"]["potion"]
+        self.assertEqual([r["item_id"] for r in project(source)["options"]],
+                         [241288,241289,241308,271887])
+        self.assertNotIn("quality_comparison_pending_item_ids",project(source))
+        self.assertTrue(manifest.verify_fresh_optional_consumables(
+            manifest.project_fresh_optional_consumables(
+                game_build=BUILD,simc_revision=rev,source=source),
+            game_build=BUILD,simc_revision=rev))
+        # Wrong item level only withholds the affected family.
+        bad=copy.deepcopy(metadata)
+        bad["items"][0]["ilevel_unscaled"]=279
+        changed={**source,"reviewed_quality_item_evidence":
+            fresh_build.optional_source_join.reviewed_quality_item_evidence(
+                BUILD,rev,rows,bad)}
+        self.assertEqual(project(changed)["quality_comparison_pending_item_ids"],
+                         [241308,241309])
+        # No reviewed source on a different revision or a mismatched blob.
+        self.assertIsNone(fresh_build.optional_source_join.reviewed_quality_item_evidence(
+            BUILD,REV,rows,metadata))
+        self.assertIsNone(fresh_build.optional_source_join.reviewed_quality_item_evidence(
+            BUILD,rev,rows,{**metadata,"source_sha256":SHA}))
+        self.assertEqual(project({**source,"simc_revision":REV},REV)["options"],[])
+        # Parser ambiguity cannot silently substitute an inferior rank.
+        shadow=copy.deepcopy(source)
+        shadow["parser_first_match_item_ids"]["241308"]=999
+        shadow["parser_shadowed_item_ids"]=[241308]
+        self.assertNotIn(241309,[r["item_id"] for r in project(shadow)["options"]])
+        self.assertNotIn(241308,[r["item_id"] for r in project(shadow)["options"]])
+
     def test_simc_consumable_substring_parser_omits_shadowed_known_item(self):
         # Actual same-revision consumable.cpp uses str_in_str_ci(full, needle).
         # A shorter name can match another item of the SAME subclass/quality

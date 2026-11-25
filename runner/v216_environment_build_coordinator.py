@@ -9891,12 +9891,18 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
                 "effect_identity":effect,
                 "use_condition_identity":"wago_on_use_0",
                 "name_enUS":row["name"]})
+        quality_evidence=optional_source_join.reviewed_quality_item_evidence(
+            build,revision,rows,metadata)
         return {"game_build":build,"simc_revision":revision,
                 "source_receipt_sha256":digest(canonical({
                     "wago_stage":original["source_stage"]["receipt_sha256"],
                     "simc_item_source":metadata["source_receipt_sha256"],
-                    "handler_stage":source["source_stage"]["receipt_sha256"]
+                    "handler_stage":source["source_stage"]["receipt_sha256"],
+                    **({"reviewed_quality_item_evidence":quality_evidence}
+                       if quality_evidence is not None else {})
                 }).encode("utf8")),"rows":rows,
+                **({"reviewed_quality_item_evidence":quality_evidence}
+                   if quality_evidence is not None else {}),
                 "parser_first_match_item_ids":{
                     str(r["physical_item_id"]):
                     first_matches[str(r["physical_item_id"])] for r in rows},

@@ -20,6 +20,7 @@ import v206_nonchmv_eagle_selection as eagle
 import v213_source_to_catalog as source_bridge
 import v222_season_budget_contract as season_budget
 import v295_season_runeforge_source as dk_season_source
+import v484_exact_optional_consumable_source_join as optional_source_join
 
 SCHEMA = "v212_simc_environment_manifest_v2"
 V098 = "v098_target_ilevel_user_scenario_v1"
@@ -629,24 +630,26 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
             group=(row["kind"],row["effect_identity"],
                    row["use_condition_identity"],parser_name(row))
             groups.setdefault(group,[]).append(row)
-        # Existing v680 source rows have no authenticated numerical
-        # comparison. A shared handler/spell + generic ON_USE is not proof
-        # that higher rank dominates every benefit, penalty or condition.
-        # Hold only unresolved rank families, not all optional choices.
+        # Use only the exact reviewed signed numerical comparison from the
+        # existing source owner. Otherwise retain the previous pending rule.
         for key,rows in groups.items():
-            if len(rows)!=1:
+            chosen_rows=rows if len(rows)==1 else (
+                optional_source_join.reviewed_quality_family_winners(
+                    game_build,simc_revision,rows,
+                    source.get("reviewed_quality_item_evidence")))
+            if chosen_rows is None:
                 pending=kinds[key[0]].setdefault(
                     "quality_comparison_pending_item_ids",[])
                 pending.extend(row["physical_item_id"] for row in rows)
                 continue
-            chosen=rows[0]
-            kinds[key[0]]["options"].append({
-                "item_id":chosen["physical_item_id"],
-                "label":chosen["name_enUS"],
-                "simc_token":chosen["simc_input_token"],
-                "quality":chosen["crafting_quality"],
-                "effect_identity":key[1],
-                "use_condition_identity":key[2]})
+            for chosen in chosen_rows:
+                kinds[key[0]]["options"].append({
+                    "item_id":chosen["physical_item_id"],
+                    "label":chosen["name_enUS"],
+                    "simc_token":chosen["simc_input_token"],
+                    "quality":chosen["crafting_quality"],
+                    "effect_identity":key[1],
+                    "use_condition_identity":key[2]})
         for group in kinds.values():
             if "quality_comparison_pending_item_ids" in group:
                 group["quality_comparison_pending_item_ids"]=sorted(set(
