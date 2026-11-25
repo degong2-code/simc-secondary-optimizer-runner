@@ -116,6 +116,33 @@ class GearStatOwner(unittest.TestCase):
         self.assertFalse(joined["environment_ready"])
         self.assertFalse(joined["user_selectable"])
 
+    def test_v760_selected_oil_scope_before_scaled_measurement(self):
+        import v216_environment_build_coordinator as build
+        chosen={"physical_item_id":101,"crafting_quality":2,
+            "simc_input_token":"main_hand:example_oil_2",
+            "simc_enchant_id":201,"selected_hand":"main_hand"}
+        row={"oil_item_id":101,"quality_rank":2,"simc_token":"example_oil",
+             "simc_enchant_id":201,"hand":"main_hand",
+             "representative_weapon_id":301,
+             "matched_same_build_spell_equipped_masks":True,
+             "user_selectable":False}
+        raw={"source_min_ilevel":300,"source_max_ilevel":350}
+        check=build._selected_oil_measurement_scope
+        self.assertIsNone(check(chosen,raw,[row],300))
+        self.assertIsNone(check(chosen,raw,[row],350))
+        for level in (299,351):
+            self.assertEqual(check(chosen,raw,[row],level),
+                             "OIL_TARGET_ILEVEL_OUTSIDE_SOURCE_RANGE")
+        for rows in ([],[{**row,"hand":"off_hand"}],
+                     [{**row,"quality_rank":1}],
+                     [{**row,"simc_enchant_id":202}]):
+            self.assertEqual(check(chosen,raw,rows,334),
+                "OIL_REPRESENTATIVE_WEAPON_MASK_NOT_MATCHED_OR_PENDING")
+        self.assertIsNone(check(chosen,
+            {"source_min_ilevel":0,"source_max_ilevel":0},[row],334))
+        with self.assertRaisesRegex(build.EnvironmentBuildBlocked,"DUPLICATE_WEAPON_MATCH"):
+            check(chosen,raw,[row,row],334)
+
     def test_engine_source_owned_selected_O_updates_shared_v222_B_T_once(self):
         # Generic source/Native owner wiring, NOT a fresh proof about a
         # particular game's oil. Original source + hand mask + same gear

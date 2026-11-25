@@ -6262,6 +6262,67 @@ def _zero_history_F_O_native_component_candidates(*, observations,
 
 
 
+def _oil_weapon_source_rows(*,weapon_source,game_build,simc_revision):
+    """Reuse the original v286 source identity checks before and after Native."""
+    source = weapon_source or {}
+    stage_status = source.get("status")
+    if stage_status in ("REPRESENTATIVE_OIL_MASK_MATCH_SOURCE_ONLY",
+                        "REPRESENTATIVE_OIL_MASK_MATCH_PENDING"):
+        need(source.get("schema") ==
+                 "v286_representative_oil_source_compatibility_v1"
+             and source.get("same_build_source_only") is True
+             and source.get("game_build") == game_build
+             and source.get("simc_revision") == simc_revision
+             and source.get("environment_ready") is False
+             and type(source.get("candidate_options")) is list
+             and len(source["candidate_options"]) <= 10000,
+             "V216_FO_V286_WEAPON_SOURCE_IDENTITY_DRIFT")
+        weapon_rows = source["candidate_options"]
+    else:
+        weapon_rows = []
+    return stage_status,weapon_rows
+
+
+def _oil_exact_weapon_match(option,weapon_rows):
+    """The same physical ID, rank, token, enchant and hand must match."""
+    hand = option["selected_hand"]
+    token = option["simc_input_token"]
+    # v281 constructs precisely this hand-qualified SimC option.
+    prefix = ("main_hand:" if hand == "main_hand" else
+              "main_hand:disabled/off_hand:")
+    stripped = token[len(prefix):] if token.startswith(prefix) else None
+    matching = [w for w in weapon_rows
+                if w.get("oil_item_id") == option["physical_item_id"]
+                and w.get("quality_rank") == option["crafting_quality"]
+                and w.get("simc_enchant_id") == option["simc_enchant_id"]
+                and stripped==(
+                    w.get("simc_token")+"_"+str(option["crafting_quality"])
+                    if option["crafting_quality"]>0 else
+                    w.get("simc_token"))
+                and w.get("hand") == hand
+                and w.get("matched_same_build_spell_equipped_masks") is True
+                and w.get("user_selectable") is False]
+    need(len(matching) <= 1, "V216_FO_V286_DUPLICATE_WEAPON_MATCH")
+    selected = matching[0] if matching else None
+    return selected
+
+
+def _oil_source_ilevel_allowed(raw,target_ilevel):
+    low,high=raw.get("source_min_ilevel"),raw.get("source_max_ilevel")
+    need(type(low) is int and type(high) is int and low>=0 and high>=0,
+         "V216_SELECTED_O_ILVL_RESTRICTIONS_INVALID")
+    return (low==0 or target_ilevel>=low) and (high==0 or target_ilevel<=high)
+
+
+def _selected_oil_measurement_scope(option,raw,weapon_rows,target_ilevel):
+    """No subprocess can repair missing applicability or known level conflict."""
+    if not _oil_source_ilevel_allowed(raw,target_ilevel):
+        return "OIL_TARGET_ILEVEL_OUTSIDE_SOURCE_RANGE"
+    if _oil_exact_weapon_match(option,weapon_rows) is None:
+        return "OIL_REPRESENTATIVE_WEAPON_MASK_NOT_MATCHED_OR_PENDING"
+    return None
+
+
 def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
                                                 game_build, simc_revision):
     """Reuse v281/v278 physical Native rows and the original v286 mask match.
@@ -6340,43 +6401,15 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
             "all_market_qualities_verified":False,
             "user_selectable":False,
         })
-    source = weapon_source or {}
-    stage_status = source.get("status")
-    if stage_status in ("REPRESENTATIVE_OIL_MASK_MATCH_SOURCE_ONLY",
-                        "REPRESENTATIVE_OIL_MASK_MATCH_PENDING"):
-        need(source.get("schema") ==
-                 "v286_representative_oil_source_compatibility_v1"
-             and source.get("same_build_source_only") is True
-             and source.get("game_build") == game_build
-             and source.get("simc_revision") == simc_revision
-             and source.get("environment_ready") is False
-             and type(source.get("candidate_options")) is list
-             and len(source["candidate_options"]) <= 10000,
-             "V216_FO_V286_WEAPON_SOURCE_IDENTITY_DRIFT")
-        weapon_rows = source["candidate_options"]
-    else:
-        weapon_rows = []
+    source=weapon_source or {}
+    stage_status,weapon_rows=_oil_weapon_source_rows(
+        weapon_source=weapon_source,game_build=game_build,
+        simc_revision=simc_revision)
     oils = []
     for option in numeric["oil"]:
-        hand = option["selected_hand"]
-        token = option["simc_input_token"]
-        # v281 constructs precisely this hand-qualified SimC option.
-        prefix = ("main_hand:" if hand == "main_hand" else
-                  "main_hand:disabled/off_hand:")
-        stripped = token[len(prefix):] if token.startswith(prefix) else None
-        matching = [w for w in weapon_rows
-                    if w.get("oil_item_id") == option["physical_item_id"]
-                    and w.get("quality_rank") == option["crafting_quality"]
-                    and w.get("simc_enchant_id") == option["simc_enchant_id"]
-                    and stripped==(
-                        w.get("simc_token")+"_"+str(option["crafting_quality"])
-                        if option["crafting_quality"]>0 else
-                        w.get("simc_token"))
-                    and w.get("hand") == hand
-                    and w.get("matched_same_build_spell_equipped_masks") is True
-                    and w.get("user_selectable") is False]
-        need(len(matching) <= 1, "V216_FO_V286_DUPLICATE_WEAPON_MATCH")
-        selected = matching[0] if matching else None
+        hand=option["selected_hand"]
+        token=option["simc_input_token"]
+        selected=_oil_exact_weapon_match(option,weapon_rows)
         oils.append({
             "physical_item_id":option["physical_item_id"],
             "crafting_quality":option["crafting_quality"],
@@ -8891,12 +8924,7 @@ def _fresh_source_owner_selected_O_component(*, preflight, staged,
                 "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY",
                 "SIMC_PRECOMBAT_GEAR_NUMBER_SOURCE_ONLY"):
             return None
-        low,high=row.get("source_min_ilevel"),row.get("source_max_ilevel")
-        need(type(low) is int and type(high) is int
-             and low>=0 and high>=0,
-             "V216_SELECTED_O_ILVL_RESTRICTIONS_INVALID")
-        if (low>0 and target_ilevel<low) or (
-                high>0 and target_ilevel>high):
+        if not _oil_source_ilevel_allowed(row,target_ilevel):
             return None
         vec=row.get("static_CHMV_vector_unadmitted")
         need(type(vec) is dict
@@ -10691,7 +10719,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 "oil_item_ids_by_hand",{})
             pending_hands=[]
             measured=[]
+            scope_pending={}
             if selected_oils and type(original) is dict:
+                _,weapon_rows=_oil_weapon_source_rows(
+                    weapon_source=source_compilation.get(
+                        "representative_oil_source_options_unadmitted"),
+                    game_build=collected["expected_game_build"],
+                    simc_revision=source_compilation["simc_revision"])
+                target_oil_ilevel=fresh_collection_inputs[
+                    "representative_request"]["target_ilevel"]
                 planned=source_compilation[
                     "automatic_F_O_measurement_candidates_unadmitted"]["oil"]
                 by_id={r["enchant_id"]:r for r in original["items"]}
@@ -10709,6 +10745,12 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                          if chosen is not None else None)
                     if raw is None:
                         pending_hands.append(hand)
+                        continue
+                    reason=_selected_oil_measurement_scope(
+                        chosen,raw,weapon_rows,target_oil_ilevel)
+                    if reason is not None:
+                        pending_hands.append(hand)
+                        scope_pending[hand]=reason
                         continue
                     if raw.get("static_CHMV_vector") is not None:
                         continue
@@ -10751,6 +10793,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             elif selected_oils:
                 pending_hands.extend(selected_oils)
             unresolved=(bool(pending_hands) if selected_oils else
+                False if selected_budget_items is not None else
                 type(original) is not dict or
                 any(r.get("static_CHMV_vector") is None
                     for r in original.get("items",[])))
@@ -10761,6 +10804,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 "requires":(["O_SIMC_SCALED_STATIC_RATING_PENDING"]
                             if unresolved else []),
                 "per_item":measured,
+                "selected_oil_scope_pending_by_hand":scope_pending,
                 "new_native_calls":sum(r["new_native_calls"] for r in measured),
                 "legacy_buffed_native_not_used_as_static_O":True,
                 "O_approved":False,"environment_ready":False}
