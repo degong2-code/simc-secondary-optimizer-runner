@@ -172,7 +172,9 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
             if (include_consumable_parser_names and
                     number(fields[11],"V230_ITEM_CLASS_INVALID")==0):
                 sub=number(fields[12],"V230_ITEM_SUBCLASS_INVALID")
-                if sub in (1,5):
+                # SimC's potion index includes subtype 8 (other).
+                # Preserve generated chunk/row order for first-match lookup.
+                if sub in (1,5,8):
                     name=fields[0]
                     need(name.startswith('"') and name.endswith('"') and
                          len(name)<=300 and len(parser_names)<20000,

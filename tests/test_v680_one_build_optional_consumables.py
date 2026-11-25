@@ -99,6 +99,27 @@ class OneBuildOptionalChoices(unittest.TestCase):
         # This guard is deliberately limited to source-known rows.
         # Do not claim complete SimC DBC uniqueness or Native acceptance.
 
+    def test_v779_ordered_source_projection_does_not_repeat_unordered_guard(self):
+        rows=[exact_row("food",201,"royal_roast",0,"spell:111"),
+              exact_row("food",202,"old_royal_roast",0,"spell:222")]
+        source={**self.source(rows),
+                "parser_first_match_item_ids":{"201":201,"202":202},
+                "parser_shadowed_item_ids":[]}
+        projected=manifest.project_fresh_optional_consumables(
+            game_build=BUILD,simc_revision=REV,source=source)
+        self.assertEqual([r["item_id"] for r in
+                          projected["categories"]["food"]["options"]],[201,202])
+        source["parser_first_match_item_ids"]["201"]=202
+        with self.assertRaisesRegex(manifest.EnvironmentBlocked,
+                                    "OPTIONAL_SOURCE_FIRST_MATCH_SHADOW_CONFLICT"):
+            manifest.project_fresh_optional_consumables(
+                game_build=BUILD,simc_revision=REV,source=source)
+        source["parser_shadowed_item_ids"]=[201]
+        projected=manifest.project_fresh_optional_consumables(
+            game_build=BUILD,simc_revision=REV,source=source)
+        self.assertEqual([r["item_id"] for r in
+                          projected["categories"]["food"]["options"]],[202])
+
     def test_v764_unranked_token_can_match_rank_one_but_not_rank_two(self):
         built=self.registry([
             exact_row("food",301,"royal_roast",0,"spell:301"),
@@ -527,9 +548,19 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
             # can still shadow the new option in SimC's substring parser.
             # The name-only index is transient; the sealed projection
             # excludes that item without discarding independent options.
+            # A later matching name cannot shadow the earlier exact row.
             meta["consumable_parser_name_rows"].append({
                 "item_id":999,"name":"Old Royal Roast","subclass_id":5,
                 "crafting_quality":3})
+            with mock.patch.object(fresh_build.simc_item_metadata,
+                                   "from_seed",return_value=meta):
+                later=fresh_build._fresh_v680_source_owned_food_potion_uncached(
+                    collected=collected,compilation=comp)
+            self.assertEqual(later["parser_shadowed_item_ids"],[])
+            self.assertEqual(later["parser_first_match_item_ids"]["202"],202)
+            # Move the same candidate before the selected item: true shadow.
+            meta["consumable_parser_name_rows"].insert(
+                0,meta["consumable_parser_name_rows"].pop())
             with mock.patch.object(fresh_build.simc_item_metadata,
                                    "from_seed",return_value=meta) as scan:
                 shadowed=fresh_build._fresh_v680_source_owned_food_potion_uncached(
@@ -539,6 +570,7 @@ console.log('V680_OPTION_SAME_INSTALLED_SOURCE_UI_PASS');
                 sorted(r["physical_item_id"] for r in shadowed["rows"]),
                 [201,202,203])
             self.assertEqual(shadowed["parser_shadowed_item_ids"],[202])
+            self.assertEqual(shadowed["parser_first_match_item_ids"]["202"],999)
             projected=manifest.project_fresh_optional_consumables(
                 game_build=BUILD,simc_revision=REV,source=shadowed)
             self.assertEqual(projected["categories"]["food"]["options"],[],

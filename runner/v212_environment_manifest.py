@@ -657,22 +657,33 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
         # Reject only that ambiguous choice. This guard covers SOURCE-KNOWN
         # rows, not every item in SimC's complete DBC; native acceptance and
         # full parser uniqueness remain outside this offline projection.
-        known_parser_names={}
-        for row in source["rows"]:
-            key=(row["kind"],row["crafting_quality"])
-            known_parser_names.setdefault(key,[]).append(
-                (row["physical_item_id"],parser_name(row)))
-        for name in ("food","potion"):
-            kinds[name]["options"]=[
-                row for row in kinds[name]["options"]
-                if not any(
-                    other_id!=row["item_id"] and
-                    parser_name({"simc_input_token":row["simc_token"],
-                                 "crafting_quality":row["quality"]}) in other_name
-                    for other_id,other_name in known_parser_names.get(
-                        (name,row["quality"]),[])+
-                        (known_parser_names.get((name,1),[])
-                         if row["quality"]==0 else []))]
+        first_matches=source.get("parser_first_match_item_ids")
+        if first_matches is not None:
+            need(type(first_matches) is dict and
+                 set(first_matches)=={str(r["physical_item_id"]) for r in source["rows"]} and
+                 all(i is None or (type(i) is int and i>0)
+                     for i in first_matches.values()),
+                 "OPTIONAL_SOURCE_FIRST_MATCH_SCOPE_INVALID")
+        else:
+            # Historical source-only rows lack ordered full DBC evidence.
+            # Preserve their conservative fallback; do not let this
+            # unordered check override a real first-match result.
+            known_parser_names={}
+            for row in source["rows"]:
+                key=(row["kind"],row["crafting_quality"])
+                known_parser_names.setdefault(key,[]).append(
+                    (row["physical_item_id"],parser_name(row)))
+            for name in ("food","potion"):
+                kinds[name]["options"]=[
+                    row for row in kinds[name]["options"]
+                    if not any(
+                        other_id!=row["item_id"] and
+                        parser_name({"simc_input_token":row["simc_token"],
+                                     "crafting_quality":row["quality"]}) in other_name
+                        for other_id,other_name in known_parser_names.get(
+                            (name,row["quality"]),[])+
+                            (known_parser_names.get((name,1),[])
+                             if row["quality"]==0 else []))]
         # The v216 same-pass DBC inventory may identify a shadow from an
         # item outside the active-season candidate list. Remove only the
         # affected option, never silently substitute a lower quality.
@@ -682,6 +693,10 @@ def project_fresh_optional_consumables(*,game_build,simc_revision,source=None):
              set(shadowed)<={row["physical_item_id"] for row in source["rows"]},
              "OPTIONAL_SOURCE_PARSER_SHADOW_SCOPE_INVALID")
         shadowed=set(shadowed)
+        if first_matches is not None:
+            need(shadowed=={int(i) for i,first in first_matches.items()
+                            if first!=int(i)},
+                 "OPTIONAL_SOURCE_FIRST_MATCH_SHADOW_CONFLICT")
         for name in ("food","potion"):
             kinds[name]["options"]=[
                 row for row in kinds[name]["options"]

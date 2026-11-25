@@ -9822,15 +9822,18 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
         for row in parser_rows:
             need(type(row) is dict and
                  type(row.get("item_id")) is int and row["item_id"]>0 and
-                 row.get("subclass_id") in (1,5) and
+                 row.get("subclass_id") in (1,5,8) and
                  type(row.get("crafting_quality")) is int and
                  row["crafting_quality"]>=0 and
                  type(row.get("name")) is str,
                  "V764_OPTIONAL_PARSER_NAME_ROW_INVALID")
             stem=optional_source_join.parser_name_stem(row["name"])
             if stem is not None:
-                key=(row["subclass_id"],row["crafting_quality"])
-                parser_names.setdefault(key,[]).append((row["item_id"],stem))
+                # filtered_dbc_index_t::init appends in source order;
+                # ::get returns range::find_if, not all possible matches.
+                key="food" if row["subclass_id"]==5 else "potion"
+                parser_names.setdefault(key,[]).append(
+                    (row["item_id"],stem,row["crafting_quality"]))
         needed={kind:{} for kind in ("food","potion")}
         current_version=tuple(int(x) for x in build.split(".")[:3])
         for kind in needed:
@@ -9848,6 +9851,7 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
                     needed[kind].setdefault(spell,set()).add(handler)
         rows=[]
         shadowed=[]
+        first_matches={}
         classes={"food":5,"potion":1}
         # Actual SimC APL may select ordinary DBC consumables without a
         # Midnight custom-effect registration. Exact reviewed APL tokens
@@ -9875,18 +9879,16 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
             apl_source=token in reviewed.get(kind,{})
             if not names and not apl_source:continue
             stem=optional_source_join.parser_name_stem(row["name"])
-            names_for_parser=parser_names.get(
-                (classes[kind],row["crafting_quality"]),[])
-            # Actual pinned consumable.cpp: q==quality OR (!quality && q==1).
-            # A token without a rank can match both unranked and rank 1.
-            if row["crafting_quality"]==0:
-                names_for_parser=names_for_parser+parser_names.get(
-                    (classes[kind],1),[])
-            # This is parser identity only, not Native effect acceptance.
-            if (not any(i==item_id and name==stem
-                        for i,name in names_for_parser) or
-                    any(i!=item_id and stem in name
-                        for i,name in names_for_parser)):
+            # Actual pinned consumable.cpp + sc_item_data.cpp +
+            # client_data.hpp: first matching item in the filtered DBC.
+            # Keep rank 0/1 in original interleaved order, not rank buckets.
+            rank=row["crafting_quality"]
+            first=next((i for i,name,q in parser_names.get(kind,[])
+                        if stem in name and (q==rank or (rank==0 and q==1))),
+                       None)
+            first_matches[str(item_id)]=first
+            # Later matches cannot shadow the first item.
+            if first!=item_id:
                 shadowed.append(item_id)
             effect=("simc:"+next(iter(names))+":spell:"+str(spell)
                     if names else "simc:reviewed_apl_input:spell:"+str(spell))
@@ -9904,6 +9906,9 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
                     "simc_item_source":metadata["source_receipt_sha256"],
                     "handler_stage":source["source_stage"]["receipt_sha256"]
                 }).encode("utf8")),"rows":rows,
+                "parser_first_match_item_ids":{
+                    str(r["physical_item_id"]):
+                    first_matches[str(r["physical_item_id"])] for r in rows},
                 "parser_shadowed_item_ids":sorted(
                     set(shadowed)&{r["physical_item_id"] for r in rows})}
     except (EnvironmentBuildBlocked,simc_item_metadata.ItemMetadataBlocked,
