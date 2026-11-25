@@ -9849,13 +9849,18 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
         rows=[]
         shadowed=[]
         classes={"food":5,"potion":1}
+        # Actual SimC APL may select ordinary DBC consumables without a
+        # Midnight custom-effect registration. Exact reviewed APL tokens
+        # are a second source of input identity, not a DPS or quality proof.
+        reviewed=optional_source_join.reviewed_apl_default_groups(
+            build,revision)
         for origin in items:
             item_id=origin.get("item_id")
             if item_id not in simc:continue
             kind=origin["kind"]
             spell=origin["on_use_spell_ids"][0]
             names=needed[kind].get(spell,set())
-            if len(names)!=1:continue
+            if len(names)>1:continue
             row=simc[item_id]
             if (row.get("class_id")!=0 or
                     row.get("subclass_id")!=classes[kind] or
@@ -9867,6 +9872,8 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
             if (token is None or len(token)>100 or
                     not 0<len(row["name"])<=200):
                 continue
+            apl_source=token in reviewed.get(kind,{})
+            if not names and not apl_source:continue
             stem=optional_source_join.parser_name_stem(row["name"])
             names_for_parser=parser_names.get(
                 (classes[kind],row["crafting_quality"]),[])
@@ -9881,7 +9888,8 @@ def _fresh_v680_source_owned_food_potion_uncached(*,collected,compilation):
                     any(i!=item_id and stem in name
                         for i,name in names_for_parser)):
                 shadowed.append(item_id)
-            effect="simc:"+next(iter(names))+":spell:"+str(spell)
+            effect=("simc:"+next(iter(names))+":spell:"+str(spell)
+                    if names else "simc:reviewed_apl_input:spell:"+str(spell))
             if len(effect)>180:continue
             rows.append({
                 "kind":kind,"physical_item_id":item_id,

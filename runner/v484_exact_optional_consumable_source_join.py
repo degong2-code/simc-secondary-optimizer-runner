@@ -42,6 +42,43 @@ def need(condition, code):
         raise OptionalConsumableSourceBlocked(code)
 
 
+def reviewed_apl_default_groups(game_build,simc_revision):
+    """Exact reviewed level-90 APL input defaults (not numerical quality proof).
+
+    Same pinned revision: engine/class_modules/apl and class overrides.
+    Unknown build/revision has no source evidence; never guess next season.
+    The same owner serves source joining and public default preferences.
+    """
+    if (game_build!="12.1.5.70961" or
+        simc_revision!="9933ffb946fb55b1fa66657b848f519ac19006e1"):
+        return {}
+    groups={
+        "food":{
+            "harandar_celebration":(
+                "druid/balance druid/feral monk/windwalker "
+                "rogue/assassination rogue/outlaw rogue/subtlety "
+                "shaman/elemental shaman/enhancement warlock/affliction "
+                "warlock/demonology warlock/destruction warrior/arms warrior/fury"),
+            "silvermoon_parade":(
+                "deathknight/frost deathknight/unholy evoker/devastation "
+                "hunter/beast_mastery hunter/marksmanship hunter/survival "
+                "mage/arcane mage/fire mage/frost priest/shadow"),
+            "blooming_feast":"demonhunter/havoc demonhunter/devourer",
+            "royal_roast":"paladin/retribution"},
+        "potion":{
+            "lights_potential_2":(
+                "druid/balance evoker/devastation mage/arcane mage/fire "
+                "paladin/retribution priest/shadow rogue/assassination "
+                "rogue/outlaw rogue/subtlety shaman/elemental "
+                "shaman/enhancement warrior/arms warrior/fury"),
+            "potion_of_recklessness_2":(
+                "deathknight/frost deathknight/unholy demonhunter/havoc "
+                "demonhunter/devourer hunter/beast_mastery hunter/marksmanship "
+                "hunter/survival mage/frost monk/windwalker warlock/destruction"),
+            "liquid_luster_2":"druid/feral warlock/affliction warlock/demonology"}}
+    return groups
+
+
 def candidate_token(name, rank):
     """Conservative SimC parser spelling, NOT proof that a token selects an item.
 

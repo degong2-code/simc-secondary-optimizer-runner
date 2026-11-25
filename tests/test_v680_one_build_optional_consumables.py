@@ -216,6 +216,62 @@ class OneBuildOptionalChoices(unittest.TestCase):
             doc,{**approved,"potion":["source_default","lights_potential_2"]})
         self.assertEqual(missing["mage/frost"],{"food":"silvermoon_parade"})
 
+    def test_v777_generic_dbc_default_is_revision_scoped_not_arbitrary_name(self):
+        """Exact physical source + generated DBC + reviewed APL input."""
+        rev="9933ffb946fb55b1fa66657b848f519ac19006e1"
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            candidates=root/"physical.json"
+            handlers=root/"handlers.json"
+            ids=[501,502,503,504]
+            candidates.write_text(json.dumps({
+                "game_build":BUILD,"source_only":True,
+                "items":[{"item_id":i,"kind":"potion","on_use_spell_ids":[i+1000],
+                    "source_status":"EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"}
+                    for i in ids]}),encoding="utf8")
+            collected={
+                "expected_game_build":BUILD,
+                "fresh_optional_food_potion_wago_effects":{
+                    "status":"FOOD_POTION_WAGO_USE_SPELLS_SOURCE_READY",
+                    "candidate_path":str(candidates),
+                    "source_stage":{"receipt_sha256":"1"*64}},
+                "fresh_food_potion_item_sources":{
+                    "simc_effect_source_receipt_path":str(handlers),
+                    "source_stage":{"receipt_sha256":"2"*64}},
+                "fresh_lazy_full_pinned_simc_item_source":{
+                    "source_dir":str(root),"receipt_sha256":"3"*64}}
+            for revision in (rev,REV):
+                handlers.write_text(json.dumps({
+                    "schema":fresh_build.simc_effect_candidates.SCHEMA,
+                    "source":{"commit":revision},"candidates":{}}),encoding="utf8")
+                meta={"game_build":BUILD,"simc_revision":revision,
+                      "source_receipt_sha256":"4"*64,
+                      "selection_mode":"EXACT_REQUESTED_IDS_ALLOW_MISSING",
+                      "items":[{"item_id":i,"name":name,
+                           "class_id":0,"subclass_id":1,"inventory_type":0,
+                           "crafting_quality":rank}
+                        for i,name,rank in (
+                           (501,"Light's Potential",2),
+                           (502,"Random Mana Potion",2),
+                           (503,"Light's Potential",1),
+                           (504,"Liquid Luster",2))]}
+                meta["consumable_parser_name_rows"]=[
+                    {k:row[k] for k in ("item_id","name","subclass_id",
+                                        "crafting_quality")}
+                    for row in meta["items"]]
+                with mock.patch.object(fresh_build.simc_item_metadata,
+                                      "from_seed",return_value=meta):
+                    source=fresh_build._fresh_v680_source_owned_food_potion_uncached(
+                        collected=collected,compilation={
+                            "stage_root":str(root),"simc_revision":revision})
+                self.assertEqual([row["physical_item_id"] for row in source["rows"]],
+                                 [501,504] if revision==rev else [])
+                if revision==rev:
+                    self.assertEqual(source["rows"][0]["effect_identity"],
+                                     "simc:reviewed_apl_input:spell:1501")
+                    self.assertEqual(source["rows"][0]["simc_input_token"],
+                                     "lights_potential_2")
+
     def test_actual_user_ui_consumes_only_the_exact_installed_source(self):
         node=shutil.which("node")
         if node is None:
