@@ -106,6 +106,92 @@ def parse_dbc_rows(text,target_ids):
     need(set(rows)==set(target_ids),
          "SIMC_ITEM_ENCHANTMENT_TARGET_COVERAGE_MISMATCH")
     return rows
+def primary_gem_quality_projection(candidate_rows):
+    """Compare exact source components within the same observed gem family.
+
+    This is a quality preference, NOT runtime rating, application or UI
+    admission. Keep unranked/ambiguous/unknown families independent.
+    """
+    import math
+    groups={}
+    seen=set()
+    for row in candidate_rows:
+        item=row["item_id"];meta=row["metadata"]
+        prop=row["physical_property"];enc=row["enchant_source_row"]
+        need(type(item) is int and item>0 and item not in seen and
+             item==meta["item_id"]==prop["item_id"]==enc["id_gem"] and
+             prop["enchant_id"]==enc["id"] and meta["class_id"]==3 and
+             type(meta["crafting_quality"]) is int and
+             meta["crafting_quality"]>=0,
+             "SPECIAL_GEM_QUALITY_EXACT_ITEM_RELATION_REQUIRED")
+        seen.add(item)
+        need(all(type(enc[k]) is list and len(enc[k])==3 for k in
+                 ("ench_type","ench_prop","ench_amount","ench_coeff")) and
+             all(type(n) in (int,float) and math.isfinite(n)
+                 for k in ("ench_amount","ench_coeff") for n in enc[k]),
+             "SPECIAL_GEM_QUALITY_NUMERIC_SHAPE_REQUIRED")
+        key=(meta["item_name"],meta["quality"],meta["class_id"],
+             meta["subclass_id"],prop["expansion_id"],prop["color_mask"],
+             prop["minimum_ilevel"])
+        groups.setdefault(key,[]).append(row)
+    preferred=[];dominated=[];pending=[];unranked=[];comparisons=[]
+    condition_fields=("id_scaling","min_scaling_level","max_scaling_level",
+                      "min_ilevel","max_ilevel","req_skill","req_skill_value",
+                      "id_spell","ench_type","ench_prop","dbc_name")
+    primary={3,4,5,71,72,73,74}
+    def comparable(low,high):
+        a=low["enchant_source_row"];b=high["enchant_source_row"]
+        if any(a[k]!=b[k] for k in condition_fields):
+            return False
+        if a["id_scaling"] not in (0,-1,-7):
+            return False
+        if not any(typ==5 and prop in primary and
+                   (amount>0 or coeff>0)
+                   for typ,prop,amount,coeff in zip(
+                       a["ench_type"],a["ench_prop"],a["ench_amount"],a["ench_coeff"])):
+            return False
+        for typ,prop,am,bm,ac,bc in zip(a["ench_type"],a["ench_prop"],
+               a["ench_amount"],b["ench_amount"],a["ench_coeff"],b["ench_coeff"]):
+            if typ==4 or (typ==5 and prop in primary):
+                if min(am,bm,ac,bc)<0 or bm<am or bc<ac:
+                    return False
+            elif typ in (0,3):
+                if (am,ac)!=(bm,bc):
+                    return False
+            else:
+                # Unknown or CHMV component needs its existing owner.
+                return False
+        return True
+    for family in groups.values():
+        ranked=[r for r in family if r["metadata"]["crafting_quality"]>0]
+        unranked.extend(r["item_id"] for r in family if
+                        r["metadata"]["crafting_quality"]==0)
+        if not ranked:continue
+        top_rank=max(r["metadata"]["crafting_quality"] for r in ranked)
+        top=[r for r in ranked if r["metadata"]["crafting_quality"]==top_rank]
+        if len(top)!=1 or len(ranked)<2:
+            pending.extend(r["item_id"] for r in ranked)
+            continue
+        winner=top[0]
+        others=[r for r in ranked if r is not winner]
+        if not all(comparable(r,winner) for r in others):
+            pending.extend(r["item_id"] for r in ranked)
+            continue
+        preferred.append(winner["item_id"])
+        dominated.extend(r["item_id"] for r in others)
+        comparisons.append({"preferred_item_id":winner["item_id"],
+                            "lower_source_coefficient_item_ids":sorted(
+                                r["item_id"] for r in others),
+                            "same_source_component_and_condition_fields":True})
+    return {"preferred_rank_item_ids_source_only":sorted(preferred),
+            "lower_rank_item_ids_source_only":sorted(dominated),
+            "comparison_pending_item_ids":sorted(pending),
+            "unranked_distinct_item_ids":sorted(unranked),
+            "comparisons":sorted(comparisons,key=lambda r:r["preferred_item_id"]),
+            "resolved_numeric_noninferiority_verified":False,
+            "user_selectable":False,"environment_ready":False}
+
+
 def parse_enums(text):
     out={}
     for line in text.splitlines():

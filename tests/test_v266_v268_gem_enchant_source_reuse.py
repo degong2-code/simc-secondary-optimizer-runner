@@ -280,6 +280,34 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                     self.assertEqual(result["network_calls"],0)
                 self.assertEqual(parse.call_count,1)
 
+    def test_v822_actual_v821_special_rank_source_projection(self):
+        from runner import v211_enchant_source_effect_classification as classifier
+        import copy
+        path=Path(__file__).resolve().parents[1]/"docs/development/research_receipts/p1_v821_70961_primary_gem_enchant_compact.json"
+        doc=json.loads(path.read_text("utf8"))
+        self.assertEqual(doc["status"],"PASS_EXACT_PINNED_SPECIAL_GEM_ENCHANT_ROWS_NOT_ADMITTED")
+        rows=doc["candidate_rows"]
+        result=classifier.primary_gem_quality_projection(rows)
+        self.assertEqual(result["preferred_rank_item_ids_source_only"],
+                         [240967,240969,240971,240983])
+        self.assertEqual(result["lower_rank_item_ids_source_only"],
+                         [240966,240968,240970,240982])
+        self.assertEqual(result["unranked_distinct_item_ids"],[241142,241143,241144])
+        self.assertFalse(result["resolved_numeric_noninferiority_verified"])
+        self.assertFalse(result["user_selectable"])
+        for key,value in (("ench_prop",[71,999,0]),("min_ilevel",81),
+                          ("ench_coeff",[0.1,0,0])):
+            altered=copy.deepcopy(rows)
+            altered[1]["enchant_source_row"][key]=value
+            rejected=classifier.primary_gem_quality_projection(altered)
+            self.assertNotIn(240967,rejected["preferred_rank_item_ids_source_only"])
+            self.assertTrue({240966,240967}<=set(
+                rejected["comparison_pending_item_ids"]))
+        drift=copy.deepcopy(rows)
+        drift[1]["enchant_source_row"]["id_gem"]=1
+        with self.assertRaises(classifier.SourceBlocked):
+            classifier.primary_gem_quality_projection(drift)
+
     def test_same_build_source_and_scaling_schema_must_be_explicit(self):
         with self.assertRaisesRegex(source.EnchantSourceBlocked,
                                     "EXACT_SAME_BUILD"):
