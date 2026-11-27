@@ -446,3 +446,31 @@ class SocketLayoutTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SocketBonusSourceReuse(unittest.TestCase):
+    def test_v824_socket_bonus_reuses_effect_review_tables(self):
+        import pathlib
+        import tempfile
+        from runner import v706_selectable_bonus_effect_candidates as review
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            data={
+                "ItemBonus":"ID,ParentItemBonusListID,Type,Value_0,Value_1,Value_2\n1,6007,6,1,0,0\n2,7000,50,6007,0,0\n3,8000,23,88,0,0\n",
+                "ItemBonusListGroupEntry":"ItemBonusListGroupID,ItemBonusListID\n9,7000\n",
+                "ItemBonusTreeNode":"ID,ParentItemBonusTreeID,ChildItemBonusTreeID,ChildItemBonusListID,ChildItemBonusListGroupID\n1,10,11,0,0\n2,11,0,0,9\n3,12,0,8000,0\n",
+                "ItemXBonusTree":"ItemID,ItemBonusTreeID\n123,10\n124,12\n125,10\n"}
+            paths={}
+            for name,value in data.items():
+                paths[name]=root/(name+".csv")
+                paths[name].write_text(value,encoding="utf8")
+            result=review.discover([123,124],paths)
+            self.assertEqual(result["candidate_item_count"],1)
+            self.assertEqual(result["items"][0]["item_id"],124)
+            socket=result["socket_bonus_source_only"]
+            self.assertEqual(socket["items"],[{"item_id":123,
+                "candidate_bonus_list_ids":[7000]}])
+            self.assertEqual(socket["bonus_lists"][0]["source_bonus_ids"],[6007])
+            self.assertEqual(socket["bonus_lists"][0]["socket_rows"][0]["Value_0"],"1")
+            self.assertFalse(socket["applicability_verified"])
+            self.assertFalse(socket["automatic_bonus_attachment"])

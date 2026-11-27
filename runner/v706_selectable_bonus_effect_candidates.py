@@ -72,6 +72,9 @@ def discover(item_ids,paths):
     need(set(paths)==set(COLUMNS),"BONUS_REVIEW_TABLE_SET_INVALID")
     # Scan only effect-adding bonus rows. 23 is SimC ADD_ITEM_EFFECT.
     effects=defaultdict(set)
+    # ITEM_BONUS_SOCKET=6 in the pinned SimC data_enums.hh.
+    # Preserve exact raw values, not a socket eligibility decision.
+    socket_rows=defaultdict(list)
     bonus_types=defaultdict(set)
     nested_bonus=defaultdict(set)
     for row in rows(paths["ItemBonus"],"ItemBonus"):
@@ -81,6 +84,9 @@ def discover(item_ids,paths):
         if kind==50 and bonus:
             child=positive(row["Value_0"])
             if child:nested_bonus[child].add(bonus)
+        if kind==6 and bonus:
+            socket_rows[bonus].append({k:row.get(k) for k in
+                ("ID","Type","Value_0","Value_1","Value_2")})
         if kind!=23:continue
         effect=positive(row["Value_0"])
         if bonus and effect:effects[bonus].add(effect)
@@ -97,14 +103,29 @@ def discover(item_ids,paths):
             nested_links+=1
             need(nested_links<=MAX_PROPAGATED_LINKS,"BONUS_NESTED_LINK_LIMIT")
             queue.append((parent,effect))
+    # Reuse the same nested bonus relations, without reparsing the CSV.
+    socket_links={b:{b} for b in socket_rows}
+    queue=deque((b,b) for b in socket_rows)
+    count=len(queue)
+    while queue:
+        child,original=queue.popleft()
+        for parent in nested_bonus.get(child,()):
+            linked=socket_links.setdefault(parent,set())
+            if original in linked:continue
+            linked.add(original);count+=1
+            need(count<=MAX_PROPAGATED_LINKS,"BONUS_SOCKET_NESTED_LINK_LIMIT")
+            queue.append((parent,original))
     groups=defaultdict(set)
+    socket_groups=defaultdict(set)
     for row in rows(paths["ItemBonusListGroupEntry"],"ItemBonusListGroupEntry"):
         bonus=positive(row["ItemBonusListID"])
         group=positive(row["ItemBonusListGroupID"])
         if group and bonus in effects:groups[group].add(bonus)
+        if group and bonus in socket_links:socket_groups[group].add(bonus)
     parents=defaultdict(set)
     by_tree=defaultdict(set)
     root_effect_nodes=defaultdict(dict)
+    socket_by_tree=defaultdict(set)
     for row in rows(paths["ItemBonusTreeNode"],"ItemBonusTreeNode"):
         tree=positive(row["ParentItemBonusTreeID"])
         child=positive(row["ChildItemBonusTreeID"])
@@ -114,6 +135,8 @@ def discover(item_ids,paths):
         if child:parents[child].add(tree)
         if bonus in effects:by_tree[tree].add(bonus)
         if group in groups:by_tree[tree].update(groups[group])
+        if bonus in socket_links:socket_by_tree[tree].add(bonus)
+        if group in socket_groups:socket_by_tree[tree].update(socket_groups[group])
         # A direct root leaf with an effect-only list and explicit zero
         # values in ALL known context fields is a bounded safe serializer
         # candidate. Missing/unknown fields, groups, mixed rows, child
@@ -140,12 +163,25 @@ def discover(item_ids,paths):
                 links+=1
                 need(links<=MAX_PROPAGATED_LINKS,"BONUS_TREE_LINK_LIMIT")
                 pending.append((parent,bonus))
+    socket_queue=deque((tree,bonus) for tree,bs in socket_by_tree.items() for bonus in bs)
+    count=len(socket_queue)
+    need(count<=MAX_PROPAGATED_LINKS,"BONUS_SOCKET_TREE_LINK_LIMIT")
+    while socket_queue:
+        child,bonus=socket_queue.popleft()
+        for parent in parents[child]:
+            if bonus not in socket_by_tree[parent]:
+                socket_by_tree[parent].add(bonus);count+=1
+                need(count<=MAX_PROPAGATED_LINKS,"BONUS_SOCKET_TREE_LINK_LIMIT")
+                socket_queue.append((parent,bonus))
     by_item=defaultdict(set)
+    socket_by_item=defaultdict(set)
     direct_roots=defaultdict(dict)
     for row in rows(paths["ItemXBonusTree"],"ItemXBonusTree"):
         iid=positive(row["ItemID"])
         if iid not in wanted:continue
         tree=positive(row["ItemBonusTreeID"])
+        if socket_by_tree.get(tree):
+            socket_by_item[iid].update(socket_by_tree[tree])
         if tree in by_tree and by_tree[tree]:
             by_item[iid].update(by_tree[tree])
             for bonus,nodes in root_effect_nodes.get(tree,{}).items():
@@ -173,6 +209,18 @@ def discover(item_ids,paths):
                 for b in sorted(bs)],
                 "applicable_variant_verified":False}
                 for i,bs in sorted(by_item.items())],
+            "socket_bonus_source_only":{
+                "status":"POTENTIAL_SOCKET_BONUS_LINKS_OBSERVED",
+                "type":6,"items":[{"item_id":i,
+                    "candidate_bonus_list_ids":sorted(bs)}
+                    for i,bs in sorted(socket_by_item.items())],
+                "bonus_lists":[{"bonus_id":b,"source_bonus_ids":sorted(socket_links[b]),
+                    "bonus_types":sorted(bonus_types[b]),
+                    "socket_rows":[{"source_bonus_id":original,**r}
+                                   for original in sorted(socket_links[b])
+                                   for r in socket_rows[original]]}
+                    for b in sorted({b for bs in socket_by_item.values() for b in bs})],
+                "applicability_verified":False,"automatic_bonus_attachment":False},
             "bonus_type_23_reviewed":True,
             "nested_apply_bonus_reviewed":True,
             "context_free_effect_bonus_candidates":resolved,
