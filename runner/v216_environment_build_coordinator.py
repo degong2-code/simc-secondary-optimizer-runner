@@ -855,7 +855,8 @@ def _gem_scaled_two_stat_source(source):
 
 def _fresh_pinned_dbc_ordinary_gem_j_source(*, candidates, collected,
                                            stage_root, simc_revision,
-                                           _read_dbc=None,target_ilevel=None):
+                                           _read_dbc=None,target_ilevel=None,
+                                           excluded_special_gem_id=None):
     """Reuse v275/v211/v296's sealed DBC static CHMV before gem Native.
 
     This is an UNADMITTED J candidate. Identical source conditions and
@@ -917,10 +918,18 @@ def _fresh_pinned_dbc_ordinary_gem_j_source(*, candidates, collected,
          type(raw.get("source_sha256")) is str and
          season_budget_contract.SHA.fullmatch(raw["source_sha256"]) is not None,
          "V216_GEM_DBC_SEALED_ENCHANT_SOURCE_DRIFT")
+    # Keep the full sealed source identity. Only the ordinary selection
+    # excludes the explicitly selected physical special; no new scan.
+    if excluded_special_gem_id is not None:
+        need(type(excluded_special_gem_id) is int and
+             excluded_special_gem_id in ids,
+             "V818_J_SPECIAL_EXCLUSION_SOURCE_REQUIRED")
     groups={stat:[] for stat in physical_gems.ORDINARY_FOUR_STATS}
     unresolved=0
     eligible_scaled=0
     for row in rows:
+        if row["item_id"]==excluded_special_gem_id:
+            continue
         original=by_enchant[row["enchant_id"]]
         if not _gem_reference_ilevel_allowed(row,original,target_ilevel):
             continue
@@ -960,6 +969,8 @@ def _fresh_pinned_dbc_ordinary_gem_j_source(*, candidates, collected,
     return {**out,
         "status":"PINNED_SIMC_DBC_FOUR_STAT_J_STATIC_UNADMITTED",
         "by_stat":chosen,
+        **({"excluded_special_gem_id":excluded_special_gem_id}
+           if excluded_special_gem_id is not None else {}),
         "rating_by_id":{str(r["item_id"]):r["raw_nominal_points"]
                         for r in chosen.values()},
         "J_candidate_unadmitted":sum(r["raw_nominal_points"]
@@ -984,17 +995,18 @@ def _fresh_match_pinned_dbc_ordinary_j(*, preview, layout, ratings,
          and season_budget_contract.SHA.fullmatch(
              preview["source_sha256"]) is not None
          and type(layout) is dict
-         and layout.get("special_gem_id") is None
          and type(link) is dict
          and link.get("same_build_gem_item_join_only") is True
-         and link.get("special_gem_item_id") is None
+         and link.get("special_gem_item_id")==layout.get("special_gem_id")
+         and preview.get("excluded_special_gem_id")==layout.get("special_gem_id")
          and type(link.get("v221_stage_receipt_sha256")) is str
          and season_budget_contract.SHA.fullmatch(
              link["v221_stage_receipt_sha256"]) is not None,
          "V216_PINNED_DBC_J_ORIGINAL_SOURCE_REQUIRED")
+    special=layout.get("special_gem_id")
     ids=physical_gems.ordinary_four_stat_default(
         observed_by_stat=preview["by_stat"],
-        socket_total=layout["socket_total"],special_gem_id=None,need=need)
+        socket_total=layout["socket_total"],special_gem_id=special,need=need)
     four={str(row["item_id"]):row["raw_nominal_points"]
           for row in preview["by_stat"].values()}
     need(ids==layout.get("ordinary_gem_ids") and
@@ -1002,7 +1014,8 @@ def _fresh_match_pinned_dbc_ordinary_j(*, preview, layout, ratings,
          and preview.get("rating_by_id")==four
          and preview.get("J_candidate_unadmitted")==
              sum(four[str(item)] for item in ids[:4])
-         and link.get("selected_item_ids")==sorted(set(ids)),
+         and link.get("selected_item_ids")==sorted(set(ids)|
+             ({special} if special is not None else set())),
          "V216_PINNED_DBC_J_SELECTED_IDS_OR_RATINGS_DRIFT")
     return ids
 
@@ -1022,10 +1035,11 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
          and type(preview.get("source_sha256")) is str
          and season_budget_contract.SHA.fullmatch(
              preview["source_sha256"]) is not None
-         and type(layout) is dict and layout.get("special_gem_id") is None
+         and type(layout) is dict
          and type(link) is dict and
          link.get("same_build_gem_item_join_only") is True
-         and link.get("special_gem_item_id") is None
+         and link.get("special_gem_item_id")==layout.get("special_gem_id")
+         and preview.get("excluded_special_gem_id")==layout.get("special_gem_id")
          and preview.get("v221_stage_receipt_sha256")==
              link.get("v221_stage_receipt_sha256")
          and type(preview.get("v230_stage_receipt_sha256")) is str
@@ -1035,13 +1049,15 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
          and season_budget_contract.SHA.fullmatch(
              preview["v230_original_item_data_sha256"]) is not None,
          "V216_NATIVE_J_SOURCE_BUILD_SHA_OR_QUALITY_REQUIRED")
+    special=layout.get("special_gem_id")
     ids=physical_gems.ordinary_four_stat_default(
         observed_by_stat=preview["by_stat"],
-        socket_total=layout["socket_total"],special_gem_id=None,need=need)
+        socket_total=layout["socket_total"],special_gem_id=special,need=need)
     mapping={str(row["item_id"]):row["raw_nominal_points"]
              for row in preview["by_stat"].values()}
     need(ids==layout.get("ordinary_gem_ids")
-         and link.get("selected_item_ids")==sorted(set(ids))
+         and link.get("selected_item_ids")==sorted(set(ids)|
+             ({special} if special is not None else set()))
          and ratings==mapping and preview["rating_by_id"]==mapping
          and preview["J_candidate_unadmitted"]==
              sum(mapping[str(i)] for i in ids[:4]),
@@ -1349,7 +1365,7 @@ def _default_measured_ordinary_gems(*,items,proofs):
 def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
                                              stage_root, binary, simc_revision,
                                              native_G_status,_read_dbc=None,
-                                             target_ilevel=None):
+                                             target_ilevel=None,excluded_special_gem_id=None):
     """One original v278 Native pair per DISTINCT same-season scale signature.
 
     Do not require exactly four effects: CH/CM/CV, HC/HM/HV, MC/MH/MV,
@@ -1417,8 +1433,13 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
          type(raw.get("source_sha256")) is str and
          season_budget_contract.SHA.fullmatch(raw["source_sha256"]) is not None,
          "V216_GEM_NATIVE_SEALED_DBC_SOURCE_DRIFT")
+    if excluded_special_gem_id is not None:
+        need(type(excluded_special_gem_id) is int and
+             excluded_special_gem_id in ids,
+             "V818_J_SPECIAL_EXCLUSION_SOURCE_REQUIRED")
     plan=_fresh_two_stat_gem_named_tier_measurement_plan(
-        rows=rows,by_enchant=by_enchant,target_ilevel=target_ilevel)
+        rows=[r for r in rows if r["item_id"]!=excluded_special_gem_id],
+        by_enchant=by_enchant,target_ilevel=target_ilevel)
     if plan["status"]!="NAMED_TIER_AND_INNER_QUALITY_PLAN_UNADMITTED":
         return {**pending,"reason":plan["reason"],
                 "tier_source_status":plan["status"],
@@ -1597,6 +1618,8 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
             for row in plan["sample_items"]},
         "selected_numeric_source_proofs_by_item_id":selected_proofs,
         "by_stat":selected,
+        **({"excluded_special_gem_id":excluded_special_gem_id}
+           if excluded_special_gem_id is not None else {}),
         "rating_by_id":{str(v["item_id"]):v["raw_nominal_points"]
                         for v in selected.values()},
         "J_candidate_unadmitted":sum(
@@ -8221,7 +8244,7 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
                     candidate["v230_original_item_data_sha256"],
                 "v275_static_enchant_source_sha256":preview["source_sha256"],
                 "ordinary_gem_item_ids":list(ids),
-                "special_gem_item_id":None,
+                "special_gem_item_id":layout.get("special_gem_id"),
                 "per_item_nominal_rating":dict(preview["rating_by_id"])}
         out["J"]={"rating":j["J_candidate_unadmitted"],
                   "source_identity_sha256":
@@ -8304,7 +8327,7 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
                     list(preview["measured_candidate_ids"]),
                 "sample_and_source_equivalence_by_selected_item_id":receipts,
                 "ordinary_gem_item_ids":list(ids),
-                "special_gem_item_id":None,
+                "special_gem_item_id":layout.get("special_gem_id"),
                 "per_item_nominal_rating":dict(preview["rating_by_id"])}
         out["J"]={"rating":j["J_candidate_unadmitted"],
                   "source_identity_sha256":
@@ -10661,16 +10684,16 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     source_compilation[
                         "four_stat_source_owner_diagnostic_unadmitted"]=(
                             j_owner_diagnostic)
-                    # The existing mixed Native owner is ordinary-only.
-                    # Do not silently change an explicitly selected special's
-                    # established raw/nominal route; its mixed scope is separate.
-                    raw_j_complete=(
-                        _raw_four_stat_j_can_finish(observed)
-                        if source_selected_gem_roles["special_gem_id"] is None
-                        else observed.get(
-                            "four_stat_ordinary_source_complete_unadmitted") is True)
-                    if (nominal_four_stat_source is None and
-                            not raw_j_complete):
+                    # Ordinary J uses the same numeric basis regardless of
+                    # the separately selected special. No special effect or
+                    # socket approval follows from this numeric projection.
+                    raw_j_complete=_raw_four_stat_j_can_finish(observed)
+                    special_source_present=(special_id is None or special_id in
+                        (observed.get("selected_gem_v221_item_ids_unadmitted") or []))
+                    unresolved_j_source=(
+                        nominal_four_stat_source is None and not raw_j_complete
+                        and not special_invalid and special_source_present)
+                    if unresolved_j_source:
                         # Raw EffectPointsMin may be unobserved (70783: 0/75).
                         # Reuse the exact v221 IDs and already collected v230
                         # item_data once, without attempting gem Native/DPS.
@@ -10685,10 +10708,6 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             gem_candidates["candidate_count"])
                         progress["ordinary_gem_source_candidate_status_unadmitted"]=(
                             gem_candidates["status"])
-                    unresolved_j_source=(
-                        nominal_four_stat_source is None and
-                        not raw_j_complete and
-                        source_selected_gem_roles["special_gem_id"] is None)
                     pinned_dbc_j_preview=None
                     # Both J branches consume the same immutable source
                     # projection within this Build, not another DBC scan.
@@ -10705,6 +10724,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                                 stage_root=source_compilation["stage_root"],
                                 simc_revision=source_compilation["simc_revision"],
                                 _read_dbc=read_gem_dbc,
+                                **({"excluded_special_gem_id":special_id}
+                                   if special_id is not None else {}),
                                 target_ilevel=fresh_collection_inputs[
                                     "representative_request"]["target_ilevel"]))
                         progress["four_stat_pinned_dbc_j_status_unadmitted"]=(
@@ -10787,7 +10808,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             ordinary=physical_gems.ordinary_four_stat_default(
                                 observed_by_stat=pinned_dbc_j_preview["by_stat"],
                                 socket_total=target_sockets,
-                                special_gem_id=None,need=need)
+                                special_gem_id=special_id,need=need)
                             zero_history_gem_ratings=dict(
                                 pinned_dbc_j_preview["rating_by_id"])
                         elif (type(native_j_preview) is dict and
@@ -10800,7 +10821,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             ordinary=physical_gems.ordinary_four_stat_default(
                                 observed_by_stat=native_j_preview["by_stat"],
                                 socket_total=target_sockets,
-                                special_gem_id=None,need=need)
+                                special_gem_id=special_id,need=need)
                             zero_history_gem_ratings=dict(
                                 native_j_preview["rating_by_id"])
                         elif raw_j_complete:

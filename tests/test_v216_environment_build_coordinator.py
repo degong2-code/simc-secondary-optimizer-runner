@@ -430,6 +430,33 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertFalse(numeric["environment_ready"])
         self.assertIsNone(numeric["F"])
         self.assertEqual(numeric["new_native_calls"],0)
+        # Same four ordinary types, six ordinary sockets + one special.
+        special=330099
+        with_special={**layout,"socket_total":7,"special_gem_id":special}
+        special_link={**link,"special_gem_item_id":special,
+                      "selected_item_ids":sorted(ids+[special])}
+        projected={**preview,"excluded_special_gem_id":special}
+        self.assertEqual(v216._fresh_match_pinned_dbc_ordinary_j(
+            preview=projected,layout=with_special,ratings=four,
+            link=special_link,game_build=build,simc_revision=rev),ordinary)
+        mixed=v216._fresh_source_owner_selected_J_F_numeric(
+            preflight={**preflight,"physical_gem_layout_unadmitted":with_special,
+                       "selected_v221_gem_item_relation_unadmitted":special_link},
+            compilation={**compilation,
+                "four_stat_pinned_dbc_j_source_unadmitted":projected},
+            selected_physical_items=None)
+        self.assertEqual(mixed["J"]["rating"],138)
+        self.assertEqual(mixed["J"]["special_gem_item_id"],special)
+        self.assertFalse(mixed["J"]["special_gem_contributes_to_J"])
+        self.assertFalse(mixed["environment_ready"])
+        with self.assertRaises(v216.EnvironmentBuildBlocked):
+            v216._fresh_match_pinned_dbc_ordinary_j(
+                preview=preview,layout=with_special,ratings=four,
+                link=special_link,game_build=build,simc_revision=rev)
+        with self.assertRaises(v216.EnvironmentBuildBlocked):
+            v216._fresh_match_pinned_dbc_ordinary_j(
+                preview=projected,layout=with_special,ratings=four,
+                link=link,game_build=build,simc_revision=rev)
         with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
                                     "V216_PINNED_DBC_J_SELECTED_IDS_OR_RATINGS_DRIFT"):
             v216._fresh_match_pinned_dbc_ordinary_j(
@@ -533,6 +560,18 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             preview=preview,layout=layout,ratings=ratings,
             link=link,game_build=build,simc_revision=rev)
         self.assertEqual(chosen,ids)
+        special=330099
+        special_layout={**layout,"socket_total":5,"special_gem_id":special}
+        special_link={**link,"special_gem_item_id":special,
+                      "selected_item_ids":sorted(ids+[special])}
+        special_preview={**preview,"excluded_special_gem_id":special}
+        self.assertEqual(v216._fresh_match_simc_native_ordinary_j(
+            preview=special_preview,layout=special_layout,ratings=ratings,
+            link=special_link,game_build=build,simc_revision=rev),ids)
+        with self.assertRaises(v216.EnvironmentBuildBlocked):
+            v216._fresh_match_simc_native_ordinary_j(
+                preview=preview,layout=special_layout,ratings=ratings,
+                link=special_link,game_build=build,simc_revision=rev)
         # The same sealed receipt reader must bind the unbuffed vector,
         # not the legacy talent-modified snapshot, for a new mixed proof.
         mixed=copy.deepcopy(preview)
@@ -587,6 +626,16 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(result["J"]["numeric_source_owner"],
                          "SIMC_NATIVE_CONTROLLED_GEM_DELTA")
         self.assertEqual(result["J"]["per_item_nominal_rating"],ratings)
+        special_result=v216._fresh_source_owner_selected_J_F_numeric(
+            preflight={**preflight,"physical_gem_layout_unadmitted":special_layout,
+                       "selected_v221_gem_item_relation_unadmitted":special_link},
+            compilation={**compilation,
+                "four_stat_simc_native_j_source_unadmitted":special_preview},
+            selected_physical_items=None)
+        self.assertEqual(special_result["J"]["rating"],92)
+        self.assertEqual(special_result["J"]["special_gem_item_id"],special)
+        self.assertFalse(special_result["J"]["special_gem_contributes_to_J"])
+        self.assertFalse(special_result["environment_ready"])
         self.assertEqual(result["J"]["observed_quality_rank_by_id"],
                          {str(i):2 for i in ids})
         self.assertFalse(result["environment_ready"])
