@@ -7,7 +7,12 @@ controls; reuse the BASE install for the previously untested automatic
 crafted G delta + bounded DPS. Do not repeat the v806 mixed-weapon proof.
 Only compact, allowlisted evidence leaves this isolated run.
 """
-import argparse,json,re,tempfile
+import argparse,hashlib,json,re,tempfile
+from urllib.parse import quote
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support import expected_conditions as EC
 from pathlib import Path
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select,WebDriverWait
@@ -27,6 +32,83 @@ OIL=243734
 CRAFT=244579
 MAX_BASE_NATIVE=24
 MAX_VARIANT_NATIVE=24
+
+# Exact app.js buildSeasonEnvironment(true) consent for the tested F+O
+# selection, not a general acceptance rule for other dialogs or future UI.
+SELECTED_ENVIRONMENT_CONFIRM = (
+    "기존 검증 시즌 환경을 우선 재사용하고, 없으면 원본 구축을 시작할까요? "
+    "필요 시 외부 네트워크를 사용할 수 있습니다."
+    " 기존 G Native 최대 1회 실행될 수 있습니다."
+    " 영약 F 후보만 최대 8회 신규 Native로 관측할 수 있습니다. 기름은 Native를 실행하지 않습니다."
+    " 선택한 기름의 스케일링 값은 기존 실행 캐시를 먼저 재사용하고, 필요한 손에만 SimC 측정을 수행합니다."
+)
+
+def accept_selected_environment_confirm(browser, evidence, timeout=15):
+    """Read the actual modal before any execute_script polling; accept once
+    only for this exact stage. Unknown text is not logged or approved."""
+    evidence.update(expected_code="SELECTED_F_O_BUILD_CONFIRM",
+                    expected_text=SELECTED_ENVIRONMENT_CONFIRM,
+                    status="WAITING")
+    try:
+        dialog=WebDriverWait(browser,timeout).until(EC.alert_is_present())
+    except TimeoutException:
+        evidence["status"]="MISSING"
+        raise RuntimeError("V814_EXPECTED_SELECTED_ENVIRONMENT_CONFIRM_MISSING")
+    actual=dialog.text
+    evidence["observed_text_sha256"]=hashlib.sha256(actual.encode("utf8")).hexdigest()
+    evidence["observed_text_length"]=len(actual)
+    if actual!=SELECTED_ENVIRONMENT_CONFIRM:
+        evidence["status"]="UNEXPECTED_NOT_ACCEPTED"
+        raise RuntimeError("V814_UNEXPECTED_SELECTED_ENVIRONMENT_CONFIRM")
+    evidence["observed_text"]=actual
+    evidence["status"]="MATCHED"
+    dialog.accept()
+    evidence["status"]="ACCEPTED"
+
+def preflight_selected_environment_confirm(evidence):
+    """Real Chrome fixture, no season app/API/source/SimC calls. Exercise
+    the same click, alert wait and exact comparison used by the real probe."""
+    options=Options()
+    for flag in ("--headless=new","--no-sandbox","--disable-dev-shm-usage",
+                 "--window-size=1440,950"):
+        options.add_argument(flag)
+    browser=webdriver.Chrome(options=options)
+    try:
+        browser.get("data:text/html;charset=utf-8,"+quote(
+            '<button id="prepare">Prepare</button>'))
+        def click_confirm(message):
+            browser.execute_script("""
+                window.confirmResult=null;
+                document.getElementById("prepare").onclick=()=>{
+                    window.confirmResult=window.confirm(arguments[0]);
+                };
+            """,message)
+            clickable(browser,browser.find_element(By.ID,"prepare"))
+        click_confirm(SELECTED_ENVIRONMENT_CONFIRM)
+        evidence["expected"]={}
+        accept_selected_environment_confirm(browser,evidence["expected"])
+        WebDriverWait(browser,10).until(lambda d:d.execute_script(
+            "return window.confirmResult===true"))
+        click_confirm("V814 unrelated confirmation fixture")
+        evidence["unexpected"]={}
+        try:
+            accept_selected_environment_confirm(browser,evidence["unexpected"])
+        except RuntimeError as exc:
+            if str(exc)!="V814_UNEXPECTED_SELECTED_ENVIRONMENT_CONFIRM":
+                raise
+            # Fixture only: verify refusal left the unexpected alert open,
+            # then dismiss it to clean up the test browser.
+            dialog=browser.switch_to.alert
+            need(dialog.text=="V814 unrelated confirmation fixture",
+                 "V814_UNEXPECTED_FIXTURE_NOT_PRESERVED")
+            dialog.dismiss()
+            WebDriverWait(browser,10).until(lambda d:d.execute_script(
+                "return window.confirmResult===false"))
+        else:
+            raise RuntimeError("V814_UNEXPECTED_FIXTURE_WAS_ACCEPTED")
+        evidence["status"]="PASS_REAL_CHROME_EXPECTED_AND_UNEXPECTED_CONFIRM"
+    finally:
+        browser.quit()
 
 class Credentials(EphemeralActionsCredentials):
     def status(self):
@@ -91,6 +173,9 @@ def run(args):
                  "max_ilevel":by_id.get(r["simc_enchant_id"],{}).get("source_max_ilevel")}
                 for r in plan.get("oil",[]) if r.get("selected_hand")=="main_hand"][:32]
     try:
+        report["confirmation_preflight"]={}
+        save("CONFIRMATION_PREFLIGHT_NO_SOURCE_OR_NATIVE")
+        preflight_selected_environment_confirm(report["confirmation_preflight"])
         save("PINNED_BINARY_AND_LIVE_BUILD")
         binary=Path(args.simc).resolve(strict=True)
         identity=json.loads(Path(args.identity).read_text("utf-8-sig"))
@@ -199,7 +284,11 @@ def run(args):
                 check("V813_BROWSER_OLD_BUDGET_REVOKED",selected["old_budget"],"")
                 check("V813_NAME_SELECTION_NO_BUILD",len(report["builds"]),1)
                 save("BROWSER_SELECTED_ENVIRONMENT_PREPARE")
+                report["selected_environment_confirmation"]={}
                 clickable(browser,browser.find_element(By.ID,"user-variant-prepare-btn"))
+                accept_selected_environment_confirm(
+                    browser,report["selected_environment_confirmation"])
+                save("BROWSER_SELECTED_ENVIRONMENT_CONFIRM_ACCEPTED")
                 wait_idle(browser,720)
                 report["browser_preparation_technical_code"]=safe_code(
                     browser.execute_script("return state.lastUserBlocker?.technical||null"))
