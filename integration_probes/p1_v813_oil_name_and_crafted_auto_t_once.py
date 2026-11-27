@@ -128,7 +128,9 @@ def run(args):
     browser=server=thread=None
     def save(stage=None):
         if stage:report["stage"]=stage
-        raw=json.dumps(report,sort_keys=True,ensure_ascii=False,allow_nan=False)
+        # Lossless JSON escapes keep the receipt safe on Windows CP1252 stdout.
+        # Use the same bytes for file and console; readers recover the exact text.
+        raw=json.dumps(report,sort_keys=True,ensure_ascii=True,allow_nan=False)
         (out/"V813_OIL_NAME_CRAFTED_AUTO_T.json").write_text(raw+"\n",encoding="utf8")
         print("V813_RECEIPT "+raw,flush=True)
     def check(code,actual,expected):
