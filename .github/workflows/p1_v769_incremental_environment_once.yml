@@ -157,11 +157,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -m unittest -v tests.test_v182_simple_user_inputs_offline.SelectedOilPreparationRouting tests.test_v285_consumable_weapon_source tests.test_p1_v568_first_user_environment_bridge_offline tests.test_v208_special_L_hydration_offline.OneExactSpecialHydration.test_crafted_only_fresh_delta_two_batches_then_cache_zero_L
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Real Chrome named oil registration and crafted auto T in one workspace
+      - name: Crafted-only automatic T and two DPS cases; reuse v815 oil proof
         if: contains(github.event.head_commit.message, '[v813-oil-name-craft-once]')
         timeout-minutes: 33
         run: |
-          python -u integration_probes/p1_v813_oil_name_and_crafted_auto_t_once.py --simc .v618-simc-cache/simc.exe --identity .v618-simc-cache/identity.json --out out/v813
+          python -u integration_probes/p1_v813_oil_name_and_crafted_auto_t_once.py --simc .v618-simc-cache/simc.exe --identity .v618-simc-cache/identity.json --out out/v813 --crafted-only
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v6
         if: always() && contains(github.event.head_commit.message, '[v813-oil-name-craft-once]')

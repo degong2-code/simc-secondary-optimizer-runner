@@ -124,7 +124,14 @@ def run(args):
     report={"status":"STARTED","build":BUILD,"revision":REV,
             "target_ilevel":TARGET,"full_product_e2e":"PENDING",
             "quality_equivalence_verified":False,"global_optimum_proven":False,
-            "dps_native":0,"browser_actual":False,"builds":[]}
+            "dps_native":0,"browser_actual":False,"builds":[],
+            "mode":"CRAFTED_ONLY" if args.crafted_only else "OIL_AND_CRAFTED"}
+    if args.crafted_only:
+        report["reused_historical_oil_registration"]={
+            "run_id":46003074859,"job_id":140519373927,
+            "head":"a0f7e59542c86f7b5844890b11fb0c088c6653b0",
+            "oil_id":OIL,"O_total":32,
+            "current_run_repeats_oil_registration":False}
     browser=server=thread=None
     def save(stage=None):
         if stage:report["stage"]=stage
@@ -175,9 +182,10 @@ def run(args):
                  "max_ilevel":by_id.get(r["simc_enchant_id"],{}).get("source_max_ilevel")}
                 for r in plan.get("oil",[]) if r.get("selected_hand")=="main_hand"][:32]
     try:
-        report["confirmation_preflight"]={}
-        save("CONFIRMATION_PREFLIGHT_NO_SOURCE_OR_NATIVE")
-        preflight_selected_environment_confirm(report["confirmation_preflight"])
+        if not args.crafted_only:
+            report["confirmation_preflight"]={}
+            save("CONFIRMATION_PREFLIGHT_NO_SOURCE_OR_NATIVE")
+            preflight_selected_environment_confirm(report["confirmation_preflight"])
         save("PINNED_BINARY_AND_LIVE_BUILD")
         binary=Path(args.simc).resolve(strict=True)
         identity=json.loads(Path(args.identity).read_text("utf-8-sig"))
@@ -223,96 +231,104 @@ def run(args):
             base_bytes=digest(base_path)
             report["base_sha"]=base_sha
             with observe_real_boundary(report,root):
-                save("SOURCE_NAME_CHOICES_BEFORE_INSTALL")
-                data=jobs.installed_oil_loadouts(TARGET,BUILD)
-                prep=data.get("oil_preparation_source") or {}
-                check("V813_PREPARATION_SOURCE_STATUS",prep.get("status"),
-                      "OIL_PREPARATION_SOURCE_IDENTIFIED")
-                check("V813_PREPARATION_NATIVE",prep.get("native_calls"),0)
-                check("V813_PREPARATION_NETWORK",prep.get("network_calls"),0)
-                row=[r for r in prep["items"] if r["physical_item_id"]==OIL]
-                check("V813_EXACT_PHYSICAL_SOURCE_COUNT",len(row),1)
-                check("V813_UNVERIFIED_SOURCE_NOT_REGISTERED",row[0]["user_selectable"],False)
-                check("V813_NO_POSITIVE_INSTALL_BEFORE_SELECTION",len(data["items"]),0)
-                report["preparation_candidate_count"]=len(prep["items"])
-                report["preparation_source_sha"]=prep["source_candidate_sha256"]
-                save("REAL_CHROME_INPUT")
-                server,thread=start_http(app)
-                browser=browser_open()
-                report["browser_actual"]=True
-                browser.execute_script("""
-                  const n=$("season-game-build");
-                  n.value=arguments[0];
-                  n.dispatchEvent(new Event("input",{bubbles:true}));
-                  n.dispatchEvent(new Event("change",{bubbles:true}));
-                """,BUILD)
-                WebDriverWait(browser,120).until(lambda b:b.execute_script("""
-                   return !state.busy && installedConsumableScopeMatches(state.oilCatalog)
-                     && Array.from($("oil-preparation-main").options).some(
-                       x=>x.value===String(arguments[0]));
-                """,OIL))
-                select("optimizer-oil-use-mode","off")
-                wait_idle(browser,60)
-                select("season-verified-flask",FLASK)
-                wait_idle(browser,60)
-                # Re-dispatch real DOM change if a unique F was already chosen.
-                if browser.execute_script("return state.seasonGear?.installed_manifest_sha256")!=base_sha:
-                    browser.execute_script('$("season-verified-flask").dispatchEvent(new Event("change",{bubbles:true}))')
+                if not args.crafted_only:
+                    save("SOURCE_NAME_CHOICES_BEFORE_INSTALL")
+                    data=jobs.installed_oil_loadouts(TARGET,BUILD)
+                    prep=data.get("oil_preparation_source") or {}
+                    check("V813_PREPARATION_SOURCE_STATUS",prep.get("status"),
+                          "OIL_PREPARATION_SOURCE_IDENTIFIED")
+                    check("V813_PREPARATION_NATIVE",prep.get("native_calls"),0)
+                    check("V813_PREPARATION_NETWORK",prep.get("network_calls"),0)
+                    row=[r for r in prep["items"] if r["physical_item_id"]==OIL]
+                    check("V813_EXACT_PHYSICAL_SOURCE_COUNT",len(row),1)
+                    check("V813_UNVERIFIED_SOURCE_NOT_REGISTERED",row[0]["user_selectable"],False)
+                    check("V813_NO_POSITIVE_INSTALL_BEFORE_SELECTION",len(data["items"]),0)
+                    report["preparation_candidate_count"]=len(prep["items"])
+                    report["preparation_source_sha"]=prep["source_candidate_sha256"]
+                    save("REAL_CHROME_INPUT")
+                    server,thread=start_http(app)
+                    browser=browser_open()
+                    report["browser_actual"]=True
+                    browser.execute_script("""
+                      const n=$("season-game-build");
+                      n.value=arguments[0];
+                      n.dispatchEvent(new Event("input",{bubbles:true}));
+                      n.dispatchEvent(new Event("change",{bubbles:true}));
+                    """,BUILD)
+                    WebDriverWait(browser,120).until(lambda b:b.execute_script("""
+                       return !state.busy && installedConsumableScopeMatches(state.oilCatalog)
+                         && Array.from($("oil-preparation-main").options).some(
+                           x=>x.value===String(arguments[0]));
+                    """,OIL))
+                    select("optimizer-oil-use-mode","off")
                     wait_idle(browser,60)
-                check("V813_BROWSER_BASE_BIND",browser.execute_script(
-                    "return state.seasonGear?.installed_manifest_sha256||null"),base_sha)
-                navigate(browser,"settings")
-                open_fold("simc-technical-panel")
-                input_text(browser,"binary",str(binary))
-                input_text(browser,"revision",REV)
-                wait_idle(browser,60)
-                navigate(browser,"optimizer")
-                open_fold("env-oil-options")
-                open_fold("oil-preparation-panel")
-                check("V813_NAME_CONTROL_OUTSIDE_EXPERT",browser.execute_script("""
-                    return !$("optimizer-season-itemid-expert").contains($("oil-preparation-main"));
-                """),True)
-                select("oil-preparation-main",OIL)
-                selected=browser.execute_script("""return {
-                    id:field("optimizer-oil-main-id"),flask:field("season-selected-flask-id"),
-                    intent:oilUseIntent,ready:state.seasonGearTargetIlevel,
-                    old_budget:field("season-verified-budget")
-                }""")
-                report["browser_selected_intent"]=selected
-                check("V813_BROWSER_PHYSICAL_OIL",selected["id"],str(OIL))
-                check("V813_BROWSER_F_PRESERVED",selected["flask"],str(FLASK))
-                check("V813_BROWSER_OIL_INTENT",selected["intent"],True)
-                check("V813_BROWSER_OLD_READY_REVOKED",selected["ready"],None)
-                check("V813_BROWSER_OLD_BUDGET_REVOKED",selected["old_budget"],"")
-                check("V813_NAME_SELECTION_NO_BUILD",len(report["builds"]),1)
-                save("BROWSER_SELECTED_ENVIRONMENT_PREPARE")
-                report["selected_environment_confirmation"]={}
-                clickable(browser,browser.find_element(By.ID,"user-variant-prepare-btn"))
-                accept_selected_environment_confirm(
-                    browser,report["selected_environment_confirmation"])
-                save("BROWSER_SELECTED_ENVIRONMENT_CONFIRM_ACCEPTED")
-                wait_idle(browser,720)
-                report["browser_preparation_technical_code"]=safe_code(
-                    browser.execute_script("return state.lastUserBlocker?.technical||null"))
-                check("V813_ONE_SELECTED_BUILD",len(report["builds"]),2)
-                variant=report["builds"][1]
-                check("V813_VARIANT_READY",variant["environment_ready"],True)
-                check("V813_VARIANT_INSTALLED",variant["environment_installed"],True)
-                need(type(variant["native_calls"]) is int and
-                     0<=variant["native_calls"]<=MAX_VARIANT_NATIVE,
-                     "V813_VARIANT_NATIVE_BOUND")
-                oil_sha=variant["installed_manifest_sha256"]
-                need(type(oil_sha) is str and oil_sha!=base_sha,"V813_POSITIVE_INSTALL_SHA_REQUIRED")
-                check("V813_POSITIVE_O",sum(variant["budget"]["O"].values())>0,True)
-                check("V813_REGISTERED_BROWSER_OIL",browser.execute_script(
-                    "return !!selectedFullVerifiedOil()"),True)
-                check("V813_BROWSER_BOUND_POSITIVE_SHA",browser.execute_script(
-                    "return state.seasonGear?.installed_manifest_sha256||null"),oil_sha)
-                check("V813_BASE_INSTALL_BYTES_UNCHANGED",digest(base_path),base_bytes)
-                report["oil_registration_pass"]=True
+                    select("season-verified-flask",FLASK)
+                    wait_idle(browser,60)
+                    # Re-dispatch real DOM change if a unique F was already chosen.
+                    if browser.execute_script("return state.seasonGear?.installed_manifest_sha256")!=base_sha:
+                        browser.execute_script('$("season-verified-flask").dispatchEvent(new Event("change",{bubbles:true}))')
+                        wait_idle(browser,60)
+                    check("V813_BROWSER_BASE_BIND",browser.execute_script(
+                        "return state.seasonGear?.installed_manifest_sha256||null"),base_sha)
+                    navigate(browser,"settings")
+                    open_fold("simc-technical-panel")
+                    input_text(browser,"binary",str(binary))
+                    input_text(browser,"revision",REV)
+                    wait_idle(browser,60)
+                    navigate(browser,"optimizer")
+                    open_fold("env-oil-options")
+                    open_fold("oil-preparation-panel")
+                    check("V813_NAME_CONTROL_OUTSIDE_EXPERT",browser.execute_script("""
+                        return !$("optimizer-season-itemid-expert").contains($("oil-preparation-main"));
+                    """),True)
+                    select("oil-preparation-main",OIL)
+                    selected=browser.execute_script("""return {
+                        id:field("optimizer-oil-main-id"),flask:field("season-selected-flask-id"),
+                        intent:oilUseIntent,ready:state.seasonGearTargetIlevel,
+                        old_budget:field("season-verified-budget")
+                    }""")
+                    report["browser_selected_intent"]=selected
+                    check("V813_BROWSER_PHYSICAL_OIL",selected["id"],str(OIL))
+                    check("V813_BROWSER_F_PRESERVED",selected["flask"],str(FLASK))
+                    check("V813_BROWSER_OIL_INTENT",selected["intent"],True)
+                    check("V813_BROWSER_OLD_READY_REVOKED",selected["ready"],None)
+                    check("V813_BROWSER_OLD_BUDGET_REVOKED",selected["old_budget"],"")
+                    check("V813_NAME_SELECTION_NO_BUILD",len(report["builds"]),1)
+                    save("BROWSER_SELECTED_ENVIRONMENT_PREPARE")
+                    report["selected_environment_confirmation"]={}
+                    clickable(browser,browser.find_element(By.ID,"user-variant-prepare-btn"))
+                    accept_selected_environment_confirm(
+                        browser,report["selected_environment_confirmation"])
+                    save("BROWSER_SELECTED_ENVIRONMENT_CONFIRM_ACCEPTED")
+                    wait_idle(browser,720)
+                    report["browser_preparation_technical_code"]=safe_code(
+                        browser.execute_script("return state.lastUserBlocker?.technical||null"))
+                    check("V813_ONE_SELECTED_BUILD",len(report["builds"]),2)
+                    variant=report["builds"][1]
+                    check("V813_VARIANT_READY",variant["environment_ready"],True)
+                    check("V813_VARIANT_INSTALLED",variant["environment_installed"],True)
+                    need(type(variant["native_calls"]) is int and
+                         0<=variant["native_calls"]<=MAX_VARIANT_NATIVE,
+                         "V813_VARIANT_NATIVE_BOUND")
+                    oil_sha=variant["installed_manifest_sha256"]
+                    need(type(oil_sha) is str and oil_sha!=base_sha,"V813_POSITIVE_INSTALL_SHA_REQUIRED")
+                    check("V813_POSITIVE_O",sum(variant["budget"]["O"].values())>0,True)
+                    check("V813_REGISTERED_BROWSER_OIL",browser.execute_script(
+                        "return !!selectedFullVerifiedOil()"),True)
+                    check("V813_BROWSER_BOUND_POSITIVE_SHA",browser.execute_script(
+                        "return state.seasonGear?.installed_manifest_sha256||null"),oil_sha)
+                    check("V813_BASE_INSTALL_BYTES_UNCHANGED",digest(base_path),base_bytes)
+                    report["oil_registration_pass"]=True
+                else:
+                    # Reuse the tested original HTTP/Chrome transport only;
+                    # no oil choice/preflight/positive O Build is repeated.
+                    save("CRAFTED_HTTP_TRANSPORT")
+                    server,thread=start_http(app)
+                    browser=browser_open()
+                    report["browser_actual"]=True
                 save("CRAFTED_ONLY_AUTO_T_PREPARE")
-                # Same exact BASE install, no new environment Build; this
-                # is a real HTTP/Native test, not a claim of browser crafting.
+                # Same exact BASE install, no additional environment Build.
+                # Real HTTP/Native test, not a claim of browser crafting.
                 controls=web.sessions.standard_controls(("hunter","survival"))
                 controls.update(race="human",oil_hands=[],final_T=None,
                     embellishments=[{"slot":"head","item_id":CRAFT,
@@ -352,9 +368,35 @@ def run(args):
                 check("V813_CRAFTED_PLAN_NATIVE",plan.get("native_calls"),0)
                 check("V813_CRAFTED_PLAN_SESSION",plan.get("session_id")==sid,True)
                 budget=plan["plan"]
-                check("V813_CRAFTED_AUTO_BUDGET_SOURCE",budget.get("budget_source"),
+                report["crafted_public_plan"]={k:budget.get(k) for k in
+                    ("base_B","fixed_O","final_T","native_called")}
+                report["crafted_public_profile_stage"]=(plan.get("profile_stage") or {}).get("status")
+                save()
+                check("V816_CRAFTED_PROFILE_STAGE",report["crafted_public_profile_stage"],
+                      "SELECTED_FRESH_SOURCE_REPLAY_VERIFIED_NO_NATIVE")
+                # v113 deliberately projects B/O/T, not v096 provenance.
+                # Verify that exact same sealed manifest via its original
+                # plan_only owner; never add fields to or change public API.
+                manifest_path=profile.parent/"manifest.json"
+                manifest=json.loads(manifest_path.read_text("utf8"))
+                selected=manifest[web.bootstrap.entry.SELECTED_FRESH_SEASON_FIELD]
+                check("V816_CRAFTED_INSTALLED_SHA",selected["installed_manifest_sha256"],base_sha)
+                internal=web.bootstrap.entry.run_manifest(manifest_path,plan_only=True)
+                report["crafted_internal_plan"]={k:internal.get(k) for k in
+                    ("budget_source","base_B","fixed_O","final_T","native_called",
+                     "selected_source_replay_recomputed_at_native_entry")}
+                report["crafted_internal_plan"]["manual_T_key_present"]="user_manual_final_T" in internal
+                save()
+                check("V813_CRAFTED_AUTO_BUDGET_SOURCE",internal["budget_source"],
                       "ADMITTED_SELECTED_FRESH_SEASON_B8_V436")
-                check("V813_CRAFTED_NO_MANUAL_T",budget.get("user_manual_final_T"),None)
+                check("V816_CRAFTED_SOURCE_REPLAY",internal["selected_source_replay_recomputed_at_native_entry"],True)
+                check("V816_CRAFTED_INTERNAL_NO_NATIVE",internal["native_called"],False)
+                check("V816_CRAFTED_NO_MANUAL_INPUT",request["controls"]["final_T"],None)
+                check("V813_CRAFTED_NO_MANUAL_T","user_manual_final_T" in internal,False)
+                check("V816_CRAFTED_PUBLIC_INTERNAL_BOT",
+                      {k:budget[k] for k in ("base_B","fixed_O","final_T")},
+                      {k:internal[k] for k in ("base_B","fixed_O","final_T")})
+                check("V816_CRAFTED_O_ZERO",sum(budget["fixed_O"].values()),0)
                 check("V813_CRAFTED_AUTO_T_ACCOUNTING",budget["final_T"],budget["base_B"]+sum(budget["fixed_O"].values()))
                 report["crafted_B"]=budget["base_B"];report["crafted_T"]=budget["final_T"]
                 save("CRAFTED_REPREPARE_CACHE")
@@ -394,8 +436,10 @@ def run(args):
                 check("V813_CRAFTED_RESULT_95",user["confidence_level"],.95)
                 check("V813_CRAFTED_RESULT_NOT_GLOBAL_PROOF",user["global_optimum_proven"],False)
                 need(best["observed_dps_mean"]>0 and best["simc_sem"]>=0,"V813_CRAFTED_DPS_OR_SEM_INVALID")
-                check("V813_NO_ADDITIONAL_BUILDS",len(report["builds"]),2)
-                report.update(status="PASS_REAL_OIL_NAME_REGISTRATION_CRAFTED_AUTO_T_TWO_DPS_CACHE",
+                check("V813_NO_ADDITIONAL_BUILDS",len(report["builds"]),1 if args.crafted_only else 2)
+                check("V816_BASE_INSTALL_UNCHANGED_AFTER_CACHE",digest(base_path),base_bytes)
+                report.update(status=("PASS_REAL_CRAFTED_AUTO_T_TWO_DPS_CACHE" if args.crafted_only
+                    else "PASS_REAL_OIL_NAME_REGISTRATION_CRAFTED_AUTO_T_TWO_DPS_CACHE"),
                     cases=seen,dps=best["observed_dps_mean"],sem=best["simc_sem"],
                     rating=best["absolute_rating_T"])
                 return 0
@@ -416,4 +460,5 @@ def run(args):
 if __name__=="__main__":
     p=argparse.ArgumentParser()
     for name in ("simc","identity","out"):p.add_argument("--"+name,required=True)
+    p.add_argument("--crafted-only",action="store_true")
     raise SystemExit(run(p.parse_args()))
