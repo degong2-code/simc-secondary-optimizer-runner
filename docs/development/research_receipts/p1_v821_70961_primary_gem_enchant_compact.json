@@ -1,0 +1,651 @@
+{
+  "actual_socket_applicability_verified": false,
+  "candidate_rows": [
+    {
+      "enchant_source_row": {
+        "dbc_name": "+$k1 Primary Stat and +0.15% critical strike effectiveness per unique Midnight gem color",
+        "ench_amount": [
+          0,
+          0,
+          0
+        ],
+        "ench_coeff": [
+          0.5352,
+          0,
+          0
+        ],
+        "ench_prop": [
+          71,
+          1258209,
+          0
+        ],
+        "ench_type": [
+          5,
+          3,
+          0
+        ],
+        "id": 8557,
+        "id_gem": 240966,
+        "id_scaling": -7,
+        "id_spell": 0,
+        "max_ilevel": 0,
+        "max_scaling_level": 80,
+        "min_ilevel": 80,
+        "min_scaling_level": 0,
+        "req_skill": 0,
+        "req_skill_value": 0
+      },
+      "item_id": 240966,
+      "linked_spell_source_text": {
+        "1258209": "Increases the effect of critical strikes by ${$M1}.1% per unique Khaz Algar gem color currently socketed."
+      },
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 1,
+        "item_id": 240966,
+        "item_ilevel_unscaled": 278,
+        "item_name": "Powerful Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8557,
+        "expansion_id": 11,
+        "gem_property_id": 4407,
+        "item_id": 240966,
+        "minimum_ilevel": 0
+      },
+      "user_selectable": false
+    },
+    {
+      "enchant_source_row": {
+        "dbc_name": "+$k1 Primary Stat and +0.15% critical strike effectiveness per unique Midnight gem color",
+        "ench_amount": [
+          0,
+          0,
+          0
+        ],
+        "ench_coeff": [
+          0.6839,
+          0,
+          0
+        ],
+        "ench_prop": [
+          71,
+          1258209,
+          0
+        ],
+        "ench_type": [
+          5,
+          3,
+          0
+        ],
+        "id": 8556,
+        "id_gem": 240967,
+        "id_scaling": -7,
+        "id_spell": 0,
+        "max_ilevel": 0,
+        "max_scaling_level": 80,
+        "min_ilevel": 80,
+        "min_scaling_level": 0,
+        "req_skill": 0,
+        "req_skill_value": 0
+      },
+      "item_id": 240967,
+      "linked_spell_source_text": {
+        "1258209": "Increases the effect of critical strikes by ${$M1}.1% per unique Khaz Algar gem color currently socketed."
+      },
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 2,
+        "item_id": 240967,
+        "item_ilevel_unscaled": 295,
+        "item_name": "Powerful Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8556,
+        "expansion_id": 11,
+        "gem_property_id": 4408,
+        "item_id": 240967,
+        "minimum_ilevel": 0
+      },
+      "user_selectable": false
+    },
+    {
+      "enchant_source_row": {
+        "dbc_name": "+$k1 Primary Stat and +$1258210s1% Maximum Mana per unique Midnight gem color",
+        "ench_amount": [
+          0,
+          0,
+          0
+        ],
+        "ench_coeff": [
+          0.5352,
+          0,
+          0
+        ],
+        "ench_prop": [
+          71,
+          1258210,
+          0
+        ],
+        "ench_type": [
+          5,
+          3,
+          0
+        ],
+        "id": 8559,
+        "id_gem": 240968,
+        "id_scaling": -7,
+        "id_spell": 0,
+        "max_ilevel": 0,
+        "max_scaling_level": 80,
+        "min_ilevel": 80,
+        "min_scaling_level": 0,
+        "req_skill": 0,
+        "req_skill_value": 0
+      },
+      "item_id": 240968,
+      "linked_spell_source_text": {
+        "1258210": "Increases maximum mana by $s1% per unique Midnight gem color currently socketed."
+      },
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 1,
+        "item_id": 240968,
+        "item_ilevel_unscaled": 278,
+        "item_name": "Telluric Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8559,
+        "expansion_id": 11,
+        "gem_property_id": 4406,
+        "item_id": 240968,
+        "minimum_ilevel": 0
+      },
+      "user_selectable": false
+    },
+    {
+      "enchant_source_row": {
+        "dbc_name": "+$k1 Primary Stat and +$1258210s1% Maximum Mana per unique Midnight gem color",
+        "ench_amount": [
+          0,
+          0,
+          0
+        ],
+        "ench_coeff": [
+          0.6839,
+          0,
+          0
+        ],
+        "ench_prop": [
+          71,
+          1258210,
+          0
+        ],
+        "ench_type": [
+          5,
+          3,
+          0
+        ],
+        "id": 8558,
+        "id_gem": 240969,
+        "id_scaling": -7,
+        "id_spell": 0,
+        "max_ilevel": 0,
+        "max_scaling_level": 80,
+        "min_ilevel": 80,
+        "min_scaling_level": 0,
+        "req_skill": 0,
+        "req_skill_value": 0
+      },
+      "item_id": 240969,
+      "linked_spell_source_text": {
+        "1258210": "Increases maximum mana by $s1% per unique Midnight gem color currently socketed."
+      },
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 2,
+        "item_id": 240969,
+        "item_ilevel_unscaled": 295,
+        "item_name": "Telluric Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8558,
+        "expansion_id": 11,
+        "gem_property_id": 4405,
+        "item_id": 240969,
+        "minimum_ilevel": 0
+      },
+      "user_selectable": false
+    },
+    {
+      "enchant_source_row": {
+        "dbc_name": "+$k1 Primary Stat and +$k2 Armor",
+        "ench_amount": [
+          0,
+          0,
+          0
+        ],
+        "ench_coeff": [
+          0.5352,
+          0.2973,
+          0
+        ],
+        "ench_prop": [
+          71,
+          0,
+          0
+        ],
+        "ench_type": [
+          5,
+          4,
+          0
+        ],
+        "id": 8554,
+        "id_gem": 240970,
+        "id_scaling": -1,
+        "id_spell": 0,
+        "max_ilevel": 0,
+        "max_scaling_level": 80,
+        "min_ilevel": 80,
+        "min_scaling_level": 0,
+        "req_skill": 0,
+        "req_skill_value": 0
+      },
+      "item_id": 240970,
+      "linked_spell_source_text": {},
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 1,
+        "item_id": 240970,
+        "item_ilevel_unscaled": 278,
+        "item_name": "Stoic Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8554,
+        "expansion_id": 11,
+        "gem_property_id": 4409,
+        "item_id": 240970,
+        "minimum_ilevel": 0
+      },
+      "user_selectable": false
+    },
+    {
+      "enchant_source_row": {
+        "dbc_name": "+$k1 Primary Stat and +$k2 Armor",
+        "ench_amount": [
+          0,
+          0,
+          0
+        ],
+        "ench_coeff": [
+          0.6839,
+          0.3865,
+          0
+        ],
+        "ench_prop": [
+          71,
+          0,
+          0
+        ],
+        "ench_type": [
+          5,
+          4,
+          0
+        ],
+        "id": 8555,
+        "id_gem": 240971,
+        "id_scaling": -1,
+        "id_spell": 0,
+        "max_ilevel": 0,
+        "max_scaling_level": 80,
+        "min_ilevel": 80,
+        "min_scaling_level": 0,
+        "req_skill": 0,
+        "req_skill_value": 0
+      },
+      "item_id": 240971,
+      "linked_spell_source_text": {},
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 2,
+        "item_id": 240971,
+        "item_ilevel_unscaled": 295,
+        "item_name": "Stoic Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8555,
+        "expansion_id": 11,
+        "gem_property_id": 4410,
+        "item_id": 240971,
+        "minimum_ilevel": 0
+      },
+      "user_selectable": false
+    },
+    {
+      "enchant_source_row": {
+        "dbc_name": "+$k1 Primary Stat",
+        "ench_amount": [
+          0,
+          0,
+          0
+        ],
+        "ench_coeff": [
+          0.7731,
+          0,
+          0
+        ],
+        "ench_prop": [
+          71,
+          0,
+          0
+        ],
+        "ench_type": [
+          5,
+          0,
+          0
+        ],
+        "id": 8551,
+        "id_gem": 240982,
+        "id_scaling": -1,
+        "id_spell": 0,
+        "max_ilevel": 0,
+        "max_scaling_level": 80,
+        "min_ilevel": 80,
+        "min_scaling_level": 0,
+        "req_skill": 0,
+        "req_skill_value": 0
+      },
+      "item_id": 240982,
+      "linked_spell_source_text": {},
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 1,
+        "item_id": 240982,
+        "item_ilevel_unscaled": 278,
+        "item_name": "Indecipherable Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8551,
+        "expansion_id": 11,
+        "gem_property_id": 4401,
+        "item_id": 240982,
+        "minimum_ilevel": 0
+      },
+      "user_selectable": false
+    },
+    {
+      "enchant_source_row": {
+        "dbc_name": "+$k1 Primary Stat",
+        "ench_amount": [
+          0,
+          0,
+          0
+        ],
+        "ench_coeff": [
+          0.9515,
+          0,
+          0
+        ],
+        "ench_prop": [
+          71,
+          0,
+          0
+        ],
+        "ench_type": [
+          5,
+          0,
+          0
+        ],
+        "id": 8552,
+        "id_gem": 240983,
+        "id_scaling": -1,
+        "id_spell": 0,
+        "max_ilevel": 0,
+        "max_scaling_level": 80,
+        "min_ilevel": 80,
+        "min_scaling_level": 0,
+        "req_skill": 0,
+        "req_skill_value": 0
+      },
+      "item_id": 240983,
+      "linked_spell_source_text": {},
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 2,
+        "item_id": 240983,
+        "item_ilevel_unscaled": 295,
+        "item_name": "Indecipherable Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8552,
+        "expansion_id": 11,
+        "gem_property_id": 4402,
+        "item_id": 240983,
+        "minimum_ilevel": 0
+      },
+      "user_selectable": false
+    },
+    {
+      "enchant_source_row": {
+        "dbc_name": "+$k1 Primary Stat and getting snared increases damage of your next attack by $411132s1 per stack",
+        "ench_amount": [
+          0,
+          0,
+          0
+        ],
+        "ench_coeff": [
+          0.6839,
+          0,
+          0
+        ],
+        "ench_prop": [
+          71,
+          411126,
+          0
+        ],
+        "ench_type": [
+          5,
+          3,
+          0
+        ],
+        "id": 8686,
+        "id_gem": 241142,
+        "id_scaling": -7,
+        "id_spell": 0,
+        "max_ilevel": 0,
+        "max_scaling_level": 80,
+        "min_ilevel": 80,
+        "min_scaling_level": 0,
+        "req_skill": 0,
+        "req_skill_value": 0
+      },
+      "item_id": 241142,
+      "linked_spell_source_text": {
+        "411126": "You gain a stack of Determination each second while afflicted by a movement impairing effect, stacking up to $411132U times. Your next weapon attack consumes Determination for $411132s1 Physical damage per stack."
+      },
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 0,
+        "item_id": 241142,
+        "item_ilevel_unscaled": 610,
+        "item_name": "Determined Heliotrope",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8686,
+        "expansion_id": 11,
+        "gem_property_id": 4424,
+        "item_id": 241142,
+        "minimum_ilevel": 14118
+      },
+      "user_selectable": false
+    },
+    {
+      "enchant_source_row": {
+        "dbc_name": "+$k1 Primary Stat and opponent's failed interrupt attempts grant Precognition",
+        "ench_amount": [
+          0,
+          0,
+          0
+        ],
+        "ench_coeff": [
+          0.6839,
+          0,
+          0
+        ],
+        "ench_prop": [
+          71,
+          377360,
+          0
+        ],
+        "ench_type": [
+          5,
+          3,
+          0
+        ],
+        "id": 8684,
+        "id_gem": 241143,
+        "id_scaling": -7,
+        "id_spell": 0,
+        "max_ilevel": 0,
+        "max_scaling_level": 80,
+        "min_ilevel": 80,
+        "min_scaling_level": 0,
+        "req_skill": 0,
+        "req_skill_value": 0
+      },
+      "item_id": 241143,
+      "linked_spell_source_text": {
+        "377360": "If an interrupt is used on you while you are not casting, become immune to crowd control, interrupt, and cast pushback effects for $377362d."
+      },
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 0,
+        "item_id": 241143,
+        "item_ilevel_unscaled": 610,
+        "item_name": "Cognitive Heliotrope",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8684,
+        "expansion_id": 11,
+        "gem_property_id": 4425,
+        "item_id": 241143,
+        "minimum_ilevel": 14118
+      },
+      "user_selectable": false
+    },
+    {
+      "enchant_source_row": {
+        "dbc_name": "+$k1 Primary Stat and +$435550s1% Damage Reduction when affected by Crowd Control",
+        "ench_amount": [
+          0,
+          0,
+          0
+        ],
+        "ench_coeff": [
+          0.6839,
+          0,
+          0
+        ],
+        "ench_prop": [
+          71,
+          435550,
+          0
+        ],
+        "ench_type": [
+          5,
+          3,
+          0
+        ],
+        "id": 8685,
+        "id_gem": 241144,
+        "id_scaling": -7,
+        "id_spell": 0,
+        "max_ilevel": 0,
+        "max_scaling_level": 80,
+        "min_ilevel": 80,
+        "min_scaling_level": 0,
+        "req_skill": 0,
+        "req_skill_value": 0
+      },
+      "item_id": 241144,
+      "linked_spell_source_text": {
+        "435550": "Grants $s1% damage reduction for $435551d after being the victim of a loss of control effect."
+      },
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 0,
+        "item_id": 241144,
+        "item_ilevel_unscaled": 610,
+        "item_name": "Enduring Heliotrope",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8685,
+        "expansion_id": 11,
+        "gem_property_id": 4423,
+        "item_id": 241144,
+        "minimum_ilevel": 14118
+      },
+      "user_selectable": false
+    }
+  ],
+  "dps_native_calls": 0,
+  "full_environment_builds": 0,
+  "game_build": "12.1.5.70961",
+  "new_github_request_attempts": 6,
+  "prior_compact_sha256": "7559b0460f254acac2f84fe961201f3ca4b1364adff3780969f8122e25ca2af1",
+  "prior_job_id": 140578213118,
+  "prior_run_id": 46020391704,
+  "prior_v221_receipt_sha256": "22c73561e71534f11ab16b7f726a8ec45152f3bbb3b1ffb649aa728609c89160",
+  "quality_noninferiority_verified": false,
+  "schema": "p1_v821_exact_primary_gem_enchant_source_replay_v1",
+  "simc_native_calls": 0,
+  "simc_revision": "9933ffb946fb55b1fa66657b848f519ac19006e1",
+  "source_files": {
+    "spell_item_enchantment.inc": {
+      "git_blob_sha1": "76fd0f20c7fffc2f44a187f9a15f88184cb0cc3f",
+      "sha256": "eb28b110b84d0222cbf672930b6a205201f57af3f5527cf5b06249c6fc61652c",
+      "size": 1093702
+    },
+    "spelltext_data.inc": {
+      "git_blob_sha1": "2ecca0579a28ce460f0745b266545cf58d2b0c0f",
+      "sha256": "f274c34d9278c65c53a8852c83ce9c7ece066544401d5e19af2458966c118054",
+      "size": 3971792
+    }
+  },
+  "source_only_not_installed": true,
+  "status": "PASS_EXACT_PINNED_SPECIAL_GEM_ENCHANT_ROWS_NOT_ADMITTED",
+  "wago_network_calls": 0
+}
