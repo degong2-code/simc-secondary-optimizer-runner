@@ -2874,6 +2874,12 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                  "selected_special_gem_two_CHMV_accounting_pending_source_only")
                  is not True,
              "V216_SELECTED_SPECIAL_GEM_TWO_CHMV_ACCOUNTING_PENDING")
+        # One-stat or mixed primary/secondary gems must not silently lose
+        # positive CHMV because special gems are excluded from ordinary J.
+        need(gem_enchant.get(
+                 "selected_special_gem_positive_CHMV_accounting_pending_source_only")
+                 is not True,
+             "V216_SELECTED_SPECIAL_GEM_POSITIVE_CHMV_ACCOUNTING_PENDING")
         source_properties=None
         if gem_enchant.get("selected_gem_v221_source_properties_complete") is True:
             props=gem_enchant.get(
@@ -10673,10 +10679,21 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         (special_id in reference_ids or
                          observed.get(
                              "selected_special_gem_two_CHMV_accounting_pending_source_only")
+                             is True or
+                         observed.get(
+                             "selected_special_gem_positive_CHMV_accounting_pending_source_only")
                              is True))
                     if special_invalid:
                         progress["requires"].append(
                             "SELECTED_SPECIAL_GEM_ACCOUNTING_OR_TARGET_ILEVEL_PENDING")
+                    if special_id is not None:
+                        progress["selected_special_gem_source_role_unadmitted"]={
+                            "item_id":special_id,
+                            "primary_attribute_observed":observed.get(
+                                "selected_special_gem_primary_role_observed_source_only") is True,
+                            "positive_CHMV_accounting_pending":observed.get(
+                                "selected_special_gem_positive_CHMV_accounting_pending_source_only") is True,
+                            "source_only":True}
                     j_owner_diagnostic=(
                         _existing_v268_four_stat_source_diagnostic(
                             observed=observed,csv_source=src))

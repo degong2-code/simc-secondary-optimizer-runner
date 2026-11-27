@@ -20,6 +20,9 @@ GEM_SOURCE_STATUS = "SOURCE_ITEM_PROPERTY_LINKS_ONLY_NOT_USER_ADMITTED"
 # SimC version. IDs for crit/haste/vers/mastery are stable source enum keys.
 CHMV = {32:"crit_rating",36:"haste_rating",
         49:"mastery_rating",40:"versatility_rating"}
+# Same item_mod_type primary/hybrid IDs as v211.MODS. Stamina,
+# tertiary ratings and unknown spell effects are not primary evidence.
+PRIMARY_ATTRIBUTE_ARGS = frozenset((3,4,5,71,72,73,74))
 STAT_ENCHANT_EFFECT = 5
 MAX_CSV = 32_000_000
 MAX_GEM_LINKS = 5000
@@ -116,6 +119,8 @@ def preview(*, gem_join, raw_enchant_csv, expected_game_build):
         pure_stat_args=set()
         has_scaled_component=False
         non_chmv_or_invalid_component=False
+        primary_args=set()
+        chmv_args=set()
         if row is None:
             verdict="ENCHANT_ID_MISSING_FROM_SAME_BUILD_CSV"
         else:
@@ -128,6 +133,15 @@ def preview(*, gem_join, raw_enchant_csv, expected_game_build):
                 points=integer(row[f"EffectPointsMin_{idx}"],"POINTS")
                 scaling=floating(row[f"EffectScalingPoints_{idx}"],
                                  "SCALING")
+                # Record positive stat component identities even when an
+                # unrelated primary/proc component makes the whole vector
+                # non-pure. No coefficient evaluation, no zero inference.
+                if (kind==STAT_ENCHANT_EFFECT and points>=0 and scaling>=0
+                        and (points>0 or scaling>0)):
+                    if arg in PRIMARY_ATTRIBUTE_ARGS:
+                        primary_args.add(arg)
+                    if arg in CHMV:
+                        chmv_args.add(arg)
                 # Source shape only: identify pure two-stat scaled rows
                 # without evaluating their coefficients or granting J.
                 if (kind==STAT_ENCHANT_EFFECT and arg in CHMV and
@@ -148,6 +162,8 @@ def preview(*, gem_join, raw_enchant_csv, expected_game_build):
             "item_id":join["item_id"],"gem_property_id":join["gem_property_id"],
             "enchant_id":enchant_id,
             "effect_classification":verdict,
+            "positive_primary_attribute_args_source_only":sorted(primary_args),
+            "positive_CHMV_stat_args_source_only":sorted(chmv_args),
             "pure_two_CHMV_scaled_shape_source_only":(
                 applicable==2 and len(pure_stat_args)==2 and
                 has_scaled_component and not non_chmv_or_invalid_component),

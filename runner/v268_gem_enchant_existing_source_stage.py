@@ -323,6 +323,18 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
              is not None else excluded_ordinary_item_id)
     role_row=by_id.get(role_id) or {}
     role_vec=role_row.get("raw_static_points_candidate")
+    # Positive primary source evidence is sufficient for the user's
+    # special-role classification, not for quality or effect admission.
+    # An absent positive component is NOT a certificate of zero CHMV.
+    primary_candidates=sorted(row["item_id"] for row in result["records"]
+        if row.get("positive_primary_attribute_args_source_only"))
+    role_primary=list(role_row.get("positive_primary_attribute_args_source_only") or [])
+    role_chmv=list(role_row.get("positive_CHMV_stat_args_source_only") or [])
+    if special_effect is not None:
+        special_effect.update(
+            primary_attribute_args_source_only=role_primary,
+            positive_CHMV_stat_args_source_only=role_chmv,
+            primary_special_role_observed_source_only=bool(role_primary))
     special_two_stat_accounting_pending=(
         role_row.get("pure_two_CHMV_scaled_shape_source_only") is True or
         (type(role_vec) is dict and
@@ -380,6 +392,10 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
         "selected_special_gem_raw_effect_unadmitted":special_effect,
         "selected_special_gem_two_CHMV_accounting_pending_source_only":
             bool(special_two_stat_accounting_pending),
+        "primary_attribute_special_gem_ids_source_only":primary_candidates,
+        "selected_special_gem_positive_CHMV_accounting_pending_source_only":
+            bool(role_chmv),
+        "selected_special_gem_primary_role_observed_source_only":bool(role_primary),
         "selected_gem_unresolved_item_ids":unresolved,
         "selected_gem_all_raw_points_known":(
             selected_gem_item_ids is not None and not unresolved and

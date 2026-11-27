@@ -178,6 +178,9 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
             # A missing or non-CHMV shape is not a positive role proof.
             self.assertFalse(first[
                 "selected_special_gem_two_CHMV_accounting_pending_source_only"])
+            # A one-stat source cannot silently become a zero-CHMV special.
+            self.assertTrue(first[
+                "selected_special_gem_positive_CHMV_accounting_pending_source_only"])
             chosen=adapter.view(
                 stage_root=root,v221_candidate_path=path,build=BUILD,
                 selected_gem_item_ids=[2102,2103,2104,2105],
@@ -228,6 +231,54 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
             self.assertFalse(first["environment_ready"])
             self.assertEqual(first["native_calls"],0)
             self.assertEqual(first["network_calls"],0)
+
+    def test_v819_primary_role_and_mixed_CHMV_source_remain_separate(self):
+        # Source fixtures, not current-season real gem measurements.
+        links=joined()
+        records=list(csv.DictReader(io.StringIO(enchant_csv().decode("utf8"))))
+        by_id={int(row["ID"]):row for row in records}
+        by_id[501].update(Effect_0="5",EffectArg_0="71",
+                          EffectPointsMin_0="0",EffectScalingPoints_0="0.5")
+        by_id[502].update(Effect_1="5",EffectArg_1="4",
+                          EffectPointsMin_1="10",EffectScalingPoints_1="0")
+        by_id[503].update(Effect_1="5",EffectArg_1="7",
+                          EffectPointsMin_1="12",EffectScalingPoints_1="0")
+        buf=io.StringIO()
+        writer=csv.DictWriter(buf,fieldnames=list(source.COLUMNS),lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(records)
+        raw=buf.getvalue().encode("utf8")
+        class FakeResponse:
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*args):return False
+            def read(self,size=-1):return raw
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            adapter.collect(stage_root=root,build=BUILD,
+                transport=lambda req,timeout:FakeResponse())
+            path=root/"v221.json"
+            path.write_text(json.dumps(links),encoding="utf8")
+            with patch.object(adapter.join,"preview",wraps=adapter.join.preview) as parse:
+                for item,primary,positive in ((2001,True,False),(2002,True,True),
+                                               (2003,False,False),(2004,False,False)):
+                    result=adapter.view(stage_root=root,v221_candidate_path=path,
+                        build=BUILD,selected_source_gem_item_ids=[item],
+                        selected_special_gem_item_id=item)
+                    self.assertEqual(result["primary_attribute_special_gem_ids_source_only"],
+                                     [2001,2002])
+                    self.assertEqual(result[
+                        "selected_special_gem_primary_role_observed_source_only"],primary)
+                    self.assertEqual(result[
+                        "selected_special_gem_positive_CHMV_accounting_pending_source_only"],positive)
+                    effect=result["selected_special_gem_raw_effect_unadmitted"]
+                    self.assertIsNone(effect["raw_static_CHMV_total_candidate_unadmitted"])
+                    self.assertFalse(effect["J_budget_attribution_verified"])
+                    self.assertFalse(result["environment_ready"])
+                    self.assertIsNone(result["J"])
+                    self.assertEqual(result["native_calls"],0)
+                    self.assertEqual(result["network_calls"],0)
+                self.assertEqual(parse.call_count,1)
 
     def test_same_build_source_and_scaling_schema_must_be_explicit(self):
         with self.assertRaisesRegex(source.EnchantSourceBlocked,
@@ -305,6 +356,11 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                     "raw_static_CHMV_vector_candidate_unadmitted"][
                     "crit_rating"],25)
                 self.assertFalse(static["J_budget_attribution_verified"])
+                self.assertTrue(observed_special[
+                    "selected_special_gem_positive_CHMV_accounting_pending_source_only"])
+                self.assertFalse(unknown_special[
+                    "selected_special_gem_positive_CHMV_accounting_pending_source_only"])
+                self.assertIsNone(unknown["raw_static_CHMV_total_candidate_unadmitted"])
                 with self.assertRaisesRegex(ValueError,
                         "V268_SPECIAL_GEM_MUST_BE_SOURCE_BOUND_AND_DISTINCT"):
                     adapter.view(
