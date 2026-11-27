@@ -1079,6 +1079,9 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
          and len(preview.get("source_selected_tier_candidate_ids",[]))==
              preview.get("highest_quality_candidate_count")
          and set(ids)<=set(preview["source_selected_tier_candidate_ids"])
+         and (special is None or
+              (special not in preview["source_selected_tier_candidate_ids"]
+               and special not in measured and str(special) not in samples))
          and set(proofs)==set(str(i) for i in set(ids))
          and all(type(item) is dict for item in proofs.values()),
          "V216_NATIVE_J_SOURCE_SAMPLE_AND_SELECTED_PROOFS_DRIFT")
@@ -10749,6 +10752,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             simc_revision=source_compilation["simc_revision"],
                             native_G_status=native_G["status"],
                             _read_dbc=read_gem_dbc,
+                            **({"excluded_special_gem_id":special_id}
+                               if special_id is not None else {}),
                             target_ilevel=fresh_collection_inputs[
                                 "representative_request"]["target_ilevel"])
                         progress["new_native_calls"]+=native_j_preview[

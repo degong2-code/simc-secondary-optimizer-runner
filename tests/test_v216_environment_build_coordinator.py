@@ -239,6 +239,18 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                    "candidates_unadmitted":rows+[other]}})
         self.assertEqual(chosen["J_candidate_unadmitted"],93)
         self.assertEqual(chosen["by_stat"]["crit_rating"]["item_id"],349991)
+        # Synthetic exclusion contract, NOT a claim that this two-stat
+        # fixture is a legal special gem in the actual product.
+        with mock.patch.object(v216.oil_raw_source,"from_v275",
+                               return_value=alternate):
+            excluded=v216._fresh_pinned_dbc_ordinary_gem_j_source(
+                **{**kwargs,"candidates":{**candidate,
+                   "candidate_count":len(rows)+1,
+                   "candidates_unadmitted":rows+[other]}},
+                excluded_special_gem_id=349991)
+        self.assertEqual(excluded["excluded_special_gem_id"],349991)
+        self.assertEqual(excluded["J_candidate_unadmitted"],92)
+        self.assertNotIn("349991",excluded["rating_by_id"])
         self.assertEqual(chosen["native_calls"],0)
         self.assertFalse(chosen["environment_ready"])
         # A lower craft rank can provide greater nominal J. This is not
@@ -365,6 +377,16 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 "330015"]["numeric_source"],
                 "EXACT_CONTROLLED_SIMC_NATIVE_UNBUFFED_GEAR_DELTA")
             self.assertFalse(actual["environment_ready"])
+            # Excluding the sole scaled sample must not launch its Native
+            # pair, even if it otherwise wins a leading stat.
+            excluded=v216._fresh_four_stat_simc_observed_j_preview(
+                **native_args,excluded_special_gem_id=330015)
+            self.assertEqual(excluded["excluded_special_gem_id"],330015)
+            self.assertEqual(excluded["J_candidate_unadmitted"],92)
+            self.assertNotIn(330015,excluded["source_selected_tier_candidate_ids"])
+            self.assertEqual(excluded["measured_candidate_ids"],[])
+            self.assertEqual(native.call_count,1)
+            self.assertEqual(loader.call_count,1)
             native.return_value={**measured,
                 "simc_unbuffed_gear_two_stat_vector_unadmitted":None}
             blocked=v216._fresh_four_stat_simc_observed_j_preview(**native_args)
