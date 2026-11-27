@@ -33,12 +33,78 @@ def code(exc):
     return value if re.fullmatch(r"[A-Z][A-Z0-9_]{3,100}",value) else type(exc).__name__
 
 
-def observe(out):
+def observe_special_gem_source(result,state,save):
+    """One original same-build source scope; never publish a raw candidate."""
+    compilation=result.get("source_compilation") or {}
+    state["source_compilation_status"]=compilation.get("status")
+    state["native_calls_reported"]=result.get("native_calls")
+    state["environment_installed"]=result.get("environment_installed") is True
+    if state["native_calls_reported"]!=0 or state["environment_installed"]:
+        raise RuntimeError("V820_SOURCE_ONLY_SCOPE_DRIFT")
+    if compilation.get("status")!="FRESH_V191_V211_V213_COMPILED_UNADMITTED":
+        raise RuntimeError("V820_ORIGINAL_COMPILATION_PENDING")
+    src=original._fresh_gem_item_source_stage(
+        stage_root=compilation["stage_root"],
+        wago_folder=pathlib.Path(result["snapshot_receipt_path"]).parent,
+        source_catalog_path=compilation["source_catalog_path"],
+        expected_game_build=BUILD)
+    state["v221"]={k:src.get(k) for k in ("status","physical_gem_item_links","simc_dbc_build_matched")}
+    state["v221"]["receipt_sha256"]=src["source_stage"]["receipt_sha256"]
+    save()
+    args=dict(stage_root=compilation["stage_root"],build=BUILD,
+              v221_candidate_path=src["candidate_path"])
+    view=original.gem_enchant_stage.view(**args)
+    ids=view.get("primary_attribute_special_gem_ids_source_only")
+    state["v268_status"]=view.get("status")
+    state["gem_enchant_source_sha256"]=view.get("enchant_source_sha256")
+    state["primary_candidate_ids"]=ids
+    state["intrinsic_socket_source"]={k:(result.get("fresh_one_spec_simc_representative") or {}).get(k)
+        for k in ("status","intrinsic_socket_total_source_only",
+                  "intrinsic_socket_counts_by_selected_slot_source_only")}
+    save()
+    if not isinstance(ids,list) or not 0<len(ids)<=16 or len(set(ids))!=len(ids):
+        raise RuntimeError("V820_PRIMARY_GEM_SOURCE_EMPTY_OR_SCOPE_TOO_LARGE")
+    seed=result["fresh_lazy_full_pinned_simc_item_source"]["source_dir"]
+    quality=original._fresh_selected_gem_simc_quality_stage(
+        stage_root=compilation["stage_root"],seed_directory=seed,
+        game_build=BUILD,simc_revision=REV,selected_item_ids=ids)
+    state["quality_source_status"]=quality.get("status")
+    state["quality_source_receipt_sha256"]=quality.get("v230_stage_receipt_sha256")
+    if quality.get("quality_source_authenticated") is not True:
+        raise RuntimeError("V820_ORIGINAL_SELECTED_ITEM_METADATA_PENDING")
+    metadata={row["item_id"]:row for row in quality["selected_item_quality_unadmitted"]}
+    rows=[]
+    state["candidate_rows"]=rows
+    for item in ids:
+        # Only the bounded primary cohort is projected; the original v266
+        # join is cached. No additional collection, Native, or item DB.
+        selected=original.gem_enchant_stage.view(**args,
+            selected_source_gem_item_ids=[item],selected_special_gem_item_id=item)
+        if (selected.get("selected_gem_v221_source_properties_complete") is not True
+                or selected.get("selected_special_gem_primary_role_observed_source_only") is not True
+                or selected.get("enchant_source_sha256")!=state["gem_enchant_source_sha256"]
+                or selected.get("native_calls")!=0 or selected.get("network_calls")!=0):
+            raise RuntimeError("V820_EXACT_PRIMARY_ITEM_SOURCE_DRIFT")
+        rows.append({"item_id":item,"metadata":metadata[item],
+            "physical_property":selected["selected_gem_v221_source_properties_unadmitted"][0],
+            "source_effect":selected["selected_special_gem_raw_effect_unadmitted"],
+            "positive_CHMV_accounting_pending":selected[
+                "selected_special_gem_positive_CHMV_accounting_pending_source_only"],
+            "user_selectable":False})
+        save()
+    state["status"]="PASS_REAL_PRIMARY_GEM_SOURCE_OBSERVED_NOT_ADMITTED"
+    state["actual_special_gem_profile_verified"]=False
+    save()
+    return 0
+
+
+def observe(out, *, special_gems=False):
     dest=pathlib.Path(out).resolve()
     dest.mkdir(parents=True,exist_ok=True)
-    path=dest/"V684_ONE_BUILD_OPTIONAL_SOURCE_ONLY.json"
+    path=dest/("V820_SPECIAL_GEM_SOURCE_ONLY.json" if special_gems else
+               "V684_ONE_BUILD_OPTIONAL_SOURCE_ONLY.json")
     state={
-        "schema":SCHEMA,
+        "schema":("p1_v820_real_primary_gem_source_only_v1" if special_gems else SCHEMA),
         "status":"STARTED",
         "game_build":BUILD,
         "simc_revision":REV,
@@ -80,8 +146,10 @@ def observe(out):
                     "auto_native_G_requested":False,
                     "auto_native_F_requested":False,
                     "auto_native_O_requested":False,
-                    "auto_four_stat_source_requested":False,
+                    "auto_four_stat_source_requested":special_gems,
                 })
+            if special_gems:
+                return observe_special_gem_source(result,state,save)
             compilation=result.get("source_compilation") or {}
             physical=result.get("fresh_food_potion_item_sources") or {}
             wago=result.get("fresh_optional_food_potion_wago_effects") or {}
@@ -189,12 +257,14 @@ def observe(out):
             save()
             return 0 if rows and selectable else 2
     except Exception as exc:
-        state["status"]="BLOCKED_REAL_V216_OPTIONAL_SOURCE"
+        state["status"]=("BLOCKED_REAL_V216_SPECIAL_GEM_SOURCE" if special_gems else "BLOCKED_REAL_V216_OPTIONAL_SOURCE")
         state["first_blocker"]=code(exc)
         state["error_type"]=type(exc).__name__
         save()
         return 2
     finally:
+        if special_gems:
+            print("V820_SPECIAL_GEM_SOURCE "+json.dumps(state,ensure_ascii=True,sort_keys=True),flush=True)
         print("V684_SOURCE_ONLY_VERDICT "+json.dumps({
             k:state.get(k) for k in (
                 "status","first_blocker","source_compilation_status",
@@ -418,7 +488,8 @@ if __name__=="__main__":
     parser.add_argument("--out",type=pathlib.Path,required=True)
     parser.add_argument("--replay-v778",type=pathlib.Path)
     parser.add_argument("--quality-replay",action="store_true")
+    parser.add_argument("--special-gems",action="store_true")
     args=parser.parse_args()
     raise SystemExit(replay_ordered_lookup(args.replay_v778,args.out,
                          quality_replay=args.quality_replay)
-                     if args.replay_v778 else observe(args.out))
+                     if args.replay_v778 else observe(args.out,special_gems=args.special_gems))

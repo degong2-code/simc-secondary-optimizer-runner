@@ -31,7 +31,7 @@ jobs:
           python -m pip install -r requirements-web-test.txt
           python -m unittest tests.test_v684_real_optional_source_onebuild_probe -v
   one-source-only:
-    if: ${{ contains(github.event.head_commit.message, '[v684-source-once]') }}
+    if: ${{ contains(github.event.head_commit.message, '[v684-source-once]') || contains(github.event.head_commit.message, '[v820-gem-source-once]') }}
     runs-on: windows-2022
     timeout-minutes: 28
     env:
@@ -60,14 +60,18 @@ jobs:
         timeout-minutes: 22
         run: |
           New-Item -ItemType Directory -Force out/v684 | Out-Null
-          python -u integration_probes/p1_v684_real_optional_source_onebuild_once.py --out out/v684
+          $extra = @()
+          if ('${{ contains(github.event.head_commit.message, '[v820-gem-source-once]') }}' -eq 'true') { $extra += '--special-gems' }
+          python -u integration_probes/p1_v684_real_optional_source_onebuild_once.py --out out/v684 @extra
           if ($LASTEXITCODE -ne 0) { throw 'V684_FIRST_SOURCE_BLOCKER_IN_RECEIPT' }
       - name: Preserve bounded evidence only; never source CSV or credentials
         if: always()
         uses: actions/upload-artifact@v6
         with:
           name: p1-v684-real-70961-optional-source-only-once
-          path: out/v684/V684_ONE_BUILD_OPTIONAL_SOURCE_ONLY.json
+          path: |
+            out/v684/V684_ONE_BUILD_OPTIONAL_SOURCE_ONLY.json
+            out/v684/V820_SPECIAL_GEM_SOURCE_ONLY.json
           if-no-files-found: warn
           retention-days: 10
   ordered-lookup-replay:
