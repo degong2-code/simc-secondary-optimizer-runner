@@ -1,0 +1,459 @@
+{
+  "actual_parser_native_accepted": false,
+  "actual_special_gem_profile_verified": false,
+  "all_quality_numeric_noninferiority_proven": false,
+  "candidate_rows": [
+    {
+      "item_id": 240966,
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 1,
+        "item_id": 240966,
+        "item_ilevel_unscaled": 278,
+        "item_name": "Powerful Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8557,
+        "expansion_id": 11,
+        "gem_property_id": 4407,
+        "item_id": 240966,
+        "minimum_ilevel": 0
+      },
+      "positive_CHMV_accounting_pending": false,
+      "source_effect": {
+        "J_budget_attribution_verified": false,
+        "effect_classification": "NONSTATIC_SCALED_OR_NON_CHMV_EFFECT_PENDING",
+        "item_id": 240966,
+        "missing_or_nonstatic_never_assumed_zero": true,
+        "positive_CHMV_stat_args_source_only": [],
+        "primary_attribute_args_source_only": [
+          71
+        ],
+        "primary_special_role_observed_source_only": true,
+        "raw_static_CHMV_total_candidate_unadmitted": null,
+        "raw_static_CHMV_vector_candidate_unadmitted": null,
+        "simc_effective_rating_verified": false
+      },
+      "user_selectable": false
+    },
+    {
+      "item_id": 240967,
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 2,
+        "item_id": 240967,
+        "item_ilevel_unscaled": 295,
+        "item_name": "Powerful Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8556,
+        "expansion_id": 11,
+        "gem_property_id": 4408,
+        "item_id": 240967,
+        "minimum_ilevel": 0
+      },
+      "positive_CHMV_accounting_pending": false,
+      "source_effect": {
+        "J_budget_attribution_verified": false,
+        "effect_classification": "NONSTATIC_SCALED_OR_NON_CHMV_EFFECT_PENDING",
+        "item_id": 240967,
+        "missing_or_nonstatic_never_assumed_zero": true,
+        "positive_CHMV_stat_args_source_only": [],
+        "primary_attribute_args_source_only": [
+          71
+        ],
+        "primary_special_role_observed_source_only": true,
+        "raw_static_CHMV_total_candidate_unadmitted": null,
+        "raw_static_CHMV_vector_candidate_unadmitted": null,
+        "simc_effective_rating_verified": false
+      },
+      "user_selectable": false
+    },
+    {
+      "item_id": 240968,
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 1,
+        "item_id": 240968,
+        "item_ilevel_unscaled": 278,
+        "item_name": "Telluric Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8559,
+        "expansion_id": 11,
+        "gem_property_id": 4406,
+        "item_id": 240968,
+        "minimum_ilevel": 0
+      },
+      "positive_CHMV_accounting_pending": false,
+      "source_effect": {
+        "J_budget_attribution_verified": false,
+        "effect_classification": "NONSTATIC_SCALED_OR_NON_CHMV_EFFECT_PENDING",
+        "item_id": 240968,
+        "missing_or_nonstatic_never_assumed_zero": true,
+        "positive_CHMV_stat_args_source_only": [],
+        "primary_attribute_args_source_only": [
+          71
+        ],
+        "primary_special_role_observed_source_only": true,
+        "raw_static_CHMV_total_candidate_unadmitted": null,
+        "raw_static_CHMV_vector_candidate_unadmitted": null,
+        "simc_effective_rating_verified": false
+      },
+      "user_selectable": false
+    },
+    {
+      "item_id": 240969,
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 2,
+        "item_id": 240969,
+        "item_ilevel_unscaled": 295,
+        "item_name": "Telluric Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8558,
+        "expansion_id": 11,
+        "gem_property_id": 4405,
+        "item_id": 240969,
+        "minimum_ilevel": 0
+      },
+      "positive_CHMV_accounting_pending": false,
+      "source_effect": {
+        "J_budget_attribution_verified": false,
+        "effect_classification": "NONSTATIC_SCALED_OR_NON_CHMV_EFFECT_PENDING",
+        "item_id": 240969,
+        "missing_or_nonstatic_never_assumed_zero": true,
+        "positive_CHMV_stat_args_source_only": [],
+        "primary_attribute_args_source_only": [
+          71
+        ],
+        "primary_special_role_observed_source_only": true,
+        "raw_static_CHMV_total_candidate_unadmitted": null,
+        "raw_static_CHMV_vector_candidate_unadmitted": null,
+        "simc_effective_rating_verified": false
+      },
+      "user_selectable": false
+    },
+    {
+      "item_id": 240970,
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 1,
+        "item_id": 240970,
+        "item_ilevel_unscaled": 278,
+        "item_name": "Stoic Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8554,
+        "expansion_id": 11,
+        "gem_property_id": 4409,
+        "item_id": 240970,
+        "minimum_ilevel": 0
+      },
+      "positive_CHMV_accounting_pending": false,
+      "source_effect": {
+        "J_budget_attribution_verified": false,
+        "effect_classification": "NONSTATIC_SCALED_OR_NON_CHMV_EFFECT_PENDING",
+        "item_id": 240970,
+        "missing_or_nonstatic_never_assumed_zero": true,
+        "positive_CHMV_stat_args_source_only": [],
+        "primary_attribute_args_source_only": [
+          71
+        ],
+        "primary_special_role_observed_source_only": true,
+        "raw_static_CHMV_total_candidate_unadmitted": null,
+        "raw_static_CHMV_vector_candidate_unadmitted": null,
+        "simc_effective_rating_verified": false
+      },
+      "user_selectable": false
+    },
+    {
+      "item_id": 240971,
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 2,
+        "item_id": 240971,
+        "item_ilevel_unscaled": 295,
+        "item_name": "Stoic Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8555,
+        "expansion_id": 11,
+        "gem_property_id": 4410,
+        "item_id": 240971,
+        "minimum_ilevel": 0
+      },
+      "positive_CHMV_accounting_pending": false,
+      "source_effect": {
+        "J_budget_attribution_verified": false,
+        "effect_classification": "NONSTATIC_SCALED_OR_NON_CHMV_EFFECT_PENDING",
+        "item_id": 240971,
+        "missing_or_nonstatic_never_assumed_zero": true,
+        "positive_CHMV_stat_args_source_only": [],
+        "primary_attribute_args_source_only": [
+          71
+        ],
+        "primary_special_role_observed_source_only": true,
+        "raw_static_CHMV_total_candidate_unadmitted": null,
+        "raw_static_CHMV_vector_candidate_unadmitted": null,
+        "simc_effective_rating_verified": false
+      },
+      "user_selectable": false
+    },
+    {
+      "item_id": 240982,
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 1,
+        "item_id": 240982,
+        "item_ilevel_unscaled": 278,
+        "item_name": "Indecipherable Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8551,
+        "expansion_id": 11,
+        "gem_property_id": 4401,
+        "item_id": 240982,
+        "minimum_ilevel": 0
+      },
+      "positive_CHMV_accounting_pending": false,
+      "source_effect": {
+        "J_budget_attribution_verified": false,
+        "effect_classification": "NONSTATIC_SCALED_OR_NON_CHMV_EFFECT_PENDING",
+        "item_id": 240982,
+        "missing_or_nonstatic_never_assumed_zero": true,
+        "positive_CHMV_stat_args_source_only": [],
+        "primary_attribute_args_source_only": [
+          71
+        ],
+        "primary_special_role_observed_source_only": true,
+        "raw_static_CHMV_total_candidate_unadmitted": null,
+        "raw_static_CHMV_vector_candidate_unadmitted": null,
+        "simc_effective_rating_verified": false
+      },
+      "user_selectable": false
+    },
+    {
+      "item_id": 240983,
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 2,
+        "item_id": 240983,
+        "item_ilevel_unscaled": 295,
+        "item_name": "Indecipherable Eversong Diamond",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8552,
+        "expansion_id": 11,
+        "gem_property_id": 4402,
+        "item_id": 240983,
+        "minimum_ilevel": 0
+      },
+      "positive_CHMV_accounting_pending": false,
+      "source_effect": {
+        "J_budget_attribution_verified": false,
+        "effect_classification": "NONSTATIC_SCALED_OR_NON_CHMV_EFFECT_PENDING",
+        "item_id": 240983,
+        "missing_or_nonstatic_never_assumed_zero": true,
+        "positive_CHMV_stat_args_source_only": [],
+        "primary_attribute_args_source_only": [
+          71
+        ],
+        "primary_special_role_observed_source_only": true,
+        "raw_static_CHMV_total_candidate_unadmitted": null,
+        "raw_static_CHMV_vector_candidate_unadmitted": null,
+        "simc_effective_rating_verified": false
+      },
+      "user_selectable": false
+    },
+    {
+      "item_id": 241142,
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 0,
+        "item_id": 241142,
+        "item_ilevel_unscaled": 610,
+        "item_name": "Determined Heliotrope",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8686,
+        "expansion_id": 11,
+        "gem_property_id": 4424,
+        "item_id": 241142,
+        "minimum_ilevel": 14118
+      },
+      "positive_CHMV_accounting_pending": false,
+      "source_effect": {
+        "J_budget_attribution_verified": false,
+        "effect_classification": "NONSTATIC_SCALED_OR_NON_CHMV_EFFECT_PENDING",
+        "item_id": 241142,
+        "missing_or_nonstatic_never_assumed_zero": true,
+        "positive_CHMV_stat_args_source_only": [],
+        "primary_attribute_args_source_only": [
+          71
+        ],
+        "primary_special_role_observed_source_only": true,
+        "raw_static_CHMV_total_candidate_unadmitted": null,
+        "raw_static_CHMV_vector_candidate_unadmitted": null,
+        "simc_effective_rating_verified": false
+      },
+      "user_selectable": false
+    },
+    {
+      "item_id": 241143,
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 0,
+        "item_id": 241143,
+        "item_ilevel_unscaled": 610,
+        "item_name": "Cognitive Heliotrope",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8684,
+        "expansion_id": 11,
+        "gem_property_id": 4425,
+        "item_id": 241143,
+        "minimum_ilevel": 14118
+      },
+      "positive_CHMV_accounting_pending": false,
+      "source_effect": {
+        "J_budget_attribution_verified": false,
+        "effect_classification": "NONSTATIC_SCALED_OR_NON_CHMV_EFFECT_PENDING",
+        "item_id": 241143,
+        "missing_or_nonstatic_never_assumed_zero": true,
+        "positive_CHMV_stat_args_source_only": [],
+        "primary_attribute_args_source_only": [
+          71
+        ],
+        "primary_special_role_observed_source_only": true,
+        "raw_static_CHMV_total_candidate_unadmitted": null,
+        "raw_static_CHMV_vector_candidate_unadmitted": null,
+        "simc_effective_rating_verified": false
+      },
+      "user_selectable": false
+    },
+    {
+      "item_id": 241144,
+      "metadata": {
+        "class_id": 3,
+        "crafting_quality": 0,
+        "item_id": 241144,
+        "item_ilevel_unscaled": 610,
+        "item_name": "Enduring Heliotrope",
+        "quality": 4,
+        "subclass_id": 9
+      },
+      "physical_property": {
+        "color_mask": 14,
+        "enchant_id": 8685,
+        "expansion_id": 11,
+        "gem_property_id": 4423,
+        "item_id": 241144,
+        "minimum_ilevel": 14118
+      },
+      "positive_CHMV_accounting_pending": false,
+      "source_effect": {
+        "J_budget_attribution_verified": false,
+        "effect_classification": "NONSTATIC_SCALED_OR_NON_CHMV_EFFECT_PENDING",
+        "item_id": 241144,
+        "missing_or_nonstatic_never_assumed_zero": true,
+        "positive_CHMV_stat_args_source_only": [],
+        "primary_attribute_args_source_only": [
+          71
+        ],
+        "primary_special_role_observed_source_only": true,
+        "raw_static_CHMV_total_candidate_unadmitted": null,
+        "raw_static_CHMV_vector_candidate_unadmitted": null,
+        "simc_effective_rating_verified": false
+      },
+      "user_selectable": false
+    }
+  ],
+  "dps_native_calls": 0,
+  "environment_installed": false,
+  "full_product_e2e": "PENDING",
+  "game_build": "12.1.5.70961",
+  "gem_enchant_source_sha256": "8df63d2f10c0be0bf699c8be15ee86c3d75a9347d70016e2198676dd6801ceda",
+  "historical_source_injected": false,
+  "intrinsic_socket_source": {
+    "intrinsic_socket_counts_by_selected_slot_source_only": {
+      "back": 0,
+      "chest": 0,
+      "feet": 0,
+      "finger1": 0,
+      "finger2": 0,
+      "hands": 0,
+      "head": 0,
+      "legs": 0,
+      "main_hand": 0,
+      "neck": 0,
+      "shoulders": 0,
+      "waist": 0,
+      "wrists": 0
+    },
+    "intrinsic_socket_total_source_only": 0,
+    "status": "FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE"
+  },
+  "native_calls_reported": 0,
+  "new_optimizer": false,
+  "one_original_v216_source_build": true,
+  "primary_candidate_ids": [
+    240966,
+    240967,
+    240968,
+    240969,
+    240970,
+    240971,
+    240982,
+    240983,
+    241142,
+    241143,
+    241144
+  ],
+  "quality_source_receipt_sha256": "8b85c6e11f524e22c38a3cac0bd26f6134d962b44cd9757209635546a6a53735",
+  "quality_source_status": "PINNED_SIMC_GEM_QUALITY_SOURCE_ONLY_UNADMITTED",
+  "schema": "p1_v820_real_primary_gem_source_only_v1",
+  "simc_native_calls": 0,
+  "simc_revision": "9933ffb946fb55b1fa66657b848f519ac19006e1",
+  "source_compilation_status": "FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+  "source_only_not_installed": true,
+  "status": "PASS_REAL_PRIMARY_GEM_SOURCE_OBSERVED_NOT_ADMITTED",
+  "v221": {
+    "physical_gem_item_links": 75,
+    "receipt_sha256": "22c73561e71534f11ab16b7f726a8ec45152f3bbb3b1ffb649aa728609c89160",
+    "simc_dbc_build_matched": true,
+    "status": "SOURCE_ITEM_PROPERTY_LINKS_ONLY_NOT_USER_ADMITTED"
+  },
+  "v268_status": "ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED"
+}
