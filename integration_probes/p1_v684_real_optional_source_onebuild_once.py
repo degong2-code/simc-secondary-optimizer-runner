@@ -98,13 +98,83 @@ def observe_special_gem_source(result,state,save):
     return 0
 
 
-def observe(out, *, special_gems=False):
+def observe_socket_bonus_source(result,state,save):
+    """Actual selected source rows, no new collection or admission."""
+    comp=result["source_compilation"]
+    rep=result["fresh_one_spec_simc_representative"]
+    review=result["fresh_selectable_bonus_effect_review"]
+    state.update(source_compilation_status=comp.get("status"),
+        native_calls_reported=result.get("native_calls"),
+        environment_installed=result.get("environment_installed") is True,
+        bonus_review_status=review.get("status"),
+        bonus_review_item_count=review.get("socket_bonus_source_item_count"),
+        representative_status=rep.get("status"))
+    save()
+    if (state["native_calls_reported"]!=0 or state["environment_installed"]
+            or comp.get("status")!="FRESH_V191_V211_V213_COMPILED_UNADMITTED"
+            or rep.get("status")!="FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE"
+            or review.get("status")!="POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED"):
+        raise RuntimeError("V825_ORIGINAL_SOURCE_SCOPE_PENDING")
+    root=pathlib.Path(comp["stage_root"]).resolve()
+    review_path=pathlib.Path(review["candidate_path"]).resolve()
+    stage=review["source_stage"]
+    sid=stage["stage_id"]
+    rel="source/"+sid+".json"
+    if review_path!=root/rel or not review_path.is_file() or review_path.stat().st_size>12_000_000:
+        raise RuntimeError("V825_BONUS_REVIEW_PATH_OR_SIZE_DRIFT")
+    doc=json.loads(review_path.read_text("utf8"))
+    inputs=doc["source_identity"]
+    if (doc["schema"]!=original.bonus_effect_review.SCHEMA or doc["game_build"]!=BUILD
+            or inputs["game_build"]!=BUILD or
+            sid!=original._derived_source_generation("season-bonus-effect-review",inputs)):
+        raise RuntimeError("V825_BONUS_REVIEW_IDENTITY_DRIFT")
+    proof=original.stage_engine.verify_stage(root=root,stage_id=sid,
+        stage_version="bonus-effect-source-only-v1",inputs=inputs,outputs={"review":rel})
+    if proof["receipt_sha256"]!=stage["receipt_sha256"]:
+        raise RuntimeError("V825_BONUS_REVIEW_RECEIPT_DRIFT")
+    source_path=pathlib.Path(rep["candidate_path"])
+    source=json.loads(source_path.read_text("utf8"))
+    if (source["schema"]!=original.simc_representative.SCHEMA
+            or source["game_build"]!=BUILD or source["simc_revision"]!=REV
+            or source["target_ilevel"]!=334
+            or source["receipt_sha256"]!=original.simc_source.digest(
+                original.simc_source.canonical({k:v for k,v in source.items()
+                    if k!="receipt_sha256"}).encode("utf8"))
+            or source["selected_intrinsic_socket_count_by_slot_source_only"]!=rep[
+                "intrinsic_socket_counts_by_selected_slot_source_only"]):
+        raise RuntimeError("V825_ORIGINAL_V232_SOURCE_DRIFT")
+    projection=doc["socket_bonus_source_only"]
+    by_id={r["item_id"]:r for r in projection["items"]}
+    by_bonus={r["bonus_id"]:r for r in projection["bonus_lists"]}
+    selected=source["selected_G_slot_ids"]
+    slots=("head","neck","finger1","finger2","wrists","waist")
+    state.update(v232_receipt_sha256=source["receipt_sha256"],
+        v232_stage_receipt_sha256=rep["source_stage"]["receipt_sha256"],
+        bonus_review_receipt_sha256=proof["receipt_sha256"],
+        bonus_source_identity=inputs,
+        selected_rows=[{"slot":slot,"item_id":selected[slot],
+            "intrinsic_socket_count":source["selected_intrinsic_socket_count_by_slot_source_only"][slot],
+            "candidate_bonus_lists":[by_bonus[b] for b in
+                by_id.get(selected[slot],{}).get("candidate_bonus_list_ids",[])]}
+            for slot in slots],
+        original_selected_gear_season_provenance=source.get("selected_ordinary_source_provenance"),
+        game_socket_legal_verified=False,automatic_bonus_attachment=False)
+    state["selected_slots_with_reachable_bonus"]=sum(
+        bool(row["candidate_bonus_lists"]) for row in state["selected_rows"])
+    state["status"]="PASS_REAL_SELECTED_SOCKET_BONUS_SOURCE_OBSERVED_NOT_ADMITTED"
+    save()
+    return 0
+
+
+def observe(out, *, special_gems=False,socket_bonuses=False):
     dest=pathlib.Path(out).resolve()
     dest.mkdir(parents=True,exist_ok=True)
-    path=dest/("V820_SPECIAL_GEM_SOURCE_ONLY.json" if special_gems else
+    path=dest/("V825_SELECTED_SOCKET_BONUS_SOURCE.json" if socket_bonuses else
+               "V820_SPECIAL_GEM_SOURCE_ONLY.json" if special_gems else
                "V684_ONE_BUILD_OPTIONAL_SOURCE_ONLY.json")
     state={
-        "schema":("p1_v820_real_primary_gem_source_only_v1" if special_gems else SCHEMA),
+        "schema":("p1_v825_real_selected_socket_bonus_source_only_v1" if socket_bonuses else
+                  "p1_v820_real_primary_gem_source_only_v1" if special_gems else SCHEMA),
         "status":"STARTED",
         "game_build":BUILD,
         "simc_revision":REV,
@@ -148,6 +218,8 @@ def observe(out, *, special_gems=False):
                     "auto_native_O_requested":False,
                     "auto_four_stat_source_requested":special_gems,
                 })
+            if socket_bonuses:
+                return observe_socket_bonus_source(result,state,save)
             if special_gems:
                 return observe_special_gem_source(result,state,save)
             compilation=result.get("source_compilation") or {}
@@ -257,12 +329,15 @@ def observe(out, *, special_gems=False):
             save()
             return 0 if rows and selectable else 2
     except Exception as exc:
-        state["status"]=("BLOCKED_REAL_V216_SPECIAL_GEM_SOURCE" if special_gems else "BLOCKED_REAL_V216_OPTIONAL_SOURCE")
+        state["status"]=("BLOCKED_REAL_V216_SOCKET_BONUS_SOURCE" if socket_bonuses else
+                         "BLOCKED_REAL_V216_SPECIAL_GEM_SOURCE" if special_gems else "BLOCKED_REAL_V216_OPTIONAL_SOURCE")
         state["first_blocker"]=code(exc)
         state["error_type"]=type(exc).__name__
         save()
         return 2
     finally:
+        if socket_bonuses:
+            print("V825_SELECTED_SOCKET_BONUS_SOURCE "+json.dumps(state,ensure_ascii=True,sort_keys=True),flush=True)
         if special_gems:
             print("V820_SPECIAL_GEM_SOURCE "+json.dumps(state,ensure_ascii=True,sort_keys=True),flush=True)
         print("V684_SOURCE_ONLY_VERDICT "+json.dumps({
@@ -588,12 +663,16 @@ if __name__=="__main__":
     parser.add_argument("--replay-v778",type=pathlib.Path)
     parser.add_argument("--quality-replay",action="store_true")
     parser.add_argument("--special-gems",action="store_true")
+    parser.add_argument("--socket-bonuses",action="store_true")
     parser.add_argument("--replay-special-enchants",type=pathlib.Path)
     args=parser.parse_args()
+    if args.socket_bonuses and (args.special_gems or args.replay_v778 or args.replay_special_enchants or args.quality_replay):
+        parser.error("socket bonus source is exclusive")
     if args.replay_special_enchants is not None:
         if args.special_gems or args.replay_v778 or args.quality_replay:
             parser.error("special enchant replay is exclusive")
         raise SystemExit(replay_special_gem_enchants(args.replay_special_enchants,args.out))
     raise SystemExit(replay_ordered_lookup(args.replay_v778,args.out,
                          quality_replay=args.quality_replay)
-                     if args.replay_v778 else observe(args.out,special_gems=args.special_gems))
+                     if args.replay_v778 else observe(args.out,special_gems=args.special_gems,
+                                                     socket_bonuses=args.socket_bonuses))
