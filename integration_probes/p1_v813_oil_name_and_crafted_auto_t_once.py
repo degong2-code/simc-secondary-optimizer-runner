@@ -119,13 +119,14 @@ def safe_code(value):
     return code if re.fullmatch(r"[A-Z][A-Z0-9_]{3,140}",code) else None
 
 def run(args):
+    base_only=args.crafted_only or args.fury_only
     out=Path(args.out).resolve()
     out.mkdir(parents=True,exist_ok=True)
     report={"status":"STARTED","build":BUILD,"revision":REV,
             "target_ilevel":TARGET,"full_product_e2e":"PENDING",
             "quality_equivalence_verified":False,"global_optimum_proven":False,
             "dps_native":0,"browser_actual":False,"builds":[],
-            "mode":"CRAFTED_ONLY" if args.crafted_only else "OIL_AND_CRAFTED"}
+            "mode":"FURY_ONLY" if args.fury_only else "CRAFTED_ONLY" if args.crafted_only else "OIL_AND_CRAFTED"}
     if args.crafted_only:
         report["reused_historical_oil_registration"]={
             "run_id":46003074859,"job_id":140519373927,
@@ -182,7 +183,7 @@ def run(args):
                  "max_ilevel":by_id.get(r["simc_enchant_id"],{}).get("source_max_ilevel")}
                 for r in plan.get("oil",[]) if r.get("selected_hand")=="main_hand"][:32]
     try:
-        if not args.crafted_only:
+        if not base_only:
             report["confirmation_preflight"]={}
             save("CONFIRMATION_PREFLIGHT_NO_SOURCE_OR_NATIVE")
             preflight_selected_environment_confirm(report["confirmation_preflight"])
@@ -220,7 +221,8 @@ def run(args):
                 native_G_binary=str(binary),consumable_native_binary=str(binary),
                 auto_native_F_requested=True,selected_flask_item_id=FLASK,
                 selected_oil_item_ids_by_hand={},source_target_socket_count=4,
-                simc_revision_hint=REV)
+                simc_revision_hint=REV,
+                reference_G_track="fury_dual_2h" if args.fury_only else "general")
             check("V813_BASE_READY",base.get("environment_ready"),True)
             check("V813_BASE_INSTALLED",base.get("environment_installed"),True)
             check("V813_BASE_O",sum(base["O"].values()),0)
@@ -230,8 +232,19 @@ def run(args):
             base_path=Path(base_install["stage_output_path"])
             base_bytes=digest(base_path)
             report["base_sha"]=base_sha
+            if args.fury_only:
+                installed,_=web.environment_manifest.read_json(base_path)
+                web.environment_manifest.verify_fresh_installed_environment(installed)
+                report["fury_install"]={k:installed.get(k) for k in
+                    ("official_G_reference_track","official_G_profile_receipt_sha256",
+                     "official_G","official_J","official_F","official_B","official_T")}
+                save()
+                check("V817_FURY_G_TRACK",installed.get("official_G_reference_track"),"fury_dual_2h")
+                check("V817_FURY_G_EXACT_NATIVE",installed["trusted_budget_component_source_identities"]["G"]["source_verification"],"EXACT_NATIVE")
+                check("V817_FURY_AUTO_B",base["B"],base["G"]+base["J"]+base["F"])
+                check("V817_FURY_AUTO_T",base["T"],base["B"])
             with observe_real_boundary(report,root):
-                if not args.crafted_only:
+                if not base_only:
                     save("SOURCE_NAME_CHOICES_BEFORE_INSTALL")
                     data=jobs.installed_oil_loadouts(TARGET,BUILD)
                     prep=data.get("oil_preparation_source") or {}
@@ -326,13 +339,16 @@ def run(args):
                     server,thread=start_http(app)
                     browser=browser_open()
                     report["browser_actual"]=True
-                save("CRAFTED_ONLY_AUTO_T_PREPARE")
+                label="FURY" if args.fury_only else "CRAFTED"
+                save(label+"_ONLY_AUTO_T_PREPARE")
                 # Same exact BASE install, no additional environment Build.
                 # Real HTTP/Native test, not a claim of browser crafting.
-                controls=web.sessions.standard_controls(("hunter","survival"))
-                controls.update(race="human",oil_hands=[],final_T=None,
-                    embellishments=[{"slot":"head","item_id":CRAFT,
-                         "options":{"crafted_stats":"32/36","embellishment":"arcanoweave_lining"}}])
+                controls=web.sessions.standard_controls(
+                    ("warrior","fury") if args.fury_only else ("hunter","survival"))
+                controls.update(race="human",oil_hands=[],final_T=None)
+                if not args.fury_only:
+                    controls["embellishments"]=[{"slot":"head","item_id":CRAFT,
+                         "options":{"crafted_stats":"32/36","embellishment":"arcanoweave_lining"}}]
                 request={"controls":controls,"binary":str(binary),"revision":REV,
                     "current_season_product":True,"installed_season_game_build":BUILD,
                     "installed_manifest_sha256":base_sha,"selected_flask_item_id":FLASK,
@@ -340,69 +356,107 @@ def run(args):
                 longreq={**request,"max_native_calls":12,
                           "max_new_native_this_invocation":1,"max_elapsed_seconds":360}
                 p=api("POST","/api/v1/longrun/prepare",longreq)
-                report["crafted_prepare"]={k:p.get(k) for k in (
+                report[label.lower()+"_prepare"]={k:p.get(k) for k in (
                     "status","new_dps_native_calls","static_L_native_calls_this_start",
                     "selected_G_delta_native_calls_this_start",
                     "selected_static_native_calls_this_start","selected_oil_native_calls_this_start")}
                 receipt=p.get("static_L_start_receipt") or {}
-                report["crafted_prepare"]["selected_special_count"]=receipt.get("selected_special_count")
-                report["crafted_prepare"]["selected_G_delta"]=receipt.get("selected_G_delta")
+                report[label.lower()+"_prepare"]["selected_special_count"]=receipt.get("selected_special_count")
+                report[label.lower()+"_prepare"]["selected_G_delta"]=receipt.get("selected_G_delta")
                 save()
                 check("V813_CRAFTED_PREPARE_STATUS",p.get("status"),
                       "LONGRUN_SOURCE_PREPARED_NO_DPS_NATIVE")
                 check("V813_CRAFTED_PREPARE_DPS",p.get("new_dps_native_calls"),0)
                 check("V813_CRAFTED_NO_LOCKED_L",p.get("static_L_native_calls_this_start"),0)
-                check("V813_CRAFTED_NO_SELECTED_SPECIAL",receipt.get("selected_special_count"),0)
-                delta=p.get("selected_G_delta_native_calls_this_start")
-                need(type(delta) is int and 0<=delta<=2,"V813_CRAFTED_G_DELTA_NATIVE_BOUND")
                 sid=p["session_id"]
                 profile=root/sid/"generated"/"profile.simc"
-                line=next((x for x in profile.read_text("utf8").splitlines()
-                           if x.startswith("head=")),"")
-                check("V813_CRAFTED_HEAD_PRESENT",bool(re.search(r"(?:^|,)id="+str(CRAFT)+r"(?:,|$)",line)),True)
-                check("V813_CRAFTED_STATS_PRESENT","crafted_stats=32/36" in line,True)
-                check("V813_CRAFTED_EMBELLISHMENT_PRESENT","embellishment=arcanoweave_lining" in line,True)
-                save("CRAFTED_READ_ONLY_AUTO_T_PLAN")
+                if args.fury_only:
+                    manifest=json.loads((profile.parent/"manifest.json").read_text("utf8"))
+                    check("V817_FURY_WEAPON_LAYOUT",manifest["weapon_layout"],"dual_two_hand")
+                    report["fury_weapon_layout"]=manifest["weapon_layout"]
+                    lines=profile.read_text("utf8").splitlines()
+                    weapon_ids=[]
+                    for hand in ("main_hand","off_hand"):
+                        line=next((x for x in lines if x.startswith(hand+"=")),"")
+                        match=re.search(r"(?:^|,)id=([0-9]+)(?:,|$)",line)
+                        need(match is not None,"V817_FURY_WEAPON_ID_MISSING")
+                        weapon_ids.append(int(match.group(1)))
+                    report["fury_weapon_ids"]=weapon_ids
+                    save()
+                else:
+                    check("V813_CRAFTED_NO_SELECTED_SPECIAL",receipt.get("selected_special_count"),0)
+                    delta=p.get("selected_G_delta_native_calls_this_start")
+                    need(type(delta) is int and 0<=delta<=2,"V813_CRAFTED_G_DELTA_NATIVE_BOUND")
+                    sid=p["session_id"]
+                    profile=root/sid/"generated"/"profile.simc"
+                    line=next((x for x in profile.read_text("utf8").splitlines()
+                               if x.startswith("head=")),"")
+                    check("V813_CRAFTED_HEAD_PRESENT",bool(re.search(r"(?:^|,)id="+str(CRAFT)+r"(?:,|$)",line)),True)
+                    check("V813_CRAFTED_STATS_PRESENT","crafted_stats=32/36" in line,True)
+                    check("V813_CRAFTED_EMBELLISHMENT_PRESENT","embellishment=arcanoweave_lining" in line,True)
+                save(label+"_READ_ONLY_AUTO_T_PLAN")
                 plan=api("POST","/api/v1/sessions/plan",request)
                 check("V813_CRAFTED_PLAN_STATUS",plan.get("status"),"READY_ZERO_NATIVE")
                 check("V813_CRAFTED_PLAN_NATIVE",plan.get("native_calls"),0)
                 check("V813_CRAFTED_PLAN_SESSION",plan.get("session_id")==sid,True)
                 budget=plan["plan"]
-                report["crafted_public_plan"]={k:budget.get(k) for k in
-                    ("base_B","fixed_O","final_T","native_called")}
-                report["crafted_public_profile_stage"]=(plan.get("profile_stage") or {}).get("status")
-                save()
-                check("V816_CRAFTED_PROFILE_STAGE",report["crafted_public_profile_stage"],
-                      "SELECTED_FRESH_SOURCE_REPLAY_VERIFIED_NO_NATIVE")
-                # v113 deliberately projects B/O/T, not v096 provenance.
-                # Verify that exact same sealed manifest via its original
-                # plan_only owner; never add fields to or change public API.
-                manifest_path=profile.parent/"manifest.json"
-                manifest=json.loads(manifest_path.read_text("utf8"))
-                selected=manifest[web.bootstrap.entry.SELECTED_FRESH_SEASON_FIELD]
-                check("V816_CRAFTED_INSTALLED_SHA",selected["installed_manifest_sha256"],base_sha)
-                internal=web.bootstrap.entry.run_manifest(manifest_path,plan_only=True)
-                report["crafted_internal_plan"]={k:internal.get(k) for k in
-                    ("budget_source","base_B","fixed_O","final_T","native_called",
-                     "selected_source_replay_recomputed_at_native_entry")}
-                report["crafted_internal_plan"]["manual_T_key_present"]="user_manual_final_T" in internal
-                save()
-                check("V813_CRAFTED_AUTO_BUDGET_SOURCE",internal["budget_source"],
-                      "ADMITTED_SELECTED_FRESH_SEASON_B8_V436")
-                check("V816_CRAFTED_SOURCE_REPLAY",internal["selected_source_replay_recomputed_at_native_entry"],True)
-                check("V816_CRAFTED_INTERNAL_NO_NATIVE",internal["native_called"],False)
-                check("V816_CRAFTED_NO_MANUAL_INPUT",request["controls"]["final_T"],None)
-                check("V813_CRAFTED_NO_MANUAL_T","user_manual_final_T" in internal,False)
-                check("V816_CRAFTED_PUBLIC_INTERNAL_BOT",
-                      {k:budget[k] for k in ("base_B","fixed_O","final_T")},
-                      {k:internal[k] for k in ("base_B","fixed_O","final_T")})
-                check("V816_CRAFTED_O_ZERO",sum(budget["fixed_O"].values()),0)
-                check("V813_CRAFTED_AUTO_T_ACCOUNTING",budget["final_T"],budget["base_B"]+sum(budget["fixed_O"].values()))
-                report["crafted_B"]=budget["base_B"];report["crafted_T"]=budget["final_T"]
-                save("CRAFTED_REPREPARE_CACHE")
+                if args.fury_only:
+                    manifest_path=profile.parent/"manifest.json"
+                    manifest=json.loads(manifest_path.read_text("utf8"))
+                    sealed=manifest[web.bootstrap.entry.FRESH_SEASON_FIELD]
+                    check("V817_FURY_INSTALLED_SHA",sealed["installed_manifest_sha256"],base_sha)
+                    internal=web.bootstrap.entry.run_manifest(manifest_path,plan_only=True)
+                    report["fury_public_plan"]={k:budget[k] for k in ("base_B","fixed_O","final_T","native_called")}
+                    report["fury_internal_plan"]={k:internal.get(k) for k in
+                        ("base_B","fixed_O","final_T","native_called","budget_source","class","spec")}
+                    save()
+                    check("V817_FURY_SOURCE",internal["budget_source"],"ADMITTED_FRESH_SEASON_GJFO_V212_V217")
+                    check("V817_FURY_SPEC",[internal["class"],internal["spec"]],["warrior","fury"])
+                    check("V817_FURY_MANUAL_T_ABSENT","user_manual_final_T" in internal,False)
+                    check("V817_FURY_INTERNAL_NO_NATIVE",internal["native_called"],False)
+                    check("V817_FURY_PUBLIC_BOT",[budget["base_B"],budget["fixed_O"],budget["final_T"]],
+                          [base["B"],base["O"],base["T"]])
+                    check("V817_FURY_INTERNAL_BOT",[internal["base_B"],internal["fixed_O"],internal["final_T"]],
+                          [base["B"],base["O"],base["T"]])
+                else:
+                    report["crafted_public_plan"]={k:budget.get(k) for k in
+                        ("base_B","fixed_O","final_T","native_called")}
+                    report["crafted_public_profile_stage"]=(plan.get("profile_stage") or {}).get("status")
+                    save()
+                    check("V816_CRAFTED_PROFILE_STAGE",report["crafted_public_profile_stage"],
+                          "SELECTED_FRESH_SOURCE_REPLAY_VERIFIED_NO_NATIVE")
+                    # v113 deliberately projects B/O/T, not v096 provenance.
+                    # Verify that exact same sealed manifest via its original
+                    # plan_only owner; never add fields to or change public API.
+                    manifest_path=profile.parent/"manifest.json"
+                    manifest=json.loads(manifest_path.read_text("utf8"))
+                    selected=manifest[web.bootstrap.entry.SELECTED_FRESH_SEASON_FIELD]
+                    check("V816_CRAFTED_INSTALLED_SHA",selected["installed_manifest_sha256"],base_sha)
+                    internal=web.bootstrap.entry.run_manifest(manifest_path,plan_only=True)
+                    report["crafted_internal_plan"]={k:internal.get(k) for k in
+                        ("budget_source","base_B","fixed_O","final_T","native_called",
+                         "selected_source_replay_recomputed_at_native_entry")}
+                    report["crafted_internal_plan"]["manual_T_key_present"]="user_manual_final_T" in internal
+                    save()
+                    check("V813_CRAFTED_AUTO_BUDGET_SOURCE",internal["budget_source"],
+                          "ADMITTED_SELECTED_FRESH_SEASON_B8_V436")
+                    check("V816_CRAFTED_SOURCE_REPLAY",internal["selected_source_replay_recomputed_at_native_entry"],True)
+                    check("V816_CRAFTED_INTERNAL_NO_NATIVE",internal["native_called"],False)
+                    check("V816_CRAFTED_NO_MANUAL_INPUT",request["controls"]["final_T"],None)
+                    check("V813_CRAFTED_NO_MANUAL_T","user_manual_final_T" in internal,False)
+                    check("V816_CRAFTED_PUBLIC_INTERNAL_BOT",
+                          {k:budget[k] for k in ("base_B","fixed_O","final_T")},
+                          {k:internal[k] for k in ("base_B","fixed_O","final_T")})
+                    check("V816_CRAFTED_O_ZERO",sum(budget["fixed_O"].values()),0)
+                    check("V813_CRAFTED_AUTO_T_ACCOUNTING",budget["final_T"],budget["base_B"]+sum(budget["fixed_O"].values()))
+                    report["crafted_B"]=budget["base_B"];report["crafted_T"]=budget["final_T"]
+                save(label+"_REPREPARE_CACHE")
                 replay=api("POST","/api/v1/longrun/prepare",longreq)
                 check("V813_CRAFTED_REPREPARE_SAME_SESSION",replay.get("session_id")==sid,True)
-                check("V813_CRAFTED_REPREPARE_STATIC_NATIVE",replay.get("selected_static_native_calls_this_start"),0)
+                if args.fury_only:
+                    check("V817_FURY_REPREPARE_STATIC_L",replay.get("static_L_native_calls_this_start"),0)
+                else:
+                    check("V813_CRAFTED_REPREPARE_STATIC_NATIVE",replay.get("selected_static_native_calls_this_start"),0)
                 url="/api/v1/sessions/"+sid
                 def cases():
                     cfg=longrun.config(root/sid)
@@ -413,7 +467,7 @@ def run(args):
                                    ("input.simc","result.json","native_receipt.json"))]
                 seen=[]
                 for count in (1,2):
-                    save("CRAFTED_DPS_NATIVE_"+str(count))
+                    save(label+"_DPS_NATIVE_"+str(count))
                     api("POST",url+"/longrun/resume",{"max_new_native_this_invocation":1,
                                                      "max_elapsed_seconds":360})
                     status=wait_quiet(browser,sid)
@@ -425,7 +479,7 @@ def run(args):
                     check("V813_CRAFTED_DPS_CASE_COUNT",len(current),count)
                     check("V813_CRAFTED_DPS_OLD_BYTES",current[:len(seen)]==seen,True)
                     seen=current
-                save("CRAFTED_CACHE_ONLY")
+                save(label+"_CACHE_ONLY")
                 api("POST",url+"/longrun/cache-only",{})
                 status=wait_quiet(browser,sid)
                 check("V813_CRAFTED_CACHE_ATTEMPTS",status["progress"]["native_attempts"],2)
@@ -436,9 +490,10 @@ def run(args):
                 check("V813_CRAFTED_RESULT_95",user["confidence_level"],.95)
                 check("V813_CRAFTED_RESULT_NOT_GLOBAL_PROOF",user["global_optimum_proven"],False)
                 need(best["observed_dps_mean"]>0 and best["simc_sem"]>=0,"V813_CRAFTED_DPS_OR_SEM_INVALID")
-                check("V813_NO_ADDITIONAL_BUILDS",len(report["builds"]),1 if args.crafted_only else 2)
+                check("V813_NO_ADDITIONAL_BUILDS",len(report["builds"]),1 if base_only else 2)
                 check("V816_BASE_INSTALL_UNCHANGED_AFTER_CACHE",digest(base_path),base_bytes)
-                report.update(status=("PASS_REAL_CRAFTED_AUTO_T_TWO_DPS_CACHE" if args.crafted_only
+                report.update(status=("PASS_REAL_FURY_AUTO_T_TWO_DPS_CACHE" if args.fury_only else
+                    "PASS_REAL_CRAFTED_AUTO_T_TWO_DPS_CACHE" if args.crafted_only
                     else "PASS_REAL_OIL_NAME_REGISTRATION_CRAFTED_AUTO_T_TWO_DPS_CACHE"),
                     cases=seen,dps=best["observed_dps_mean"],sem=best["simc_sem"],
                     rating=best["absolute_rating_T"])
@@ -460,5 +515,7 @@ def run(args):
 if __name__=="__main__":
     p=argparse.ArgumentParser()
     for name in ("simc","identity","out"):p.add_argument("--"+name,required=True)
-    p.add_argument("--crafted-only",action="store_true")
+    modes=p.add_mutually_exclusive_group()
+    modes.add_argument("--crafted-only",action="store_true")
+    modes.add_argument("--fury-only",action="store_true")
     raise SystemExit(run(p.parse_args()))
