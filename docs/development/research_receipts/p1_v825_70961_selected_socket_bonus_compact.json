@@ -1,0 +1,424 @@
+{
+  "actual_parser_native_accepted": false,
+  "all_quality_numeric_noninferiority_proven": false,
+  "automatic_bonus_attachment": false,
+  "bonus_review_item_count": 403,
+  "bonus_review_receipt_sha256": "9dec331e649e38f11fd35b2c1904f65e607072e11399667007dc1a2e73d51604",
+  "bonus_review_status": "POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED",
+  "bonus_source_identity": {
+    "ItemBonusListGroupEntry_receipt_sha256": "8e23ba6246576c9790832a5b153645c6d186a6a8fed5b3c0b4116d64785f8384",
+    "ItemBonusListGroupEntry_sha256": "f07be2bfe219aa9ebd0d2fcfffe716678d951cc8b7b9fd01d7bed5a3cb5ec31c",
+    "ItemBonusTreeNode_receipt_sha256": "76b9b262d85def3b68929a8c58027dfdea3325f0d95051a9f86eaf2f524ac51b",
+    "ItemBonus_receipt_sha256": "58769df3a0574c219e49fe80d2e3308d6e552f31585be8a8b0db020219cda561",
+    "ItemBonus_sha256": "4d543c53ec08e726b07a381f84e2db4dd472b4c4bdcd1499a9fae0e23753f076",
+    "ItemXBonusTree_receipt_sha256": "b6b56aa6f8399522c5ab53d469743bc24581a3676b9ec5dff289d174e36a7bb6",
+    "code_sha256": "bef3368d355f5989557f1158bf9b19831182e90c82f301aa7343a876981cc2d5",
+    "game_build": "12.1.5.70961",
+    "gear_receipt_sha256": "139edb975130d2e555a30dc7b2440e5fb281a61912def4c18233e4d1782471eb",
+    "review_ids_sha256": "138d152dd2d84a853f0cb4ba1fd176369b10cdd63e85dd006c954aeec88a42ab"
+  },
+  "dps_native_calls": 0,
+  "environment_installed": false,
+  "full_product_e2e": "PENDING",
+  "game_build": "12.1.5.70961",
+  "game_socket_legal_verified": false,
+  "historical_source_injected": false,
+  "native_calls_reported": 0,
+  "new_optimizer": false,
+  "one_original_v216_source_build": true,
+  "original_selected_gear_season_provenance": {
+    "back": {
+      "G_source_approved": false,
+      "explicit_db2_match_no_world_state": false,
+      "matched_journal_encounter_ids": [],
+      "same_display_season_worldstate_pending": false,
+      "season_membership_authenticated": false,
+      "source_kinds": [
+        "raid_journal"
+      ],
+      "status": "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN",
+      "unresolved_requirements": [
+        "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN"
+      ],
+      "world_state_expression_ids": []
+    },
+    "chest": {
+      "G_source_approved": false,
+      "explicit_db2_match_no_world_state": false,
+      "matched_journal_encounter_ids": [],
+      "same_display_season_worldstate_pending": false,
+      "season_membership_authenticated": false,
+      "source_kinds": [
+        "raid_journal"
+      ],
+      "status": "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN",
+      "unresolved_requirements": [
+        "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN"
+      ],
+      "world_state_expression_ids": []
+    },
+    "feet": {
+      "G_source_approved": false,
+      "explicit_db2_match_no_world_state": false,
+      "matched_journal_encounter_ids": [],
+      "same_display_season_worldstate_pending": false,
+      "season_membership_authenticated": false,
+      "source_kinds": [
+        "raid_journal"
+      ],
+      "status": "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN",
+      "unresolved_requirements": [
+        "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN"
+      ],
+      "world_state_expression_ids": []
+    },
+    "finger1": {
+      "G_source_approved": false,
+      "explicit_db2_match_no_world_state": false,
+      "matched_journal_encounter_ids": [],
+      "same_display_season_worldstate_pending": false,
+      "season_membership_authenticated": false,
+      "source_kinds": [
+        "raid_journal"
+      ],
+      "status": "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN",
+      "unresolved_requirements": [
+        "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN"
+      ],
+      "world_state_expression_ids": []
+    },
+    "finger2": {
+      "G_source_approved": false,
+      "explicit_db2_match_no_world_state": false,
+      "matched_journal_encounter_ids": [],
+      "same_display_season_worldstate_pending": false,
+      "season_membership_authenticated": false,
+      "source_kinds": [
+        "mplus_journal"
+      ],
+      "status": "MPLUS_DISPLAY_SEASON_NOT_INDEPENDENTLY_MATCHED",
+      "unresolved_requirements": [
+        "MPLUS_DISPLAY_SEASON_NOT_INDEPENDENTLY_MATCHED"
+      ],
+      "world_state_expression_ids": []
+    },
+    "main_hand": {
+      "G_source_approved": false,
+      "explicit_db2_match_no_world_state": false,
+      "matched_journal_encounter_ids": [],
+      "same_display_season_worldstate_pending": false,
+      "season_membership_authenticated": false,
+      "source_kinds": [
+        "raid_journal"
+      ],
+      "status": "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN",
+      "unresolved_requirements": [
+        "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN"
+      ],
+      "world_state_expression_ids": []
+    },
+    "neck": {
+      "G_source_approved": false,
+      "explicit_db2_match_no_world_state": false,
+      "matched_journal_encounter_ids": [],
+      "same_display_season_worldstate_pending": false,
+      "season_membership_authenticated": false,
+      "source_kinds": [
+        "mplus_journal"
+      ],
+      "status": "MPLUS_DISPLAY_SEASON_NOT_INDEPENDENTLY_MATCHED",
+      "unresolved_requirements": [
+        "MPLUS_DISPLAY_SEASON_NOT_INDEPENDENTLY_MATCHED"
+      ],
+      "world_state_expression_ids": []
+    },
+    "waist": {
+      "G_source_approved": false,
+      "explicit_db2_match_no_world_state": false,
+      "matched_journal_encounter_ids": [],
+      "same_display_season_worldstate_pending": false,
+      "season_membership_authenticated": false,
+      "source_kinds": [
+        "raid_journal"
+      ],
+      "status": "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN",
+      "unresolved_requirements": [
+        "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN"
+      ],
+      "world_state_expression_ids": []
+    },
+    "wrists": {
+      "G_source_approved": false,
+      "explicit_db2_match_no_world_state": false,
+      "matched_journal_encounter_ids": [],
+      "same_display_season_worldstate_pending": false,
+      "season_membership_authenticated": false,
+      "source_kinds": [
+        "raid_journal"
+      ],
+      "status": "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN",
+      "unresolved_requirements": [
+        "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN"
+      ],
+      "world_state_expression_ids": []
+    }
+  },
+  "representative_status": "FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE",
+  "schema": "p1_v825_real_selected_socket_bonus_source_only_v1",
+  "selected_rows": [
+    {
+      "candidate_bonus_lists": [],
+      "intrinsic_socket_count": 0,
+      "item_id": 271465,
+      "slot": "head"
+    },
+    {
+      "candidate_bonus_lists": [
+        {
+          "bonus_id": 13534,
+          "bonus_types": [
+            6,
+            9,
+            26
+          ],
+          "socket_rows": [
+            {
+              "ID": "30115",
+              "Type": "6",
+              "Value_0": "1",
+              "Value_1": "7",
+              "Value_2": "0",
+              "source_bonus_id": 13534
+            }
+          ],
+          "source_bonus_ids": [
+            13534
+          ]
+        },
+        {
+          "bonus_id": 13668,
+          "bonus_types": [
+            6,
+            26
+          ],
+          "socket_rows": [
+            {
+              "ID": "30657",
+              "Type": "6",
+              "Value_0": "1",
+              "Value_1": "7",
+              "Value_2": "0",
+              "source_bonus_id": 13668
+            }
+          ],
+          "source_bonus_ids": [
+            13668
+          ]
+        }
+      ],
+      "intrinsic_socket_count": 0,
+      "item_id": 251142,
+      "slot": "neck"
+    },
+    {
+      "candidate_bonus_lists": [
+        {
+          "bonus_id": 13668,
+          "bonus_types": [
+            6,
+            26
+          ],
+          "socket_rows": [
+            {
+              "ID": "30657",
+              "Type": "6",
+              "Value_0": "1",
+              "Value_1": "7",
+              "Value_2": "0",
+              "source_bonus_id": 13668
+            }
+          ],
+          "source_bonus_ids": [
+            13668
+          ]
+        },
+        {
+          "bonus_id": 13695,
+          "bonus_types": [
+            6,
+            9,
+            26
+          ],
+          "socket_rows": [
+            {
+              "ID": "30782",
+              "Type": "6",
+              "Value_0": "1",
+              "Value_1": "7",
+              "Value_2": "0",
+              "source_bonus_id": 13695
+            }
+          ],
+          "source_bonus_ids": [
+            13695
+          ]
+        }
+      ],
+      "intrinsic_socket_count": 0,
+      "item_id": 268266,
+      "slot": "finger1"
+    },
+    {
+      "candidate_bonus_lists": [
+        {
+          "bonus_id": 13534,
+          "bonus_types": [
+            6,
+            9,
+            26
+          ],
+          "socket_rows": [
+            {
+              "ID": "30115",
+              "Type": "6",
+              "Value_0": "1",
+              "Value_1": "7",
+              "Value_2": "0",
+              "source_bonus_id": 13534
+            }
+          ],
+          "source_bonus_ids": [
+            13534
+          ]
+        },
+        {
+          "bonus_id": 13668,
+          "bonus_types": [
+            6,
+            26
+          ],
+          "socket_rows": [
+            {
+              "ID": "30657",
+              "Type": "6",
+              "Value_0": "1",
+              "Value_1": "7",
+              "Value_2": "0",
+              "source_bonus_id": 13668
+            }
+          ],
+          "source_bonus_ids": [
+            13668
+          ]
+        }
+      ],
+      "intrinsic_socket_count": 0,
+      "item_id": 251136,
+      "slot": "finger2"
+    },
+    {
+      "candidate_bonus_lists": [
+        {
+          "bonus_id": 13668,
+          "bonus_types": [
+            6,
+            26
+          ],
+          "socket_rows": [
+            {
+              "ID": "30657",
+              "Type": "6",
+              "Value_0": "1",
+              "Value_1": "7",
+              "Value_2": "0",
+              "source_bonus_id": 13668
+            }
+          ],
+          "source_bonus_ids": [
+            13668
+          ]
+        },
+        {
+          "bonus_id": 13695,
+          "bonus_types": [
+            6,
+            9,
+            26
+          ],
+          "socket_rows": [
+            {
+              "ID": "30782",
+              "Type": "6",
+              "Value_0": "1",
+              "Value_1": "7",
+              "Value_2": "0",
+              "source_bonus_id": 13695
+            }
+          ],
+          "source_bonus_ids": [
+            13695
+          ]
+        }
+      ],
+      "intrinsic_socket_count": 0,
+      "item_id": 268239,
+      "slot": "wrists"
+    },
+    {
+      "candidate_bonus_lists": [
+        {
+          "bonus_id": 13668,
+          "bonus_types": [
+            6,
+            26
+          ],
+          "socket_rows": [
+            {
+              "ID": "30657",
+              "Type": "6",
+              "Value_0": "1",
+              "Value_1": "7",
+              "Value_2": "0",
+              "source_bonus_id": 13668
+            }
+          ],
+          "source_bonus_ids": [
+            13668
+          ]
+        },
+        {
+          "bonus_id": 13695,
+          "bonus_types": [
+            6,
+            9,
+            26
+          ],
+          "socket_rows": [
+            {
+              "ID": "30782",
+              "Type": "6",
+              "Value_0": "1",
+              "Value_1": "7",
+              "Value_2": "0",
+              "source_bonus_id": 13695
+            }
+          ],
+          "source_bonus_ids": [
+            13695
+          ]
+        }
+      ],
+      "intrinsic_socket_count": 0,
+      "item_id": 268244,
+      "slot": "waist"
+    }
+  ],
+  "selected_slots_with_reachable_bonus": 5,
+  "simc_native_calls": 0,
+  "simc_revision": "9933ffb946fb55b1fa66657b848f519ac19006e1",
+  "source_compilation_status": "FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+  "source_only_not_installed": true,
+  "status": "PASS_REAL_SELECTED_SOCKET_BONUS_SOURCE_OBSERVED_NOT_ADMITTED",
+  "v232_receipt_sha256": "3875cfa4ef6f9f586b2f1dfbf4561341b097b83a70193b5cb1ef23848e70ee2a",
+  "v232_stage_receipt_sha256": "f6b711e40f4cf079c7c6c061bda01fa52a7448b616311a59e0607f0b7a856bfa"
+}

@@ -1,0 +1,201 @@
+{
+  "schema": "p1_v826_exact_pinned_socket_bonus_profile_source_v1",
+  "game_build": "12.1.5.70961",
+  "simc_revision": "9933ffb946fb55b1fa66657b848f519ac19006e1",
+  "source_profile": {
+    "path": "profiles/MID2/MID2_Paladin_Retribution.simc",
+    "git_blob_sha1": "864e857c5d8cdbaa5b03939f077fcb657a4784aa",
+    "selected_rows": [
+      "head=warhelm_of_the_consecrated_flame,id=271465,bonus_id=12854/13692/13698/13750,gem_id=240983,redirected_base_stats=268229",
+      "neck=aqirbane_reliquary,id=268265,bonus_id=4786/13750/13848/13987,ilevel=344,gem_id=240892/240892",
+      "wrists=spellbreakers_bracers,id=237834,bonus_id=8790/8960/13454/13750/13751/13836/9627,gem_id=240892,crafted_stats=32/49",
+      "waist=girdle_of_toxic_regret,id=268259,bonus_id=13668,ilevel=344,gem_id=240892",
+      "finger1=vile_alchemists_band,id=268249,bonus_id=1808/13668,ilevel=334,gem_id=240892,enchant_id=7967",
+      "finger2=loa_worshipers_band,id=251513,bonus_id=8960/12214/13751/13836/9627,gem_id=240892,enchant_id=7967"
+    ]
+  },
+  "source_generated": {
+    "path": "engine/dbc/generated/item_bonus.inc",
+    "git_blob_sha1": "63ab4457b2839483daf360e8dd055902c3d9d4d1",
+    "header": "// Item bonuses, wow build 12.1.5.70961",
+    "column_order": [
+      "record_id",
+      "bonus_id",
+      "type",
+      "value_1",
+      "value_2",
+      "value_3",
+      "value_4",
+      "index"
+    ],
+    "rows": [
+      [
+        3238,
+        1808,
+        6,
+        1,
+        7,
+        0,
+        0,
+        0
+      ],
+      [
+        3239,
+        1808,
+        9,
+        12,
+        100,
+        0,
+        0,
+        1
+      ],
+      [
+        11380,
+        6007,
+        1,
+        162,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        30115,
+        13534,
+        6,
+        1,
+        7,
+        0,
+        0,
+        0
+      ],
+      [
+        30116,
+        13534,
+        26,
+        5,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        30117,
+        13534,
+        9,
+        12,
+        0,
+        0,
+        0,
+        2
+      ],
+      [
+        30657,
+        13668,
+        6,
+        1,
+        7,
+        0,
+        0,
+        0
+      ],
+      [
+        30658,
+        13668,
+        26,
+        5,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        30782,
+        13695,
+        6,
+        1,
+        7,
+        0,
+        0,
+        0
+      ],
+      [
+        30783,
+        13695,
+        26,
+        5,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        30784,
+        13695,
+        9,
+        12,
+        0,
+        0,
+        0,
+        2
+      ],
+      [
+        31197,
+        13750,
+        6,
+        1,
+        7,
+        0,
+        0,
+        0
+      ],
+      [
+        31198,
+        13750,
+        26,
+        5,
+        0,
+        0,
+        0,
+        1
+      ]
+    ]
+  },
+  "source_application": {
+    "path": "engine/dbc/sc_item_data.cpp",
+    "git_blob_sha1": "7c043b5c68b0d5dbb85fa3d3ccb08f34a6464776",
+    "apply_item_bonus_start_line": 172,
+    "apply_item_bonus_end_line": 539,
+    "switch_case_labels": [
+      "case ITEM_BONUS_APPLY_BONUS:",
+      "case ITEM_BONUS_SQUISH_CURVE:",
+      "case ITEM_BONUS_SCALE_CONFIG:",
+      "case ITEM_BONUS_SCALE_CONFIG_2:",
+      "case ITEM_BONUS_CRAFTING_QUALITY:",
+      "case ITEM_BONUS_POST_SQUISH_ITEM_LEVEL:",
+      "case ITEM_BONUS_ILEVEL:",
+      "case ITEM_BONUS_SET_ILEVEL_2:",
+      "case ITEM_BONUS_MOD:",
+      "case ITEM_BONUS_QUALITY:",
+      "case ITEM_BONUS_DESC:",
+      "case ITEM_BONUS_SUFFIX:",
+      "case ITEM_BONUS_REQ_LEVEL:",
+      "case ITEM_BONUS_SOCKET:",
+      "case ITEM_BONUS_SCALING:",
+      "case ITEM_BONUS_SCALING_2:",
+      "case ITEM_BONUS_ADD_ITEM_EFFECT:",
+      "case ITEM_BONUS_MOD_ITEM_STAT:",
+      "case ITEM_BONUS_ILEVEL_IN_PVP:",
+      "default:"
+    ],
+    "enum_git_blob_sha1": "23e5af4d5c407aef6092225030019757c9fa3354",
+    "enum_socket_value": 6,
+    "types_9_26_not_explicitly_handled_in_this_switch": true
+  },
+  "actual_selected_head_item_id": 271465,
+  "actual_source_profile_special_gem_id": 240983,
+  "actual_source_profile_head_bonus_id": 13750,
+  "game_socket_legal_verified": false,
+  "actual_native_verified": false,
+  "source_scope": "PINNED_SIMC_INPUT_EVIDENCE_NOT_GAME_ELIGIBILITY"
+}
