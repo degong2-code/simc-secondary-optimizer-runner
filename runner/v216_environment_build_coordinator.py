@@ -4083,6 +4083,7 @@ def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
                 "conditional_or_mixed_bonus_candidate_count":result.get("conditional_or_mixed_bonus_candidate_count",0),
                 "effect_option_candidate_count":result.get("effect_option_candidate_count",0),
                 "selected_effect_option_count":len(result.get("selected_effect_option_rows",[])),
+                "socket_bonus_source_item_count":len((result.get("socket_bonus_source_only") or {}).get("items",[])),
                 "candidate_path":str((root/relative).resolve()),
                 "source_stage":{k:v for k,v in stage.items() if k!="result"},
                 "network_calls_by_stage":attempted[0],"native_calls":0,
@@ -8078,6 +8079,53 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
     spells=compilation.get("existing_v281_socket_spell_source_unadmitted")
     # Connect the existing item→use spell source to the precise J pending
     # boundary, without treating it as same-season in-game applicability.
+    bonus_source=None
+    if extra and (collected.get("fresh_selectable_bonus_effect_review") or {}).get("candidate_path"):
+        # Source-only: reuse the exact sealed existing bonus review and v232
+        # physical gear IDs, never interpret a reachable list as applicable.
+        try:
+            review=collected["fresh_selectable_bonus_effect_review"]
+            stage_root=pathlib.Path(compilation["stage_root"]).resolve()
+            ref=review["source_stage"]
+            sid=ref["stage_id"]
+            rel="source/"+sid+".json"
+            path=pathlib.Path(review["candidate_path"])
+            need(path.resolve()==(stage_root/rel).resolve() and path.is_file()
+                 and not path.is_symlink() and path.stat().st_size<=12_000_000,
+                 "V824_SOCKET_REVIEW_PATH_INVALID")
+            doc=json.loads(path.read_text("utf8"))
+            inputs=doc["source_identity"]
+            need(doc["schema"]==bonus_effect_review.SCHEMA and
+                 doc["game_build"]==collected["expected_game_build"] and
+                 inputs["game_build"]==collected["expected_game_build"] and
+                 sid==_derived_source_generation("season-bonus-effect-review",inputs),
+                 "V824_SOCKET_REVIEW_SCOPE_DRIFT")
+            verified=stage_engine.verify_stage(root=stage_root,stage_id=sid,
+                stage_version="bonus-effect-source-only-v1",inputs=inputs,outputs={"review":rel})
+            need(verified["receipt_sha256"]==ref["receipt_sha256"],
+                 "V824_SOCKET_REVIEW_RECEIPT_DRIFT")
+            original=json.loads(pathlib.Path(source["candidate_path"]).read_text("utf8"))
+            need(original["receipt_sha256"]==simc_source.digest(simc_source.canonical({
+                k:v for k,v in original.items() if k!="receipt_sha256"}).encode("utf8")) and
+                original["game_build"]==collected["expected_game_build"] and
+                original["selected_intrinsic_socket_count_by_slot_source_only"]==counts,
+                "V824_SOCKET_PHYSICAL_SOURCE_DRIFT")
+            selected=original["selected_G_slot_ids"]
+            projection=doc["socket_bonus_source_only"]
+            by_id={r["item_id"]:r for r in projection["items"]}
+            by_bonus={r["bonus_id"]:r for r in projection["bonus_lists"]}
+            bonus_source={"status":"SAME_BUILD_SELECTED_SOCKET_BONUS_SOURCE_ONLY",
+                "review_receipt_sha256":verified["receipt_sha256"],
+                "selected_rows":[{"slot":slot,"item_id":selected[slot],
+                    "additional_socket_count_requested":n,
+                    "candidate_bonus_lists":[by_bonus[b] for b in
+                        by_id.get(selected[slot],{}).get("candidate_bonus_list_ids",[])]}
+                    for slot,n in extra.items()],
+                "game_socket_legal_verified":False}
+        except (EnvironmentBuildBlocked,stage_engine.StageExecutionBlocked,
+                OSError,ValueError,KeyError,TypeError):
+            bonus_source={"status":"SELECTED_SOCKET_BONUS_SOURCE_PENDING",
+                          "game_socket_legal_verified":False}
     socket_source=(
         {"status":hints.get("status"),
          "v280_stage_receipt_sha256":hints.get(
@@ -8097,6 +8145,8 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
         if extra and type(spells) is dict else None)
     return {**out,
             "socket_item_source_only_for_unverified_additions":socket_source,
+            **({"socket_bonus_source_only_for_unverified_additions":bonus_source}
+                if bonus_source is not None else {}),
             "socket_spell_effect_source_only_for_unverified_additions":
                 spell_source,
             "status":("J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING"
