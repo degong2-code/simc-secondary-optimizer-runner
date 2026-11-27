@@ -483,13 +483,117 @@ def replay_direct_quality(out,rows,metadata,tree,owner,seed):
         save()
         return 2
 
+def replay_special_gem_enchants(prior,out):
+    """Reuse actual v820 item rows and the original v275 pinned source reader.
+    No full Build, Wago, item database, binary, Native, or option promotion.
+    """
+    import v275_pinned_simc_compiler_inputs as compiler
+    import v229_simc_only_source_seed as seed
+    import v211_enchant_source_effect_classification as classifier
+    out=pathlib.Path(out)
+    out.mkdir(parents=True,exist_ok=True)
+    state={"schema":"p1_v821_exact_primary_gem_enchant_source_replay_v1",
+           "game_build":BUILD,"simc_revision":REV,"status":"STARTED",
+           "prior_run_id":46020391704,"prior_job_id":140578213118,
+           "full_environment_builds":0,"wago_network_calls":0,
+           "new_github_request_attempts":0,"simc_native_calls":0,
+           "dps_native_calls":0,"source_only_not_installed":True,
+           "quality_noninferiority_verified":False,
+           "actual_socket_applicability_verified":False,
+           "source_files":{}}
+    def save():
+        (out/"V821_SPECIAL_GEM_ENCHANT_REPLAY.json").write_text(
+            json.dumps(state,ensure_ascii=True,sort_keys=True,indent=2,
+                       allow_nan=False)+"\n",encoding="utf8")
+    def fetch(req,timeout):
+        state["new_github_request_attempts"]+=1
+        return seed.urlopen(req,timeout=timeout)
+    try:
+        raw=pathlib.Path(prior).read_bytes()
+        old=json.loads(raw)
+        rows=old["candidate_rows"]
+        if (old.get("schema")!="p1_v820_real_primary_gem_source_only_v1"
+                or old.get("status")!="PASS_REAL_PRIMARY_GEM_SOURCE_OBSERVED_NOT_ADMITTED"
+                or old.get("game_build")!=BUILD or old.get("simc_revision")!=REV
+                or old.get("native_calls_reported")!=0
+                or old.get("environment_installed") is not False
+                or old.get("v221",{}).get("physical_gem_item_links")!=75
+                or len(rows)!=11 or [r["item_id"] for r in rows]!=old["primary_candidate_ids"]
+                or len({r["item_id"] for r in rows})!=len(rows)
+                or any(r["physical_property"]["item_id"]!=r["item_id"]
+                       or r["metadata"]["item_id"]!=r["item_id"]
+                       or r["source_effect"]["primary_special_role_observed_source_only"] is not True
+                       or r["user_selectable"] is not False for r in rows)):
+            raise ValueError("V821_RETAINED_V820_SCOPE_MISMATCH")
+        state["prior_compact_sha256"]=seed.digest(raw)
+        state["prior_v221_receipt_sha256"]=old["v221"]["receipt_sha256"]
+        ids={r["physical_property"]["enchant_id"] for r in rows}
+        if len(ids)!=len(rows):
+            raise ValueError("V821_RETAINED_ENCHANT_ID_DRIFT")
+        paths={name:compiler.COMPILER_INPUTS[name] for name in
+               ("spell_item_enchantment.inc","spelltext_data.inc")}
+        meta=compiler.pinned_git_blobs(revision=REV,paths=paths,transport=fetch)
+        content={}
+        for name,path in paths.items():
+            req=seed.Request(seed.RAW_BASE+REV+"/"+path,headers={
+                "User-Agent":"SIMC-Secondary-v275-source-collector/1.0",
+                "Accept":"text/plain"})
+            with fetch(req,timeout=90) as response:
+                if response.status!=200:
+                    raise ValueError("V821_PINNED_HTTP_NON200:"+name)
+                data=response.read(classifier.MAX_SOURCE+1)
+            row=meta[name]
+            if len(data)!=row["size"] or seed.git_blob(data)!=row["sha"]:
+                raise ValueError("V821_PINNED_SOURCE_BLOB_SHA_DRIFT:"+name)
+            source=data.decode("utf8")
+            if classifier.build_from_header(source,name)!=BUILD:
+                raise ValueError("V821_PINNED_BUILD_DRIFT:"+name)
+            content[name]=source
+            state["source_files"][name]={"size":len(data),
+                "git_blob_sha1":row["sha"],"sha256":seed.digest(data)}
+            save()
+        enchants=classifier.parse_dbc_rows(content["spell_item_enchantment.inc"],ids)
+        texts=classifier.parse_spelltexts(content["spelltext_data.inc"])
+        cohort=[]
+        for row in rows:
+            item=row["item_id"]
+            enc=enchants[row["physical_property"]["enchant_id"]]
+            # Preserve raw source fields and linked spell descriptions;
+            # do not evaluate scaling or invent an effect/quality decision.
+            spell_ids=sorted({sid for sid in [enc["id_spell"],
+                *(prop for typ,prop in zip(enc["ench_type"],enc["ench_prop"])
+                  if typ==3)] if sid>0})
+            cohort.append({"item_id":item,"metadata":row["metadata"],
+                "physical_property":row["physical_property"],
+                "enchant_source_row":enc,"linked_spell_source_text":{
+                    str(i):classifier.resolve_spelltext(i,texts) for i in spell_ids},
+                "user_selectable":False})
+        state.update(status="PASS_EXACT_PINNED_SPECIAL_GEM_ENCHANT_ROWS_NOT_ADMITTED",
+                     candidate_rows=cohort)
+        save()
+        return 0
+    except Exception as exc:
+        state.update(status="BLOCKED_EXACT_SPECIAL_GEM_SOURCE_REPLAY",
+                     first_blocker=code(exc),error_type=type(exc).__name__)
+        save()
+        return 2
+    finally:
+        print("V821_SPECIAL_GEM_ENCHANT_REPLAY "+json.dumps(
+            state,ensure_ascii=True,sort_keys=True,allow_nan=False),flush=True)
+
+
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--out",type=pathlib.Path,required=True)
     parser.add_argument("--replay-v778",type=pathlib.Path)
     parser.add_argument("--quality-replay",action="store_true")
     parser.add_argument("--special-gems",action="store_true")
+    parser.add_argument("--replay-special-enchants",type=pathlib.Path)
     args=parser.parse_args()
+    if args.replay_special_enchants is not None:
+        if args.special_gems or args.replay_v778 or args.quality_replay:
+            parser.error("special enchant replay is exclusive")
+        raise SystemExit(replay_special_gem_enchants(args.replay_special_enchants,args.out))
     raise SystemExit(replay_ordered_lookup(args.replay_v778,args.out,
                          quality_replay=args.quality_replay)
                      if args.replay_v778 else observe(args.out,special_gems=args.special_gems))
