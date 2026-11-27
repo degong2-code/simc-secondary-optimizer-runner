@@ -1,0 +1,54 @@
+{
+  "actual_head_after": "warhelm_of_the_consecrated_flame,id=271465,bonus_id=12854/13692/13698/13750,gem_id=240983,redirected_base_stats=268229",
+  "actual_head_before": "warhelm_of_the_consecrated_flame,id=271465,bonus_id=12854/13692/13698/13750,redirected_base_stats=268229",
+  "binary_sha256": "4f4472ac8687d029cd7d6041741f44aa98750ea1b3e953dfa7002dee1f38879f",
+  "buffed_CHMV_delta_observed": {
+    "crit_rating": 0,
+    "haste_rating": 0,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "cases": [
+    {
+      "input_sha256": "5068809641cf9d640b7f529a86b58682494e465d42dad0f71eb02c00cc906c64",
+      "native_json2_sha256": "b4ad465c381d9887da759f615b844286aa260275745c3f069aee054fea8c9134",
+      "native_returncode": 0,
+      "status": "NATIVE_JSON2_CAPTURED",
+      "variant": "baseline"
+    },
+    {
+      "input_sha256": "f1d52ba153b3b5300a8384f47184104d2795c6987ac636fa6a3d1d7274a64a6e",
+      "native_json2_sha256": "d51f675eaae08434762a18ac230c7a0dd896c144adbf282fe58688940aa13ba7",
+      "native_returncode": 0,
+      "status": "NATIVE_JSON2_CAPTURED",
+      "variant": "active"
+    }
+  ],
+  "dps_optimizer_calls": 0,
+  "full_environment_builds": 0,
+  "game_build": "12.1.5.70961",
+  "game_socket_legal_verified": false,
+  "head_source_row": "head=warhelm_of_the_consecrated_flame,id=271465,bonus_id=12854/13692/13698/13750,gem_id=240983,redirected_base_stats=268229",
+  "head_static_CHMV_after": {
+    "crit_rating": 61,
+    "haste_rating": 140,
+    "mastery_rating": null,
+    "versatility_rating": null
+  },
+  "head_static_CHMV_before": {
+    "crit_rating": 61,
+    "haste_rating": 140,
+    "mastery_rating": null,
+    "versatility_rating": null
+  },
+  "native_calls": 2,
+  "only_changed_option": "head.gem_id=240983",
+  "schema": "p1_v826_special_gem_actual_source_profile_pair_v1",
+  "simc_revision": "9933ffb946fb55b1fa66657b848f519ac19006e1",
+  "source_profile_blob_sha1": "864e857c5d8cdbaa5b03939f077fcb657a4784aa",
+  "source_profile_path": "profiles/MID2/MID2_Paladin_Retribution.simc",
+  "source_profile_sha256": "cc97c926407623d377586106c415e8e8ff1e3308858cca0950a419877c200a46",
+  "status": "PASS_ACTUAL_SPECIAL_GEM_PROFILE_PAIR_NOT_ADMITTED",
+  "user_selectable": false,
+  "wago_calls": 0
+}

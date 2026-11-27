@@ -10855,6 +10855,25 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             read_dbc=read_gem_dbc)
                         source_compilation["primary_gem_rank_source_unadmitted"]=rank_source
                         progress["primary_gem_rank_source_status"]=rank_source["status"]
+                        # Bind selected direct-static accounting to the exact
+                        # already-authenticated source cohort, not a historic
+                        # item list or a guessed zero for a spell effect.
+                        if special_id is not None:
+                            selected_static=(rank_source.get(
+                                "direct_static_CHMV_source_by_item_id") or {}).get(
+                                    str(special_id))
+                            if selected_static is not None:
+                                selected_static={
+                                    **selected_static,
+                                    "game_build":rank_source["game_build"],
+                                    "simc_revision":rank_source["simc_revision"],
+                                    "enchant_source_sha256":rank_source["enchant_source_sha256"],
+                                    "v221_stage_receipt_sha256":rank_source["v221_stage_receipt_sha256"],
+                                    "ordinary_J_includes_selected_special":False,
+                                    "user_selectable":False}
+                                source_compilation[
+                                    "selected_special_gem_direct_CHMV_source_only"]=selected_static
+                                progress["selected_special_gem_direct_CHMV_source_only"]=selected_static
                     if unresolved_j_source:
                         # The ORIGINAL v275/v211/v296 generated DBC is
                         # already sealed and includes unbuffed static effects.

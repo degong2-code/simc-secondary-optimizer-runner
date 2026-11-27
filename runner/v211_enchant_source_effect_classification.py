@@ -115,6 +115,8 @@ def primary_gem_quality_projection(candidate_rows):
     import math
     groups={}
     seen=set()
+    direct_CHMV={}
+    primary={3,4,5,71,72,73,74}
     for row in candidate_rows:
         item=row["item_id"];meta=row["metadata"]
         prop=row["physical_property"];enc=row["enchant_source_row"]
@@ -130,6 +132,28 @@ def primary_gem_quality_projection(candidate_rows):
              all(type(n) in (int,float) and math.isfinite(n)
                  for k in ("ench_amount","ench_coeff") for n in enc[k]),
              "SPECIAL_GEM_QUALITY_NUMERIC_SHAPE_REQUIRED")
+        # Exact direct DBC components only. A pure primary/armor row
+        # cannot contribute direct CHMV rating; a linked spell or unknown
+        # component remains unobserved. Do not infer runtime effects from
+        # missing JSON2 fields or scale primary/armor ourselves.
+        components=list(zip(enc["ench_type"],enc["ench_prop"],
+                            enc["ench_amount"],enc["ench_coeff"]))
+        pure=(enc["id_spell"]==0 and enc["req_skill"]==0
+              and enc["req_skill_value"]==0
+              and any(typ==5 and arg in primary and (amount>0 or coeff>0)
+                      for typ,arg,amount,coeff in components)
+              and all(amount>=0 and coeff>=0 and
+                      ((typ==0 and arg==0 and amount==0 and coeff==0)
+                       or (typ==5 and arg in primary)
+                       or (typ==4 and arg==0))
+                      for typ,arg,amount,coeff in components))
+        direct_CHMV[str(item)]={
+            "item_id":item,"enchant_id":enc["id"],
+            "direct_static_CHMV_vector_source_only":
+                {stat:0 for stat in STATS} if pure else None,
+            "source_basis":("EXACT_PRIMARY_OR_ARMOR_COMPONENTS_NO_LINKED_SPELL"
+                            if pure else "DIRECT_CHMV_OR_LINKED_EFFECT_PENDING"),
+            "effective_runtime_CHMV_verified":False}
         key=(meta["item_name"],meta["quality"],meta["class_id"],
              meta["subclass_id"],prop["expansion_id"],prop["color_mask"],
              prop["minimum_ilevel"])
@@ -138,7 +162,6 @@ def primary_gem_quality_projection(candidate_rows):
     condition_fields=("id_scaling","min_scaling_level","max_scaling_level",
                       "min_ilevel","max_ilevel","req_skill","req_skill_value",
                       "id_spell","ench_type","ench_prop","dbc_name")
-    primary={3,4,5,71,72,73,74}
     def comparable(low,high):
         a=low["enchant_source_row"];b=high["enchant_source_row"]
         if any(a[k]!=b[k] for k in condition_fields):
@@ -188,6 +211,7 @@ def primary_gem_quality_projection(candidate_rows):
             "comparison_pending_item_ids":sorted(pending),
             "unranked_distinct_item_ids":sorted(unranked),
             "comparisons":sorted(comparisons,key=lambda r:r["preferred_item_id"]),
+            "direct_static_CHMV_source_by_item_id":direct_CHMV,
             "resolved_numeric_noninferiority_verified":False,
             "user_selectable":False,"environment_ready":False}
 

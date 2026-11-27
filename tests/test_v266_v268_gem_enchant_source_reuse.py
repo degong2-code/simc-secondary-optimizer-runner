@@ -293,6 +293,27 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
         self.assertEqual(result["lower_rank_item_ids_source_only"],
                          [240966,240968,240970,240982])
         self.assertEqual(result["unranked_distinct_item_ids"],[241142,241143,241144])
+        direct=result["direct_static_CHMV_source_by_item_id"]
+        self.assertEqual({int(i) for i,r in direct.items()
+                          if r["direct_static_CHMV_vector_source_only"] is not None},
+                         {240970,240971,240982,240983})
+        pair=json.loads((path.parent/"p1_v826_70961_special_gem_native_pair_compact.json").read_text("utf8"))
+        self.assertEqual(pair["status"],"PASS_ACTUAL_SPECIAL_GEM_PROFILE_PAIR_NOT_ADMITTED")
+        self.assertEqual(pair["game_build"],doc["game_build"])
+        self.assertEqual(pair["simc_revision"],doc["simc_revision"])
+        self.assertEqual(pair["native_calls"],2)
+        self.assertEqual(direct["240983"]["direct_static_CHMV_vector_source_only"],
+                         pair["buffed_CHMV_delta_observed"])
+        self.assertIsNone(pair["head_static_CHMV_after"]["mastery_rating"])
+        self.assertIsNone(direct["240967"]["direct_static_CHMV_vector_source_only"])
+        self.assertFalse(direct["240983"]["effective_runtime_CHMV_verified"])
+        mixed=copy.deepcopy(rows)
+        mixed[7]["enchant_source_row"]["ench_type"][1]=5
+        mixed[7]["enchant_source_row"]["ench_prop"][1]=32
+        mixed[7]["enchant_source_row"]["ench_coeff"][1]=0.1
+        self.assertIsNone(classifier.primary_gem_quality_projection(mixed)[
+            "direct_static_CHMV_source_by_item_id"]["240983"][
+                "direct_static_CHMV_vector_source_only"])
         self.assertFalse(result["resolved_numeric_noninferiority_verified"])
         self.assertFalse(result["user_selectable"])
         for key,value in (("ench_prop",[71,999,0]),("min_ilevel",81),
