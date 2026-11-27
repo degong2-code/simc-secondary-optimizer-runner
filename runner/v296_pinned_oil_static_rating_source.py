@@ -29,7 +29,8 @@ def canonical(row):
                       separators=(",",":"),allow_nan=False)
 
 def extract(*,generated_text,game_build,simc_revision,enchant_ids,
-            original_git_blob_sha1=None,oil_application=False):
+            original_git_blob_sha1=None,oil_application=False,
+            include_source_rows=False):
     """One pass of v211's exact generated DBC for selected original v281 IDs.
 
     Return only integer, unscaled ITEM_ENCHANTMENT_STAT points. Any mixed,
@@ -37,7 +38,7 @@ def extract(*,generated_text,game_build,simc_revision,enchant_ids,
     oil_application selects the actual player-overload stat enchant path.
     The shared gem raw-source caller retains its separate existing policy.
     """
-    need(type(oil_application) is bool and
+    need(type(oil_application) is bool and type(include_source_rows) is bool and
          type(generated_text) is str and bool(generated_text) and
          len(generated_text.encode("utf8"))<=enchant.MAX_SOURCE
          and type(game_build) is str and bool(game_build)
@@ -131,13 +132,16 @@ def extract(*,generated_text,game_build,simc_revision,enchant_ids,
          "selected_enchant_ids":sorted(wanted),
          "items":options,
          "native_calls":0,"network_calls":0,
+         **({"exact_enchant_source_rows":[rows[i] for i in sorted(wanted)]}
+            if include_source_rows else {}),
          "source_unbuffed":True,
          "no_effect_mechanism_reimplementation":True,
          "user_selectable":False,"O":None,"environment_ready":False}
     return {**doc,"manifest_sha256":sha(canonical(doc).encode("utf8"))}
 
 def from_v275(*,pinned_source,stage_root,game_build,
-              simc_revision,enchant_ids,oil_application=False):
+              simc_revision,enchant_ids,oil_application=False,
+              include_source_rows=False):
     """Consume the original v275 compiled source from its v217 workspace.
 
     Fail-closed on source drift. No network, Native, new DB, or extra Gate.
@@ -167,7 +171,7 @@ def from_v275(*,pinned_source,stage_root,game_build,
         game_build=game_build,simc_revision=simc_revision,
         enchant_ids=enchant_ids,
         original_git_blob_sha1=original["git_blob_sha1"],
-        oil_application=oil_application)
+        oil_application=oil_application,include_source_rows=include_source_rows)
     need(answer["source_sha256"]==original["sha256"],
          "O_RAW_V275_SOURCE_SHA_DRIFT")
     return answer

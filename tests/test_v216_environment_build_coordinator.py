@@ -174,6 +174,41 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             v216._fresh_same_build_ordinary_gem_metadata_candidates(
                 compiled=compiled,gem_source=gem_source,collected=collected)
 
+    def test_v823_primary_rank_projection_reuses_same_build_dbc_reader(self):
+        root=pathlib.Path(__file__).resolve().parents[1]
+        doc=json.loads((root/"docs/development/research_receipts/p1_v821_70961_primary_gem_enchant_compact.json").read_text("utf8"))
+        rows=doc["candidate_rows"]
+        build=doc["game_build"];rev=doc["simc_revision"]
+        metadata=[{**r["metadata"],**r["physical_property"]} for r in rows]
+        candidates={"status":"SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED",
+            "game_build":build,"simc_revision":rev,
+            "v221_stage_receipt_sha256":"a"*64,
+            "v230_stage_receipt_sha256":"b"*64,
+            "candidates_unadmitted":metadata,"candidate_count":len(metadata)}
+        raw={"game_build":build,"simc_revision":rev,"source_sha256":"c"*64,
+             "exact_enchant_source_rows":[r["enchant_source_row"] for r in rows]}
+        pinned={"status":"PINNED_V211_AND_GENERATED_SOURCES_SEALED"}
+        observed={"primary_attribute_special_gem_ids_source_only":[r["item_id"] for r in rows]}
+        with mock.patch.object(v216.oil_raw_source,"from_v275",return_value=raw) as load:
+            reader=v216._one_build_gem_dbc_reader()
+            result=v216._fresh_primary_gem_rank_source(candidates=candidates,
+                observed=observed,collected={"expected_game_build":build,
+                    "fresh_pinned_v211_source":pinned},
+                compilation={"stage_root":str(root),"simc_revision":rev},
+                read_dbc=reader)
+            self.assertEqual(result["preferred_rank_item_ids_source_only"],
+                             [240967,240969,240971,240983])
+            self.assertFalse(result["user_selectable"])
+            self.assertEqual(result["status"],"PRIMARY_GEM_RANK_SOURCE_PROJECTED_UNADMITTED")
+            reader(pinned_source=pinned,stage_root=str(root),game_build=build,
+                   simc_revision=rev,enchant_ids={r["enchant_id"] for r in metadata})
+            self.assertEqual(load.call_count,1)
+            self.assertTrue(load.call_args.kwargs["include_source_rows"])
+            absent=v216._fresh_primary_gem_rank_source(candidates=None,
+                observed=observed,collected={},compilation={},read_dbc=reader)
+            self.assertEqual(absent["status"],"PRIMARY_GEM_RANK_SOURCE_PENDING")
+            self.assertEqual(load.call_count,1)
+
     def test_v549_reuse_original_v296_dbc_for_static_four_stat_j(self):
         build="12.2.0.99999"
         rev="a"*40

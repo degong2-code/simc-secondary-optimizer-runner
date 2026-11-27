@@ -29,6 +29,7 @@ import v274_zero_history_source_compiler_wiring as source_wiring
 import v275_pinned_simc_compiler_inputs as pinned_compiler_source
 import v295_season_runeforge_source as dk_rune_source
 import v296_pinned_oil_static_rating_source as oil_raw_source
+import v211_enchant_source_effect_classification as enchant_classifier
 import v297_sealed_simc_oil_gear_delta as oil_precombat_gear
 import v632_permanent_enchant_native_E as permanent_enchant_native_E
 import v276_sealed_tier_compiler_source as compiler_tier_source
@@ -790,6 +791,8 @@ def _fresh_same_build_ordinary_gem_metadata_candidates(*, compiled,
             "minimum_ilevel":row["minimum_ilevel"],
             "expansion_id":row["expansion_id"],
             "quality":metadata[row["item_id"]]["quality"],
+            "class_id":metadata[row["item_id"]]["class_id"],
+            "subclass_id":metadata[row["item_id"]]["subclass_id"],
             "crafting_quality":metadata[row["item_id"]]["crafting_quality"],
             "item_name":metadata[row["item_id"]]["item_name"],
             "item_ilevel_unscaled":
@@ -815,11 +818,70 @@ def _one_build_gem_dbc_reader():
         nonlocal previous,raw
         if previous is not None and request==previous:
             return raw
-        result=oil_raw_source.from_v275(**request)
+        result=oil_raw_source.from_v275(**request,include_source_rows=True)
         previous=copy.deepcopy(request)
         raw=result
         return result
     return read
+
+
+def _fresh_primary_gem_rank_source(*, candidates, observed, collected,
+                                    compilation, read_dbc):
+    """Use the same v221/v230 batch and v296 read as ordinary J.
+    Source preference only; optional failures never block the base budget.
+    """
+    pending={"status":"PRIMARY_GEM_RANK_SOURCE_PENDING",
+             "user_selectable":False,"environment_ready":False,
+             "native_calls":0,"network_calls":0}
+    primary=observed.get("primary_attribute_special_gem_ids_source_only")
+    if not isinstance(primary,list) or not primary:
+        return pending
+    if not isinstance(candidates,dict) or candidates.get("status")!=(
+            "SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED"):
+        return pending
+    rows=candidates["candidates_unadmitted"]
+    primary_ids=set(primary)
+    chosen=[row for row in rows if row["item_id"] in primary_ids]
+    ids={row["enchant_id"] for row in rows}
+    pinned=collected.get("fresh_pinned_v211_source")
+    build=collected["expected_game_build"]
+    revision=compilation["simc_revision"]
+    if (len(chosen)!=len(primary_ids) or len(chosen)!=len(primary)
+            or not 0<len(ids)<=128 or min(ids)<=0
+            or not isinstance(pinned,dict)
+            or pinned.get("status")!="PINNED_V211_AND_GENERATED_SOURCES_SEALED"):
+        return pending
+    try:
+        raw=read_dbc(pinned_source=pinned,stage_root=compilation["stage_root"],
+            game_build=build,simc_revision=revision,enchant_ids=ids)
+        exact={row["id"]:row for row in raw.get("exact_enchant_source_rows",[])}
+        need(raw.get("game_build")==build and raw.get("simc_revision")==revision
+             and candidates.get("game_build")==build
+             and candidates.get("simc_revision")==revision
+             and set(exact)==ids and
+             all(type(candidates.get(k)) is str and
+                 season_budget_contract.SHA.fullmatch(candidates[k])
+                 for k in ("v221_stage_receipt_sha256","v230_stage_receipt_sha256"))
+             and type(raw.get("source_sha256")) is str
+             and season_budget_contract.SHA.fullmatch(raw["source_sha256"]),
+             "PRIMARY_GEM_EXACT_SOURCE_IDENTITY_REQUIRED")
+        cohort=[{"item_id":row["item_id"],
+            "metadata":{k:row[k] for k in ("item_id","item_name","quality",
+                "class_id","subclass_id","crafting_quality","item_ilevel_unscaled")},
+            "physical_property":{k:row[k] for k in ("item_id","enchant_id",
+                "color_mask","minimum_ilevel","expansion_id","gem_property_id")},
+            "enchant_source_row":exact[row["enchant_id"]]}
+            for row in chosen]
+        projected=enchant_classifier.primary_gem_quality_projection(cohort)
+    except (EnvironmentBuildBlocked,ValueError,KeyError,TypeError,OSError) as exc:
+        return {**pending,"reason":str(exc).split(":",1)[0]}
+    return {**pending,**projected,
+            "status":"PRIMARY_GEM_RANK_SOURCE_PROJECTED_UNADMITTED",
+            "game_build":build,"simc_revision":revision,
+            "v221_stage_receipt_sha256":candidates["v221_stage_receipt_sha256"],
+            "v230_stage_receipt_sha256":candidates["v230_stage_receipt_sha256"],
+            "enchant_source_sha256":raw["source_sha256"],
+            "candidate_rows":cohort}
 
 
 def _gem_reference_ilevel_allowed(row,source,target_ilevel):
@@ -10713,7 +10775,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     unresolved_j_source=(
                         nominal_four_stat_source is None and not raw_j_complete
                         and not special_invalid and special_source_present)
-                    if unresolved_j_source:
+                    gem_candidates=None
+                    if unresolved_j_source or observed.get(
+                            "primary_attribute_special_gem_ids_source_only"):
                         # Raw EffectPointsMin may be unobserved (70783: 0/75).
                         # Reuse the exact v221 IDs and already collected v230
                         # item_data once, without attempting gem Native/DPS.
@@ -10732,6 +10796,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     # Both J branches consume the same immutable source
                     # projection within this Build, not another DBC scan.
                     read_gem_dbc=_one_build_gem_dbc_reader()
+                    if observed.get("primary_attribute_special_gem_ids_source_only"):
+                        # Same exact enchant ID batch as J. Optional source
+                        # projection is not a prerequisite of base G/J/F/O.
+                        rank_source=_fresh_primary_gem_rank_source(
+                            candidates=gem_candidates,observed=observed,
+                            collected=collected,compilation=source_compilation,
+                            read_dbc=read_gem_dbc)
+                        source_compilation["primary_gem_rank_source_unadmitted"]=rank_source
+                        progress["primary_gem_rank_source_status"]=rank_source["status"]
                     if unresolved_j_source:
                         # The ORIGINAL v275/v211/v296 generated DBC is
                         # already sealed and includes unbuffed static effects.
