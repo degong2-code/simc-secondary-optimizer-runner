@@ -1739,7 +1739,7 @@ class LocalWebAPIOffline(unittest.TestCase):
         stub={"status":"SOURCE_ONLY_PENDING","environment_ready":False,
               "environment_installed":False,"native_calls":0}
         for key in (("mage","fire"),("druid","balance"),
-                    ("evoker","devastation"),("demon_hunter","havoc"),
+                    ("evoker","devastation"),("demonhunter","havoc"),
                     ("warrior","fury")):
             with self.subTest(spec=key),mock.patch.object(
                     web.environment_build,"build_environment",return_value=stub) as build:

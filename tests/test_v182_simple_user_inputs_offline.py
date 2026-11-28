@@ -261,7 +261,7 @@ class SelectedOilPreparationRouting(unittest.TestCase):
 const fs=require("fs"),assert=require("assert");
 const src=fs.readFileSync(process.argv[1],"utf8");
 const start=src.indexOf("async function buildSeasonEnvironment(forUserVariant=false)");
-const a=src.indexOf("const reference_G_track=",start);
+const a=src.indexOf("let reference_G_track=",start);
 const b=src.indexOf("const existingSpecial=",a);
 assert(start>=0&&a>start&&b>a,"missing Build request source");
 const nodes={},$=id=>nodes[id]??=({value:"",checked:false});
@@ -300,6 +300,39 @@ assert.throws(()=>run($,field,true),/서로 다릅니다/,"different IDs not sil
                               text=True,encoding="utf8",timeout=20)
         self.assertEqual(result.returncode,0,result.stdout+"\n"+result.stderr)
 
+
+    def test_v831_actual_js_expanded_socket_scope_and_fury_track(self):
+        import shutil,subprocess
+        from pathlib import Path
+        node=shutil.which("node")
+        if node is None:self.skipTest("Node required")
+        raw=Path(__file__).resolve().parents[1]/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const src=fs.readFileSync(process.argv[1],"utf8");
+const start=src.indexOf("async function buildSeasonEnvironment(forUserVariant=false)");
+const a=src.indexOf("let reference_G_track=",start);
+const b=src.indexOf("if(auto_select_observed_F_no_oil&&(!auto_native_F_requested",a);
+assert(start>=0&&a>start&&b>a);
+const nodes={},$=id=>nodes[id]??=({value:"",checked:false});
+const field=id=>String($(id).value).trim(),valueInt=id=>Number(field(id));
+const run=Function("$","field","valueInt","forUserVariant",src.slice(a,b)+
+ "return {reference_G_track,socket_profile_spec,source_target_socket_count};");
+$("spec").value="mage/fire";$("season-target-socket-count").value="5";
+assert.deepStrictEqual(run($,field,valueInt,true),{
+ reference_G_track:"general",socket_profile_spec:"mage/fire",source_target_socket_count:5});
+$("spec").value="warrior/fury";$("final_T").value="4000";
+assert.deepStrictEqual(run($,field,valueInt,true),{
+ reference_G_track:"fury_dual_2h",socket_profile_spec:"warrior/fury",source_target_socket_count:5});
+assert.deepStrictEqual(run($,field,valueInt,false),{
+ reference_G_track:"general",socket_profile_spec:null,source_target_socket_count:4});
+$("season-target-socket-count").value="4";
+assert.deepStrictEqual(run($,field,valueInt,true),{
+ reference_G_track:"general",socket_profile_spec:null,source_target_socket_count:4});
+"""
+        result=subprocess.run([node,"-e",code,str(raw)],capture_output=True,
+                              text=True,encoding="utf8",timeout=20)
+        self.assertEqual(result.returncode,0,result.stdout+"\n"+result.stderr)
 
     def test_actual_js_select_and_start_reuse_or_build_selected_only(self):
         import shutil, subprocess
