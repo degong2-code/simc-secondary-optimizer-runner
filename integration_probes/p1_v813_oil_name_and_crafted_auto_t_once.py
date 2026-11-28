@@ -119,14 +119,14 @@ def safe_code(value):
     return code if re.fullmatch(r"[A-Z][A-Z0-9_]{3,140}",code) else None
 
 def run(args):
-    base_only=args.crafted_only or args.fury_only
+    base_only=args.crafted_only or args.fury_only or args.source_owned_craft
     out=Path(args.out).resolve()
     out.mkdir(parents=True,exist_ok=True)
     report={"status":"STARTED","build":BUILD,"revision":REV,
             "target_ilevel":TARGET,"full_product_e2e":"PENDING",
             "quality_equivalence_verified":False,"global_optimum_proven":False,
             "dps_native":0,"browser_actual":False,"builds":[],
-            "mode":"FURY_ONLY" if args.fury_only else "CRAFTED_ONLY" if args.crafted_only else "OIL_AND_CRAFTED"}
+            "mode":"SOURCE_OWNED_CRAFT" if args.source_owned_craft else "FURY_ONLY" if args.fury_only else "CRAFTED_ONLY" if args.crafted_only else "OIL_AND_CRAFTED"}
     if args.crafted_only:
         report["reused_historical_oil_registration"]={
             "run_id":46003074859,"job_id":140519373927,
@@ -232,6 +232,36 @@ def run(args):
             base_path=Path(base_install["stage_output_path"])
             base_bytes=digest(base_path)
             report["base_sha"]=base_sha
+            selected_token="arcanoweave_lining"
+            if args.source_owned_craft:
+                save("SOURCE_OWNED_REGISTRY")
+                installed,_=web.environment_manifest.read_json(base_path)
+                web.environment_manifest.verify_fresh_installed_environment(installed)
+                registry=installed.get("installed_embellishments")
+                report["embellishment_source"]={
+                    "embedded":type(registry) is dict,
+                    "pending":installed.get("installed_embellishments_pending",False),
+                    "option_count":len((registry or {}).get("options",{})),
+                    "source_stage_status":(base.get("source_compilation",{}).get(
+                        "source_owned_embellishments") or {}).get("source_candidate_sha256"),
+                    "pending_reasons":(registry or {}).get("pending",{})}
+                save()
+                need(type(registry) is dict,"V854_SOURCE_OWNED_EMBELLISHMENTS_NOT_INSTALLED")
+                # Must exercise a real new token, not the already proven
+                # two-name v188 fallback. Reuse the exact historical head
+                # to isolate this changed choice from unrelated gear.
+                from v188_user_choice_metadata import KNOWN_EMBELLISHMENTS
+                candidates=[token for token,row in registry["options"].items()
+                    if token not in KNOWN_EMBELLISHMENTS and CRAFT in row["item_ids"]]
+                need(bool(candidates),"V854_NO_NEW_SOURCE_TOKEN_FOR_EXACT_CRAFT")
+                selected_token=sorted(candidates)[0]
+                report["embellishment_source"].update(
+                    selected_token=selected_token,item_id=CRAFT,
+                    material_item_id=registry["options"][selected_token]["material_item_id"],
+                    bonus_id=registry["options"][selected_token]["bonus_id"],
+                    source_receipt_sha256=registry["source_receipt_sha256"],
+                    source_candidate_sha256=registry["source_candidate_sha256"])
+                save()
             if args.fury_only:
                 installed,_=web.environment_manifest.read_json(base_path)
                 web.environment_manifest.verify_fresh_installed_environment(installed)
@@ -340,6 +370,17 @@ def run(args):
                     browser=browser_open()
                     report["browser_actual"]=True
                 label="FURY" if args.fury_only else "CRAFTED"
+                if args.source_owned_craft:
+                    save("EXACT_INSTALLED_MENU")
+                    menu=api("GET","/api/v1/season-gear?game_build="+BUILD+
+                        "&target_ilevel="+str(TARGET)+"&installed_manifest_sha256="+base_sha)
+                    check("V854_MENU_INSTALLED_SHA",menu.get("installed_manifest_sha256"),base_sha)
+                    check("V854_MENU_REGISTRY",menu.get("embellishments"),registry["options"])
+                    compatible=[r for r in menu["choices"]["selectable_stat_craft"]
+                        if r["item_id"]==CRAFT and
+                           "hunter/survival" in r.get("compatible_dps_specs",[])]
+                    check("V854_MENU_COMPATIBLE_ITEM_COUNT",len(compatible),1)
+                    report["embellishment_source"]["menu_verified"]=True
                 save(label+"_ONLY_AUTO_T_PREPARE")
                 # Same exact BASE install, no additional environment Build.
                 # Real HTTP/Native test, not a claim of browser crafting.
@@ -348,7 +389,7 @@ def run(args):
                 controls.update(race="human",oil_hands=[],final_T=None)
                 if not args.fury_only:
                     controls["embellishments"]=[{"slot":"head","item_id":CRAFT,
-                         "options":{"crafted_stats":"32/36","embellishment":"arcanoweave_lining"}}]
+                         "options":{"crafted_stats":"32/36","embellishment":selected_token}}]
                 request={"controls":controls,"binary":str(binary),"revision":REV,
                     "current_season_product":True,"installed_season_game_build":BUILD,
                     "installed_manifest_sha256":base_sha,"selected_flask_item_id":FLASK,
@@ -393,7 +434,8 @@ def run(args):
                                if x.startswith("head=")),"")
                     check("V813_CRAFTED_HEAD_PRESENT",bool(re.search(r"(?:^|,)id="+str(CRAFT)+r"(?:,|$)",line)),True)
                     check("V813_CRAFTED_STATS_PRESENT","crafted_stats=32/36" in line,True)
-                    check("V813_CRAFTED_EMBELLISHMENT_PRESENT","embellishment=arcanoweave_lining" in line,True)
+                    check("V813_CRAFTED_EMBELLISHMENT_PRESENT",
+                          ("embellishment="+selected_token) in line,True)
                 save(label+"_READ_ONLY_AUTO_T_PLAN")
                 plan=api("POST","/api/v1/sessions/plan",request)
                 check("V813_CRAFTED_PLAN_STATUS",plan.get("status"),"READY_ZERO_NATIVE")
@@ -493,7 +535,8 @@ def run(args):
                 check("V813_NO_ADDITIONAL_BUILDS",len(report["builds"]),1 if base_only else 2)
                 check("V816_BASE_INSTALL_UNCHANGED_AFTER_CACHE",digest(base_path),base_bytes)
                 report.update(status=("PASS_REAL_FURY_AUTO_T_TWO_DPS_CACHE" if args.fury_only else
-                    "PASS_REAL_CRAFTED_AUTO_T_TWO_DPS_CACHE" if args.crafted_only
+                    "PASS_REAL_SOURCE_OWNED_EMBELLISHMENT_TWO_DPS_CACHE" if args.source_owned_craft
+                    else "PASS_REAL_CRAFTED_AUTO_T_TWO_DPS_CACHE" if args.crafted_only
                     else "PASS_REAL_OIL_NAME_REGISTRATION_CRAFTED_AUTO_T_TWO_DPS_CACHE"),
                     cases=seen,dps=best["observed_dps_mean"],sem=best["simc_sem"],
                     rating=best["absolute_rating_T"])
@@ -518,4 +561,5 @@ if __name__=="__main__":
     modes=p.add_mutually_exclusive_group()
     modes.add_argument("--crafted-only",action="store_true")
     modes.add_argument("--fury-only",action="store_true")
+    modes.add_argument("--source-owned-craft",action="store_true")
     raise SystemExit(run(p.parse_args()))
