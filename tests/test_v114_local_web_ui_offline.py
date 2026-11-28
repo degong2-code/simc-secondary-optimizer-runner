@@ -2693,6 +2693,62 @@ const refresh=load("async function refreshExistingSeasonTrinkets(",
                               text=True,timeout=20)
         self.assertEqual(result.returncode,0,result.stderr)
 
+    def test_v868_equipment_diagnostic_reports_only_observed_public_ids(self):
+        import shutil,subprocess
+        page=self.client.get("/").text
+        self.assertIn('id="equipment-diagnostic-copy"',page)
+        self.assertIn('id="equipment-diagnostic-fallback"',page)
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("const explicitEquipmentUpdates=new WeakMap()"),b=raw.indexOf("async function updateVisibleEquipmentChoices()",a);
+assert(a>=0&&b>a);
+const gear={season_build:"12.1.5.70961",source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
+  private_path:"C:/secret/path",secret:"never export",special_source_refresh_pending:true,
+  choices:{trinket:[{item_id:17},{item_id:18}],special_effect_gear_candidate:[{item_id:19},{item_id:20}]}};
+const state={seasonGear:gear,seasonGearTargetIlevel:334,token:"secret token"};
+const fields={ilevel:"334","season-game-build":"12.1.5.70961",spec:"warlock/destruction",
+  "equipment-trinket-search":"private query","equipment-special-search":""};
+const grid={"equipment-trinket-grid":{querySelectorAll:()=>[{dataset:{itemId:"17"}}]},
+  "equipment-special-grid":{querySelectorAll:()=>[{dataset:{itemId:"19"}}]}};
+const fallback={hidden:true,value:"",focus(){},select(){}};grid["equipment-diagnostic-fallback"]=fallback;
+let clipboard=[],notices=[];
+const navigator={clipboard:{writeText:async x=>clipboard.push(x)}};
+const f=Function("state","field","$","verifiedInstalledGearScopeMatchesRun","specLabels","eligibleEquipment","navigator","setNotice",
+ raw.slice(a,b)+";return {rememberEquipmentUpdate,equipmentDiagnosticSnapshot,copyEquipmentDiagnostic};")(
+ state,id=>fields[id]||"",id=>grid[id],()=>fields.ilevel==="334",
+ {"warlock/destruction":"파괴"},group=>state.seasonGear?.choices[group]?.slice(0,1)||[],navigator,x=>notices.push(x));
+(async()=>{
+ const before=f.equipmentDiagnosticSnapshot();assert.equal(before.update,null);
+ f.rememberEquipmentUpdate(gear,334,"12.1.5.70961",{status:"SEASON_TRINKET_SOURCE_REFRESHED",
+  reason:"C:/private/path",new_trinkets:[{item_id:18}],new_special_items:[{item_id:20}],
+  special_generation_verified:false,bonus_effect_overlay_pending:true,new_special_pending_count:1,api_key:"secret"});
+ const snapshot=f.equipmentDiagnosticSnapshot();
+ assert.deepEqual(snapshot.trinkets.catalog_ids,[17,18]);
+ assert.deepEqual(snapshot.trinkets.eligible_ids,[17]);
+ assert.deepEqual(snapshot.trinkets.rendered_ids,[17]);
+ assert.equal(snapshot.trinkets.search_active,true);
+ assert.equal(snapshot.update.reason,null);
+ assert.deepEqual(snapshot.update.new_special_ids,[20]);
+ assert.equal(snapshot.update.special_pending_count,1);
+ const text=JSON.stringify(snapshot);
+ for(const secret of ["secret","private query","C:/","api_key","token"])assert(!text.includes(secret));
+ await f.copyEquipmentDiagnostic();assert.equal(clipboard.length,1);assert(fallback.hidden);
+ navigator.clipboard.writeText=async()=>{throw Error("blocked")};
+ await f.copyEquipmentDiagnostic();assert.equal(fallback.hidden,false);
+ assert.deepEqual(JSON.parse(fallback.value),snapshot);
+ fields.ilevel="335";assert.equal(f.equipmentDiagnosticSnapshot().update,null);
+ state.seasonGear=null;assert.deepEqual(f.equipmentDiagnosticSnapshot().trinkets.catalog_ids,[]);
+ console.log("V868_EQUIPMENT_DIAGNOSTIC_PASS");
+})().catch(e=>{console.error(e);process.exitCode=1});
+"""
+        result=subprocess.run([node,"-e",script,str(ROOT/"runner/webui/app.js")],
+                              capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V868_EQUIPMENT_DIAGNOSTIC_PASS",result.stdout)
+
     def test_v862_explicit_equipment_update_reuses_existing_scope(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text

@@ -1075,6 +1075,71 @@ async function refreshExistingSeasonTrinkets(gear,level,refreshEmbellishments=tr
   }
 }
 
+const explicitEquipmentUpdates=new WeakMap();
+function equipmentDiagnosticCode(value){
+  return typeof value==="string"&&/^[A-Z][A-Z0-9_]{0,119}(?::[A-Z][A-Z0-9_]{0,119})?$/.test(value)?value:null;
+}
+function rememberEquipmentUpdate(gear,level,build,data){
+  if(!gear)return;
+  explicitEquipmentUpdates.set(gear,{
+    level,build,status:equipmentDiagnosticCode(data?.status)||"RESPONSE_UNAVAILABLE",
+    reason:equipmentDiagnosticCode(data?.reason),
+    delve_status:equipmentDiagnosticCode(data?.supplementary_delve_status),
+    bonus_effect_status:equipmentDiagnosticCode(data?.bonus_effect_source_status),
+    loot_spec_status:equipmentDiagnosticCode(data?.loot_spec_source_status),
+    special_generation_verified:typeof data?.special_generation_verified==="boolean"?data.special_generation_verified:null,
+    bonus_effect_overlay_pending:typeof data?.bonus_effect_overlay_pending==="boolean"?data.bonus_effect_overlay_pending:null,
+    special_pending_count:Number.isSafeInteger(data?.new_special_pending_count)?data.new_special_pending_count:null,
+    new_trinket_ids:equipmentDiagnosticIds(data?.new_trinkets),
+    new_special_ids:equipmentDiagnosticIds(data?.new_special_items)
+  });
+}
+function equipmentDiagnosticIds(rows){
+  return [...new Set((Array.isArray(rows)?rows:[]).map(x=>x?.item_id)
+    .filter(id=>Number.isSafeInteger(id)&&id>0))].sort((a,b)=>a-b);
+}
+function equipmentDiagnosticSnapshot(){
+  const gear=state.seasonGear,level=Number(field("ilevel"));
+  const build=field("season-game-build")||state.verifiedInstalledBuildFromThisPage;
+  const validBuild=x=>typeof x==="string"&&/^\d+(?:\.\d+){3}$/.test(x)?x:null;
+  const spec=field("spec");
+  const current=verifiedInstalledGearScopeMatchesRun(build,level);
+  const previous=gear&&explicitEquipmentUpdates.get(gear);
+  const collect=(group,grid,search)=>{
+    const all=equipmentDiagnosticIds(gear?.choices?.[group]);
+    const eligible=equipmentDiagnosticIds(eligibleEquipment(group));
+    const rendered=equipmentDiagnosticIds([...($(grid)?.querySelectorAll("[data-item-id]")||[])]
+      .map(node=>({item_id:Number(node.dataset.itemId)})));
+    return {catalog_ids:all,eligible_ids:eligible,rendered_ids:rendered,
+      search_active:Boolean(field(search).trim())};
+  };
+  // No arbitrary payload spreads, raw paths, keys, talents, session data,
+  // or user search text. Scope and lists are observed, not approval.
+  return {schema:"equipment_list_diagnostic_v1",requested_build:validBuild(build),
+    catalog_build:validBuild(gear?.season_build),
+    requested_ilevel:Number.isSafeInteger(level)&&level>0&&level<=1000?level:null,
+    catalog_ilevel:Number.isSafeInteger(state.seasonGearTargetIlevel)?state.seasonGearTargetIlevel:null,
+    spec:Object.prototype.hasOwnProperty.call(specLabels,spec)?spec:null,
+    source_scope:equipmentDiagnosticCode(gear?.source_scope),
+    scope_matches:current,full_season_completeness_confirmed:gear?.full_season_completeness_confirmed===true,
+    special_source_refresh_pending:typeof gear?.special_source_refresh_pending==="boolean"?gear.special_source_refresh_pending:null,
+    update:previous&&previous.level===level&&previous.build===build?previous:null,
+    trinkets:collect("trinket","equipment-trinket-grid","equipment-trinket-search"),
+    special_items:collect("special_effect_gear_candidate","equipment-special-grid","equipment-special-search")};
+}
+async function copyEquipmentDiagnostic(){
+  const safe=JSON.stringify(equipmentDiagnosticSnapshot(),null,2);
+  const fallback=$("equipment-diagnostic-fallback");
+  fallback.hidden=true;fallback.value="";
+  try{
+    if(!navigator.clipboard?.writeText)throw Error("CLIPBOARD_UNAVAILABLE");
+    await navigator.clipboard.writeText(safe);
+    setNotice("장비 목록 정보 복사 완료 · 채팅에 붙여넣을 수 있습니다.");
+  }catch{
+    fallback.value=safe;fallback.hidden=false;fallback.focus();fallback.select();
+    setNotice("자동 복사가 차단되었습니다. 표시된 정보를 직접 복사해 주세요.");
+  }
+}
 async function updateVisibleEquipmentChoices(){
   const gear=state.seasonGear,level=Number(field("ilevel"));
   const build=field("season-game-build")||state.verifiedInstalledBuildFromThisPage;
@@ -1090,6 +1155,7 @@ async function updateVisibleEquipmentChoices(){
   note.textContent="저장된 시즌 자료로 장비 목록 확인 중 · 기존 계산은 유지";
   const data=await refreshExistingSeasonTrinkets(gear,level,true,true);
   if(state.seasonGear!==gear||Number(field("ilevel"))!==level)return;
+  rememberEquipmentUpdate(gear,level,build,data);
   if(!data||data.status!=="SEASON_TRINKET_SOURCE_REFRESHED"){
     note.textContent="일부 장비 자료를 확인하지 못했습니다. 기존 목록과 결과는 유지됩니다."+
       (typeof data?.reason==="string"?" ("+data.reason+")":"");
@@ -6049,6 +6115,7 @@ function registerHandlers() {
     withBusy(applyOilUseToggle);
   });
   $("equipment-refresh-btn").addEventListener("click",()=>withBusy(updateVisibleEquipmentChoices));
+  $("equipment-diagnostic-copy").addEventListener("click",copyEquipmentDiagnostic);
   $("equipment-prepare-btn").addEventListener("click",()=>prepareEquipmentFromStep());
   $("equipment-trinket-search").addEventListener("input",drawInlineEquipment);
   $("equipment-special-search").addEventListener("input",drawInlineEquipment);
