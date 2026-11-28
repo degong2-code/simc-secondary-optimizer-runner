@@ -1761,3 +1761,12 @@ body{background:#24252B;color:var(--ink)}
   color:var(--muted);font-size:9px;line-height:1.45;
   white-space:normal;overflow-wrap:break-word;
 }
+
+/* Selected-only special gear settings; raw source rows remain private. */
+#equipment-selected-specials:not([hidden]){display:grid;gap:6px;margin-top:8px}
+.selected-special-control{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,120px) auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid #424141;border-radius:6px}
+.selected-special-control>span{overflow-wrap:anywhere;font-size:12px}
+.selected-special-control>label{font-size:11px;min-width:0}
+.selected-special-control input{width:100%;box-sizing:border-box;min-width:0}
+.selected-special-control .btn{white-space:nowrap;font-size:11px}
+@media(max-width:520px){.selected-special-control{grid-template-columns:minmax(0,1fr) auto}.selected-special-control>span{grid-column:1/-1}}

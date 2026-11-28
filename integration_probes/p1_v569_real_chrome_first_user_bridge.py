@@ -216,9 +216,12 @@ def main():
             special=d.find_element(By.CSS_SELECTOR,
                 "#equipment-special-grid button[data-item-id='910003']")
             visible_click(d,special)
+            # Only the selected-only visible control is a real user input.
+            level=d.find_element(By.CSS_SELECTOR,
+                "#equipment-selected-specials [data-item-id='910003'] input")
+            level.send_keys("330")
+            need(snap(d)["specialLevel"]=="330","V842_VISIBLE_LEVEL_MIRRORS_OWNER")
             d.execute_script("""
-              const level=document.querySelector('#special-rows [data-field="ilevel"]');
-              level.value="330";level.dispatchEvent(new Event("input",{bubbles:true}));
               const target=document.getElementById("ilevel");
               target.value="330";target.dispatchEvent(new Event("input",{bubbles:true}));
               const oil=document.getElementById("optimizer-oil-use-mode");
@@ -241,9 +244,11 @@ def main():
                  and s["specialLevel"]=="330" and not s["specialHistoric"],
                  "V840_RETRY_REBINDS_EXACT_GEAR")
             # Explicit clear is the user's decision, not a hidden rebind effect.
-            clear=d.find_element(By.CSS_SELECTOR,"#special-rows .gear-clear")
+            clear=d.find_element(By.CSS_SELECTOR,
+                "#equipment-selected-specials [data-item-id='910003'] button")
             visible_click(d,clear)
-            need(snap(d)["special"]==[] and snap(d)["specialLevel"]=="",
+            need(snap(d)["special"]==[] and snap(d)["specialLevel"]=="" and
+                 not d.find_element(By.ID,"equipment-selected-specials").is_displayed(),
                  "V840_EXPLICIT_CLEAR_REMOVES_ALL_FIELDS")
             s=snap(d)
             need(s["trinkets"]==["910001","910002"] and not s["disabled"]
@@ -256,7 +261,8 @@ def main():
               build_requests=5,gear_requests=3,dps_requests_synthetic=1,
               first_click_native_zero=True,wrong_sha_rejected=True,
               user_selected_two_trinkets=True,failed_build_retains_gear=True,
-              retry_restores_gear=True,explicit_clear_removes_fields=True)
+              retry_restores_gear=True,explicit_clear_removes_fields=True,
+              visible_special_level_owner=True)
         except Exception as exc:
             receipt["status"]="FAIL"
             receipt["failure_type"]=type(exc).__name__

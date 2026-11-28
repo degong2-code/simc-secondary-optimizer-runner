@@ -623,6 +623,44 @@ console.log("V841_HISTORIC_TRINKET_REPLACEMENT_PASS");
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertIn("V841_HISTORIC_TRINKET_REPLACEMENT_PASS",result.stdout)
 
+    def test_v842_selected_special_visible_controls_keep_single_owner(self):
+        """The visible per-item level and clear operate on the original row."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function renderSelectedSpecialControls(");
+const b=raw.indexOf("/* v354",a);
+assert(a>=0&&b>a);
+const make=()=>({dataset:{},children:[],listeners:{},
+ appendChild(x){this.children.push(x)},append(...x){this.children.push(...x)},
+ replaceChildren(){this.children=[]},setAttribute(){},
+ addEventListener(k,f){this.listeners[k]=f}});
+const host=make(),level={value:"334",dispatchEvent(e){events.push(e.type)}};
+const events=[];let cleared=0,preview=0;
+const row={querySelector(q){return q===".gear-clear"?{click(){cleared++}}:level}};
+const select={value:"100",selectedOptions:[{textContent:"Special"}]};
+const render=Function("$","document","state","updateBudgetPreview","buttonState",
+ "Event",raw.slice(a,b)+"\nreturn renderSelectedSpecialControls;")(
+ ()=>host,{createElement:make},{},()=>preview++,()=>{},class{constructor(type){this.type=type}});
+render([{row,select}]);
+assert(!host.hidden);assert.equal(host.children.length,1);
+const [name,label,button]=host.children[0].children;
+const input=label.children[0];
+assert.equal(input.value,"334");assert.equal(name.textContent,"Special");
+input.value="330";input.listeners.input();
+assert.equal(level.value,"330");assert.deepStrictEqual(events,["input"]);
+assert.equal(preview,1);button.listeners.click();assert.equal(cleared,1);
+render([{row,select:{value:""}}]);assert(host.hidden);assert.equal(host.children.length,0);
+console.log("V842_SELECTED_SPECIAL_CONTROL_PASS");
+"""
+        result=subprocess.run([node,"-e",script,str(ROOT/"runner/webui/app.js")],
+                              cwd=ROOT,capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V842_SELECTED_SPECIAL_CONTROL_PASS",result.stdout)
+
     def test_v359_inline_equipment_and_stat_cap_location(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
@@ -2472,7 +2510,10 @@ const refresh=load("async function refreshExistingSeasonTrinkets(",
         self.assertIn('id="special-rows"',page)
         self.assertNotIn('<summary>부위별 상세 설정</summary>',page)
         self.assertIn('const limit=isSpecial?8:2;',js)
-        self.assertIn('((field("trinket1")?1:0)+(field("trinket2")?1:0))+"/2 선택"',js)
+        self.assertIn('seasonChoice("trinket",field(id))).length)+"/2 현재 시즌 선택"',js)
+        self.assertIn('id="equipment-selected-specials"',page)
+        self.assertIn('renderSelectedSpecialControls(selectedRows);',js)
+        self.assertIn('row.querySelector(".gear-clear").click()',js)
         self.assertIn('.result-workspace .stat-bars{width:100%;max-width:none;min-width:0}',css)
         self.assertIn('.alt-stat-summary{color:#D7D0C5;font-size:13px;',css)
         self.assertIn('.alt-metric strong{font-size:13px;',css)

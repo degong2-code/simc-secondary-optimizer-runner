@@ -413,9 +413,47 @@ function drawInlineEquipment(){
     specials.length+"종"+(sQuery?" 중 검색 결과 "+sFiltered.length+"종":"")+
     (complete?" · 시즌 목록 확인됨":" · 시즌 전체 목록 완성 확인 전"):
     "시즌 특수효과 장비 후보 검증·설치 필요";
-  // Native slot controls are maintained only for the original API,
-  // not used as an extra, redundant user-facing selection bar.
-
+  // Selected-only controls mirror the existing native row. The catalogue
+  // remains the only picker; no ordinary gear or raw bonus/catalyst editor.
+  renderSelectedSpecialControls(selectedRows);
+}
+function renderSelectedSpecialControls(rows){
+  const host=$("equipment-selected-specials");
+  if(!host)return;
+  host.replaceChildren();
+  const selected=rows.filter(entry=>entry.select?.value);
+  host.hidden=!selected.length;
+  for(const entry of selected){
+    const {row,select}=entry;
+    const itemId=select.value;
+    const level=row.querySelector('[data-field="ilevel"]');
+    const wrap=document.createElement("div");
+    wrap.className="selected-special-control";
+    wrap.dataset.itemId=itemId;
+    const name=document.createElement("span");
+    name.textContent=select.selectedOptions[0]?.textContent||"#"+itemId;
+    const label=document.createElement("label");
+    label.textContent="아이템 레벨";
+    const input=document.createElement("input");
+    input.type="number";input.min="1";input.max="1000";input.step="1";
+    input.placeholder="목표 ilvl";
+    input.value=level.value;
+    input.setAttribute("aria-label",name.textContent+" 아이템 레벨");
+    input.addEventListener("input",()=>{
+      level.value=input.value;
+      level.dispatchEvent(new Event("input",{bubbles:true}));
+      updateBudgetPreview();
+      buttonState(state.running,state.longrunResultReady);
+    });
+    label.appendChild(input);
+    const clear=document.createElement("button");
+    clear.type="button";clear.className="btn secondary";
+    clear.textContent="선택 해제";
+    clear.setAttribute("aria-label",name.textContent+" 선택 해제");
+    // Use the existing complete-row clear path, including private options.
+    clear.addEventListener("click",()=>row.querySelector(".gear-clear").click());
+    wrap.append(name,label,clear);host.appendChild(wrap);
+  }
 }
 
 /* v354 — image-free card chooser. Every actual selected ID stays in the
