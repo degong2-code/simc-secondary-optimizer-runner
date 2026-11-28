@@ -71,7 +71,18 @@ def eliminate_historical_sources(root,env,work):
                 source.read_bytes())
             source.unlink()
             removed+=1
-    require(removed>0,"NO_HISTORICAL_BUNDLED_SEASON_TO_QUARANTINE")
+    # A direct zero-history v181 ZIP is already clean. Legacy packages
+    # must still actually quarantine historical source files.
+    if removed==0:
+        manifest=json.loads((root/"V181_PACKAGE_MANIFEST.json").read_text("utf8"))
+        require(manifest.get("package_variant")=="first_user_zero_history_candidate"
+                and manifest.get("historical_season_sources_bundled") is False
+                and manifest.get("source_catalog") is None,
+                "NO_HISTORICAL_BUNDLED_SEASON_TO_QUARANTINE")
+    else:
+        manifest=json.loads((root/"V181_PACKAGE_MANIFEST.json").read_text("utf8"))
+        require(manifest.get("historical_season_sources_bundled") is not False,
+                "ZERO_HISTORY_PACKAGE_CONTAINS_HISTORICAL_SOURCE")
     home=pathlib.Path(env["HOME"])
     local=pathlib.Path(env["LOCALAPPDATA"])
     require(not (home/"SIMC_Secondary_Optimizer"/"runs").exists() and
