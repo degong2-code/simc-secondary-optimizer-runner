@@ -12,7 +12,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 URL="http://127.0.0.1:8795/"
 INSTALL=r"""
 const originalFetch=window.fetch.bind(window);
-const SHA="a".repeat(64), BUILD="12.1.5.70783";
+const SHA="a".repeat(64), NEW_SHA="d".repeat(64), BUILD="12.1.5.70783";
 window.__v569={mode:"cancel",calls:[],builds:0,gears:0,dps:0};
 window.confirm=()=>window.__v569.mode!=="cancel";
 window.fetch=async (resource,config={})=>{
@@ -40,7 +40,7 @@ window.fetch=async (resource,config={})=>{
      zero_history_build:{requires:["GEM_J_PENDING"]},
      source_compilation:{missing:[]}});
    return reply({status:"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",
-     installed_manifest_sha256:SHA,installed_source_game_build:BUILD,
+     installed_manifest_sha256:level===330?NEW_SHA:SHA,installed_source_game_build:BUILD,
      verified_v113_profile_source_restored:true,
      G:2850,J:92,F:165,O:0,B:3107,T:3107,
      web_environment_scope:{game_build:BUILD,target_ilevel:level,
@@ -49,11 +49,12 @@ window.fetch=async (resource,config={})=>{
  }
  if(p==="/api/v1/season-gear"&&m==="GET"&&u.searchParams.has("installed_manifest_sha256")){
    s.gears++;s.calls.push("gear");
-   if(u.searchParams.get("installed_manifest_sha256")!==SHA)
+   const expected=Number(u.searchParams.get("target_ilevel"))===330?NEW_SHA:SHA;
+   if(u.searchParams.get("installed_manifest_sha256")!==expected)
      throw Error("V569_WRONG_GEAR_QUERY_SHA");
    return reply({status:"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
      source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
-     installed_manifest_sha256:s.mode==="wrong-sha"?"c".repeat(64):SHA,
+     installed_manifest_sha256:s.mode==="wrong-sha"?"c".repeat(64):expected,
      season_build:BUILD,weapon_forms:{"paladin/retribution":"two_hand"},
      selected_slot_inventory:{two_hand:{head:[1]}},
      choices:{trinket:[{item_id:910001,name:"Synthetic Alpha"},
@@ -61,7 +62,8 @@ window.fetch=async (resource,config={})=>{
        special_effect_gear_candidate:[{item_id:910003,name:"Synthetic Special",
         inventory_type:1,class_id:4,subclass_id:4}],selectable_stat_craft:[]}});
  }
- if(p==="/api/v1/season-gear/refresh"||p==="/api/v1/season-item-icons")
+ if(p==="/api/v1/season-gear/refresh"||p==="/api/v1/season-item-icons"||
+    p==="/api/v1/environment/official-game-terms")
    return reply({});
  if(p==="/api/v1/verified-oil-loadouts")
    return reply({schema:"v113_verified_installed_oil_loadouts_v1",game_build:BUILD,
@@ -69,7 +71,7 @@ window.fetch=async (resource,config={})=>{
  if(p==="/api/v1/longrun/start"&&m==="POST"){
    s.calls.push("dps");s.dps++;
    const body=JSON.parse(config.body);s.last=body;
-   if(body.installed_manifest_sha256!==SHA||
+   if(body.installed_manifest_sha256!==NEW_SHA||
       body.installed_season_game_build!==BUILD||
       body.controls.trinket_ids.join(",")!=="910001,910002"||
       body.controls.ilevel!==330)
@@ -176,10 +178,10 @@ def main():
             # The current product validates path/revision before any Build.
             # These synthetic values never reach a real Native endpoint.
             d.execute_script("""
-              document.getElementById("binary").value="C:\\simc\\simc.exe";
+              document.getElementById("binary").value=arguments[0];
               document.getElementById("revision").value="710c2408bf";
               buttonState(state.running,state.longrunResultReady);
-            """)
+            ""","C:/simc/simc.exe")
             cold=snap(d)
             print("V569_COLD_SCREEN "+json.dumps(cold,ensure_ascii=True),flush=True)
             need(cold["label"]=="시즌 환경 준비 · 장신구 목록 불러오기"
@@ -228,7 +230,7 @@ def main():
                  "V840_PENDING_PRESERVES_GEAR")
             d.execute_script("window.__v569.mode='ready'")
             click(d);s=snap(d)
-            need(s["builds"]==5 and s["dps"]==0 and s["level"]==330
+            need(s["builds"]==5 and s["dps"]==0 and s["level"]==330 and s["sha"]=="d"*64
                  and s["trinkets"]==["910001","910002"] and s["special"]==["910003"]
                  and s["specialLevel"]=="330" and not s["specialHistoric"],
                  "V840_RETRY_REBINDS_EXACT_GEAR")
