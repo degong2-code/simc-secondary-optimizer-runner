@@ -793,6 +793,45 @@ def verify_fresh_optional_consumables(doc,*,game_build,simc_revision):
             tokens.add(row["simc_token"])
     return True
 
+def verify_exact_J_socket_source(scope,*,game_build,simc_revision,target_ilevel,J):
+    """Validate the optional exact J layout in the original installed manifest."""
+    need(type(scope) is dict
+         and scope.get("schema")=="v830_exact_representative_socket_J_source_v1"
+         and scope.get("game_build")==game_build
+         and scope.get("simc_revision")==simc_revision
+         and scope.get("target_ilevel")==target_ilevel
+         and scope.get("J")==J
+         and scope.get("game_socket_legal_verified") is False
+         and all(valid_sha(scope.get(k)) for k in (
+             "source_review_sha256","v232_stage_receipt_sha256",
+             "original_G_native_sha256","active_native_sha256","native_binary_sha256")),
+         "FRESH_J_SOCKET_SOURCE_IDENTITY_DRIFT")
+    counts=scope.get("socket_counts")
+    ids=scope.get("physical_item_ids_by_slot")
+    bonuses=scope.get("source_socket_bonus_by_slot")
+    ordinary=scope.get("ordinary_gem_ids")
+    special=scope.get("special_gem_id")
+    where=scope.get("special_slot")
+    need(type(counts) is dict and bool(counts)
+         and set(counts)<=set(specs.SLOT_ORDER)-{"trinket1","trinket2"}
+         and all(type(n) is int and 1<=n<=3 for n in counts.values())
+         and type(ids) is dict and set(ids)==set(counts)
+         and all(type(i) is int and i>0 for i in ids.values())
+         and type(bonuses) is dict and bool(bonuses) and set(bonuses)<=set(counts)
+         and all(type(row) is dict and set(row)=={"item_id","bonus_id","added_socket_count"}
+                 and row["item_id"]==ids[s] and type(row["bonus_id"]) is int
+                 and row["bonus_id"]>0 and type(row["added_socket_count"]) is int
+                 and 1<=row["added_socket_count"]<=counts[s] for s,row in bonuses.items())
+         and type(ordinary) is list and len(ordinary)>=4
+         and all(type(i) is int and i>0 and i!=special for i in ordinary)
+         and (special is None and where is None or
+              type(special) is int and special>0 and where in counts)
+         and scope.get("socket_total")==sum(counts.values())==
+                len(ordinary)+int(special is not None),
+         "FRESH_J_SOCKET_SOURCE_LAYOUT_DRIFT")
+    return True
+
+
 def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha256,
                                         staged_source_environment,
                                         trusted_budget_evidence, source_ui,
@@ -853,6 +892,10 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
                for row in prepared["verified_option_inputs_unpublished"]]
     oil=budget["fixed_O"]
     components=trusted_budget_evidence["components"]
+    physical_J=components["J"].get("exact_representative_socket_source")
+    if physical_J is not None:
+        verify_exact_J_socket_source(physical_J,game_build=source_catalog["game_build"],
+            simc_revision=source_catalog["simc_revision"],target_ilevel=target_ilevel,J=budget["J"])
     physical_F=_selected_verified_F_source(components["F"],budget["F"])
     physical_O=_selected_verified_O_source(components["O"],oil)
     # Optional exact source-owner scope: older general v212 installs keep
@@ -905,6 +948,8 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
            if g_track=="fury_dual_2h" else {}),
         "official_effective_G":budget["effective_G"],
         "official_J":budget["J"],
+        **({"official_J_physical_socket_source":physical_J}
+           if physical_J is not None else {}),
         "official_F":budget["F"],
         "official_F_physical_source":physical_F,
         "official_O":dict(oil),
@@ -986,6 +1031,10 @@ def verify_fresh_installed_environment(document):
          document.get("dps_optimization_required") is False and
          document.get("native_calls")==0 and document.get("network_calls")==0,
          "FRESH_INSTALL_READY_OR_BUDGET_CONTRACT_DRIFT")
+    if "official_J_physical_socket_source" in document:
+        verify_exact_J_socket_source(document["official_J_physical_socket_source"],
+            game_build=document["game_build"],simc_revision=document["simc_revision"],
+            target_ilevel=document["target_ilevel"],J=document["official_J"])
     if "installed_optional_consumables" in document:
         verify_fresh_optional_consumables(
             document["installed_optional_consumables"],

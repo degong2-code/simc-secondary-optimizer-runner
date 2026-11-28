@@ -1,0 +1,187 @@
+{
+  "G_native_status": "G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING",
+  "binary_sha256": "4f4472ac8687d029cd7d6041741f44aa98750ea1b3e953dfa7002dee1f38879f",
+  "dps_native_calls": 0,
+  "environment_installed": false,
+  "game_build": "12.1.5.70961",
+  "game_socket_legal_verified": false,
+  "layout": {
+    "CHMV_J_source_authenticated": false,
+    "candidate_J_unadmitted": null,
+    "environment_ready": false,
+    "four_colors_physically_present": false,
+    "game_socket_applicability_verified": false,
+    "highest_quality_gem_ids_verified_for_new_season": false,
+    "max_four_color_effect_claimed": false,
+    "native_calls": 0,
+    "ordinary_colors_observed": [
+      "amethyst",
+      "garnet",
+      "peridot"
+    ],
+    "ordinary_count": 4,
+    "ordinary_gem_ids": [
+      240906,
+      240890,
+      240898,
+      240914
+    ],
+    "schema": "v271_user_socket_gem_layout_stage_v1",
+    "simc_declared_full_socket_policy": "FULL_GEM_ID_PROFILE_SIMC_OWNS",
+    "socket_counts": {
+      "finger1": 1,
+      "finger2": 1,
+      "neck": 1,
+      "waist": 1,
+      "wrists": 1
+    },
+    "socket_total": 5,
+    "source_observed_gem_item_ids": [
+      240890,
+      240898,
+      240906,
+      240914,
+      240983
+    ],
+    "source_socket_bonus_by_slot": {
+      "finger1": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268266
+      },
+      "finger2": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 251136
+      },
+      "neck": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 251142
+      },
+      "waist": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268244
+      },
+      "wrists": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268239
+      }
+    },
+    "special_gem_id": 240983,
+    "special_slot": "finger1",
+    "status": "PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING"
+  },
+  "new_native_calls": 7,
+  "requested_socket_total": 5,
+  "requires": [
+    "HIGHEST_QUALITY_GEM_J_SOURCE_PENDING",
+    "HIGHEST_QUALITY_FLASK_F_SOURCE_PENDING",
+    "WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING",
+    "SAME_SEASON_GJFO_B_T_AND_VERSIONED_INSTALL_PENDING",
+    "SAME_BUILD_V191_V211_V213_V212_INSTALL_PENDING",
+    "G_NATIVE_NUMERIC_REFERENCE_REUSE_REQUIRES_J_F_O",
+    "F_O_HIGHEST_QUALITY_AND_WEAPON_APPLICABILITY_PENDING"
+  ],
+  "schema": "p1_v829_selected_actual_socket_bonus_once_v1",
+  "selected_socket_bonus_native": {
+    "active_native_sha256": "320f0371c5c0e32ca0a4098aa511addbb8bc7d60a3dd579665c9b325b67f2a43",
+    "bonus_plan": {
+      "finger1": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268266
+      },
+      "finger2": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 251136
+      },
+      "neck": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 251142
+      },
+      "waist": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268244
+      },
+      "wrists": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268239
+      }
+    },
+    "game_build": "12.1.5.70961",
+    "game_socket_legal_verified": false,
+    "native_binary_sha256": "4f4472ac8687d029cd7d6041741f44aa98750ea1b3e953dfa7002dee1f38879f",
+    "network_calls": 0,
+    "new_native_calls": 1,
+    "original_G_native_sha256": "d1828260a169805655a3e95c43066078061d86e2dd3a104acf57ee2738d0194a",
+    "simc_revision": "9933ffb946fb55b1fa66657b848f519ac19006e1",
+    "source_review_sha256": "b3b5c407d4f1ffd006425c9553226157d1bb8db2816083dd37391e2b492f6097",
+    "static_comparison": {
+      "exact_bonus_options_observed": true,
+      "physical_slots": 13,
+      "static_gear_unchanged": true
+    },
+    "status": "EXACT_SIMC_SOCKET_BONUS_STATIC_BOUND",
+    "v232_stage_receipt_sha256": "df75e09cb2dca89266cedd91e96bab4e3374bd5b9a2769a9d6edf0e3231ff4d8"
+  },
+  "selected_special_gem_id": 240983,
+  "simc_revision": "9933ffb946fb55b1fa66657b848f519ac19006e1",
+  "source_supported_socket_candidate": {
+    "game_socket_legal_verified": false,
+    "requested_socket_total": 5,
+    "socket_counts": {
+      "back": 0,
+      "chest": 0,
+      "feet": 0,
+      "finger1": 1,
+      "finger2": 1,
+      "hands": 0,
+      "head": 0,
+      "legs": 0,
+      "main_hand": 0,
+      "neck": 1,
+      "shoulders": 0,
+      "waist": 1,
+      "wrists": 1
+    },
+    "source_socket_bonus_by_slot": {
+      "finger1": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268266
+      },
+      "finger2": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 251136
+      },
+      "neck": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 251142
+      },
+      "waist": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268244
+      },
+      "wrists": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268239
+      }
+    },
+    "status": "EXACT_SOCKET_SOURCE_CANDIDATE_NOT_NATIVE_VERIFIED"
+  },
+  "status": "PASS_ACTUAL_SELECTED_SOCKET_BONUS_STATIC_NOT_INSTALLED",
+  "workflow_run_id": 46098425659,
+  "workflow_job_id": 140835078392,
+  "source_commit": "bac97e86fd699365e12343af464c998d1245c42e"
+}

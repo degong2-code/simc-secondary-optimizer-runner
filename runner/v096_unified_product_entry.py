@@ -245,6 +245,40 @@ def _signed_installed_user_E0_profile(*,doc,selected,profile,user_final_T,
     return source
 
 
+def _assert_installed_J_socket_profile(*,doc,profile):
+    """Match final physical gem/bonus tokens to exact installed J source."""
+    scope=doc.get("official_J_physical_socket_source")
+    if scope is None:return
+    counts=scope["socket_counts"]
+    ordinary=iter(scope["ordinary_gem_ids"])
+    expected={}
+    for slot,n in sorted(counts.items()):
+        gems=[scope["special_gem_id"]] if slot==scope["special_slot"] else []
+        gems.extend(next(ordinary) for _ in range(n-len(gems)))
+        expected[slot]="/".join(map(str,gems))
+    seen=set()
+    for line in profile.splitlines():
+        slot,sep,tail=line.partition("=")
+        if not sep or slot not in gear_slots.SLOTS or slot.startswith("trinket"):
+            continue
+        fields=tail.split(",")
+        gem=[x for x in fields if x.startswith("gem_id=")]
+        if slot not in expected:
+            need(not gem,"FRESH_J_SOCKET_UNEXPECTED_GEM_SLOT:"+slot)
+            continue
+        need(slot not in seen and gem==["gem_id="+expected[slot]]
+             and fields.count("id="+str(scope["physical_item_ids_by_slot"][slot]))==1
+             and fields.count("ilevel="+str(scope["target_ilevel"]))==1,
+             "FRESH_J_SOCKET_FINAL_PHYSICAL_GEM_DRIFT:"+slot)
+        bonus=scope["source_socket_bonus_by_slot"].get(slot)
+        if bonus is not None:
+            need([x for x in fields if x.startswith("bonus_id=")]==
+                 ["bonus_id="+str(bonus["bonus_id"])],
+                 "FRESH_J_SOCKET_FINAL_BONUS_DRIFT:"+slot)
+        seen.add(slot)
+    need(seen==set(expected),"FRESH_J_SOCKET_FINAL_SLOT_MISSING")
+
+
 def _admitted_fresh_season_source(*, manifest_path, season, revision,
                                   user_scenario, flask_F, oil_hands, profile):
     """Reuse ORIGINAL exact-build v216/v217/v212 installed source, never a preview.
@@ -267,6 +301,7 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
          "FRESH_SEASON_INTERNAL_SOURCE_FIELDS")
     doc,bound=_verified_installed_fresh_v217(
         manifest_path=manifest_path,season=season)
+    _assert_installed_J_socket_profile(doc=doc,profile=profile)
     normalized=contract.normalize(user_scenario)
     oil=doc["official_O"]
     zeros={stat:0 for stat in contract.STATS}

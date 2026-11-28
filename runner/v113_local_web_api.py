@@ -855,6 +855,14 @@ class LocalJobs:
         if any(k not in compilation for k in names):
             raise environment_manifest.EnvironmentBlocked(
                 "WEB_FRESH_V098_ORIGINAL_PROFILE_INPUT_MISSING")
+        socket_scope=doc.get("official_J_physical_socket_source")
+        if socket_scope is not None:
+            layout=compilation["physical_gem_layout_unadmitted"]
+            if any(layout.get(k)!=socket_scope.get(k) for k in (
+                    "socket_counts","socket_total","ordinary_gem_ids","special_gem_id",
+                    "special_slot","source_socket_bonus_by_slot")):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_INSTALLED_J_SOCKET_LAYOUT_DRIFT")
         self._verified_fresh_profile_result={
             "normal_build_entry":True,
             "zero_history_build":{"environment_ready":True},
