@@ -4363,9 +4363,10 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     # resolve on selection. Only small sealed files, not
                     # another raw acquisition or numeric environment Build.
                     sealed=None
-                    if any(bootstrap.refreshed_special_source_eligible(
+                    needs_special_seal=any(bootstrap.refreshed_special_source_eligible(
                             r,refreshed["candidate"].get("db2_display_season_id"))
-                           for r in refreshed["candidate"]["items"]):
+                           for r in refreshed["candidate"]["items"])
+                    if needs_special_seal:
                         sealed=environment_build.read_sealed_selectable_gear_generation(
                             stage_root=root,build=game_build)
                     refreshed={**refreshed,"special_generation_verified":(
@@ -4375,11 +4376,15 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     # refresh must retry failed optional acquisition. The
                     # raw owner already reuses successful same-build bytes.
                     jobs.season_gear_refresh_cache.pop(game_build,None)
+                    # Raw bonus observation is not proof that v098 can
+                    # resolve the selectable generation. Keep incomplete
+                    # refreshes retryable without admitting unsealed rows.
                     if (refreshed.get("supplementary_delve_status") in (
                             "SUPPLEMENTARY_SOURCE_OBSERVED",
                             "SUPPLEMENTARY_SOURCE_PARTIAL") and
                             refreshed.get("bonus_effect_review",{}).get("status")==
-                                "POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED"):
+                                "POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED" and
+                            (not needs_special_seal or refreshed["special_generation_verified"])):
                         jobs.season_gear_refresh_cache[game_build]={
                             **refreshed,"network_calls":0,"explicit_refresh_complete":True}
                 # Independent optional retry: do not repeat gear refresh

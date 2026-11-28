@@ -724,9 +724,11 @@ class LocalWebAPIOffline(unittest.TestCase):
               mock.patch.object(web.source_to_catalog,"verify_catalog",return_value=True),
               mock.patch.object(web.official_ko_env,"read_names",return_value={}),
               mock.patch.object(web.environment_build,"refresh_existing_season_gear_source",
-                 side_effect=[partial,refresh]) as collect,
+                 side_effect=[partial,refresh,refresh]) as collect,
               mock.patch.object(web.environment_build,"read_sealed_selectable_gear_generation",
-                 return_value={**refresh,"network_calls":0}) as sealed,
+                 side_effect=[{**refresh,"network_calls":0}, {**refresh,"network_calls":0},
+                              None, {**refresh,"network_calls":0},
+                              {**refresh,"network_calls":0}]) as sealed,
               mock.patch.object(web.season_gear,"public_options",return_value={"choices":{
                   "trinket":[row,fresh_trinket],
                   "special_effect_gear_candidate":[fresh_special,pending_special],
@@ -742,11 +744,19 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertEqual(pending.json()["network_calls_now"],2)
             self.assertEqual(pending.json()["bonus_effect_source_status"],
                              "BONUS_EFFECT_SOURCE_PENDING")
+            unresolved=self.client.post(url,headers=self.headers,json={})
+            self.assertEqual(unresolved.status_code,200,unresolved.text)
+            self.assertEqual(unresolved.json()["bonus_effect_source_status"],
+                             "POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED")
+            self.assertFalse(unresolved.json()["special_generation_verified"])
+            self.assertEqual(unresolved.json()["new_special_items"],[])
+            self.assertNotIn(game_build,self.app.state.jobs.season_gear_refresh_cache)
+            # A valid generation can recover without repeating numeric Build.
             first=self.client.post(url,headers=self.headers,json={})
             second=self.client.post(url,headers=self.headers,json={})
             self.app.state.jobs.season_gear_refresh_cache.clear()
             get=self.client.get(url.replace("/refresh",""),headers=self.headers)
-            self.assertEqual(sealed.call_count,4)
+            self.assertEqual(sealed.call_count,5)
         self.assertEqual(get.status_code,200,get.text)
         self.assertEqual({r["item_id"] for r in get.json()["choices"]["trinket"]},
                          {269999,270000})
@@ -770,7 +780,7 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(second.json()["network_calls_now"],0)
         self.assertEqual(report["installed_manifest_sha256"],digest)
         self.assertEqual(install_path.read_text(),"{}")
-        self.assertEqual(collect.call_count,2)
+        self.assertEqual(collect.call_count,3)
         self.assertEqual(self.client.post(url,json={}).status_code,403)
 
     def test_verified_installed_oil_loadouts_are_read_only_and_empty(self):
