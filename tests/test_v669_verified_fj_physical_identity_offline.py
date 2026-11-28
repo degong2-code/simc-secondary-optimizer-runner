@@ -109,11 +109,14 @@ const nodes=Object.create(null);
 const $=id=>(nodes[id]??={
  value:'',textContent:'',hidden:true,disabled:false,options:[],
  replaceChildren(...xs){this.options=[...xs];this.value=xs[0]?.value||'';},
- appendChild(x){this.options.push(x);}
+ appendChild(x){if(x.tag==='optgroup')this.options.push(...x.children);else this.options.push(x);}
 });
 const field=id=>String($(id).value||'');
 const option=(value,label)=>({value:String(value),textContent:String(label),disabled:false});
-const document={getElementById:id=>$(id)};
+const document={getElementById:id=>$(id),createElement:tag=>{
+ assert.equal(tag,"optgroup");
+ return {tag,children:[],appendChild(x){this.children.push(x)}};
+}};
 const state={verifiedInstalledBuildFromThisPage:null,seasonGear:null};
 $('season-game-build').value='12.1.5.70961';
 $('ilevel').value='334';
@@ -140,12 +143,15 @@ assert.strictEqual($('season-verified-budget-group').hidden,false);
 assert.equal(sel.options.length,3);
 assert.equal(sel.options[1].disabled,false);
 assert.equal(sel.options[2].disabled,false);
-assert(sel.options[1].textContent.includes('검증 환경 1'));
-assert(sel.options[2].textContent.includes('검증 환경 2'));
+assert(sel.options[1].textContent.includes('구성 1'));
+assert(sel.options[2].textContent.includes('구성 1'));
+assert(sel.options[1].textContent.includes('저장본 1'));
+assert(sel.options[2].textContent.includes('저장본 2'));
+assert.deepEqual(sel.options.slice(1).map(x=>x.value),[A,B]);
 assert(sel.options[1].title.includes('revision-A'));
 assert(!sel.options[1].textContent.includes(A));
 assert(!sel.options[2].textContent.includes(B));
-assert($('season-verified-budget-status').textContent.includes('개별 검증'));
+assert($('season-verified-budget-status').textContent.includes('구성 1종 · 저장본 2개'));
 assert.equal($('season-verified-budget-diagnostic-detail').hidden,true);
 assert.equal($('season-verified-fj-diagnostic-copy').hidden,true);
 // Each original v212+v113 source must be admitted on its own exact receipt.
@@ -296,11 +302,14 @@ const nodes=Object.create(null),copies=[];
 const $=id=>(nodes[id]??={
  value:'',hidden:true,disabled:false,textContent:'',options:[],
  replaceChildren(...items){this.options=items;this.value=items[0]?.value||'';},
- appendChild(item){this.options.push(item)}
+ appendChild(item){if(item.tag==='optgroup')this.options.push(...item.children);else this.options.push(item)}
 });
 const field=id=>String($(id).value||'');
 const valueInt=id=>Number(field(id));
-const document={getElementById:id=>$(id)};
+const document={getElementById:id=>$(id),createElement:tag=>{
+ assert.equal(tag,"optgroup");
+ return {tag,children:[],appendChild(x){this.children.push(x)}};
+}};
 const option=(value,label)=>({value:String(value),textContent:String(label),
  disabled:false});
 const navigator={clipboard:{writeText:async x=>copies.push(x)}};
@@ -550,7 +559,7 @@ class ConsumableDropdownLayoutRegression(unittest.TestCase):
         # Avoid changing stored SimC identity, verified install selection or
         # option IDs just to improve a narrow dropdown's presentation.
         self.assertIn("item.individually_verified===true",js)
-        self.assertIn("candidate=option(item.installed_manifest_sha256,label)",js)
+        self.assertIn("candidate=option(item.installed_manifest_sha256,savedLabel)",js)
         self.assertNotIn("candidate.disabled=duplicate",js)
 
 

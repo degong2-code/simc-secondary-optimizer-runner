@@ -81,7 +81,7 @@ class SeasonFailureReceipt(unittest.TestCase):
         # v676: multiple individually verified installed environments
         # remain separate exact-SHA choices; no cross-source equality Gate.
         self.assertIn('item.individually_verified===true',ui)
-        self.assertIn('const candidate=option(item.installed_manifest_sha256,label)',ui)
+        self.assertIn('const candidate=option(item.installed_manifest_sha256,savedLabel)',ui)
         self.assertNotIn('candidate.disabled=duplicate',ui)
         self.assertIn('state.verifiedBaseFlaskInstalls.filter(x=>',ui)
         self.assertIn('x.installed_manifest_sha256===selectedBudget',ui)
