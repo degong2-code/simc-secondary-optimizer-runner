@@ -159,7 +159,7 @@ const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, s
                 equipmentIconUrls:new Map(),equipmentIconScope:"",
                 equipmentIconEpoch:0,
                 autoSeasonTargetEnabled:true, lastVerifiedSeasonTarget:null,
-                pollTimer:null, pollBusy:false,
+                pollTimer:null, pollBusy:false, pollEpoch:0,
                 pollFailures:0, nextPollAt:0, nextPassivePollAt:0 };
 const number = (value,decimals=0) =>
   typeof value==="number" && Number.isFinite(value) ?
@@ -3361,6 +3361,10 @@ function buttonState(active=false,ready=false) {
 }
 async function withBusy(fn) {
   if(state.busy) return;
+  // Invalidate any passive status/result GET already in flight before an
+  // explicit user action. Same-session resume/cancel must not be overwritten
+  // by an older snapshot just because its session ID is unchanged.
+  state.pollEpoch=(state.pollEpoch||0)+1;
   state.busy=true;buttonState(state.running,false);
   try{
     await fn();
@@ -4763,9 +4767,9 @@ async function readSession(id) {
 }
 async function pollOnce() {
   if(!state.session)return;
-  const id=state.session;
+  const id=state.session,epoch=state.pollEpoch;
   const snapshot=await readSession(id);
-  if(id!==state.session)return;
+  if(id!==state.session||epoch!==state.pollEpoch)return;
   renderProgress(snapshot.progress);
   if(snapshot.result)renderResult(snapshot.result);
 }
@@ -4800,10 +4804,14 @@ function beginPolling() {
     if(state.busy||state.pollBusy||!state.session||
        Date.now()<state.nextPollAt||Date.now()<state.nextPassivePollAt)return;
     state.pollBusy=true;
-    const id=state.session;
+    const id=state.session,epoch=state.pollEpoch;
     pollOnce().then(()=>{
-      if(id===state.session){state.pollFailures=0;state.nextPollAt=0;}
-    }).catch(err=>handlePollFailure(err,id)).finally(()=>{state.pollBusy=false;});
+      if(id===state.session&&epoch===state.pollEpoch){
+        state.pollFailures=0;state.nextPollAt=0;
+      }
+    }).catch(err=>{
+      if(id===state.session&&epoch===state.pollEpoch)handlePollFailure(err,id);
+    }).finally(()=>{state.pollBusy=false;});
   },1400);
 }
 async function loadRecentSessions() {

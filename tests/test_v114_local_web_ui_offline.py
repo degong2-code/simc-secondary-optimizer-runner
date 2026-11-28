@@ -2856,6 +2856,73 @@ const begin=Function("state","$","setInterval","clearInterval",
         self.assertEqual(r.returncode,0,r.stderr)
         self.assertIn("V623_FINAL_RESULT_POLL_STOP_ZERO_NATIVE_PASS",r.stdout)
 
+    def test_v855_old_passive_poll_cannot_overwrite_same_session_user_action(self):
+        """Actual JS, deferred status/response ordering; no Native or server."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+function part(a,b){
+  const start=raw.indexOf(a),end=raw.indexOf(b,start);
+  assert(start>=0&&end>start);return raw.slice(start,end);
+}
+const state={session:"a".repeat(20),pollEpoch:0,pollTimer:null,
+  pollBusy:false,busy:false,running:false,longrunCompleted:false,
+  pollFailures:0,nextPollAt:0,nextPassivePollAt:0};
+const nodes={},$=id=>(nodes[id]??={hidden:false});
+const pending=[],shown=[],errors=[];
+let tick;
+const readSession=id=>new Promise((resolve,reject)=>pending.push({id,resolve,reject}));
+const app=Function("state","$","readSession","renderProgress","renderResult",
+  "setInterval","clearInterval","handlePollFailure","buttonState","setNotice",
+  "clearUserBlocker","prepareUserSelectedEnvironment",
+  part("async function withBusy(fn) {"," // An explicitly copied diagnosis")+
+  part("async function pollOnce() {","function handlePollFailure(err,id) {")+
+  part("function beginPolling() {","async function loadRecentSessions() {")+
+  "return {withBusy,pollOnce,beginPolling};")(
+    state,$,readSession,p=>shown.push(p),r=>shown.push(r),
+    f=>{tick=f;return 1;},()=>{},e=>errors.push(e),
+    ()=>{},()=>{},()=>{},()=>{});
+const flush=()=>new Promise(resolve=>setImmediate(resolve));
+(async()=>{
+  app.beginPolling();tick();
+  assert.strictEqual(pending.length,1);
+  const resume=app.withBusy(async()=>{await app.pollOnce();});
+  assert.strictEqual(pending.length,2);
+  pending[1].resolve({progress:"new running",result:null});
+  await resume;
+  pending[0].resolve({progress:"old paused",result:"old result"});
+  await flush();
+  assert.deepStrictEqual(shown,["new running"]);
+  assert.strictEqual(state.pollBusy,false);
+  tick();
+  assert.strictEqual(pending.length,3);
+  await app.withBusy(async()=>{state.pollFailures=2;state.nextPollAt=123;});
+  pending[2].reject(Error("SESSION_NOT_FOUND"));
+  await flush();
+  assert.deepStrictEqual(errors,[]);
+  assert.strictEqual(state.pollFailures,2);
+  assert.strictEqual(state.nextPollAt,123);
+  state.nextPollAt=0;
+  tick();assert.strictEqual(pending.length,4);
+  pending[3].resolve({progress:"current paused",result:"current result"});
+  await flush();
+  assert.deepStrictEqual(shown,["new running","current paused","current result"]);
+  assert.strictEqual(state.pollFailures,0);
+  tick();assert.strictEqual(pending.length,5);
+  pending[4].reject(Error("REAL_CURRENT_FAILURE"));await flush();
+  assert.strictEqual(errors.length,1);
+  assert.strictEqual(errors[0].message,"REAL_CURRENT_FAILURE");
+  console.log("V855_SAME_SESSION_POLL_EPOCH_PASS");
+})().catch(e=>{console.error(e);process.exitCode=1});
+"""
+        result=subprocess.run([node,"-e",script,str(ROOT/"runner/webui/app.js")],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V855_SAME_SESSION_POLL_EPOCH_PASS",result.stdout)
+
     def test_v622_recent_session_index_uses_readable_status_not_raw_worker_code(self):
         """Completed and paused v293 sessions remain distinguishable after restart."""
         js=self.client.get("/assets/app.js").text
