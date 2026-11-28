@@ -133,6 +133,29 @@ class SocketLayoutTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"SOCKET_BONUS_OPTION_CHANGED"):
                 sockets.apply_source_socket_bonuses(staged,physical,self.need,verify_only=True)
 
+    def test_v829_real_composer_serializes_bonus_with_gems(self):
+        character={"class":"druid","spec":"balance","race":"night_elf",
+                   "talents":"CAAAABBB11122"}
+        trinkets=[{"slot":"trinket1","item_id":270175,"options":{}},
+                  {"slot":"trinket2","item_id":270173,"options":{}}]
+        _,_,base_rows,_=pure.compose(character,trinkets)
+        ids=[311100,311101,311102,311103]
+        plan={"socket_counts":{"head":1,"neck":1,"finger1":1,"finger2":1,"wrists":1},
+              "special_gem_id":240983,"special_slot":"head","ordinary_gem_ids":ids,
+              sockets.SOURCE_IDS_FIELD:sorted(ids+[240983]),
+              sockets.SOCKET_BONUS_FIELD:{"neck":{"item_id":base_rows["neck"]["item_id"],
+                   "bonus_id":13668,"added_socket_count":1}}}
+        profile,receipt,rows,_=pure.compose(character,trinkets,socket_plan=plan)
+        neck=next(line for line in profile.splitlines() if line.startswith("neck="))
+        self.assertIn("bonus_id=13668",neck)
+        self.assertIn("gem_id=",neck)
+        self.assertEqual(receipt["socket_layout"][sockets.SOCKET_BONUS_FIELD],
+                         plan[sockets.SOCKET_BONUS_FIELD])
+        sockets.apply_source_socket_bonuses(rows,plan,self.need,verify_only=True)
+        rows["neck"]["item_id"]+=1
+        with self.assertRaisesRegex(ValueError,"SOCKET_BONUS_PHYSICAL_ITEM"):
+            sockets.apply_source_socket_bonuses(rows,plan,self.need,verify_only=True)
+
     def test_v829_existing_native_static_parser_exact_bonus_comparison(self):
         import copy,json
         from runner import v216_environment_build_coordinator as engine

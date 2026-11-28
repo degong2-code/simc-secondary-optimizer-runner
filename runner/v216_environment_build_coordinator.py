@@ -8227,6 +8227,16 @@ def _fresh_native_socket_bonus_application(*,collected,compilation,
     layout=preflight.get("physical_gem_layout_unadmitted") or {}
     bonuses=layout.get(physical_gems.SOCKET_BONUS_FIELD)
     if not bonuses or not binary:return pending
+    if layout.get("special_gem_id") is not None:
+        special=compilation.get("selected_special_gem_direct_CHMV_source_only") or {}
+        vector=special.get("direct_static_CHMV_vector_source_only")
+        if (special.get("item_id")!=layout["special_gem_id"]
+                or special.get("game_build")!=preflight["game_build"]
+                or special.get("simc_revision")!=preflight["simc_revision"]
+                or type(vector) is not dict
+                or set(vector)!=set(season_budget_contract.STATS)
+                or any(type(v) is not int or v!=0 for v in vector.values())):
+            return {**pending,"reason":"SELECTED_SPECIAL_DIRECT_CHMV_ACCOUNTING_PENDING"}
     extra=j_socket.get("additional_socket_proof_required_by_slot")
     source=compilation.get("selected_representative_socket_bonus_source_only") or {}
     if (native_G.get("status")!="G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING"
@@ -11167,13 +11177,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                                     declared_counts=proposed["socket_counts"]
                                     source_bonus_by_slot=proposed[physical_gems.SOCKET_BONUS_FIELD]
                                 else:
+                                    declared_counts=None
                                     progress["requires"].append(
                                         "EXACT_SELECTED_SOCKET_SOURCE_CAPACITY_PENDING")
-                        progress["simc_declared_full_socket_counts_source_only"]=(
-                            dict(declared_counts))
-                        source_compilation[
-                            "simc_declared_full_socket_counts_source_only"]=(
+                        if declared_counts is not None:
+                            progress["simc_declared_full_socket_counts_source_only"]=(
                                 dict(declared_counts))
+                            source_compilation[
+                                "simc_declared_full_socket_counts_source_only"]=(
+                                    dict(declared_counts))
                     ordinary=None
                     if declared_counts is not None and not special_invalid and (
                             special_id is None or special_id in
