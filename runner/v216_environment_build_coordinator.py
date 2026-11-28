@@ -7865,7 +7865,8 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
                                                     selected_roles,
                                                     target_ilevel,
                                                     candidate_socket_counts=None,
-                                                    simc_declared_socket_counts=None):
+                                                    simc_declared_socket_counts=None,
+                                                    source_socket_bonus_by_slot=None):
     """Stage one existing special + ordinary gems on original v232 slots.
 
     A separate prospective slot plan can add *unadmitted* bonus slots.
@@ -7959,6 +7960,8 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
     rows={slot:{"slot":slot,"item_id":ids[slot],
                 "ilevel":target_ilevel,"options":{}}
           for slot in sorted(ids)}
+    if source_socket_bonus_by_slot:
+        plan[physical_gems.SOCKET_BONUS_FIELD]=source_socket_bonus_by_slot
     _,layout=physical_gems.arrange(rows,plan,need)
     # Compare the staged physical layout against the proposed target counts,
     # NOT the smaller original intrinsic counts. The downstream source owner
@@ -8000,6 +8003,63 @@ def _fresh_declared_four_ordinary_base_compatibility(*, layout, extra):
             and sum(counts.values())==4
             and bool(extra)
             and all(type(n) is int and n>0 for n in extra.values()))
+
+
+def _fresh_socket_bonus_source_projection(*,collected,compilation):
+    """Reuse the authenticated original v824/v706 review for selected IDs."""
+    source=collected.get("fresh_one_spec_simc_representative") or {}
+    counts=source.get("intrinsic_socket_counts_by_selected_slot_source_only")
+    if (type(counts) is not dict or not counts or
+            not (collected.get("fresh_selectable_bonus_effect_review") or {}).get("candidate_path")):
+        return None
+    try:
+        review=collected["fresh_selectable_bonus_effect_review"]
+        stage_root=pathlib.Path(compilation["stage_root"]).resolve()
+        ref=review["source_stage"]
+        sid=ref["stage_id"]
+        rel="source/"+sid+".json"
+        path=pathlib.Path(review["candidate_path"])
+        need(path.resolve()==(stage_root/rel).resolve() and path.is_file()
+             and not path.is_symlink() and path.stat().st_size<=12_000_000,
+             "V824_SOCKET_REVIEW_PATH_INVALID")
+        doc=json.loads(path.read_text("utf8"))
+        inputs=doc["source_identity"]
+        need(doc["schema"]==bonus_effect_review.SCHEMA and
+             doc["game_build"]==collected["expected_game_build"] and
+             inputs["game_build"]==collected["expected_game_build"] and
+             sid==_derived_source_generation("season-bonus-effect-review",inputs),
+             "V824_SOCKET_REVIEW_SCOPE_DRIFT")
+        verified=stage_engine.verify_stage(root=stage_root,stage_id=sid,
+            stage_version="bonus-effect-source-only-v1",inputs=inputs,outputs={"review":rel})
+        need(verified["receipt_sha256"]==ref["receipt_sha256"],
+             "V824_SOCKET_REVIEW_RECEIPT_DRIFT")
+        original=json.loads(pathlib.Path(source["candidate_path"]).read_text("utf8"))
+        need(original["receipt_sha256"]==simc_source.digest(simc_source.canonical({
+            k:v for k,v in original.items() if k!="receipt_sha256"}).encode("utf8")) and
+            original["game_build"]==collected["expected_game_build"] and
+            original["simc_revision"]==compilation["simc_revision"] and
+            original["selected_intrinsic_socket_count_by_slot_source_only"]==counts,
+            "V824_SOCKET_PHYSICAL_SOURCE_DRIFT")
+        selected=original["selected_G_slot_ids"]
+        projection=doc["socket_bonus_source_only"]
+        by_id={r["item_id"]:r for r in projection["items"]}
+        by_bonus={r["bonus_id"]:r for r in projection["bonus_lists"]}
+        bonus_source={"status":"SAME_BUILD_SELECTED_SOCKET_BONUS_SOURCE_ONLY",
+            "review_receipt_sha256":verified["receipt_sha256"],
+            "v232_stage_receipt_sha256":source["source_stage"]["receipt_sha256"],
+            "game_build":collected["expected_game_build"],
+            "simc_revision":compilation["simc_revision"],
+            "intrinsic_socket_counts_by_slot":dict(counts),
+            "selected_rows":[{"slot":slot,"item_id":selected[slot],
+                "candidate_bonus_lists":[by_bonus[b] for b in
+                    by_id.get(selected[slot],{}).get("candidate_bonus_list_ids",[])]}
+                for slot in sorted(selected)],
+            "game_socket_legal_verified":False}
+    except (EnvironmentBuildBlocked,stage_engine.StageExecutionBlocked,
+            OSError,ValueError,KeyError,TypeError):
+        return {"status":"SELECTED_SOCKET_BONUS_SOURCE_PENDING",
+                "game_socket_legal_verified":False}
+    return bonus_source
 
 
 def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
@@ -8080,52 +8140,18 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
     # Connect the existing item→use spell source to the precise J pending
     # boundary, without treating it as same-season in-game applicability.
     bonus_source=None
-    if extra and (collected.get("fresh_selectable_bonus_effect_review") or {}).get("candidate_path"):
-        # Source-only: reuse the exact sealed existing bonus review and v232
-        # physical gear IDs, never interpret a reachable list as applicable.
-        try:
-            review=collected["fresh_selectable_bonus_effect_review"]
-            stage_root=pathlib.Path(compilation["stage_root"]).resolve()
-            ref=review["source_stage"]
-            sid=ref["stage_id"]
-            rel="source/"+sid+".json"
-            path=pathlib.Path(review["candidate_path"])
-            need(path.resolve()==(stage_root/rel).resolve() and path.is_file()
-                 and not path.is_symlink() and path.stat().st_size<=12_000_000,
-                 "V824_SOCKET_REVIEW_PATH_INVALID")
-            doc=json.loads(path.read_text("utf8"))
-            inputs=doc["source_identity"]
-            need(doc["schema"]==bonus_effect_review.SCHEMA and
-                 doc["game_build"]==collected["expected_game_build"] and
-                 inputs["game_build"]==collected["expected_game_build"] and
-                 sid==_derived_source_generation("season-bonus-effect-review",inputs),
-                 "V824_SOCKET_REVIEW_SCOPE_DRIFT")
-            verified=stage_engine.verify_stage(root=stage_root,stage_id=sid,
-                stage_version="bonus-effect-source-only-v1",inputs=inputs,outputs={"review":rel})
-            need(verified["receipt_sha256"]==ref["receipt_sha256"],
-                 "V824_SOCKET_REVIEW_RECEIPT_DRIFT")
-            original=json.loads(pathlib.Path(source["candidate_path"]).read_text("utf8"))
-            need(original["receipt_sha256"]==simc_source.digest(simc_source.canonical({
-                k:v for k,v in original.items() if k!="receipt_sha256"}).encode("utf8")) and
-                original["game_build"]==collected["expected_game_build"] and
-                original["selected_intrinsic_socket_count_by_slot_source_only"]==counts,
-                "V824_SOCKET_PHYSICAL_SOURCE_DRIFT")
-            selected=original["selected_G_slot_ids"]
-            projection=doc["socket_bonus_source_only"]
-            by_id={r["item_id"]:r for r in projection["items"]}
-            by_bonus={r["bonus_id"]:r for r in projection["bonus_lists"]}
-            bonus_source={"status":"SAME_BUILD_SELECTED_SOCKET_BONUS_SOURCE_ONLY",
-                "review_receipt_sha256":verified["receipt_sha256"],
-                "selected_rows":[{"slot":slot,"item_id":selected[slot],
-                    "additional_socket_count_requested":n,
-                    "candidate_bonus_lists":[by_bonus[b] for b in
-                        by_id.get(selected[slot],{}).get("candidate_bonus_list_ids",[])]}
-                    for slot,n in extra.items()],
-                "game_socket_legal_verified":False}
-        except (EnvironmentBuildBlocked,stage_engine.StageExecutionBlocked,
-                OSError,ValueError,KeyError,TypeError):
-            bonus_source={"status":"SELECTED_SOCKET_BONUS_SOURCE_PENDING",
-                          "game_socket_legal_verified":False}
+    if extra:
+        projection=compilation.get("selected_representative_socket_bonus_source_only")
+        if projection is None:
+            projection=_fresh_socket_bonus_source_projection(
+                collected=collected,compilation=compilation)
+        if type(projection) is dict and projection.get("status")==(
+                "SAME_BUILD_SELECTED_SOCKET_BONUS_SOURCE_ONLY"):
+            bonus_source={**projection,"selected_rows":[
+                {**row,"additional_socket_count_requested":extra[row["slot"]]}
+                for row in projection["selected_rows"] if row["slot"] in extra]}
+        elif projection is not None:
+            bonus_source=projection
     socket_source=(
         {"status":hints.get("status"),
          "v280_stage_receipt_sha256":hints.get(
@@ -8159,6 +8185,133 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
             "v232_stage_receipt_sha256":stage["receipt_sha256"],
             "observed_J_unadmitted":(
                 j["J_candidate_unadmitted"] if j is not None else None)}
+
+
+def _compare_native_socket_bonus_static(*,baseline,active,bonuses,
+                                       game_build,revision):
+    """Reuse v046 resolved physical identities and static vectors."""
+    import v046_static_item_cache as static
+    from v234_source_only_one_native_G import SLOT_REMAP
+    def records(raw):
+        rows=static.native_records(raw,season="simc_"+game_build.replace(".","_"))
+        need(all(revision.startswith(row["metadata"]["native_revision"])
+                 for row in rows),"V829_SOCKET_NATIVE_REVISION_DRIFT")
+        result={SLOT_REMAP.get(row["observed_slot"],row["observed_slot"]):row
+                for row in rows}
+        need(len(result)==len(rows),"V829_SOCKET_NATIVE_DUPLICATE_SLOT")
+        return result
+    before,after=records(baseline),records(active)
+    need(set(before)==set(after) and set(bonuses)<=set(before),
+         "V829_SOCKET_NATIVE_SLOT_DRIFT")
+    for slot,left in before.items():
+        right=after[slot]
+        identity=copy.deepcopy(left["identity"])
+        if slot in bonuses:
+            proof=bonuses[slot]
+            need(identity["item_id"]==proof["item_id"] and
+                 not identity["options"],"V829_SOCKET_NATIVE_BASE_ITEM_DRIFT")
+            identity["options"]["bonus_id"]=str(proof["bonus_id"])
+        need(right["identity"]==identity and right["static"]==left["static"]
+             and left["metadata"]["item_db_source"]==right["metadata"]["item_db_source"],
+             "V829_SOCKET_NATIVE_PHYSICAL_OR_STATIC_DRIFT:"+slot)
+    return {"physical_slots":len(before),"static_gear_unchanged":True,
+            "exact_bonus_options_observed":True}
+
+
+def _fresh_native_socket_bonus_application(*,collected,compilation,
+                                           preflight,native_G,binary,j_socket):
+    """One active Native, reusing verified v277 G baseline; not game legality."""
+    pending={"status":"SELECTED_SOCKET_BONUS_NATIVE_PENDING",
+             "new_native_calls":0,"network_calls":0,
+             "game_socket_legal_verified":False}
+    layout=preflight.get("physical_gem_layout_unadmitted") or {}
+    bonuses=layout.get(physical_gems.SOCKET_BONUS_FIELD)
+    if not bonuses or not binary:return pending
+    extra=j_socket.get("additional_socket_proof_required_by_slot")
+    source=compilation.get("selected_representative_socket_bonus_source_only") or {}
+    if (native_G.get("status")!="G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING"
+            or type(extra) is not dict or set(extra)!=set(bonuses)
+            or source.get("status")!="SAME_BUILD_SELECTED_SOCKET_BONUS_SOURCE_ONLY"
+            or source.get("game_build")!=preflight["game_build"]
+            or source.get("simc_revision")!=preflight["simc_revision"]
+            or source.get("v232_stage_receipt_sha256")!=j_socket.get(
+                "v232_stage_receipt_sha256")):
+        return pending
+    calls=0
+    try:
+        proposed=physical_gems.source_supported_socket_candidate(
+            intrinsic_counts=source["intrinsic_socket_counts_by_slot"],
+            selected_rows=source["selected_rows"],socket_total=layout["socket_total"],
+            need=need)
+        need(proposed[physical_gems.SOCKET_BONUS_FIELD]==bonuses
+             and {s:n for s,n in proposed["socket_counts"].items() if n>0}==
+                {s:n for s,n in layout["socket_counts"].items() if n>0}
+             and all(bonuses[s]["added_socket_count"]==extra[s] for s in extra),
+             "V829_EXACT_SOCKET_SOURCE_PLAN_DRIFT")
+        root=pathlib.Path(compilation["stage_root"]).resolve()
+        probe=collected["fresh_one_spec_physical_G_probe"]
+        profile=pathlib.Path(probe["profile_path"]).resolve()
+        saved=pathlib.Path(native_G["native_run_folder"]).resolve()
+        receipt_path=pathlib.Path(probe["profile_receipt_path"]).resolve()
+        need(profile.is_relative_to(root) and saved.is_relative_to(root)
+             and receipt_path.is_relative_to(root)
+             and profile.is_file() and not profile.is_symlink(),
+             "V829_SOCKET_ORIGINAL_G_PROFILE_PATH_DRIFT")
+        original=profile.read_bytes()
+        receipt=json.loads(receipt_path.read_text("utf8"))
+        need(receipt["receipt_sha256"]==native_G["source_profile_receipt_sha256"]
+             and receipt["physical_profile_sha256"]==digest(original)
+             and receipt["simc_revision"]==preflight["simc_revision"]
+             and receipt["game_build_declared_by_simc_source"]==preflight["game_build"],
+             "V829_SOCKET_ORIGINAL_G_PROFILE_SHA_DRIFT")
+        baseline=(saved/"native.json").read_bytes()
+        need(digest(baseline)==native_G["native_json2_sha256"],
+             "V829_SOCKET_ORIGINAL_G_NATIVE_SHA_DRIFT")
+        active_lines=[]
+        seen=set()
+        for line in original.decode("utf8").splitlines():
+            slot,_,tail=line.partition("=")
+            if slot in bonuses:
+                proof=bonuses[slot]
+                need(slot not in seen and ",id="+str(proof["item_id"])+"," in tail
+                     and ",bonus_id=" not in tail and ",gem_id=" not in tail,
+                     "V829_SOCKET_ORIGINAL_G_ITEM_OR_OPTIONS_DRIFT")
+                line+=",bonus_id="+str(proof["bonus_id"])
+                seen.add(slot)
+            active_lines.append(line)
+        need(seen==set(bonuses),"V829_SOCKET_ORIGINAL_G_SLOT_MISSING")
+        active="\n".join(active_lines)+"\n"
+        binfile=pathlib.Path(binary).resolve(strict=True)
+        binary_sha=native_effect_pair.file_sha(binfile)
+        need(binary_sha==native_G["native_binary_sha256"],
+             "V829_SOCKET_NATIVE_BINARY_CHANGED")
+        case=native_effect_pair.run_case(
+            stage_root=root,profile=active,source_identity=digest(original),
+            binary=binfile,binary_sha256=binary_sha,
+            revision=preflight["simc_revision"],variant="active",timeout_seconds=180)
+        calls=case["new_native_calls"]
+        native_receipt=case["receipt"]
+        if native_receipt["status"]!="NATIVE_JSON2_CAPTURED":
+            return {**pending,"status":"SELECTED_SOCKET_BONUS_NATIVE_FAILED",
+                "new_native_calls":calls,"native_status":native_receipt["status"],
+                "native_log_excerpt":native_effect_pair.log_excerpt(case["folder"])}
+        raw=(case["folder"]/"native.json").read_bytes()
+        need(digest(raw)==native_receipt["native_json2_sha256"],
+             "V829_SOCKET_NATIVE_OUTPUT_SHA_DRIFT")
+        proof=_compare_native_socket_bonus_static(
+            baseline=baseline,active=raw,bonuses=bonuses,
+            game_build=preflight["game_build"],revision=preflight["simc_revision"])
+        return {**pending,"status":"EXACT_SIMC_SOCKET_BONUS_STATIC_BOUND",
+                "new_native_calls":calls,"bonus_plan":bonuses,
+                "source_review_sha256":source["review_receipt_sha256"],
+                "v232_stage_receipt_sha256":source["v232_stage_receipt_sha256"],
+                "game_build":preflight["game_build"],"simc_revision":preflight["simc_revision"],
+                "native_binary_sha256":binary_sha,
+                "original_G_native_sha256":digest(baseline),
+                "active_native_sha256":digest(raw),"static_comparison":proof}
+    except (EnvironmentBuildBlocked,ValueError,KeyError,TypeError,OSError) as exc:
+        return {**pending,"new_native_calls":calls,
+                "reason":str(exc).split("\n",1)[0][:300]}
 
 
 def _fresh_source_owner_packaged_nominal_J(*, preflight, layout, link, j):
@@ -10986,6 +11139,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     selected_slots=(collected.get(
                         "fresh_one_spec_simc_representative") or {}).get(
                             "intrinsic_socket_counts_by_selected_slot_source_only")
+                    source_bonus_by_slot=None
                     if type(selected_slots) is not dict or not selected_slots:
                         progress["requires"].append(
                             "SIMC_REPRESENTATIVE_GEAR_SLOT_NAMES_PENDING")
@@ -10996,6 +11150,25 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             socket_total=target_sockets,need=need,
                             intrinsic_socket_counts=(selected_slots
                                 if special_id is not None else None))
+                        if special_id is not None or target_sockets>4:
+                            projection=_fresh_socket_bonus_source_projection(
+                                collected=collected,compilation=source_compilation)
+                            if projection is not None:
+                                source_compilation[
+                                    "selected_representative_socket_bonus_source_only"]=projection
+                            if type(projection) is dict and projection.get("status")==(
+                                    "SAME_BUILD_SELECTED_SOCKET_BONUS_SOURCE_ONLY"):
+                                proposed=physical_gems.source_supported_socket_candidate(
+                                    intrinsic_counts=selected_slots,
+                                    selected_rows=projection["selected_rows"],
+                                    socket_total=target_sockets,need=need)
+                                progress["source_supported_socket_candidate"]=proposed
+                                if proposed["socket_counts"] is not None:
+                                    declared_counts=proposed["socket_counts"]
+                                    source_bonus_by_slot=proposed[physical_gems.SOCKET_BONUS_FIELD]
+                                else:
+                                    progress["requires"].append(
+                                        "EXACT_SELECTED_SOCKET_SOURCE_CAPACITY_PENDING")
                         progress["simc_declared_full_socket_counts_source_only"]=(
                             dict(declared_counts))
                         source_compilation[
@@ -11070,7 +11243,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                                     "ordinary_gem_ids":ordinary},
                                 target_ilevel=fresh_collection_inputs[
                                     "representative_request"]["target_ilevel"],
-                                simc_declared_socket_counts=declared_counts))
+                                simc_declared_socket_counts=declared_counts,
+                                source_socket_bonus_by_slot=source_bonus_by_slot))
                         progress["default_intrinsic_gem_layout_unadmitted"]=(
                             zero_history_gem_layout)
                         progress["four_stat_ordinary_source_selection_unadmitted"]=(
@@ -11157,6 +11331,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     j_socket=_fresh_selected_J_intrinsic_socket_source(
                         collected=collected,preflight=preflight,
                         compilation=source_compilation)
+                    if zero_history_gem_layout.get(physical_gems.SOCKET_BONUS_FIELD):
+                        socket_native=_fresh_native_socket_bonus_application(
+                            collected=collected,compilation=source_compilation,
+                            preflight=preflight,native_G=native_G,binary=binary,
+                            j_socket=j_socket)
+                        progress["new_native_calls"]+=socket_native["new_native_calls"]
+                        progress["selected_socket_bonus_native"]=socket_native
+                        source_compilation["selected_socket_bonus_native"]=socket_native
                     source_compilation[
                         "selected_J_intrinsic_socket_origin_unadmitted"]=j_socket
                     progress[

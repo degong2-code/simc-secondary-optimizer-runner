@@ -20,6 +20,7 @@ FIELDS = frozenset(("socket_counts", "special_gem_id", "special_slot",
 # v216 MUST compare it with that exact same-build source before even a
 # source-only J preview is used. This list itself grants no admission.
 SOURCE_IDS_FIELD = "source_observed_gem_item_ids"
+SOCKET_BONUS_FIELD = "source_socket_bonus_by_slot"
 
 
 
@@ -243,6 +244,97 @@ def declared_full_socket_counts(*,available_slots,socket_total,need,
     return planned
 
 
+def source_supported_socket_candidate(*,intrinsic_counts,selected_rows,
+                                      socket_total,need):
+    """Exact N over intrinsic and source-linked direct bonus capacity.
+
+    Type 6 is the socket record; retain a complete list including type 26
+    only as a Native-validation candidate. No stacking of alternative lists
+    and no inference of in-game acquisition permission from tree reachability.
+    """
+    need(type(intrinsic_counts) is dict and bool(intrinsic_counts)
+         and all(type(n) is int and 0<=n<=3 for n in intrinsic_counts.values())
+         and type(socket_total) is int and 4<=socket_total<=64
+         and type(selected_rows) is list,
+         "SOCKET_BONUS_SOURCE_PLAN_INPUT_INVALID")
+    by_slot={r["slot"]:r for r in selected_rows}
+    need(len(by_slot)==len(selected_rows) and set(by_slot)==set(intrinsic_counts)
+         and all(type(r.get("item_id")) is int and r["item_id"]>0
+                 for r in selected_rows),"SOCKET_BONUS_SOURCE_ITEM_SCOPE_DRIFT")
+    ordered=[slot for slot in FULL_SOCKET_SLOT_ORDER if slot in by_slot]
+    need(len(ordered)==len(by_slot),"SOCKET_BONUS_SOURCE_SLOT_INVALID")
+    # Keep one cheapest plan per achievable total, not a combinatorial
+    # search over all bonus choices. Prefer intrinsic, then fewer lists.
+    states={0:((0,0,0),{}, {})}
+    for slot in ordered:
+        intrinsic=intrinsic_counts[slot]
+        row=by_slot[slot]
+        choices={n:(None,0) for n in range(intrinsic+1)}
+        for candidate in sorted(row.get("candidate_bonus_lists",[]),
+                                key=lambda x:x["bonus_id"]):
+            b=candidate["bonus_id"]
+            types=candidate.get("bonus_types")
+            records=candidate.get("socket_rows")
+            if (type(b) is not int or b<=0
+                    or candidate.get("source_bonus_ids")!=[b]
+                    or type(types) is not list or 6 not in types
+                    or not set(types)<={6,26}
+                    or type(records) is not list or not records):
+                continue
+            if any(type(x) is not dict or x.get("source_bonus_id")!=b
+                   or x.get("Type") not in ("6",6)
+                   or str(x.get("Value_0","")) not in ("1","2","3")
+                   for x in records):
+                continue
+            added=sum(int(x["Value_0"]) for x in records)
+            n=intrinsic+added
+            if n>3:continue
+            option=({"item_id":row["item_id"],"bonus_id":b,
+                     "added_socket_count":added},int(26 in types))
+            if n not in choices or option[1]<choices[n][1]:
+                choices[n]=option
+        next_states={}
+        for used,(score,counts,bonuses) in states.items():
+            for n,(bonus,mixed) in sorted(choices.items(),reverse=True):
+                total=used+n
+                if total>socket_total:continue
+                added=0 if bonus is None else bonus["added_socket_count"]
+                cost=(score[0]+added,score[1]+int(bonus is not None),score[2]+mixed)
+                if total in next_states and next_states[total][0]<=cost:continue
+                next_states[total]=(cost,{**counts,slot:n},
+                    {**bonuses,**({slot:bonus} if bonus is not None else {})})
+        states=next_states
+    if socket_total not in states:
+        return {"status":"EXACT_SOCKET_SOURCE_CAPACITY_PENDING",
+                "requested_socket_total":socket_total,
+                "socket_counts":None,SOCKET_BONUS_FIELD:{},
+                "game_socket_legal_verified":False}
+    _,counts,bonuses=states[socket_total]
+    return {"status":"EXACT_SOCKET_SOURCE_CANDIDATE_NOT_NATIVE_VERIFIED",
+            "requested_socket_total":socket_total,"socket_counts":counts,
+            SOCKET_BONUS_FIELD:bonuses,"game_socket_legal_verified":False}
+
+
+def apply_source_socket_bonuses(rows,plan,need,*,verify_only=False):
+    """Apply only exact item-bound options; preserve other modifiers."""
+    bonuses=plan.get(SOCKET_BONUS_FIELD,{})
+    need(type(bonuses) is dict and set(bonuses)<=set(plan["socket_counts"]),
+         "SOCKET_BONUS_PLAN_SCOPE_DRIFT")
+    for slot,proof in bonuses.items():
+        need(type(proof) is dict and set(proof)=={
+                "item_id","bonus_id","added_socket_count"}
+             and all(type(proof[k]) is int and proof[k]>0 for k in proof)
+             and slot in rows and rows[slot]["item_id"]==proof["item_id"]
+             and proof["added_socket_count"]<=plan["socket_counts"][slot],
+             "SOCKET_BONUS_PHYSICAL_ITEM_OR_COUNT_DRIFT")
+        options=rows[slot]["options"]
+        token=str(proof["bonus_id"])
+        existing=options.get("bonus_id")
+        need(existing==token if verify_only else existing in (None,token),
+             "SOCKET_BONUS_OPTION_CHANGED_OR_CONFLICT")
+        if not verify_only:options["bonus_id"]=token
+
+
 def intrinsic_source_plan(*, intrinsic_socket_counts, special_gem_id,
                           ordinary_gem_ids, source_observed_gem_item_ids,
                           need):
@@ -296,7 +388,8 @@ def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
     need(type(rows) is dict and rows, "SOCKET_ROWS_REQUIRED")
     source_mode=(type(plan) is dict and SOURCE_IDS_FIELD in plan)
     need(type(plan) is dict and
-         (set(plan)==FIELDS or set(plan)==FIELDS|{SOURCE_IDS_FIELD}),
+         set(plan) in (FIELDS,FIELDS|{SOURCE_IDS_FIELD},
+                       FIELDS|{SOURCE_IDS_FIELD,SOCKET_BONUS_FIELD}),
          "SOCKET_PLAN_FIELDS")
     source_ids=None
     if source_mode:
@@ -343,6 +436,7 @@ def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
          "SOCKET_OBSERVED_GEM_RATING_INVALID")
 
     staged = copy.deepcopy(rows)
+    apply_source_socket_bonuses(staged,plan,need)
     for slot in physical:
         staged[slot]["options"].pop("gem_id", None)
     cursor = iter(ordinary)
@@ -401,6 +495,8 @@ def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
         "ordinary_gem_ids": list(actual),
         **({SOURCE_IDS_FIELD: sorted(source_ids)}
            if source_mode else {}),
+        **({SOCKET_BONUS_FIELD:copy.deepcopy(plan[SOCKET_BONUS_FIELD])}
+           if SOCKET_BONUS_FIELD in plan else {}),
         "ordinary_colors_observed": sorted(colors),
         "four_colors_physically_present": complete,
         "max_four_color_effect_claimed": False,

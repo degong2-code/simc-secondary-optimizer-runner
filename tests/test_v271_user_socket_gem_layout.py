@@ -88,6 +88,75 @@ class SocketLayoutTests(unittest.TestCase):
         # A prospective missing slot is still distinct from intrinsic proof.
         self.assertEqual(sum(partial.values()),4)
 
+    def test_v829_actual_source_bonus_candidate_and_variable_counts(self):
+        import json
+        from pathlib import Path
+        receipt=json.loads((Path(__file__).resolve().parents[1]/
+            "docs/development/research_receipts/p1_v825_70961_selected_socket_bonus_compact.json").read_text("utf8"))
+        rows=receipt["selected_rows"]
+        intrinsic={x["slot"]:x["intrinsic_socket_count"] for x in rows}
+        for n in (4,5):
+            plan=sockets.source_supported_socket_candidate(
+                intrinsic_counts=intrinsic,selected_rows=rows,socket_total=n,need=self.need)
+            self.assertEqual(sum(plan["socket_counts"].values()),n)
+            self.assertEqual(len(plan[sockets.SOCKET_BONUS_FIELD]),n)
+            self.assertNotIn("head",plan[sockets.SOCKET_BONUS_FIELD])
+            self.assertFalse(plan["game_socket_legal_verified"])
+        missing=sockets.source_supported_socket_candidate(
+            intrinsic_counts=intrinsic,selected_rows=rows,socket_total=6,need=self.need)
+        self.assertIsNone(missing["socket_counts"])
+        # Different season can supply actual intrinsic counts or larger
+        # direct bonus lists; N is not fixed at four/five.
+        synthetic={**intrinsic,"head":2}
+        for n in (5,6,7):
+            plan=sockets.source_supported_socket_candidate(
+                intrinsic_counts=synthetic,selected_rows=rows,socket_total=n,need=self.need)
+            self.assertEqual(sum(plan["socket_counts"].values()),n)
+            self.assertEqual(len(plan[sockets.SOCKET_BONUS_FIELD]),n-2)
+            ordinary=[311100,311101,311102,311103]+[311100]*(n-5)
+            physical=sockets.intrinsic_source_plan(
+                intrinsic_socket_counts=plan["socket_counts"],
+                special_gem_id=240983,ordinary_gem_ids=ordinary,
+                source_observed_gem_item_ids=sorted(set(ordinary)|{240983}),need=self.need)
+            physical[sockets.SOCKET_BONUS_FIELD]=plan[sockets.SOCKET_BONUS_FIELD]
+            equipment={x["slot"]:{"slot":x["slot"],"item_id":x["item_id"],
+                         "ilevel":334,"options":{}} for x in rows}
+            staged,layout=sockets.arrange(equipment,physical,self.need)
+            self.assertEqual(layout["ordinary_count"],n-1)
+            self.assertEqual(sockets.reconcile_observed_J(layout,
+                {str(i):23 for i in set(ordinary)},self.need)["J_candidate_unadmitted"],23*(n-1))
+            sockets.apply_source_socket_bonuses(staged,physical,self.need,verify_only=True)
+            slot=next(iter(physical[sockets.SOCKET_BONUS_FIELD]))
+            self.assertEqual(staged[slot]["options"]["bonus_id"],
+                str(physical[sockets.SOCKET_BONUS_FIELD][slot]["bonus_id"]))
+            staged[slot]["options"].pop("bonus_id")
+            with self.assertRaisesRegex(ValueError,"SOCKET_BONUS_OPTION_CHANGED"):
+                sockets.apply_source_socket_bonuses(staged,physical,self.need,verify_only=True)
+
+    def test_v829_existing_native_static_parser_exact_bonus_comparison(self):
+        import copy,json
+        from runner import v216_environment_build_coordinator as engine
+        rev="a"*40
+        def report(bonus=False):
+            suffix=",bonus_id=13668" if bonus else ""
+            return {"report_version":"2.0.0","git_revision":rev[:12],
+                "sim":{"players":[{"gear":{"neck":{
+                    "encoded_item":"neck,id=123,ilevel=334,source=local"+suffix,
+                    "ilevel":334,"crit_rating":100,"haste_rating":120}}}]}}
+        plan={"neck":{"item_id":123,"bonus_id":13668,"added_socket_count":1}}
+        def compare(after):
+            return engine._compare_native_socket_bonus_static(
+                baseline=json.dumps(report()).encode(),
+                active=json.dumps(after).encode(),bonuses=plan,
+                game_build="12.1.5.70961",revision=rev)
+        self.assertTrue(compare(report(True))["static_gear_unchanged"])
+        with self.assertRaisesRegex(ValueError,"V829_SOCKET_NATIVE_PHYSICAL_OR_STATIC_DRIFT"):
+            compare(report())
+        for key,value in (("crit_rating",101),("ilevel",335)):
+            changed=copy.deepcopy(report(True))
+            changed["sim"]["players"][0]["gear"]["neck"][key]=value
+            with self.assertRaises(ValueError):compare(changed)
+
     def test_p3_fm_four_stat_default_uses_each_nominal_type_once(self):
         source={
             stat:{"item_id":311100+i,"raw_nominal_points":40+i}

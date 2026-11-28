@@ -1782,6 +1782,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
     if season_extra_socket_item_ids is not None:
         _assert_season_extra_socket_items_unchanged_by_selected_equipment(
             season_extra_socket_item_ids,rows,need)
+    if season_socket_plan is not None and season_socket_plan.get("source_socket_bonus_by_slot"):
+        import v271_user_socket_gem_layout as socket_layout
+        socket_layout.apply_source_socket_bonuses(
+            rows,season_socket_plan,need,verify_only=True)
     season_socket_origin=(
         _v232_final_socket_item_source_comparison(
             candidate=season_physical_one_spec_candidate,
@@ -2057,6 +2061,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
                 "special_slot":season_socket_plan["special_slot"],
                 "special_gem_id":season_socket_plan["special_gem_id"],
                 "ordinary_gem_ids":list(season_socket_plan["ordinary_gem_ids"]),
+                **({"source_socket_bonus_by_slot":copy.deepcopy(
+                    season_socket_plan["source_socket_bonus_by_slot"])}
+                   if season_socket_plan.get("source_socket_bonus_by_slot") else {}),
                 "game_socket_legality_verified_here":False,
                 "new_native_calls":0}
             source_only[
@@ -2379,7 +2386,9 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
         "special_gem_id":special,"special_slot":where,
         "ordinary_gem_ids":list(ordinary),
         **({"source_observed_gem_item_ids":list(source_ids)}
-           if source_ids is not None else {})})
+           if source_ids is not None else {}),
+        **({"source_socket_bonus_by_slot":copy.deepcopy(layout["source_socket_bonus_by_slot"])}
+           if layout.get("source_socket_bonus_by_slot") else {})})
     return {"status":"SEASON_SETTINGS_PHYSICAL_GEMS_FLASK_COMPOSED_UNADMITTED",
             "missing":[],"settings":settings,
             "v271_socket_plan_unadmitted":socket_plan,
