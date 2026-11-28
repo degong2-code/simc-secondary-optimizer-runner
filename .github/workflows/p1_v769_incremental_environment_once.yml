@@ -11,6 +11,7 @@ on:
       - runner/v484_exact_optional_consumable_source_join.py
       - integration_probes/p1_v826_special_gem_actual_source_profile_once.py
       - integration_probes/p1_v829_selected_socket_bonus_once.py
+      - integration_probes/p1_v830_selected_special_gem_product_once.py
 permissions:
   contents: read
 concurrency:
@@ -247,5 +248,50 @@ jobs:
         with:
           name: p1-v829-selected-socket-bonus-compact
           path: out/v829/V829_SELECTED_SOCKET_BONUS.json
+          retention-days: 14
+          if-no-files-found: warn
+
+  v830-selected-special-gem-product-once:
+    if: contains(github.event.head_commit.message, '[v830-selected-gem-product-once]')
+    runs-on: windows-2022
+    timeout-minutes: 40
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: 9933ffb946fb55b1fa66657b848f519ac19006e1
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70961
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve source byte identity
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Restore exact CLI, no rebuild
+        uses: actions/cache/restore@v4
+        with:
+          path: .v618-simc-cache
+          key: v618-simc70961-source-9933ffb946fb55b1fa66657b848f519ac19006e1-win2022-msvc-cli
+      - name: Existing focused source and installed profile checks before actual Native
+        run: |
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m unittest -v tests.test_v266_v268_gem_enchant_source_reuse tests.test_v271_user_socket_gem_layout tests.test_v272_normal_build_gem_j_bridge
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Actual selected gem install, menu, two DPS and cache
+        run: |
+          python -u integration_probes/p1_v830_selected_special_gem_product_once.py --simc .v618-simc-cache/simc.exe --identity .v618-simc-cache/identity.json --out out/v830
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: p1-v830-selected-gem-product-compact
+          path: out/v830/V830_SELECTED_SPECIAL_GEM.json
           retention-days: 14
           if-no-files-found: warn

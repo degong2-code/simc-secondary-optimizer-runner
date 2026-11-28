@@ -786,6 +786,7 @@ def _admitted_selected_fresh_source(*, manifest_path, season, revision,
          "B8_SELECTED_V096_EXACT_CACHE_AND_FILLERS_REQUIRED")
     doc,bound=_verified_installed_fresh_v217(
         manifest_path=manifest_path,season=season)
+    _assert_installed_J_socket_profile(doc=doc,profile=profile)
     need(season["selected_replay_file"]=="v436_selected_source_replay.json",
          "B8_SELECTED_V096_REPLAY_FILENAME_FIXED")
     replay_owner,original_scenario=_selected_replay_origin(
