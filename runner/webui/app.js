@@ -1002,6 +1002,7 @@ async function refreshExistingSeasonTrinkets(gear,level,refreshEmbellishments=tr
       return data;
     }
     gear.special_source_refresh_pending=
+      data.bonus_effect_overlay_pending===true||
       (data.bonus_effect_source_status!==undefined&&
        data.bonus_effect_source_status!=="POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED")||
       (data.special_generation_verified===false&&data.new_special_pending_count>0);

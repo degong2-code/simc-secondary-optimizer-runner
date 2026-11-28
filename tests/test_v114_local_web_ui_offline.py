@@ -2427,7 +2427,7 @@ const $=id=>nodes[id];
 let redraw=0,requests=0,stale=false,mode="trinket",specialSlots=0,mediaRefresh=0;
 const refreshOfficialEquipmentIcons=async current=>{assert.strictEqual(state.seasonGear,current);mediaRefresh++};
 let roleStatus="TRINKET_LOOT_SPEC_SOURCE_OBSERVED",roleMetadata,embOptions,craftRedraw=0;
-let bonusStatus="POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED";
+let bonusStatus="POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED",overlayPending=false;
 const refreshCraftChoices=()=>{craftRedraw++};
 const role={source:"SAME_BUILD_DB2_EXPLICIT_LOOT_SPEC_OVERRIDE",
   status:"EXPLICIT_SHARED_WITH_DPS",roles:["DPS","HEALER"]};
@@ -2451,6 +2451,7 @@ const fetch=async(url,opts)=>{
     source_catalog_manifest_sha256:gear.source_catalog_manifest_sha256,
     supplementary_delve_status:"SUPPLEMENTARY_SOURCE_OBSERVED",
     bonus_effect_source_status:bonusStatus,special_generation_verified:true,
+    bonus_effect_overlay_pending:overlayPending,
     loot_spec_source_status:roleStatus,trinket_loot_spec_metadata:roleMetadata,
     native_calls_now:0,budget_rebuilt:false,
     new_trinkets:mode==="trinket"||mode==="mixed"?[
@@ -2605,6 +2606,16 @@ const refresh=load("async function refreshExistingSeasonTrinkets(",
   assert.strictEqual(pending.special_source_refresh_pending,false);
   await refresh(pending,334);
   assert.strictEqual(requests,6);
+  overlayPending=true;
+  await refresh(pending,334,true,true);
+  assert.strictEqual(requests,7);
+  assert.strictEqual(pending.special_source_refresh_pending,true);
+  overlayPending=false;
+  await refresh(pending,334);
+  assert.strictEqual(requests,8);
+  assert.strictEqual(pending.special_source_refresh_pending,false);
+  await refresh(pending,334);
+  assert.strictEqual(requests,8);
   assert.strictEqual(state.verifiedExistingBudget,budget);
   assert.strictEqual(pending.choiceRefreshInFlight,false);
 })().catch(e=>{console.error(e);process.exitCode=1});

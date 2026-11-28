@@ -4369,7 +4369,25 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     if needs_special_seal:
                         sealed=environment_build.read_sealed_selectable_gear_generation(
                             stage_root=root,build=game_build)
-                    refreshed={**refreshed,"special_generation_verified":(
+                    # The reader can select a different authenticated receipt
+                    # for an identical catalogue. Use its identity, exactly as
+                    # v098 will, only when the complete candidate is equal.
+                    if (sealed is not None and
+                            sealed["source_generation_sha256"]!=refreshed["source_generation_sha256"] and
+                            sealed["candidate"]==refreshed["candidate"]):
+                        refreshed={**refreshed,"source_generation_sha256":
+                                   sealed["source_generation_sha256"]}
+                    review_count=refreshed.get("bonus_effect_review",{}).get(
+                        "selected_effect_option_count")
+                    # A completed raw review with selected options is not a
+                    # completed overlay when the options never reached the
+                    # candidate. Keep this optional work retryable.
+                    overlay_pending=(type(review_count) is int and review_count>0 and
+                        review_count!=sum(
+                            r.get("season_list_basis")=="SEALED_CONTEXT_FREE_EFFECT_OPTION"
+                            for r in refreshed["candidate"]["items"]))
+                    refreshed={**refreshed,"bonus_effect_overlay_pending":overlay_pending,
+                        "special_generation_verified":(
                         sealed is not None and
                         sealed["source_generation_sha256"]==refreshed["source_generation_sha256"])}
                     # Display can reuse a partial result, but an explicit
@@ -4384,6 +4402,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                             "SUPPLEMENTARY_SOURCE_PARTIAL") and
                             refreshed.get("bonus_effect_review",{}).get("status")==
                                 "POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED" and
+                            not refreshed["bonus_effect_overlay_pending"] and
                             (not needs_special_seal or refreshed["special_generation_verified"])):
                         jobs.season_gear_refresh_cache[game_build]={
                             **refreshed,"network_calls":0,"explicit_refresh_complete":True}
@@ -4419,6 +4438,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 supplementary_delve_status=refreshed["supplementary_delve_status"],
                 bonus_effect_source_status=refreshed.get("bonus_effect_review",{}).get("status"),
                 special_generation_verified=refreshed.get("special_generation_verified") is True,
+                bonus_effect_overlay_pending=refreshed.get("bonus_effect_overlay_pending") is True,
                 supplementary_delve_unresolved_count=refreshed.get(
                     "supplementary_delve_unresolved_count"),
                 new_trinkets=[r for r in rows["trinket"] if r["item_id"] in new_ids],

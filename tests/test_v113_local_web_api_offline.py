@@ -704,14 +704,22 @@ class LocalWebAPIOffline(unittest.TestCase):
                          "journal_encounter_id":123,"journal_instance_id":456}]}
         pending_special={**fresh_special,"item_id":270002,"name":"Provisional crafted",
                          "source_evidence":[{"source":"crafted_fixed_gear"}]}
+        indirect_special={**fresh_special,"item_id":270003,"name":"Indirect armor",
+                          "inventory_type":1,"slot_hint":"head",
+                          "required_options":{"bonus_id":"12345"},
+                          "season_list_basis":"SEALED_CONTEXT_FREE_EFFECT_OPTION"}
         candidate={"season_build":game_build,"db2_display_season_id":47,
-                   "items":[row,fresh_trinket,fresh_special,pending_special]}
+                   "items":[row,fresh_trinket,fresh_special,pending_special,indirect_special]}
         refresh={"candidate":candidate,"source_generation_sha256":"d"*64,
                  "supplementary_delve_status":"SUPPLEMENTARY_SOURCE_OBSERVED",
-                 "bonus_effect_review":{"status":"POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED"},
+                 "bonus_effect_review":{"status":"POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED",
+                                        "selected_effect_option_count":1},
                  "network_calls":1,"native_calls":0}
         partial={**refresh,"bonus_effect_review":{"status":"BONUS_EFFECT_SOURCE_PENDING"},
                  "network_calls":2}
+        missing_overlay={**refresh,"candidate":{**candidate,
+                         "items":[row,fresh_trinket,fresh_special,pending_special]}}
+        equivalent={**refresh,"source_generation_sha256":"e"*64,"network_calls":0}
         url=("/api/v1/season-gear/refresh?game_build="+game_build+
              "&target_ilevel=334&installed_manifest_sha256="+digest)
         with (mock.patch.object(web.environment_manifest,"read_json",
@@ -724,15 +732,16 @@ class LocalWebAPIOffline(unittest.TestCase):
               mock.patch.object(web.source_to_catalog,"verify_catalog",return_value=True),
               mock.patch.object(web.official_ko_env,"read_names",return_value={}),
               mock.patch.object(web.environment_build,"refresh_existing_season_gear_source",
-                 side_effect=[partial,refresh,refresh]) as collect,
+                 side_effect=[partial,refresh,missing_overlay,refresh]) as collect,
               mock.patch.object(web.environment_build,"read_sealed_selectable_gear_generation",
                  side_effect=[{**refresh,"network_calls":0}, {**refresh,"network_calls":0},
-                              None, {**refresh,"network_calls":0},
-                              {**refresh,"network_calls":0}]) as sealed,
-              mock.patch.object(web.season_gear,"public_options",return_value={"choices":{
-                  "trinket":[row,fresh_trinket],
-                  "special_effect_gear_candidate":[fresh_special,pending_special],
-                  "selectable_stat_craft":[]}})):
+                              None, {**missing_overlay,"network_calls":0},
+                              equivalent,equivalent]) as sealed,
+              mock.patch.object(web.season_gear,"public_options",
+                 side_effect=lambda source,**kw:{"choices":{
+                    role:[r for r in source["items"] if r["category"]==role]
+                    for role in ("trinket","special_effect_gear_candidate",
+                                 "selectable_stat_craft")}})):
             # The actual browser uses api(..., {method:"POST",payload:{}}).
             # Keep the production JSON-only middleware unchanged.
             self.assertEqual(self.client.post(url,headers=self.headers).status_code,415)
@@ -751,26 +760,40 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertFalse(unresolved.json()["special_generation_verified"])
             self.assertEqual(unresolved.json()["new_special_items"],[])
             self.assertNotIn(game_build,self.app.state.jobs.season_gear_refresh_cache)
-            # A valid generation can recover without repeating numeric Build.
+            # An observed review can have a verified ordinary generation
+            # but no merged indirect options; do not cache it as complete.
+            missing=self.client.post(url,headers=self.headers,json={})
+            self.assertEqual(missing.status_code,200,missing.text)
+            self.assertTrue(missing.json()["special_generation_verified"])
+            self.assertTrue(missing.json()["bonus_effect_overlay_pending"])
+            self.assertEqual([r["item_id"] for r in missing.json()["new_special_items"]],
+                             [270001])
+            self.assertNotIn(game_build,self.app.state.jobs.season_gear_refresh_cache)
+            # A verified equivalent generation must use the same identity as
+            # runtime selection, not reject the same complete candidate.
             first=self.client.post(url,headers=self.headers,json={})
             second=self.client.post(url,headers=self.headers,json={})
             self.app.state.jobs.season_gear_refresh_cache.clear()
             get=self.client.get(url.replace("/refresh",""),headers=self.headers)
-            self.assertEqual(sealed.call_count,5)
+            self.assertEqual(sealed.call_count,6)
         self.assertEqual(get.status_code,200,get.text)
         self.assertEqual({r["item_id"] for r in get.json()["choices"]["trinket"]},
                          {269999,270000})
         self.assertEqual([r["item_id"] for r in get.json()["choices"]["special_effect_gear_candidate"]],
-                         [270001])
+                         [270001,270003])
         self.assertEqual(get.json()["refreshed_trinket_count"],1)
-        self.assertEqual(get.json()["refreshed_special_count"],1)
+        self.assertEqual(get.json()["refreshed_special_count"],2)
+        self.assertEqual(get.json()["source_generation_sha256"],"e"*64)
         self.assertEqual(first.status_code,200,first.text)
         self.assertEqual(second.status_code,200,second.text)
         report=first.json()
         self.assertEqual(report["status"],"SEASON_TRINKET_SOURCE_REFRESHED")
         self.assertEqual([r["item_id"] for r in report["new_trinkets"]],[270000])
-        self.assertEqual([r["item_id"] for r in report["new_special_items"]],[270001])
+        self.assertEqual([r["item_id"] for r in report["new_special_items"]],[270001,270003])
         self.assertEqual(report["new_special_pending_count"],1)
+        self.assertFalse(report["bonus_effect_overlay_pending"])
+        self.assertEqual(report["source_generation_sha256"],"e"*64)
+        self.assertEqual(report["new_special_items"][1]["required_options"],{"bonus_id":"12345"})
         self.assertEqual(report["bonus_effect_source_status"],
                          "POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED")
         self.assertTrue(report["special_generation_verified"])
@@ -780,7 +803,7 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(second.json()["network_calls_now"],0)
         self.assertEqual(report["installed_manifest_sha256"],digest)
         self.assertEqual(install_path.read_text(),"{}")
-        self.assertEqual(collect.call_count,3)
+        self.assertEqual(collect.call_count,4)
         self.assertEqual(self.client.post(url,json={}).status_code,403)
 
     def test_verified_installed_oil_loadouts_are_read_only_and_empty(self):
