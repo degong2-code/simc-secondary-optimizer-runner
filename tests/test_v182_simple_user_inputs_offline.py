@@ -198,7 +198,7 @@ assert.equal(helpers.trinketLootRoleLabel({}),"");
 assert.equal(helpers.trinketLootRoleLabel({loot_spec_metadata:make("OVERRIDE_REFERENCE_OR_ROLE_PENDING",["DPS"])}),"");
 assert.deepStrictEqual(items.map(x=>x.item_id),[1,2,3]);
 assert(!helpers.mergeTrinketRoleMetadata(items,{"1":tank,"2":shared,"3":unknown}));
-assert(src.includes("if(rolesChanged)refreshEquipmentSelectionUI();"));
+assert(src.includes("if(rolesChanged||corrections.size)refreshEquipmentSelectionUI();"));
 assert(src.includes("gear.loot_spec_source_status===\"TRINKET_LOOT_SPEC_SOURCE_OBSERVED\""));
 """
         completed=subprocess.run(["node","-e",code],cwd=ROOT,
