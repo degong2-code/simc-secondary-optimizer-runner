@@ -301,6 +301,48 @@ assert.throws(()=>run($,field,true),/서로 다릅니다/,"different IDs not sil
         self.assertEqual(result.returncode,0,result.stdout+"\n"+result.stderr)
 
 
+    def test_v832_named_special_gem_preparation_preserves_socket_intent(self):
+        import shutil,subprocess
+        from pathlib import Path
+        node=shutil.which("node")
+        if node is None:self.skipTest("Node required")
+        raw=Path(__file__).resolve().parents[1]/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const src=fs.readFileSync(process.argv[1],"utf8");
+const a=src.indexOf("async function chooseVerifiedGem()");
+const b=src.indexOf("function runeCompatibility()",a);
+const nodes={},$=id=>nodes[id]??=({value:""});
+const field=id=>String($(id).value).trim(),valueInt=id=>Number(field(id));
+const state={oilCatalog:{gem_preparation_source:{status:"SOURCE_IDENTIFIED_PREPARATION_ONLY",
+ items:[{physical_item_id:240983,user_selectable:false,status:"SOURCE_IDENTIFIED_PREPARATION_ONLY"}]}},
+ verifiedExistingBudget:{},seasonGearTargetIlevel:334};
+let calls=0;
+const run=Function("$","field","valueInt","state","installedConsumableScopeMatches",
+ "matchingInstalledGemVariants","reuseVerifiedGemVariant","updateSeasonSocketBreakdown",
+ "updateBudgetPreview","setNotice","renderVerifiedGemChoices",
+ src.slice(a,b)+"return chooseVerifiedGem();");
+const execute=()=>run($,field,valueInt,state,()=>true,()=>[],async()=>{calls++;return false;},
+ ()=>{},()=>{},()=>{},()=>{});
+(async()=>{
+ $("season-verified-special-gem").value="prepare:240983";
+ $("season-target-socket-count").value="7";
+ await execute();
+ assert.equal(field("season-existing-special-gem-id"),"240983");
+ assert.equal(valueInt("season-target-socket-count"),7);
+ assert.equal(state.verifiedExistingBudget,null);
+ assert.equal(state.seasonGearTargetIlevel,null);
+ $("season-target-socket-count").value="4";
+ await execute();assert.equal(valueInt("season-target-socket-count"),5);
+ $("season-verified-special-gem").value="prepare:240967";
+ await execute();assert.equal(calls,2);
+ assert.equal(field("season-existing-special-gem-id"),"240983");
+})().catch(e=>{console.error(e);process.exitCode=1;});
+"""
+        result=subprocess.run([node,"-e",code,str(raw)],capture_output=True,
+                              text=True,encoding="utf8",timeout=20)
+        self.assertEqual(result.returncode,0,result.stdout+"\n"+result.stderr)
+
     def test_v831_actual_js_expanded_socket_scope_and_fury_track(self):
         import shutil,subprocess
         from pathlib import Path

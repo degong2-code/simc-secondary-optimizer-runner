@@ -72,6 +72,47 @@ def _static_cache_bytes_equal(stored, requested):
         return (hashlib.file_digest(source,"sha256").digest()==
                 hashlib.file_digest(candidate,"sha256").digest())
 
+def _special_gem_preparation_rows(rank,*,game_build,simc_revision,target_ilevel):
+    """Source names and preferred direct-zero candidates, never runtime admission."""
+    if (type(rank) is not dict or rank.get("status")!=
+            "PRIMARY_GEM_RANK_SOURCE_PROJECTED_UNADMITTED"
+            or rank.get("game_build")!=game_build
+            or rank.get("simc_revision")!=simc_revision
+            or not all(type(rank.get(k)) is str and
+                re.fullmatch(r"[a-f0-9]{64}",rank[k]) for k in (
+                    "v221_stage_receipt_sha256","v230_stage_receipt_sha256",
+                    "enchant_source_sha256"))):
+        return []
+    out=[]
+    try:
+        preferred=set(rank["preferred_rank_item_ids_source_only"])
+        for row in rank["candidate_rows"]:
+            i=row["item_id"];meta=row["metadata"];enc=row["enchant_source_row"]
+            direct=rank["direct_static_CHMV_source_by_item_id"].get(str(i),{})
+            vector=direct.get("direct_static_CHMV_vector_source_only")
+            if (i not in preferred or type(i) is not int or i<=0
+                    or meta["item_id"]!=i or enc["id_gem"]!=i
+                    or direct.get("item_id")!=i or direct.get("enchant_id")!=enc["id"]
+                    or row["physical_property"]["enchant_id"]!=enc["id"]
+                    or direct.get("source_basis")!="EXACT_PRIMARY_OR_ARMOR_COMPONENTS_NO_LINKED_SPELL"
+                    or type(vector) is not dict or set(vector)!=set(
+                        environment_build.season_budget_contract.STATS)
+                    or any(type(v) is not int or v!=0 for v in vector.values())
+                    or not enc["min_ilevel"]<=target_ilevel
+                    or (enc["max_ilevel"] and target_ilevel>enc["max_ilevel"])
+                    or type(meta["item_name"]) is not str or not meta["item_name"].strip()
+                    or type(meta["crafting_quality"]) is not int or meta["crafting_quality"]<=0):
+                continue
+            out.append({"physical_item_id":i,"source_name":meta["item_name"],
+                        "crafting_quality":meta["crafting_quality"],
+                        "status":"SOURCE_IDENTIFIED_PREPARATION_ONLY",
+                        "user_selectable":False})
+        if len({x["physical_item_id"] for x in out})!=len(out):return []
+        return sorted(out,key=lambda x:(x["source_name"],x["physical_item_id"]))
+    except (KeyError,TypeError,ValueError):
+        return []
+
+
 def _verified_snapshot_gem_layout_matches(result, *, special_gem_id,
                                           socket_total,representative_spec=None):
     """Reject a verified-budget cache hit for a different SimC gem profile."""
@@ -862,6 +903,14 @@ class LocalJobs:
         if any(k not in compilation for k in names):
             raise environment_manifest.EnvironmentBlocked(
                 "WEB_FRESH_V098_ORIGINAL_PROFILE_INPUT_MISSING")
+        # Persist the small existing rank projection only when it comes
+        # from this Build or its authenticated saved snapshot. It is
+        # preparation metadata, not a second budget or effect owner.
+        if _special_gem_preparation_rows(
+                compilation.get("primary_gem_rank_source_unadmitted"),
+                game_build=doc["game_build"],simc_revision=doc["simc_revision"],
+                target_ilevel=doc["target_ilevel"]):
+            names+=("primary_gem_rank_source_unadmitted",)
         socket_scope=doc.get("official_J_physical_socket_source")
         if socket_scope is not None:
             layout=compilation["physical_gem_layout_unadmitted"]
@@ -1838,6 +1887,7 @@ class LocalJobs:
                 "items":[],"verified_flasks":[],
                 "verified_base_flask_installs":[],
                 "verified_gem_installs":[],
+                "gem_preparation_source":{"items":[],"status":"SOURCE_PREPARATION_PENDING"},
                 "verified_base_fj_collision_diagnostics":[],
                 "native_calls":0,"network_calls":0}
         if build is None:
@@ -1865,6 +1915,8 @@ class LocalJobs:
         seen=set()
         flasks_by_id={}
         conflicting_flasks=set()
+        prep_by_id={}
+        conflicting_gems=set()
         # Each receipt is admitted independently, never by comparison
         # against another installation with the same F/J.
         for _,path in sorted(candidates,key=lambda p:(-p[0],str(p[1]))):
@@ -1914,6 +1966,16 @@ class LocalJobs:
                              if type(runtime) is dict else None)
                 layout=(compilation.get("physical_gem_layout_unadmitted")
                         if type(compilation) is dict else None)
+                for row in _special_gem_preparation_rows(
+                        (compilation or {}).get("primary_gem_rank_source_unadmitted"),
+                        game_build=build,simc_revision=doc.get("simc_revision"),
+                        target_ilevel=ilevel):
+                    i=row["physical_item_id"]
+                    if i in conflicting_gems:continue
+                    prior=prep_by_id.get(i)
+                    if prior is not None and prior!=row:
+                        prep_by_id.pop(i,None);conflicting_gems.add(i)
+                    else:prep_by_id[i]=row
                 if type(layout) is dict and type(flask) is dict:
                     special=layout.get("special_gem_id")
                     sockets=layout.get("socket_total")
@@ -2030,7 +2092,13 @@ class LocalJobs:
                      if entry["special_gem_id"] is not None}
         preparation_ids={row["physical_item_id"] for row in preparation["items"]}
         official_names=official_ko_env.read_names(
-            self.root,build,set(flasks_by_id)|oil_ids|special_ids|preparation_ids)
+            self.root,build,set(flasks_by_id)|oil_ids|special_ids|preparation_ids|set(prep_by_id))
+        result["gem_preparation_source"]={
+            "status":"SOURCE_IDENTIFIED_PREPARATION_ONLY" if prep_by_id else
+                     "SOURCE_PREPARATION_PENDING",
+            "items":[{**row,**({"official_name_ko":official_names[i]}
+                     if i in official_names else {})}
+                     for i,row in sorted(prep_by_id.items())]}
         for row in preparation["items"]:
             if row["physical_item_id"] in official_names:
                 row["official_name_ko"]=official_names[row["physical_item_id"]]

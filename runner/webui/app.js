@@ -2012,7 +2012,7 @@ function renderVerifiedGemChoices(){
     if(!groups.has(key))groups.set(key,[]);
     groups.get(key).push(v);
   }
-  selector.replaceChildren(option("",special?"현재 직접 지정한 보석":"특수보석 선택 안 함"));
+  selector.replaceChildren(option("",special?"현재 지정한 보석":"특수보석 선택 안 함"));
   selector.appendChild(option("none","특수보석 미사용"));
   for(const [key,variants] of groups){
     const active=variants.find(v=>v.installed_manifest_sha256===
@@ -2022,9 +2022,24 @@ function renderVerifiedGemChoices(){
     selector.appendChild(option(key,(v.official_name_ko||
       "특수보석 #"+v.special_gem_id)+" · 소켓 "+v.socket_total+"개"));
   }
+  const prep=installedConsumableScopeMatches(state.oilCatalog)?
+    state.oilCatalog?.gem_preparation_source:null;
+  if(prep?.status==="SOURCE_IDENTIFIED_PREPARATION_ONLY"){
+    for(const row of prep.items||[]){
+      const id=row.physical_item_id;
+      if(!Number.isSafeInteger(id)||id<=0||
+         row.status!=="SOURCE_IDENTIFIED_PREPARATION_ONLY"||row.user_selectable!==false||
+         groups.has(id+":"+Math.max(5,sockets)))continue;
+      const name=row.official_name_ko||row.source_name;
+      if(typeof name!=="string"||!name.trim())continue;
+      selector.appendChild(option("prepare:"+id,name+" · 검증 준비 필요"));
+    }
+  }
   const current=special+":"+sockets;
   if(special&&Array.from(selector.options).some(o=>o.value===current))
     selector.value=current;
+  else if(special&&Array.from(selector.options).some(o=>o.value==="prepare:"+special))
+    selector.value="prepare:"+special;
   selector.disabled=selector.options.length<=2&&!special;
 }
 async function reuseVerifiedGemVariant(){
@@ -2057,7 +2072,17 @@ async function reuseVerifiedGemVariant(){
 async function chooseVerifiedGem(){
   const value=field("season-verified-special-gem");
   if(!value)return;
-  if(value!=="none"){
+  if(value.startsWith("prepare:")){
+    const match=/^prepare:([1-9][0-9]*)$/.exec(value);
+    const source=state.oilCatalog?.gem_preparation_source;
+    if(!match||!installedConsumableScopeMatches(state.oilCatalog)||
+       source?.status!=="SOURCE_IDENTIFIED_PREPARATION_ONLY"||
+       !(source.items||[]).some(r=>r.physical_item_id===Number(match[1])&&
+         r.user_selectable===false&&r.status==="SOURCE_IDENTIFIED_PREPARATION_ONLY"))return;
+    $("season-existing-special-gem-id").value=match[1];
+    $("season-target-socket-count").value=String(Math.max(5,valueInt("season-target-socket-count")));
+    state.verifiedExistingBudget=null;
+  }else if(value!=="none"){
     const match=/^([1-9][0-9]*):([1-9][0-9]*)$/.exec(value);
     if(!match||!matchingInstalledGemVariants().some(v=>
       v.special_gem_id===Number(match[1])&&v.socket_total===Number(match[2])))return;

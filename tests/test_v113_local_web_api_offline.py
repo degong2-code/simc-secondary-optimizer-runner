@@ -860,6 +860,23 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(len(res.json()["verified_flasks"]),1)
         self.assertEqual(res.json()["native_calls"],0)
 
+    def test_v832_special_gem_source_name_preparation_not_runtime_admission(self):
+        from runner import v211_enchant_source_effect_classification as classifier
+        source=Path(__file__).resolve().parents[1]/"docs/development/research_receipts/p1_v821_70961_primary_gem_enchant_compact.json"
+        doc=json.loads(source.read_text("utf8"))
+        rank={**classifier.primary_gem_quality_projection(doc["candidate_rows"]),
+              "status":"PRIMARY_GEM_RANK_SOURCE_PROJECTED_UNADMITTED",
+              "game_build":doc["game_build"],"simc_revision":doc["simc_revision"],
+              "candidate_rows":doc["candidate_rows"],"v221_stage_receipt_sha256":"a"*64,
+              "v230_stage_receipt_sha256":"b"*64,"enchant_source_sha256":"c"*64}
+        args={"game_build":doc["game_build"],"simc_revision":doc["simc_revision"],"target_ilevel":334}
+        rows=web._special_gem_preparation_rows(rank,**args)
+        self.assertEqual({x["physical_item_id"] for x in rows},{240971,240983})
+        self.assertTrue(all(x["source_name"] and x["user_selectable"] is False and
+            x["status"]=="SOURCE_IDENTIFIED_PREPARATION_ONLY" for x in rows))
+        self.assertEqual(web._special_gem_preparation_rows(rank,**{**args,"game_build":"12.1.5.0"}),[])
+        self.assertEqual(web._special_gem_preparation_rows({**rank,"v221_stage_receipt_sha256":"bad"},**args),[])
+
     def test_v763_verified_special_gem_layout_is_a_selectable_exact_install(self):
         build="12.1.5.70783"
         docs=(self.app.state.jobs.root/"_fresh_season_sources"/
