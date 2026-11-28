@@ -13,9 +13,10 @@
   <div class="topbar-inner">
     <div class="brand"><div class="brand-mark" aria-hidden="true">S<span>✦</span></div><div><strong>SIMC SECONDARY</strong><small>SECONDARY STAT OPTIMIZER</small></div></div>
     <nav class="top-nav" aria-label="화면 구획 이동">
-      <button type="button" class="nav-item is-active" data-view="optimizer" aria-current="page">2차 스탯 최적화</button>
-      <button type="button" class="nav-item" data-view="settings">환경 설정</button>
-      <button type="button" class="nav-item" data-view="results" id="results-nav-btn" hidden>결과 확인</button>
+      <button type="button" class="nav-item is-active" data-view="optimizer" aria-current="page">새 계산</button>
+      <button type="button" class="nav-item" data-view="history">이전 계산 기록</button>
+      <button type="button" class="nav-item" data-view="results" id="results-nav-btn" hidden>계산 결과</button>
+      <button type="button" class="nav-item" data-view="settings">설정</button>
     </nav>
     <div class="local-indicator"><span class="dot"></span> 로컬 SimC</div>
   </div>
@@ -25,13 +26,13 @@
     <div id="notice" class="notice" role="status" aria-live="polite">로컬 서버에 연결 중…</div>
     <section id="view-optimizer" data-view-panel="optimizer">
       <div class="view-intro">
- <div><p class="eyebrow">TARGET-LEVEL · SIMC DPS</p><h1>목표 2차 스탯 <em>최적화</em></h1><p class="intro-desc">현재 장비 재분배가 아닌 미래 목표 ilvl·T 기준 치명·가속·특화·유연 절대 rating을 탐색합니다.</p></div>
- <button type="button" class="btn secondary" data-view="settings">시즌·SimC 설정</button>
+ <div><h1>목표 2차 스탯 <em>찾기</em></h1><p class="intro-desc">목표 아이템레벨에서 가장 높은 DPS를 기대할 수 있는 치명·가속·특화·유연 수치를 찾습니다.</p></div>
+ <button type="button" class="btn secondary" data-view="history">이전 계산 기록</button>
 </div>
-      <div class="optimizer-environment-strip"><span id="optimizer-environment-state">시즌 검증 상태는 환경 설정에서 확인</span><button type="button" class="btn secondary" data-view="settings">환경 상태 확인</button></div>
+      <div class="optimizer-environment-strip"><span id="optimizer-environment-state">계산 준비 상태 확인 중</span><button type="button" class="btn secondary" data-view="settings">설정 및 문제 해결</button></div>
       <form id="optimizer-form" autocomplete="off">
   <section class="panel profile-panel" aria-labelledby="input-title">
-    <div class="section-head"><div><p class="eyebrow">01</p><h2 id="input-title">캐릭터 프로필</h2></div></div>
+    <div class="section-head"><div><p class="eyebrow">01</p><h2 id="input-title">캐릭터 및 목표</h2></div></div>
     <details class="fold profile-import"><summary><span>SimC 프로필 가져오기</span><small>현재 장비·스탯은 가져오지 않음</small></summary>
               <div class="field"><label for="simc-import-text">SimC 프로필 텍스트 붙여넣기</label><textarea id="simc-import-text" rows="4" spellcheck="false" maxlength="250000" placeholder="druid=character&#10;spec=feral&#10;race=night_elf&#10;talents=..."></textarea></div>
               <div class="field"><label for="simc-import-file">또는 로컬 SimC 프로필 파일 선택</label><input id="simc-import-file" type="file" accept=".simc,.txt,text/plain"></div>
@@ -55,11 +56,11 @@
             
     <div class="budget-mode">
   <div class="budget-mode-heading">
-    <div><strong>최종 2차 스탯 총량 (T)</strong><p id="budget-preview-note" class="hint">검증된 시즌·사용자 구성에 한해 계산값을 표시합니다. 미확정 값을 추정하지 않습니다.</p></div>
+    <div><strong>최종 2차 스탯 총합</strong><p id="budget-preview-note" class="hint">목표 레벨과 선택한 조건에 맞춰 자동 계산합니다.</p></div>
     <label class="manual-toggle"><input id="manual-t-mode" type="checkbox"> 2차 스탯 합계 직접 입력</label>
   </div>
   <div id="budget-preview" class="budget-figure" role="status" aria-live="polite"><span>자동 계산</span><strong id="budget-preview-total">시즌 검증 후 표시</strong></div>
-  <div class="field" id="manual-t-field" hidden><label for="final_T">직접 입력할 최종 T <small>기름 O 포함 · 수동 입력이 자동 계산보다 우선</small></label><input id="final_T" type="number" min="1" max="100000" placeholder="최종 2차스탯 합계"></div>
+  <div class="field" id="manual-t-field" hidden><label for="final_T">직접 입력할 최종 스탯 총합 <small>기름의 스탯 포함</small></label><input id="final_T" type="number" min="1" max="100000" placeholder="최종 2차스탯 합계"></div>
 </div>
     <div class="stat-cap-line">
       <label for="max-single-stat-percent">개별 스탯 최대 비율</label>
@@ -69,13 +70,49 @@
         
     <div class="field"><label for="talents">특성 코드 <small>선택 · 비우면 기본 대표 특성</small></label><textarea id="talents" rows="2" placeholder="직접 입력하지 않으면 기본 대표 특성 사용" spellcheck="false"></textarea><p class="hint" id="talents-default-note">특성 미입력 시 선택한 전문화의 검증된 기본 대표 특성을 사용합니다.</p></div>
             
-  <div class="gear-section gear-embellishments profile-embellishments">
+  
+  </section>
+  <section class="panel fixed-gear-panel" aria-labelledby="equipment-title">
+    <div class="section-head"><div><p class="eyebrow">02</p><h2 id="equipment-title">장비 선택</h2></div><span class="micro">장신구 2개 필수 · 특수효과는 선택</span></div>
+    <div class="equipment-preparation"><p id="equipment-prepare-status" class="hint" role="status" aria-live="polite">장비 선택 준비 상태 확인 중</p><div class="actions"><button type="button" id="equipment-prepare-btn" class="btn primary" disabled>장비 목록 준비</button><button type="button" id="equipment-refresh-btn" class="btn secondary" disabled>장비 목록 업데이트</button></div></div>
+    <p class="hint">찾는 장비가 없으면 목록을 업데이트하세요. 기존 계산과 목표 스탯 총합은 유지됩니다.</p>
+    <p id="equipment-refresh-status" class="hint" role="status" aria-live="polite"></p>
+    
+<div class="gear-section gear-trinkets">
+  <div class="gear-section-heading"><h3>장신구</h3><span>2개 필수</span></div>
+  <div class="equipment-source-controls"><div class="two">
+              <div class="field equipment-source"><label for="trinket1">장신구 1 · 필수</label><select id="trinket1" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket1">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket1">선택된 장신구 없음</p></div>
+              <div class="field equipment-source"><label for="trinket2">장신구 2 · 필수</label><select id="trinket2" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket2">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket2">선택된 장신구 없음</p></div>
+            </div></div>
+  <div class="inline-equipment">
+  <label class="equipment-filter"><span class="visually-hidden">장신구 검색</span><input id="equipment-trinket-search" type="search" autocomplete="off" placeholder="장신구 이름·ItemID 검색" aria-controls="equipment-trinket-grid"></label>
+  <div id="equipment-trinket-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 장신구 바로 선택">
+    <p class="equipment-inline-empty">장신구 목록 확인 중…</p>
+  </div>
+  <p id="equipment-trinket-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
+</div><p class="hint" id="season-gear-note">이번 시즌 장신구·특수효과 선택 목록 확인 중 · 일반장비·티어·무기는 내부 자동 구성</p>
+</div>
+<div class="gear-section gear-special">
+  <div class="gear-section-heading"><h3>특수효과 장비</h3><span>선택</span></div>
+  <div class="inline-equipment inline-equipment-special">
+  <label class="equipment-filter"><span class="visually-hidden">특수효과 장비 검색</span><input id="equipment-special-search" type="search" autocomplete="off" placeholder="특수효과 장비 이름·ItemID 검색" aria-controls="equipment-special-grid"></label>
+  <div id="equipment-special-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 특수효과 장비 바로 선택">
+    <p class="equipment-inline-empty">특수효과 장비 목록 확인 중…</p>
+  </div>
+  <p id="equipment-special-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
+  <div id="equipment-selected-specials" aria-label="선택한 특수효과 장비 설정" hidden></div>
+</div>
+<div hidden class="gear-special-details" aria-hidden="true">
+<p class="hint" hidden>일반 장비·티어4세트와 선택한 장식 제작장비의 정확한 ID는 내부에서 구성합니다. 특수장비의 보너스·촉매 원본 ID도 일반 사용자에게 입력받지 않습니다. 이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용하며, 정확한 L이 있는 경우 그대로 재사용합니다. 누락된 경우 '예산 미리 확인'(Native 0회)은 차단될 수 있으나, 사용자가 'SimC 최적화 실행'을 승인하면 내부 생성한 대표 프로필에서 정적 SimC Native 최대 1회로 선택 장비의 정확한 L을 확보·캐시합니다. 이후 최적화 계산을 진행하며, 미확정 L을 0으로 간주하지 않습니다. 현재 검증된 장식은 일반 방어구용 안감 2종입니다. 목걸이·반지·무기용 장식은 별도의 실제 호환 토큰이 검증되기 전까지 선택할 수 없습니다.</p><div id="special-rows"></div>
+</div>
+</div>
+<div class="gear-section gear-embellishments profile-embellishments">
   <div class="gear-section-heading"><h3>장식</h3><span>최대 2개</span></div>
   <p id="craft-compatibility-note" class="hint" role="note">장식별 장착 가능한 부위만 표시됩니다. 장신구·무기 장식은 검증된 선택지가 아직 없습니다.</p><div id="crafted-rows"></div>
 </div>
-  </section>
-  <section class="panel conditions-panel" aria-labelledby="conditions-title">
- <div class="section-head"><div><p class="eyebrow">02</p><h2 id="conditions-title">환경 구성</h2></div></div>
+</section>
+<section class="panel conditions-panel" aria-labelledby="conditions-title">
+ <div class="section-head"><div><p class="eyebrow">03</p><h2 id="conditions-title">소모품 및 전투조건</h2></div></div>
  
 <div class="env-input-grid" aria-label="전투 및 소모품 입력">
    <div class="env-grid-cell"><div class="field"><label for="targets">대상 수</label><input id="targets" type="number" min="1" max="40" value="1" required></div></div>
@@ -187,42 +224,8 @@
  </details>
 
 </section>
-<section class="panel fixed-gear-panel" aria-labelledby="equipment-title">
-    <div class="section-head"><div><p class="eyebrow">03</p><h2 id="equipment-title">고정 장비 선택</h2></div><span class="micro">장신구 2개 필수 · 특수효과는 선택</span></div>
-    <div class="actions"><button type="button" id="equipment-refresh-btn" class="btn secondary" disabled>장비 목록 업데이트</button></div>
-    <p class="hint">찾는 장비가 없으면 목록을 업데이트하세요. 기존 계산과 목표 스탯 총합은 유지됩니다.</p>
-    <p id="equipment-refresh-status" class="hint" role="status" aria-live="polite"></p>
-    
-<div class="gear-section gear-trinkets">
-  <div class="gear-section-heading"><h3>장신구</h3><span>2개 필수</span></div>
-  <div class="equipment-source-controls"><div class="two">
-              <div class="field equipment-source"><label for="trinket1">장신구 1 · 필수</label><select id="trinket1" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket1">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket1">선택된 장신구 없음</p></div>
-              <div class="field equipment-source"><label for="trinket2">장신구 2 · 필수</label><select id="trinket2" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket2">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket2">선택된 장신구 없음</p></div>
-            </div></div>
-  <div class="inline-equipment">
-  <label class="equipment-filter"><span class="visually-hidden">장신구 검색</span><input id="equipment-trinket-search" type="search" autocomplete="off" placeholder="장신구 이름·ItemID 검색" aria-controls="equipment-trinket-grid"></label>
-  <div id="equipment-trinket-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 장신구 바로 선택">
-    <p class="equipment-inline-empty">장신구 목록 확인 중…</p>
-  </div>
-  <p id="equipment-trinket-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
-</div><p class="hint" id="season-gear-note">이번 시즌 장신구·특수효과 선택 목록 확인 중 · 일반장비·티어·무기는 내부 자동 구성</p>
-</div>
-<div class="gear-section gear-special">
-  <div class="gear-section-heading"><h3>특수효과 장비</h3><span>선택</span></div>
-  <div class="inline-equipment inline-equipment-special">
-  <label class="equipment-filter"><span class="visually-hidden">특수효과 장비 검색</span><input id="equipment-special-search" type="search" autocomplete="off" placeholder="특수효과 장비 이름·ItemID 검색" aria-controls="equipment-special-grid"></label>
-  <div id="equipment-special-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 특수효과 장비 바로 선택">
-    <p class="equipment-inline-empty">특수효과 장비 목록 확인 중…</p>
-  </div>
-  <p id="equipment-special-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
-  <div id="equipment-selected-specials" aria-label="선택한 특수효과 장비 설정" hidden></div>
-</div>
-<div hidden class="gear-special-details" aria-hidden="true">
-<p class="hint" hidden>일반 장비·티어4세트와 선택한 장식 제작장비의 정확한 ID는 내부에서 구성합니다. 특수장비의 보너스·촉매 원본 ID도 일반 사용자에게 입력받지 않습니다. 이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용하며, 정확한 L이 있는 경우 그대로 재사용합니다. 누락된 경우 '예산 미리 확인'(Native 0회)은 차단될 수 있으나, 사용자가 'SimC 최적화 실행'을 승인하면 내부 생성한 대표 프로필에서 정적 SimC Native 최대 1회로 선택 장비의 정확한 L을 확보·캐시합니다. 이후 최적화 계산을 진행하며, 미확정 L을 0으로 간주하지 않습니다. 현재 검증된 장식은 일반 방어구용 안감 2종입니다. 목걸이·반지·무기용 장식은 별도의 실제 호환 토큰이 검증되기 전까지 선택할 수 없습니다.</p><div id="special-rows"></div>
-</div>
-</div>
-</section>
 <section class="panel submit-panel" aria-label="최적화 실행">
+    <div class="section-head"><div><p class="eyebrow">04</p><h2>계산 시작</h2></div></div>
     <p class="hint" id="optimizer-submit-note" role="status" aria-live="polite">실행 준비 상태를 확인 중입니다. 필요한 선택 사항을 여기에 안내합니다.</p>
     <div class="actions"><button type="button" id="plan-btn" hidden class="btn secondary" disabled>최적화 예산 미리 확인 · Native 0회</button><button type="button" id="start-btn" class="btn primary" disabled>최적 스탯 찾기</button></div>
             <details class="fold" id="longrun-panel" hidden><summary><span>장기 적응형 SimC 탐색 · 중단/재개</span><small>일반 최적화와 별개인 고급 실행</small></summary>
@@ -322,6 +325,17 @@
             
  </section>
 </section>
+    <section id="view-history" data-view-panel="history" hidden>
+      <div class="view-intro"><div><h1>이전 계산 <em>기록</em></h1><p class="intro-desc">저장된 계산 조건과 결과를 다시 열 수 있습니다.</p></div><button type="button" class="btn secondary" data-view="optimizer">새 계산</button></div>
+      <section class="panel history-panel" aria-labelledby="history-title"><h2 id="history-title">저장된 계산</h2>
+              <div class="field recent-session-controls"><label for="recent-session-id">계산 기록 선택</label><select id="recent-session-id" size="6"><option value="">저장된 세션 조회 중…</option></select></div>
+              <div class="restore-controls"><button id="recent-open-btn" type="button" class="btn secondary" disabled>선택한 계산 열기</button><button id="recent-refresh-btn" type="button" class="btn secondary">목록 새로고침</button></div>
+              <p class="hint" id="recent-session-note">이 PC에 저장된 계산입니다. 결과를 열어도 새 계산은 시작되지 않습니다.</p>
+              <details class="fold history-advanced"><summary>고급: 계산 ID로 열기</summary><div class="restore-controls"><input id="restore-id" aria-label="기존 세션 ID" maxlength="20" placeholder="기존 20자리 세션 ID 직접 입력" spellcheck="false"><button id="restore-btn" type="button" class="btn tiny">ID로 열기</button></div>
+              <p class="hint">과거 세션의 특성·SimC 경로는 목록 응답에 포함하지 않고, 선택 시에만 기존 서버 인증 경로로 가져옵니다. 다른 PC의 세션은 여기에 자동 표시되지 않습니다.</p>
+              </details>
+      </section>
+    </section>
     <section id="view-results" data-view-panel="results" hidden>
  <div class="view-intro"><div><p class="eyebrow">SIMC RUN & 95% RESULT</p><h1>실행 및 <em>결과</em></h1><p class="intro-desc">관측된 DPS·SEM과 근접 대안을 확인하세요. 관측 1순위가 전역 최적해를 증명하지는 않습니다.</p></div><button type="button" class="btn secondary" data-view="optimizer">조건 수정</button></div>
  <div class="result-workspace"><section class="panel run-card" aria-labelledby="run-title">
@@ -341,13 +355,7 @@
                 <p class="hint">같은 SimC·프로필·시즌 소스·후보 순서가 검증될 때만 새 경로에 저장합니다. 원본 ZIP을 변경하지 않으며, 가져온 호출 수는 전체 세션 누적 예산에 포함됩니다.</p>
               </details>
             </details>
-            <details class="restore"><summary>이 PC의 이전 세션 불러오기</summary>
-              <div class="field recent-session-controls"><label for="recent-session-id">최근 저장된 세션 (Native 0회 조회)</label><select id="recent-session-id"><option value="">저장된 세션 조회 중…</option></select></div>
-              <div class="restore-controls"><button id="recent-open-btn" type="button" class="btn secondary" disabled>선택한 세션 불러오기</button><button id="recent-refresh-btn" type="button" class="btn secondary">목록 새로고침</button></div>
-              <p class="hint" id="recent-session-note">목록에는 이 PC에 저장된 세션만 표시합니다. 결과를 불러와도 새 SimC는 실행하지 않습니다.</p>
-              <div class="restore-controls"><input id="restore-id" aria-label="기존 세션 ID" maxlength="20" placeholder="기존 20자리 세션 ID 직접 입력" spellcheck="false"><button id="restore-btn" type="button" class="btn tiny">ID로 열기</button></div>
-              <p class="hint">과거 세션의 특성·SimC 경로는 목록 응답에 포함하지 않고, 선택 시에만 기존 서버 인증 경로로 가져옵니다. 다른 PC의 세션은 여기에 자동 표시되지 않습니다.</p>
-            </details>
+            <button type="button" class="btn secondary" data-view="history">이전 계산 기록 보기</button>
           </section>
           
 <section class="panel results" id="result-panel" aria-labelledby="result-title">

@@ -175,7 +175,7 @@ function resultsAvailable(){
   return Boolean(state.session)||$("recent-session-id").options.length>1;
 }
 function switchView(view) {
-  if(!["optimizer","settings","results"].includes(view))return;
+  if(!["optimizer","settings","results","history"].includes(view))return;
   if(view==="results"&&!resultsAvailable())return;
   currentView=view;
   for(const panel of document.querySelectorAll("[data-view-panel]"))
@@ -2943,6 +2943,13 @@ function optimizerNeedsSeasonPreparation() {
 }
 // v568: existing v113/v216/v212 source owners only. This user click does
 // not automatically run DPS; exact installed SHA gear is required first.
+// Early equipment action reuses the existing preparation-only start path.
+// A ready environment must never start DPS from this button.
+function prepareEquipmentFromStep() {
+  if(state.busy||state.running||!state.token||!validTargetIlevel()||
+     !optimizerNeedsSeasonPreparation())return;
+  $("start-btn").click();
+}
 async function prepareSeasonBeforeOptimizerStart() {
   if(!optimizerNeedsSeasonPreparation())return false;
   // Exact selected sources must not invoke Native Build from optimizer entry.
@@ -3346,6 +3353,17 @@ function buttonState(active=false,ready=false) {
     $("source-credentials-clear-btn").disabled=true;
   }
   const needsEnvironment=Boolean(state.token)&&optimizerNeedsSeasonPreparation();
+  const equipmentPrepare=$("equipment-prepare-btn");
+  if(equipmentPrepare){
+    equipmentPrepare.disabled=busy||active||!state.token||!validTargetIlevel()||!needsEnvironment;
+    equipmentPrepare.hidden=Boolean(state.token)&&!needsEnvironment;
+    const preparationStatus=$("equipment-prepare-status");
+    if(preparationStatus)preparationStatus.textContent=busy?"준비 작업 중입니다.":
+      !state.token?"프로그램 연결을 확인하고 있습니다.":
+      !validTargetIlevel()?"목표 아이템레벨을 먼저 입력하세요.":
+      needsEnvironment?"장비를 선택하기 전에 이번 시즌 장비 목록을 준비하세요.":
+      "장비를 선택할 수 있습니다. 찾는 장비가 없으면 목록을 업데이트하세요.";
+  }
   $("start-btn").textContent=needsEnvironment?
     (typeof explicitSelectedEnvironmentRequested==="function"&&explicitSelectedEnvironmentRequested()?
       "선택 환경 검증·준비":"시즌 환경 준비 · 장신구 목록 불러오기"):"최적 스탯 찾기";
@@ -3364,7 +3382,7 @@ function buttonState(active=false,ready=false) {
     !field("spec")?"직업과 전문화를 선택하세요.":
     !field("race")?"종족을 선택하세요.":
     !field("trinket1")||!field("trinket2")?
-      "장신구 2개가 필요합니다. 고정 장비 선택에서 각각 지정하세요.":
+      "장비 선택에서 장신구 2개를 지정하세요.":
     field("trinket1")===field("trinket2")?
       "같은 장신구를 두 칸에 중복 선택할 수 없습니다.":
     oilPending?
@@ -3886,8 +3904,8 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
   const ready=scope.environment_ready===true&&scope.environment_installed===true;
   displaySeasonEnvironmentFacts(data,forUserVariant);
   $("optimizer-environment-state").textContent=ready?
-    "시즌 G/J/F/O 검증 설치 확인 · 선택한 개인 조건은 별도 검증":
-    "시즌 환경 설치·검증 미완료 · 환경 설정에서 원인을 확인하세요";
+    "시즌 자료 준비됨 · 선택한 조건에 따라 추가 확인이 필요할 수 있습니다":
+    "시즌 자료 준비 필요 · 설정에서 문제를 확인하세요";
   // Only a user-specific installed v212 READY report can show this T.
   // Source-only numeric previews or unadmitted candidate joins are not budgets.
   if(ready&&forUserVariant&&!$("manual-t-mode").checked&&
@@ -4892,11 +4910,11 @@ async function loadRecentSessions() {
       new Date(item.updated_unix*1000).toLocaleString("ko-KR"):"";
     // Intent from the sealed saved user, never an estimated automatic T.
     const scope=["목표 "+item.target_ilevel];
-    if(item.requested_final_T===null)scope.push("자동 T");
+    if(item.requested_final_T===null)scope.push("자동 총합");
     else if(Number.isInteger(item.requested_final_T)&&
       item.requested_final_T>=1&&item.requested_final_T<=100000)
-      scope.push("수동 T "+number(item.requested_final_T));
-    else scope.push("T 입력 미확인");
+      scope.push("수동 총합 "+number(item.requested_final_T));
+    else scope.push("총합 입력 미확인");
     if(Number.isInteger(item.combat_targets)&&
       item.combat_targets>=1&&item.combat_targets<=40)
       scope.push("대상 "+item.combat_targets+"명");
@@ -4911,8 +4929,8 @@ async function loadRecentSessions() {
   $("recent-open-btn").disabled=!list.value;
   refreshResultNavigation();
   $("recent-session-note").textContent=
-    "현재 PC의 기록 "+(list.options.length-1)+"개 · Native 0회 · "+
-    "특성·장비·로컬 경로는 목록에 포함되지 않음";
+    "이 PC의 계산 기록 "+(list.options.length-1)+"개 · "+
+    "기록을 열어도 새 계산은 시작되지 않습니다.";
 }
 // A restored new-season session is bound to a specific v212 installation.
 // Refill its candidate dropdowns BEFORE restoring its exact item IDs; do not
@@ -6031,6 +6049,7 @@ function registerHandlers() {
     withBusy(applyOilUseToggle);
   });
   $("equipment-refresh-btn").addEventListener("click",()=>withBusy(updateVisibleEquipmentChoices));
+  $("equipment-prepare-btn").addEventListener("click",()=>prepareEquipmentFromStep());
   $("equipment-trinket-search").addEventListener("input",drawInlineEquipment);
   $("equipment-special-search").addEventListener("input",drawInlineEquipment);
   for(const launch of document.querySelectorAll("[data-equip-select]"))

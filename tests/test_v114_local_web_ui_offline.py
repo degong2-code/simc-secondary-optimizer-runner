@@ -34,7 +34,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         js=self.client.get("/assets/app.js").text
         self.assertIn('<meta name="color-scheme" content="dark">',page)
         self.assertIn('aria-label="화면 구획 이동"',page)
-        for dest in ("optimizer","settings","results"):
+        for dest in ("optimizer","settings","results","history"):
             self.assertIn('data-view-panel="'+dest+'"',page)
             self.assertIn('data-view="'+dest+'"',page)
         for ident in ("manual-t-mode","budget-preview-total","equipment-dialog",
@@ -513,10 +513,13 @@ const apply=Function("state","$","field","valueInt",
         self.assertIn('gear-section gear-trinkets',gear)
         self.assertIn('gear-section gear-special',gear)
         profile=form.split('<section class="panel profile-panel"',1)[1].split('</section>',1)[0]
-        self.assertIn('gear-section gear-embellishments profile-embellishments',profile)
+        self.assertIn('gear-section gear-embellishments profile-embellishments',gear)
         self.assertIn('id="special-rows"',gear)
-        self.assertIn('id="crafted-rows"',profile)
-        self.assertNotIn('id="crafted-rows"',gear)
+        self.assertIn('id="crafted-rows"',gear)
+        self.assertNotIn('id="crafted-rows"',profile)
+        self.assertLess(form.index('id="input-title"'),form.index('id="equipment-title"'))
+        self.assertLess(form.index('id="equipment-title"'),form.index('id="conditions-title"'))
+        self.assertLess(form.index('id="conditions-title"'),form.index('id="start-btn"'))
         self.assertIn('class="equipment-source-controls"',gear)
         self.assertNotIn('https://fonts.googleapis.com',css)
         self.assertEqual(form.count('id="season-verified-flask"'),1)
@@ -687,14 +690,58 @@ console.log("V842_SELECTED_SPECIAL_CONTROL_PASS");
         self.assertIn('item.name_ko||item.name',js)
         self.assertNotIn('https://wow.zamimg.com/images/wow/icons',js)
 
-    def test_v358_compact_form_is_two_up_then_full_width_equipment(self):
+    def test_v865_history_separate_and_early_preparation_never_starts_ready_dps(self):
+        import shutil,subprocess
+        page=self.client.get("/").text
+        history=page.split('id="view-history"',1)[1].split('id="view-results"',1)[0]
+        self.assertIn('id="recent-session-id" size="6"',history)
+        self.assertIn('id="recent-open-btn"',history)
+        self.assertIn('id="restore-id"',history)
+        self.assertEqual(page.count('id="recent-session-id"'),1)
+        self.assertIn('data-view="history">이전 계산 기록',page)
+        self.assertLess(page.index('id="equipment-prepare-btn"'),page.index('id="trinket1"'))
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function prepareEquipmentFromStep()"),b=raw.indexOf("async function prepareSeasonBeforeOptimizerStart()",a);
+assert(a>=0&&b>a);
+let pending=true,valid=true,clicks=0;
+const state={busy:false,running:false,token:"test"};
+const prepare=Function("state","validTargetIlevel","optimizerNeedsSeasonPreparation","$",
+ raw.slice(a,b)+";return prepareEquipmentFromStep;")(
+ state,()=>valid,()=>pending,id=>{assert.equal(id,"start-btn");return {click(){clicks++;}};});
+prepare();assert.equal(clicks,1);
+pending=false;prepare();assert.equal(clicks,1);
+pending=true;valid=false;prepare();assert.equal(clicks,1);
+valid=true;state.busy=true;prepare();assert.equal(clicks,1);
+state.busy=false;state.running=true;prepare();assert.equal(clicks,1);
+state.running=false;state.token="";prepare();assert.equal(clicks,1);
+const x=raw.indexOf("function switchView(view)"),y=raw.indexOf("function refreshResultNavigation()",x);
+const panels=["optimizer","history","settings","results"].map(view=>({dataset:{viewPanel:view},hidden:view!=="optimizer"}));
+const buttons=panels.map(p=>({dataset:{view:p.dataset.viewPanel},classList:{toggle(){}},setAttribute(){},removeAttribute(){}}));
+const go=Function("document","window","resultsAvailable","$", "let currentView;"+raw.slice(x,y)+";return switchView;")(
+ {querySelectorAll:q=>q==="[data-view-panel]"?panels:buttons},{scrollTo(){}},()=>false,()=>({}));
+go("history");assert.equal(panels[1].hidden,false);assert.equal(panels[0].hidden,true);
+go("optimizer");assert.equal(panels[0].hidden,false);assert.equal(panels[1].hidden,true);
+go("results");assert.equal(panels[0].hidden,false);
+console.log("V865_HISTORY_AND_PREPARE_PASS");
+"""
+        result=subprocess.run([node,"-e",script,str(ROOT/"runner/webui/app.js")],
+                              capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V865_HISTORY_AND_PREPARE_PASS",result.stdout)
+
+    def test_v865_form_uses_natural_source_order_and_full_width_steps(self):
         page=self.client.get("/").text
         css=self.client.get("/assets/styles.css").text
         js=self.client.get("/assets/app.js").text
-        self.assertIn('#optimizer-form{\n  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)',css)
+        self.assertIn('#optimizer-form{\n  display:grid;grid-template-columns:minmax(0,1fr)',css)
         self.assertIn('#optimizer-form>.profile-panel{grid-column:1;grid-row:1}',css)
-        self.assertIn('#optimizer-form>.conditions-panel{grid-column:2;grid-row:1}',css)
-        self.assertIn('#optimizer-form>.fixed-gear-panel{grid-column:1/-1;grid-row:2}',css)
+        self.assertIn('#optimizer-form>.fixed-gear-panel{grid-column:1;grid-row:2}',css)
+        self.assertIn('#optimizer-form>.conditions-panel{grid-column:1;grid-row:3}',css)
+        self.assertIn('#optimizer-form>.submit-panel{grid-column:1;grid-row:4',css)
         self.assertIn('@media(max-width:970px)',css)
         self.assertIn('<details class="fold profile-import">',page)
         self.assertIn('id="class-choice-tiles" hidden',page)
@@ -2998,10 +3045,10 @@ const get=Function("$","api","option","specLabels","number","refreshResultNaviga
  await get();
  assert.equal(calls,1);
  const labels=select.options.map(x=>x.text);
- assert(labels[1].includes("자동 T · 대상 1명 · 300초"));
- assert(labels[2].includes("수동 T 3500 · 대상 5명 · 180초"));
- assert(labels[3].includes("T 입력 미확인"));
- assert(!labels[3].includes("자동 T")&&!labels[3].includes("300초"));
+ assert(labels[1].includes("자동 총합 · 대상 1명 · 300초"));
+ assert(labels[2].includes("수동 총합 3500 · 대상 5명 · 180초"));
+ assert(labels[3].includes("총합 입력 미확인"));
+ assert(!labels[3].includes("자동 총합")&&!labels[3].includes("300초"));
  assert(labels[2].includes("ID bbbbbb"));
  assert.equal(select.value,ids[1]);assert.equal(button.disabled,false);
  console.log("V861_SAVED_SESSION_CONDITIONS_PASS");
