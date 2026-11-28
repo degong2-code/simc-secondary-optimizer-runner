@@ -461,13 +461,22 @@ const exact={
   augmentation:['source_default'],
   recommended_tokens_by_spec:{'mage/frost':{food:'food_3',potion:'potion_3'}},
   items:[
-    {kind:'food',simc_token:'food_3',label:'영웅의 식사'},
-    {kind:'potion',simc_token:'potion_3',label:'특급 전투 물약'}]
+    {kind:'food',simc_token:'food_3',label:'English food',official_name_ko:'영웅의 식사'},
+    {kind:'potion',simc_token:'potion_3',label:'English potion',official_name_ko:'특급 전투 물약'}]
  }
 };
 f(exact);
 assert.deepStrictEqual(nodes.food.options.map(x=>x.value),['source_default','food_3']);
 assert(nodes.food.options[1].label==='영웅의 식사');
+assert(nodes.potion.options[1].label==='특급 전투 물약');
+assert(exact.installed_optional_consumable_choices.items[0].label==='English food');
+const fallback={...exact,installed_optional_consumable_choices:{
+ ...exact.installed_optional_consumable_choices,items:[
+  {kind:'food',simc_token:'food_3',label:'English food',official_name_ko:' '},
+  {kind:'potion',simc_token:'potion_3',label:'English potion'}]}};
+f(fallback);
+assert(nodes.food.options[1].label==='English food');
+assert(nodes.potion.options[1].label==='English potion');
 assert.deepStrictEqual(state.options.current_season_product_choices.potion,
  ['source_default','potion_3']);
 state.optionalAuto={food:true,potion:true};

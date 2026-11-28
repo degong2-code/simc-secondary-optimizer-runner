@@ -550,7 +550,7 @@ def _v677_verified_existing_budget(jobs, *, game_build, target_ilevel,
             "verified_saved_v113_profile":True,
             "source_scope":"EXACT_V212_V113_INSTALLED_REUSE",
             "installed_optional_consumable_choices":
-                _v680_public_installed_optional_choices(doc),
+                _v680_public_installed_optional_choices(doc,root=jobs.root),
             "current_retail_build_verified":False,
             "native_calls_now":0,"network_calls_now":0,
             "dps_optimization_started":False
@@ -749,19 +749,28 @@ def _v775_source_optional_defaults(doc,approved):
     return defaults
 
 
-def _v680_public_installed_optional_choices(doc):
-    """One verified v212 source projection used by UI and profile selection."""
+def _v680_public_installed_optional_choices(doc,*,root=None):
+    """Project display metadata only; the verified registry owns tokens."""
     approved=profile_stage.current_season_approved_optional_choices(doc)
     source=doc.get("installed_optional_consumables")
+    items=([{"kind":name,**row}
+            for name in ("food","potion","augmentation")
+            for row in source["categories"][name]["options"]]
+           if type(source) is dict else [])
+    # GETs stay read-only. Do not mutate any sealed v212 row, token,
+    # recommendation, cache identity or selected effect.
+    if root is not None and items:
+        names=official_ko_env.read_names(root,doc["game_build"],
+                                          {row["item_id"] for row in items})
+        for row in items:
+            if row["item_id"] in names:
+                row["official_name_ko"]=names[row["item_id"]]
     return {"schema":"v113_current_season_optional_consumables_v1",
             **approved,"source_default_simc_token":"disabled",
             "recommended_tokens_by_spec":_v775_source_optional_defaults(doc,approved),
             "diamond_id":[0],"omnium_talents":["source_default"],
             "installed_manifest_sha256":doc["manifest_sha256"],
-            "items":([{"kind":name,**row}
-                for name in ("food","potion","augmentation")
-                for row in source["categories"][name]["options"]]
-                if type(source) is dict else [])}
+            "items":items}
 
 
 def _v680_preflight_optional_consumables(root,params,user):
@@ -1362,9 +1371,17 @@ class LocalJobs:
                 if verified_profile_compilation is not None:
                     localization_source={**outcome,
                         "source_compilation":verified_profile_compilation}
+                credentials=None
+                if (localization_source.get("environment_ready") is True and
+                        localization_source.get("environment_installed") is True):
+                    try:
+                        credentials=self.source_credential_store.load()
+                    except (local_source_keys.CredentialBlocked,OSError):
+                        pass
                 localization=official_ko_env.build_for_environment(
                     self.root,game_build,localization_source,
-                    target_ilevel=target_ilevel)
+                    target_ilevel=target_ilevel,
+                    **({"credentials":credentials} if credentials else {}))
         except (official_ko_env.LocalizationBlocked,
                 environment_manifest.EnvironmentBlocked,
                 OSError,ValueError,TypeError,KeyError):
@@ -3959,7 +3976,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                         else "WEAKER_VARIANT_REPORTED")
             # Exact installed v212 choices are one owner for web and
             # profile. The old uninstalled route remains source_default-only.
-            optional=(_v680_public_installed_optional_choices(doc)
+            optional=(_v680_public_installed_optional_choices(doc,root=jobs.root)
                       if option_source_verified else
                       {"schema":"v113_current_season_optional_consumables_v1",
                        **profile_stage.current_season_approved_optional_choices(),

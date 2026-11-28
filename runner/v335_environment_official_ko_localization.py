@@ -29,7 +29,7 @@ MAX_FILE=900_000
 ROLES=frozenset((
     "trinket","special_effect_gear_candidate","selectable_stat_craft",
     "flask","ordinary_gem","special_gem","weapon_oil",
-    "verified_enchant","verified_other_item"))
+    "verified_enchant","verified_other_item","food","potion","augmentation"))
 NAME_FIELDS=frozenset(("item_id","name_ko","api_url",
                        "response_canonical_sha256"))
 STATUS_READY="VERIFIED_OFFICIAL_NAMES_COMPLETE"
@@ -140,6 +140,14 @@ def verified_environment_items(installed,physical_layout=None,
             add("ordinary_gem",i)
         special=physical_layout.get("special_gem_id")
         if special is not None:add("special_gem",special)
+    # Optional consumables already own exact physical ItemIDs in the
+    # verified v212 installed registry. Pending quality candidates are NOT
+    # in options; never localize them as an admitted menu.
+    optional=installed.get("installed_optional_consumables")
+    if type(optional) is dict:
+        for role in ("food","potion","augmentation"):
+            for row in optional["categories"][role]["options"]:
+                add(role,row["item_id"])
     for opt in installed["published_verified_options"]:
         if type(opt) is dict and opt.get("ui_selectable") is True:
             i=opt.get("physical_item_id",opt.get("item_id"))
@@ -292,7 +300,12 @@ def _build_for_roles(root,game_build,roles,*,allow_network=True,credentials=None
     for r in _static_seed(game_build,roles):
         old.setdefault(r["item_id"],r)
     needed=sorted(chosen-set(old))
-    query=needed[:MAX_FETCH] if allow_network else []
+    # Prioritize user-selected consumables in the same bounded request;
+    # gear has its existing independent presentation retry path.
+    priority={"flask","ordinary_gem","special_gem","weapon_oil",
+              "food","potion","augmentation","verified_enchant"}
+    ordered=sorted(needed,key=lambda i:(not bool(priority.intersection(roles[i])),i))
+    query=ordered[:MAX_FETCH] if allow_network else []
     collected,errors,network_calls=(
         _fetch_ids(query,**({"credentials":credentials} if credentials is not None else {}))
         if query else ([],[],0))

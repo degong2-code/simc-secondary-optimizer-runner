@@ -119,6 +119,28 @@ class EnvironmentKoTests(unittest.TestCase):
         with self.assertRaises(gear.GearBlocked):
             gear.public_options(source,official_names={999999:"임의명"})
 
+    def test_installed_optional_physical_items_use_existing_cache_not_pending(self):
+        build="12.1.5.70961"
+        doc=install(build)
+        doc["installed_optional_consumables"]={"categories":{
+            "food":{"options":[{"item_id":280021}],
+                    "quality_comparison_pending_item_ids":[280099]},
+            "potion":{"options":[{"item_id":280022}]},
+            "augmentation":{"options":[]}}}
+        with (mock.patch.dict("os.environ",{"BLIZZARD_ACCESS_TOKEN":"fixture-token"}),
+              mock.patch.object(loc.blizzard,"request_json",
+                                side_effect=self.fake_get) as get):
+            first=loc.build_from_verified_install(self.root,doc)
+            self.assertEqual(first["selected_categories"],
+                             {"flask":1,"food":1,"potion":1})
+            self.assertEqual(first["network_calls_now"],3)
+            self.assertEqual(set(loc.read_names(self.root,build,
+                {280001,280021,280022,280099})),{280001,280021,280022})
+            again=loc.build_from_verified_install(self.root,doc)
+            self.assertEqual(again["network_calls_now"],0)
+            self.assertEqual(get.call_count,3)
+            self.assertEqual(first["native_calls_now"],0)
+
     def test_refreshed_admitted_gear_uses_same_name_store(self):
         build="12.1.5.70961"
         catalog={"status":"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",

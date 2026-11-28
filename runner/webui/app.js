@@ -5034,7 +5034,10 @@ function syncInstalledOptionalConsumables(catalog){
         next[name]:["source_default"];
     const names=new Map((exact&&Array.isArray(payload.items)?
       payload.items:[]).filter(item=>item.kind===name).map(item=>[
-         item.simc_token,item.label]));
+         item.simc_token,(typeof item.official_name_ko==="string"&&
+           item.official_name_ko.trim()===item.official_name_ko&&
+           item.official_name_ko.length>0&&item.official_name_ko.length<=200?
+           item.official_name_ko:item.label)]));
     const previously=field(name);
     populateSelect(name,allowed,token=>
        token==="source_default"?(name==="augmentation"?
