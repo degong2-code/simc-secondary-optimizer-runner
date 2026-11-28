@@ -780,7 +780,7 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual({r["item_id"] for r in get.json()["choices"]["trinket"]},
                          {269999,270000})
         self.assertEqual([r["item_id"] for r in get.json()["choices"]["special_effect_gear_candidate"]],
-                         [270001,270003])
+                         [270003,270001])
         self.assertEqual(get.json()["refreshed_trinket_count"],1)
         self.assertEqual(get.json()["refreshed_special_count"],2)
         self.assertEqual(get.json()["source_generation_sha256"],"e"*64)
