@@ -3102,8 +3102,12 @@ class LocalJobs:
             hydrated["cache_reused"] if hydrated else 0)
         return response
 
-    def args_for_existing(self, folder):
-        """Recover binary/options from self-generated manifest, verify v106 identity."""
+    def args_for_existing(self, folder, *, environment_summary=None):
+        """Verify persisted environment and v106 identity once per precheck.
+
+        An internal caller may pass the summary it just read from the same
+        folder; it is not an authorization or a cross-request cache.
+        """
         m = folder / "generated" / "manifest.json"
         if not m.is_file():
             raise HTTPException(409,detail={"code":"SESSION_MANIFEST_MISSING"})
@@ -3136,8 +3140,13 @@ class LocalJobs:
                 source_path=(self.root/"_fresh_season_sources"/
                     ("wago_"+build)/"fresh_source"/"v213_candidate_catalog.json")
                 package_path=None
-                self._verify_environment_dependencies(
-                    self._read_environment_summary(folder),folder)
+                if environment_summary is None:
+                    environment_summary=self._read_environment_summary(folder)
+                if (type(environment_summary) is not dict or
+                        environment_summary.get("fresh_v212_installed_manifest_sha256")!=fresh_sha or
+                        environment_summary.get("game_build")!=build):
+                    raise sessions.SessionBlocked(
+                        "WEB_FRESH_SESSION_INSTALL_SHA_DRIFT")
             else:
                 source_path=(self.source_catalog_path()
                              if current_season and has_source else None)
@@ -3145,6 +3154,7 @@ class LocalJobs:
                               if type(source_record) is dict and
                                  source_record.get("package_manifest_sha256")
                               else None)
+            self._verify_environment_dependencies(environment_summary,folder)
             key, check = sessions.session_key(
                 user,binary,rev,static,ordinary_variant=variant,
                 independent_334=recorded.get("independent_334",False),
@@ -3321,8 +3331,8 @@ class LocalJobs:
             try:
                 # Verify the sealed package/source identity before spawning a worker.
                 environment=self._read_environment_summary(folder)
-                self._verify_environment_dependencies(environment,folder)
-                binary, rev, static = self.args_for_existing(folder)
+                binary, rev, static = self.args_for_existing(
+                    folder,environment_summary=environment)
                 if cache_only:
                     sessions.cache_only_preflight(folder)
                 else:
@@ -3366,7 +3376,6 @@ class LocalJobs:
             queued_for_spawn=False
             try:
                 environment=self._read_environment_summary(folder)
-                self._verify_environment_dependencies(environment,folder)
                 previous=longrun_sessions.config(folder)
                 requested_budget=(previous["native_budget"]
                                   if previous is not None else budget)
@@ -3382,7 +3391,7 @@ class LocalJobs:
                          "fresh_v212_installed_manifest_sha256"))):
                     raise HTTPException(422,detail={"code":
                         "WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED"})
-                self.args_for_existing(folder)
+                self.args_for_existing(folder,environment_summary=environment)
                 if previous is None:
                     if budget is None:
                         raise longrun_sessions.LocalLongRunBlocked(
@@ -3481,8 +3490,20 @@ class LocalJobs:
             if self.is_active(folder):
                 raise HTTPException(409,detail={"code":"SESSION_ALREADY_RUNNING"})
             try:
-                self._verify_environment_dependencies(environment,folder)
-                self.args_for_existing(folder)
+                # A just-prepared summary is not a persisted session seal.
+                # Read the actual fresh manifest (including v435 selected
+                # identity checks) and bind its scope before the one precheck.
+                if (type(environment) is dict and
+                        environment.get("fresh_v212_installed_manifest_sha256") is not None):
+                    persisted=self._read_environment_summary(folder)
+                    if (type(persisted) is not dict or any(
+                            persisted.get(key)!=environment.get(key) for key in (
+                                "fresh_v212_installed_manifest_sha256",
+                                "game_build","target_ilevel"))):
+                        raise sessions.SessionBlocked(
+                            "WEB_FRESH_SESSION_INSTALL_SHA_DRIFT")
+                    environment=persisted
+                self.args_for_existing(folder,environment_summary=environment)
                 longrun_sessions.establish(folder,request.max_native_calls)
             except HTTPException:
                 raise

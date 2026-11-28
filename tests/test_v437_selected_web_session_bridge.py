@@ -161,6 +161,89 @@ class SelectedWebSession(unittest.TestCase):
         self.assertEqual(v217.call_args.kwargs[
             "expected_installed_manifest_sha256"],self.base.digest)
 
+    def test_v856_precheck_verifies_exact_install_once_and_never_reuses_across_actions(self):
+        """Real web precheck/launch paths; synthetic source owner, no worker."""
+        import json
+        folder,manifest,identity=self._selected_saved_session()
+        user={"character":{"class":"paladin","spec":"retribution"},
+              "target":{"final_T":None}}
+        identity.update(user=user,current_season_product=True,
+                        current_season_source_catalog={"game_build":self.base.build})
+        digest=web.sessions.sha(web.sessions.canonical(identity).encode("utf8"))
+        renamed=self.base.root/digest[:20]
+        folder.rename(renamed)
+        folder=renamed
+        manifest.update(native_binary=str(self.binary),native_revision="abcdef0",
+                        static_cache_json=str(self.cache))
+        manifest[web.bootstrap.entry.SELECTED_FRESH_SEASON_FIELD][
+            "selected_v435_identity_sha256"]=digest
+        identity_file=folder/"V106_SESSION_IDENTITY.json"
+        manifest_file=folder/"generated"/"manifest.json"
+        identity_file.write_text(web.sessions.canonical(identity)+"\n",encoding="utf8")
+        manifest_file.write_text(web.sessions.canonical(manifest)+"\n",encoding="utf8")
+        (folder/"user.json").write_text(json.dumps(user),encoding="utf8")
+        check={k:v for k,v in identity.items() if k!="v435_selected_source_identity"}
+        child=mock.Mock()
+        child.poll.return_value=0
+        with (
+            mock.patch.object(web.environment_manifest,
+                              "verify_fresh_installed_environment"),
+            mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value={"installed_manifest_sha256":self.base.digest}) as source,
+            mock.patch.object(web.sessions,"session_key",
+                              return_value=(folder.name,check)) as session_key,
+            mock.patch.object(self.jobs,"_verify_environment_dependencies",
+                              wraps=self.jobs._verify_environment_dependencies) as verify,
+            mock.patch.object(web.subprocess,"Popen",return_value=child) as spawn,
+            mock.patch.object(web.longrun_sessions,"config",return_value=None),
+            mock.patch.object(web.longrun_sessions,"establish") as establish,
+            mock.patch.object(web.longrun_sessions,"state")
+        ):
+            summary=self.jobs._read_environment_summary(folder)
+            self.assertEqual(self.jobs.args_for_existing(folder),
+                             (self.binary.resolve(),"abcdef0",str(self.cache)))
+            self.assertEqual((verify.call_count,source.call_count),(1,1))
+            self.assertEqual(self.jobs.launch(folder)["status"],"WORKER_STARTED")
+            self.assertEqual((verify.call_count,source.call_count),(2,2))
+            self.assertEqual(self.jobs.longrun_launch(folder,budget=64)["status"],
+                             "LONGRUN_WORKER_STARTED")
+            self.assertEqual((verify.call_count,source.call_count),(3,3))
+            request=web.LongRunStartRequest(
+                controls=self.controls,binary=str(self.binary),revision="abcdef0",
+                current_season_product=True,installed_season_game_build=self.base.build,
+                max_native_calls=64)
+            with mock.patch.object(self.jobs,"prepare_with_internal_special_L",
+                                   return_value=(folder,None,summary,None)):
+                prepared=self.jobs.longrun_prepare(request)
+                self.assertEqual(prepared["new_dps_native_calls"],0)
+                self.assertEqual((verify.call_count,source.call_count),(4,4))
+                self.assertEqual((session_key.call_count,spawn.call_count,
+                                  establish.call_count),(4,2,2))
+                # The prepare result may be valid but the persisted v435
+                # seal may have changed: do not bypass the original reader.
+                manifest[web.bootstrap.entry.SELECTED_FRESH_SEASON_FIELD][
+                    "selected_v435_identity_sha256"]="0"*64
+                manifest_file.write_text(web.sessions.canonical(manifest)+"\n",
+                                         encoding="utf8")
+                with self.assertRaises(web.HTTPException) as caught:
+                    self.jobs.longrun_prepare(request)
+                self.assertIn("WEB_B8_SELECTED_SOURCE_OR_SESSION_SHA_DRIFT",
+                              str(caught.exception.detail))
+            manifest[web.bootstrap.entry.SELECTED_FRESH_SEASON_FIELD][
+                "selected_v435_identity_sha256"]=digest
+            manifest_file.write_text(web.sessions.canonical(manifest)+"\n",
+                                     encoding="utf8")
+            # The next action must revalidate the current v217 source.
+            source.return_value=None
+            with self.assertRaises(web.HTTPException) as caught:
+                self.jobs.longrun_launch(folder,budget=64)
+            self.assertIn("WEB_FRESH_V217_INSTALLED_RECEIPT_CHANGED",
+                          str(caught.exception.detail))
+            self.assertEqual((verify.call_count,source.call_count),(5,5))
+            self.assertEqual((session_key.call_count,spawn.call_count,
+                              establish.call_count),(4,2,2))
+
     def test_v438_selected_manifest_without_v435_seal_fails_closed(self):
         folder,manifest,identity=self._selected_saved_session()
         identity.pop("v435_selected_source_identity")
