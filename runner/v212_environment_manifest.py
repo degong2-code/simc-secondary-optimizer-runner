@@ -803,8 +803,11 @@ def verify_exact_J_socket_source(scope,*,game_build,simc_revision,target_ilevel,
          and scope.get("J")==J
          and scope.get("game_socket_legal_verified") is False
          and all(valid_sha(scope.get(k)) for k in (
-             "source_review_sha256","v232_stage_receipt_sha256",
-             "original_G_native_sha256","active_native_sha256","native_binary_sha256")),
+             "v232_stage_receipt_sha256","original_G_native_sha256",
+             "active_native_sha256","native_binary_sha256"))
+         and (scope.get("intrinsic_socket_source_only") is True
+              or ("intrinsic_socket_source_only" not in scope
+                  and valid_sha(scope.get("source_review_sha256")))),
          "FRESH_J_SOCKET_SOURCE_IDENTITY_DRIFT")
     representative=scope.get("representative_spec")
     need(representative is None or
@@ -821,7 +824,9 @@ def verify_exact_J_socket_source(scope,*,game_build,simc_revision,target_ilevel,
          and all(type(n) is int and 1<=n<=3 for n in counts.values())
          and type(ids) is dict and set(ids)==set(counts)
          and all(type(i) is int and i>0 for i in ids.values())
-         and type(bonuses) is dict and bool(bonuses) and set(bonuses)<=set(counts)
+         and type(bonuses) is dict and set(bonuses)<=set(counts)
+         and (bool(bonuses) if scope.get("intrinsic_socket_source_only") is not True
+              else not bonuses and type(special) is int and representative is not None)
          and all(type(row) is dict and set(row)=={"item_id","bonus_id","added_socket_count"}
                  and row["item_id"]==ids[s] and type(row["bonus_id"]) is int
                  and row["bonus_id"]>0 and type(row["added_socket_count"]) is int

@@ -433,6 +433,78 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                 active=raw(a.replace("12/13/14","12/13/15")),layout=layout,
                 ordinary_by_slot=ordinary,revision=rev)
 
+    def test_v834_intrinsic_linked_scope_reaches_manifest_and_profile(self):
+        from runner import v216_environment_build_coordinator as engine
+        from runner import v211_enchant_source_effect_classification as classifier
+        from runner import v212_environment_manifest as manifest
+        from runner import v096_unified_product_entry as entry
+        from copy import deepcopy
+        root=Path(__file__).resolve().parents[1]/"docs/development/research_receipts"
+        doc=json.loads((root/"p1_v821_70961_primary_gem_enchant_compact.json").read_text("utf8"))
+        actual=json.loads((root/"p1_v833_70961_linked_special_gem_product_compact.json").read_text("utf8"))
+        build=actual["game_build"];rev=actual["revision"];special=240967
+        ids=[11,12,13,14]
+        layout={"socket_counts":{"finger1":2,"neck":3},"special_slot":"finger1",
+                "special_gem_id":special,"ordinary_gem_ids":ids,"socket_total":5}
+        rank={**classifier.primary_gem_quality_projection(doc["candidate_rows"]),
+              "status":"PRIMARY_GEM_RANK_SOURCE_PROJECTED_UNADMITTED",
+              "game_build":build,"simc_revision":rev,
+              "v221_stage_receipt_sha256":"a"*64,"enchant_source_sha256":"b"*64}
+        selected={**rank["direct_static_CHMV_source_by_item_id"][str(special)],
+                  **{k:rank[k] for k in ("game_build","simc_revision","v221_stage_receipt_sha256","enchant_source_sha256")},
+                  "ordinary_J_includes_selected_special":False}
+        linked={**actual["linked_static"],
+                "layout_sha256":engine.digest(engine.canonical(layout).encode("utf8"))}
+        g={"game_build":build,"simc_revision":rev,"target_ilevel":334,
+           "native_json2_sha256":linked["original_G_native_sha256"],
+           "native_binary_sha256":linked["native_binary_sha256"]}
+        pre={"schema":engine.FRESH_SOURCE_PREFLIGHT_SCHEMA,"environment_ready":False,
+             "game_build":build,"simc_revision":rev,"source_catalog_manifest_sha256":"c"*64,
+             "physical_gem_layout_unadmitted":layout,"v277_native_G_preprofile_unadmitted":g}
+        socket={"status":"J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY",
+                "selected_socket_counts":layout["socket_counts"],
+                "additional_socket_proof_required_by_slot":{},
+                "observed_J_unadmitted":92,"v232_stage_receipt_sha256":"f"*64}
+        proof={"status":"EXACT_INTRINSIC_LINKED_SPECIAL_STATIC_BOUND","bonus_plan":{},
+               "physical_item_ids_by_slot":{"finger1":1,"neck":2},"representative_spec":"mage/fire",
+               "game_build":build,"simc_revision":rev,"v232_stage_receipt_sha256":"f"*64,
+               "original_G_native_sha256":g["native_json2_sha256"],
+               "native_binary_sha256":g["native_binary_sha256"],"linked_special_static":linked}
+        comp={"simc_revision":rev,"physical_gem_layout_unadmitted":layout,
+              "primary_gem_rank_source_unadmitted":rank,
+              "selected_special_gem_direct_CHMV_source_only":selected,
+              "selected_J_intrinsic_socket_origin_unadmitted":socket,
+              "selected_socket_bonus_native":proof}
+        j={"rating":92,"ordinary_gem_item_ids":ids,"special_gem_item_id":special,
+           "per_item_nominal_rating":{str(i):23 for i in ids},
+           "v221_stage_receipt_sha256":"a"*64,"source_identity_sha256":"d"*64}
+        quality={"J":{"ordinary_gem_item_ids":ids,"v221_stage_receipt_sha256":"a"*64,
+             "v230_stage_receipt_sha256":"e"*64,"real_socket_proof_required":True,
+             "same_enchant_quality_groups_source_only":[]}}
+        staged={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+                "stage_status":"REUSED_VERIFIED","stage_receipt_sha256":"f"*64}
+        def admit():
+            return engine._fresh_source_owner_original_J_F_components(
+                preflight=pre,compilation=comp,staged=staged,owner_numeric={"J":j},
+                quality_scope=quality,effect_observations=[])
+        scope=admit()["J"]["exact_representative_socket_source"]
+        self.assertTrue(manifest.verify_exact_J_socket_source(scope,game_build=build,
+            simc_revision=rev,target_ilevel=334,J=92))
+        profile="finger1=item,id=1,ilevel=334,gem_id=240967/11\nneck=item,id=2,ilevel=334,gem_id=12/13/14\n"
+        entry._assert_installed_J_socket_profile(doc={"official_J_physical_socket_source":scope},profile=profile)
+        with self.assertRaises(ValueError):
+            entry._assert_installed_J_socket_profile(doc={"official_J_physical_socket_source":scope},
+                profile=profile.replace("id=1,","id=1,bonus_id=13668,"))
+        bad=deepcopy(scope);bad.pop("intrinsic_socket_source_only")
+        with self.assertRaises(ValueError):
+            manifest.verify_exact_J_socket_source(bad,game_build=build,
+                simc_revision=rev,target_ilevel=334,J=92)
+        socket["additional_socket_proof_required_by_slot"]={"neck":1}
+        self.assertNotIn("J",admit())
+        socket["additional_socket_proof_required_by_slot"]={}
+        linked["buffed_CHMV_delta"]={**linked["buffed_CHMV_delta"],"crit_rating":1}
+        self.assertNotIn("J",admit())
+
     def test_v830_actual_bonus_proof_consumed_by_original_J_and_profile(self):
         from runner import v216_environment_build_coordinator as engine
         from runner import v211_enchant_source_effect_classification as classifier

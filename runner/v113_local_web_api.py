@@ -923,9 +923,11 @@ class LocalJobs:
         socket_scope=doc.get("official_J_physical_socket_source")
         if socket_scope is not None:
             layout=compilation["physical_gem_layout_unadmitted"]
-            if any(layout.get(k)!=socket_scope.get(k) for k in (
+            if (any(layout.get(k)!=socket_scope.get(k) for k in (
                     "socket_counts","socket_total","ordinary_gem_ids","special_gem_id",
-                    "special_slot","source_socket_bonus_by_slot")):
+                    "special_slot"))
+                    or (layout.get("source_socket_bonus_by_slot") or {})!=
+                        socket_scope.get("source_socket_bonus_by_slot")):
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_INSTALLED_J_SOCKET_LAYOUT_DRIFT")
         self._verified_fresh_profile_result={

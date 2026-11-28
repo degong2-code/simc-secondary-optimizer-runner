@@ -275,6 +275,9 @@ def _assert_installed_J_socket_profile(*,doc,profile):
             need([x for x in fields if x.startswith("bonus_id=")]==
                  ["bonus_id="+str(bonus["bonus_id"])],
                  "FRESH_J_SOCKET_FINAL_BONUS_DRIFT:"+slot)
+        if scope.get("intrinsic_socket_source_only") is True:
+            need(not any(x.startswith("bonus_id=") for x in fields),
+                 "FRESH_J_INTRINSIC_UNEXPECTED_BONUS:"+slot)
         seen.add(slot)
     need(seen==set(expected),"FRESH_J_SOCKET_FINAL_SLOT_MISSING")
 

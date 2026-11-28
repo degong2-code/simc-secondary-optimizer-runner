@@ -8323,8 +8323,8 @@ def _fresh_native_socket_bonus_application(*,collected,compilation,
              "new_native_calls":0,"network_calls":0,
              "game_socket_legal_verified":False}
     layout=preflight.get("physical_gem_layout_unadmitted") or {}
-    bonuses=layout.get(physical_gems.SOCKET_BONUS_FIELD)
-    if not bonuses or not binary:return pending
+    bonuses=layout.get(physical_gems.SOCKET_BONUS_FIELD) or {}
+    if not binary:return pending
     linked=False
     if layout.get("special_gem_id") is not None:
         special=compilation.get("selected_special_gem_direct_CHMV_source_only") or {}
@@ -8343,24 +8343,32 @@ def _fresh_native_socket_bonus_application(*,collected,compilation,
     extra=j_socket.get("additional_socket_proof_required_by_slot")
     source=compilation.get("selected_representative_socket_bonus_source_only") or {}
     if (native_G.get("status")!="G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING"
-            or type(extra) is not dict or set(extra)!=set(bonuses)
-            or source.get("status")!="SAME_BUILD_SELECTED_SOCKET_BONUS_SOURCE_ONLY"
-            or source.get("game_build")!=preflight["game_build"]
-            or source.get("simc_revision")!=preflight["simc_revision"]
-            or source.get("v232_stage_receipt_sha256")!=j_socket.get(
-                "v232_stage_receipt_sha256")):
+            or type(extra) is not dict or set(extra)!=set(bonuses)):
+        return pending
+    if bonuses:
+        if (source.get("status")!="SAME_BUILD_SELECTED_SOCKET_BONUS_SOURCE_ONLY"
+                or source.get("game_build")!=preflight["game_build"]
+                or source.get("simc_revision")!=preflight["simc_revision"]
+                or source.get("v232_stage_receipt_sha256")!=j_socket.get(
+                    "v232_stage_receipt_sha256")):
+            return pending
+    elif (not linked or j_socket.get("status") not in (
+                "J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY",
+                "J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY")
+            or j_socket.get("selected_socket_counts")!=layout["socket_counts"]):
         return pending
     calls=0
     try:
-        proposed=physical_gems.source_supported_socket_candidate(
-            intrinsic_counts=source["intrinsic_socket_counts_by_slot"],
-            selected_rows=source["selected_rows"],socket_total=layout["socket_total"],
-            need=need)
-        need(proposed[physical_gems.SOCKET_BONUS_FIELD]==bonuses
-             and {s:n for s,n in proposed["socket_counts"].items() if n>0}==
-                {s:n for s,n in layout["socket_counts"].items() if n>0}
-             and all(bonuses[s]["added_socket_count"]==extra[s] for s in extra),
-             "V829_EXACT_SOCKET_SOURCE_PLAN_DRIFT")
+        if bonuses:
+            proposed=physical_gems.source_supported_socket_candidate(
+                intrinsic_counts=source["intrinsic_socket_counts_by_slot"],
+                selected_rows=source["selected_rows"],socket_total=layout["socket_total"],
+                need=need)
+            need(proposed[physical_gems.SOCKET_BONUS_FIELD]==bonuses
+                 and {s:n for s,n in proposed["socket_counts"].items() if n>0}==
+                    {s:n for s,n in layout["socket_counts"].items() if n>0}
+                 and all(bonuses[s]["added_socket_count"]==extra[s] for s in extra),
+                 "V829_EXACT_SOCKET_SOURCE_PLAN_DRIFT")
         root=pathlib.Path(compilation["stage_root"]).resolve()
         probe=collected["fresh_one_spec_physical_G_probe"]
         profile=pathlib.Path(probe["profile_path"]).resolve()
@@ -8398,6 +8406,50 @@ def _fresh_native_socket_bonus_application(*,collected,compilation,
         binary_sha=native_effect_pair.file_sha(binfile)
         need(binary_sha==native_G["native_binary_sha256"],
              "V829_SOCKET_NATIVE_BINARY_CHANGED")
+        if not bonuses:
+            # No bonus-only comparison is needed. Bind the original sealed
+            # representative to the same G profile before comparing the gem.
+            rep_source=collected["fresh_one_spec_simc_representative"]
+            stage=rep_source["source_stage"]
+            rep_path=pathlib.Path(rep_source["candidate_path"]).resolve(strict=True)
+            stage_receipt=stage_engine._read_receipt(
+                root/".stage_receipts"/(stage["stage_id"]+".json"))
+            relative=stage_receipt["output_paths"]["candidate"]
+            rep_raw=rep_path.read_bytes()
+            need(rep_path==root/relative and rep_path.is_relative_to(root)
+                 and stage_receipt["receipt_sha256"]==stage["receipt_sha256"]==
+                     j_socket["v232_stage_receipt_sha256"]
+                 and stage_receipt["outputs"]["candidate"]["sha256"]==digest(rep_raw),
+                 "V834_INTRINSIC_REPRESENTATIVE_STAGE_DRIFT")
+            rep=json.loads(rep_raw)
+            counts=rep["selected_intrinsic_socket_count_by_slot_source_only"]
+            ids=rep["selected_G_slot_ids"]
+            need(rep["receipt_sha256"]==receipt["source_candidate_receipt_sha256"]
+                 and ids==receipt["selected_G_slot_ids"]
+                 and rep["game_build"]==preflight["game_build"]
+                 and rep["simc_revision"]==preflight["simc_revision"]
+                 and rep["target_ilevel"]==native_G["target_ilevel"]
+                 and counts==j_socket["intrinsic_socket_counts_by_slot"]
+                 and all(s in ids and 0<n<=counts.get(s,0)
+                         for s,n in layout["socket_counts"].items()),
+                 "V834_INTRINSIC_REPRESENTATIVE_PROFILE_DRIFT")
+            representative=rep["character"]["class"]+"/"+rep["character"]["spec"]
+            need(simc_representative.chooser.contracts.lookup(
+                rep["character"]["class"],rep["character"]["spec"]) is not None,
+                "V834_INTRINSIC_REPRESENTATIVE_SPEC_UNSUPPORTED")
+            linked_result=_linked_special_gem_native(root=root,socket_profile=active,
+                layout=layout,special=special,binary=binfile,binary_sha=binary_sha,
+                revision=preflight["simc_revision"],game_build=preflight["game_build"],
+                original_G_sha=digest(baseline))
+            calls+=linked_result["new_native_calls"]
+            return {**pending,"status":"EXACT_INTRINSIC_LINKED_SPECIAL_STATIC_BOUND",
+                    "linked_special_static":linked_result,"new_native_calls":calls,
+                    "bonus_plan":{},"representative_spec":representative,
+                    "physical_item_ids_by_slot":{s:ids[s] for s in layout["socket_counts"]},
+                    "v232_stage_receipt_sha256":stage["receipt_sha256"],
+                    "game_build":preflight["game_build"],"simc_revision":preflight["simc_revision"],
+                    "native_binary_sha256":binary_sha,
+                    "original_G_native_sha256":digest(baseline)}
         case=native_effect_pair.run_case(
             stage_root=root,profile=active,source_identity=digest(original),
             binary=binfile,binary_sha256=binary_sha,
@@ -9102,8 +9154,16 @@ def _fresh_special_gem_J_exclusion_source(*, preflight, compilation, j):
         proof=socket.get("linked_special_static") or {}
         g=preflight.get("v277_native_G_preprofile_unadmitted") or {}
         delta=proof.get("buffed_CHMV_delta")
+        expected_status=("EXACT_SIMC_SOCKET_BONUS_STATIC_BOUND"
+            if layout.get(physical_gems.SOCKET_BONUS_FIELD) else
+            "EXACT_INTRINSIC_LINKED_SPECIAL_STATIC_BOUND")
         if (special not in rank.get("preferred_rank_item_ids_source_only",[])
-                or socket.get("status")!="EXACT_SIMC_SOCKET_BONUS_STATIC_BOUND"
+                or socket.get("status")!=expected_status
+                or (expected_status=="EXACT_INTRINSIC_LINKED_SPECIAL_STATIC_BOUND"
+                    and (socket.get("native_binary_sha256")!=g.get("native_binary_sha256")
+                         or socket.get("v232_stage_receipt_sha256")!=(compilation.get(
+                            "selected_J_intrinsic_socket_origin_unadmitted") or {}).get(
+                                "v232_stage_receipt_sha256")))
                 or proof.get("status")!="EXACT_LINKED_SPECIAL_STATIC_ZERO"
                 or proof.get("item_id")!=special or proof.get("enchant_id")!=exact["enchant_id"]
                 or any(proof.get(k)!=preflight.get(k) for k in ("game_build","simc_revision"))
@@ -9155,6 +9215,47 @@ def _fresh_original_J_socket_bonus_scope(*,preflight,compilation,j,socket):
     bonus=layout.get(physical_gems.SOCKET_BONUS_FIELD)
     extra=socket.get("additional_socket_proof_required_by_slot")
     counts=layout.get("socket_counts")
+    if not bonus and proof.get("status")=="EXACT_INTRINSIC_LINKED_SPECIAL_STATIC_BOUND":
+        linked=proof.get("linked_special_static") or {}
+        ids=proof.get("physical_item_ids_by_slot")
+        if (extra!={} or type(counts) is not dict or not counts
+                or counts!=socket.get("selected_socket_counts")
+                or layout!=compilation.get("physical_gem_layout_unadmitted")
+                or layout.get("ordinary_gem_ids")!=j.get("ordinary_gem_item_ids")
+                or layout.get("special_gem_id")!=j.get("special_gem_item_id")
+                or proof.get("bonus_plan")!={}
+                or proof.get("v232_stage_receipt_sha256")!=socket.get("v232_stage_receipt_sha256")
+                or any(x.get(k)!=preflight.get(k) for x in (proof,g)
+                       for k in ("game_build","simc_revision"))
+                or proof.get("original_G_native_sha256")!=g.get("native_json2_sha256")
+                or proof.get("native_binary_sha256")!=g.get("native_binary_sha256")
+                or type(g.get("target_ilevel")) is not int
+                or type(ids) is not dict or set(ids)!=set(counts)
+                or any(type(i) is not int or i<=0 for i in ids.values())
+                or _fresh_special_gem_J_exclusion_source(
+                    preflight=preflight,compilation=compilation,j=j)["status"]!=
+                    "SPECIAL_GEM_DIRECT_ZERO_SOURCE_BOUND"
+                or not all(type(v) is str and season_budget_contract.SHA.fullmatch(v)
+                    for v in (proof.get("v232_stage_receipt_sha256"),
+                              proof.get("original_G_native_sha256"),
+                              proof.get("native_binary_sha256"),
+                              linked.get("active_native_sha256")))):
+            return None
+        return {"schema":"v830_exact_representative_socket_J_source_v1",
+                "intrinsic_socket_source_only":True,
+                "game_build":preflight["game_build"],"simc_revision":preflight["simc_revision"],
+                "target_ilevel":g["target_ilevel"],
+                "representative_spec":proof["representative_spec"],
+                "J":j["rating"],"socket_counts":dict(counts),
+                "socket_total":layout["socket_total"],
+                "ordinary_gem_ids":list(layout["ordinary_gem_ids"]),
+                "special_gem_id":layout["special_gem_id"],"special_slot":layout["special_slot"],
+                "physical_item_ids_by_slot":dict(ids),"source_socket_bonus_by_slot":{},
+                "v232_stage_receipt_sha256":proof["v232_stage_receipt_sha256"],
+                "original_G_native_sha256":proof["original_G_native_sha256"],
+                "active_native_sha256":linked["active_native_sha256"],
+                "native_binary_sha256":proof["native_binary_sha256"],
+                "game_socket_legal_verified":False}
     if (not bonus or type(bonus) is not dict or type(extra) is not dict
             or set(bonus)!=set(extra) or type(counts) is not dict
             or counts!=socket.get("selected_socket_counts")
@@ -9260,7 +9361,9 @@ def _fresh_source_owner_original_J_F_components(*, preflight, compilation,
             special_J["status"] in (
                 "ORDINARY_ONLY","SPECIAL_GEM_DIRECT_ZERO_SOURCE_BOUND") and
             (bonus_scope is not None or
-             (socket.get("status") in (
+             ((compilation.get("selected_socket_bonus_native") or {}).get("status")!=
+                "EXACT_INTRINSIC_LINKED_SPECIAL_STATIC_BOUND"
+             and socket.get("status") in (
                 "J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY",
                 "J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY")
              and (socket.get("additional_socket_proof_required_by_slot")=={}
@@ -11562,7 +11665,11 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     j_socket=_fresh_selected_J_intrinsic_socket_source(
                         collected=collected,preflight=preflight,
                         compilation=source_compilation)
-                    if zero_history_gem_layout.get(physical_gems.SOCKET_BONUS_FIELD):
+                    if (zero_history_gem_layout.get(physical_gems.SOCKET_BONUS_FIELD)
+                            or (zero_history_gem_layout.get("special_gem_id") is not None
+                                and (source_compilation.get(
+                                    "selected_special_gem_direct_CHMV_source_only") or {}).get(
+                                        "linked_equip_spell_ids_source_only"))):
                         socket_native=_fresh_native_socket_bonus_application(
                             collected=collected,compilation=source_compilation,
                             preflight=preflight,native_G=native_G,binary=binary,
