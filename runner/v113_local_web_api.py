@@ -988,6 +988,24 @@ class LocalJobs:
                  "source_catalog_artifact_sha256":
                      doc["source_catalog_artifact_sha256"],
                  "environment_result":result}
+        # A pre-v832 immutable snapshot may lack only the optional rank
+        # projection. Retain its authenticated bytes instead of attempting
+        # to overwrite a receipt, or turning a label into a core Build blocker.
+        dest=root/out
+        if dest.is_file() and not dest.is_symlink():
+            previous=_verified_saved_profile_snapshot(dest.parent,doc,dest)
+            if previous is not None and previous!=payload:
+                prior=previous["environment_result"]["source_compilation"]
+                current=payload["environment_result"]["source_compilation"]
+                if ("primary_gem_rank_source_unadmitted" not in prior and
+                        "primary_gem_rank_source_unadmitted" in current):
+                    without_rank={**payload,"environment_result":{
+                        **payload["environment_result"],"source_compilation":{
+                            k:v for k,v in current.items()
+                            if k!="primary_gem_rank_source_unadmitted"}}}
+                    if without_rank==previous:
+                        payload=previous
+                        self._verified_fresh_profile_result=previous["environment_result"]
         raw=(stage_engine.canonical(payload)+"\n").encode("utf8")
         if not 0<len(raw)<=8_000_000:
             raise environment_manifest.EnvironmentBlocked(

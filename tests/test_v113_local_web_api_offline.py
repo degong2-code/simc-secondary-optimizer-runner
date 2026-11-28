@@ -862,7 +862,7 @@ class LocalWebAPIOffline(unittest.TestCase):
 
     def test_v832_special_gem_source_name_preparation_not_runtime_admission(self):
         from runner import v211_enchant_source_effect_classification as classifier
-        source=Path(__file__).resolve().parents[1]/"docs/development/research_receipts/p1_v821_70961_primary_gem_enchant_compact.json"
+        source=ROOT/"docs/development/research_receipts/p1_v821_70961_primary_gem_enchant_compact.json"
         doc=json.loads(source.read_text("utf8"))
         rank={**classifier.primary_gem_quality_projection(doc["candidate_rows"]),
               "status":"PRIMARY_GEM_RANK_SOURCE_PROJECTED_UNADMITTED",
