@@ -4378,49 +4378,37 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     ("trinket","special_effect_gear_candidate")
                     for x in visible.get(kind,[])
                     if type(x) is dict and type(x.get("item_id")) is int})
-        if not ids or len(ids)>official_item_icons.MAX_ITEMS:
+        if not ids or len(ids)>official_item_icons.MAX_VISIBLE_ITEMS:
             return {"schema":official_item_icons.SCHEMA,
                     "status":"MEDIA_SOURCE_SIZE_OUT_OF_SCOPE",
                     "icons":{},"requested":len(ids),"network_calls_now":0,
                     "native_calls":0,"display_only":True}
-        scope=(game_build,target_ilevel,installed_manifest_sha256)
         with jobs.equipment_icon_lock:
-            if scope in jobs.equipment_icon_cache:
-                doc=jobs.equipment_icon_cache[scope]
-                return {**doc,"network_calls_now":0,
-                        "localization_network_calls_now":0,"cached":True}
+            # The season is the static presentation owner, not the numeric
+            # install SHA or target ilvl. Keep only successful per-item URLs.
+            cache=jobs.equipment_icon_cache.setdefault(game_build,{})
             try:
                 credentials=jobs.source_credential_store.load()
             except (local_source_keys.CredentialBlocked,OSError):
                 credentials=None
-            doc=official_item_icons.collect(ids,credentials)
-            # This existing optional presentation request is already scoped
-            # to the verified installed gear list. Complete missing Korean
-            # labels here using v335's same-build cache, not a new Build.
-            # The exact /season-gear and /installed-budget GETs remain
-            # strictly local, and name failures never block gear/SimC.
-            names=official_ko_env.read_names(jobs.root,game_build,ids)
-            if len(names)<len(ids) and credentials:
-                try:
-                    with jobs.locale_cache_lock:
-                        localization=official_ko_env.build_for_environment(
-                            jobs.root,game_build,{
-                                "environment_ready":True,
-                                "environment_installed":True,
-                                "installed_manifest_sha256":installed_manifest_sha256},
-                            target_ilevel=target_ilevel,credentials=credentials)
-                        names=official_ko_env.read_names(jobs.root,game_build,ids)
-                    doc={**doc,"localization_network_calls_now":
-                         localization.get("network_calls_now",0)}
-                except (official_ko_env.LocalizationBlocked,OSError,ValueError,
-                        TypeError,KeyError):
-                    pass
-            doc={**doc,"names_ko":{str(i):name for i,name in names.items()},
-                 "localization_network_calls_now":
-                     doc.get("localization_network_calls_now",0)}
-            if doc["status"] in ("COMPLETE","PARTIAL"):
-                jobs.equipment_icon_cache[scope]=doc
-            return {**doc,"cached":False}
+            doc=official_item_icons.collect_display(ids,credentials,cache)
+        # Names are independent of media availability and include already
+        # admitted refreshed gear. Use the original v335 store and lock.
+        names=official_ko_env.read_names(jobs.root,game_build,ids)
+        if len(names)<len(ids) and credentials:
+            try:
+                with jobs.locale_cache_lock:
+                    localization=official_ko_env.build_for_verified_gear(
+                        jobs.root,game_build,gear,credentials=credentials)
+                    names=official_ko_env.read_names(jobs.root,game_build,ids)
+                doc={**doc,"localization_network_calls_now":
+                     localization.get("network_calls_now",0)}
+            except (official_ko_env.LocalizationBlocked,OSError,ValueError,
+                    TypeError,KeyError):
+                pass
+        return {**doc,"names_ko":{str(i):name for i,name in names.items()},
+                "localization_network_calls_now":
+                    doc.get("localization_network_calls_now",0)}
 
     @app.get("/api/v1/native-batches")
     def native_batches():

@@ -888,10 +888,15 @@ function setTrinketSelection(fieldId,itemId,restored=false) {
 }
 
 async function refreshOfficialEquipmentIcons(gear){
+  const legalIds=new Set([
+    ...(gear?.choices?.trinket||[]),
+    ...(gear?.choices?.special_effect_gear_candidate||[])
+  ].map(x=>x.item_id));
   const scope=gear?.source_scope==="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"&&
     /^[0-9]+(?:\.[0-9]+){3}$/.test(gear.season_build||"")&&
     /^[a-f0-9]{64}$/.test(gear.installed_manifest_sha256||"")?
-    gear.season_build+":"+gear.installed_manifest_sha256+":"+field("ilevel"):"";
+    gear.season_build+":"+gear.installed_manifest_sha256+":"+field("ilevel")+
+    ":"+[...legalIds].sort((a,b)=>a-b).join(","):"";
   if(!scope) {
     state.equipmentIconEpoch++;
     state.equipmentIconScope="";
@@ -910,15 +915,15 @@ async function refreshOfficialEquipmentIcons(gear){
   try{
     const data=await api("/api/v1/season-item-icons?"+params.toString());
     if(state.equipmentIconEpoch!==epoch||state.equipmentIconScope!==scope||
-       state.seasonGear?.installed_manifest_sha256!==
-         gear.installed_manifest_sha256)return;
+       state.seasonGear!==gear)return;
     if(data?.schema!=="v665_official_blizzard_item_media_icons_v1"||
-       !["COMPLETE","PARTIAL"].includes(data.status)||
+       !["COMPLETE","PARTIAL","CREDENTIALS_NOT_CONFIGURED",
+         "MEDIA_PROVIDER_UNAVAILABLE"].includes(data.status)||
        !data.icons||typeof data.icons!=="object")return;
-    const legalIds=new Set([
-      ...(gear.choices?.trinket||[]),
-      ...(gear.choices?.special_effect_gear_candidate||[])
-    ].map(x=>x.item_id));
+    // Retry only on a later explicit rebind, not a polling loop.
+    if(data.status!=="COMPLETE"||
+       Object.keys(data.names_ko||{}).length<legalIds.size)
+      state.equipmentIconScope="";
     for(const [raw,src] of Object.entries(data.icons)){
       const id=Number(raw);
       if(Number.isSafeInteger(id)&&legalIds.has(id)&&typeof src==="string"&&
@@ -949,6 +954,7 @@ async function refreshOfficialEquipmentIcons(gear){
     }
     drawInlineEquipment();
   }catch{
+    if(state.equipmentIconEpoch===epoch)state.equipmentIconScope="";
     // Optional presentation never blocks selection or simulation.
   }
 }
@@ -1030,6 +1036,7 @@ async function refreshExistingSeasonTrinkets(gear,level) {
       refreshSpecialSlots();
     }
     refreshEquipmentSelectionUI();
+    void refreshOfficialEquipmentIcons(gear);
     $("season-gear-note").textContent="기존 예산 유지 · 장신구 "+added.length+
       "종, 특수효과 장비 "+specialAdded.length+"종 추가"+
       coverageNote+" · 시즌 전체 목록 완전성 미확인";

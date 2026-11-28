@@ -258,6 +258,32 @@ def build_from_verified_install(root,installed,physical_layout=None,
     """Automatic Environment Build stage: never another item-admission gate."""
     game_build=installed["game_build"]
     roles=verified_environment_items(installed,physical_layout,catalog=catalog)
+    return _build_for_roles(root,game_build,roles,allow_network=allow_network,
+                            credentials=credentials)
+
+def build_for_verified_gear(root,game_build,catalog,*,credentials=None):
+    """Only the server's already admitted exact installed gear projection.
+
+    Refreshed additions are not necessarily present in the original v213.
+    Use the same name store and fetch owner; no new item admission.
+    """
+    need(type(catalog) is dict and
+         catalog.get("status")=="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY" and
+         catalog.get("source_scope")=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES" and
+         catalog.get("season_build")==game_build and
+         re.fullmatch("[a-f0-9]{64}",catalog.get("installed_manifest_sha256") or "")
+            is not None,"GEAR_LOCALIZATION_EXACT_SCOPE_REQUIRED")
+    roles={}
+    for role in ("trinket","special_effect_gear_candidate"):
+        for row in catalog["choices"][role]:
+            i=row["item_id"]
+            need(type(i) is int and 0<i<=999999999,"SOURCE_ITEM_ID_INVALID")
+            roles.setdefault(i,set()).add(role)
+    need(len(roles)<=MAX_IDS,"LOCALIZATION_WORKLIST_TOO_LARGE")
+    return _build_for_roles(root,game_build,
+        {i:sorted(v) for i,v in sorted(roles.items())},credentials=credentials)
+
+def _build_for_roles(root,game_build,roles,*,allow_network=True,credentials=None):
     chosen=set(roles)
     cached=_read(root,game_build)
     old={r["item_id"]:r for r in cached["items"]} if cached else {}

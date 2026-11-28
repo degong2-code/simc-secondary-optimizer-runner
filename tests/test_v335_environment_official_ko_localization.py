@@ -119,6 +119,30 @@ class EnvironmentKoTests(unittest.TestCase):
         with self.assertRaises(gear.GearBlocked):
             gear.public_options(source,official_names={999999:"임의명"})
 
+    def test_refreshed_admitted_gear_uses_same_name_store(self):
+        build="12.1.5.70961"
+        catalog={"status":"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+                 "source_scope":"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
+                 "season_build":build,"installed_manifest_sha256":"a"*64,
+                 "choices":{"trinket":[{"item_id":299001}],
+                            "special_effect_gear_candidate":[{"item_id":299002}]}}
+        with (mock.patch.dict("os.environ",{"BLIZZARD_ACCESS_TOKEN":"test-token"}),
+              mock.patch.object(loc.blizzard,"request_json",side_effect=self.fake_get) as get):
+            first=loc.build_from_verified_install(self.root,install(build,299001))
+            self.assertEqual(first["network_calls_now"],1)
+            added=loc.build_for_verified_gear(self.root,build,catalog)
+            self.assertEqual(added["network_calls_now"],1)
+            self.assertEqual(added["verified_names"],2)
+            again=loc.build_for_verified_gear(self.root,build,catalog)
+            self.assertEqual(again["network_calls_now"],0)
+            self.assertEqual(get.call_count,2)
+            self.assertEqual(set(loc.read_names(self.root,build,{299001,299002})),
+                             {299001,299002})
+            with self.assertRaises(loc.LocalizationBlocked):
+                loc.build_for_verified_gear(self.root,build,{**catalog,
+                    "source_scope":"HISTORICAL_BROWSING_ONLY"})
+            self.assertEqual(get.call_count,2)
+
     def test_no_candidate_does_not_create_empty_cache(self):
         empty=install()
         empty["official_F_physical_source"]=None

@@ -60,6 +60,46 @@ class ItemIcons(unittest.TestCase):
         self.assertEqual(partial["status"],"PARTIAL")
         self.assertEqual(partial["icons"],{})
 
+    def test_display_over_eighty_reuses_successes_and_retries_only_missing(self):
+        cache={}
+        ids=list(range(1,84))
+        missing={83}
+        def media(url,headers=None):
+            iid=int(url.split("/item/")[1].split("?")[0])
+            self.calls.append(iid)
+            return {"id":iid,"assets":[] if iid in missing else
+                    [{"key":"icon","value":self.url}]}
+        auth=[]
+        def token(a,b):
+            auth.append(True)
+            return "temporary"
+        first=icons.collect_display(ids,self.cred,cache,token_loader=token,reader=media)
+        self.assertEqual(first["status"],"PARTIAL")
+        self.assertEqual(first["pending"],1)
+        self.assertEqual(first["network_calls_now"],84)
+        self.assertEqual(len(cache),82)
+        missing.clear()
+        self.calls.clear()
+        second=icons.collect_display(ids+[84],self.cred,cache,
+            token_loader=token,reader=media)
+        self.assertEqual(second["status"],"COMPLETE")
+        self.assertEqual(self.calls,[83,84])
+        self.assertEqual(second["network_calls_now"],3)
+        third=icons.collect_display([1,84],{},cache)
+        self.assertEqual(third["status"],"COMPLETE")
+        self.assertEqual(third["network_calls_now"],0)
+        self.assertEqual(set(third["icons"]),{"1","84"})
+        self.assertEqual(len(auth),2)
+
+    def test_display_missing_fetch_is_bounded_not_all_or_nothing(self):
+        cache={}
+        first=icons.collect_display(list(range(1,201)),self.cred,cache,
+            token_loader=lambda a,b:"token",reader=self.fake_media)
+        self.assertEqual(first["status"],"PARTIAL")
+        self.assertEqual(first["pending"],40)
+        self.assertEqual(first["network_calls_now"],161)
+        self.assertEqual(len(cache),160)
+
     def test_unbounded_or_incorrect_id_rejected_before_api(self):
         for bad in ([],[0],[-1],["270175"],list(range(1,82))):
             with self.subTest(bad=str(bad)[:30]):
