@@ -153,6 +153,42 @@ function run({sockets="5",special="240967",ready=true,active=A,hit=false,
                          cwd=ROOT,capture_output=True,text=True,timeout=15)
         self.assertEqual(p.returncode,0,p.stderr)
 
+    def test_v836_pending_default_oil_does_not_repeat_gem_preparation(self):
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        harness=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function matchingInstalledGemVariants(");
+const b=raw.indexOf("\nfunction renderVerifiedGemChoices()",a);
+const c=raw.indexOf("function explicitOilPreparationRequested()");
+const d=raw.indexOf("\nfunction explicitGemPreparationRequested()",c);
+const nodes={},$=id=>nodes[id]??={value:"",checked:false};
+const field=id=>$(id).value;
+$("spec").value="mage/fire";
+const A="a".repeat(64),B="b".repeat(64);
+const base={installed_manifest_sha256:A,flask_item_id:1,
+ reference_G_track:"general",socket_total:5,special_gem_id:240967,
+ selected_oil_item_ids_by_hand:{}};
+const oil={...base,installed_manifest_sha256:B,
+ selected_oil_item_ids_by_hand:{main_hand:2}};
+const state={seasonGear:{installed_manifest_sha256:A},
+ oilCatalog:{verified_gem_installs:[base,oil]}};
+let verified=false;
+const f=Function("field","$","state","installedConsumableScopeMatches",
+ "selectedFullVerifiedOil","oilUseIntent",raw.slice(a,b)+"\n"+raw.slice(c,d)+
+ "\nreturn matchingInstalledGemVariants;")(field,$,state,()=>true,()=>verified,true);
+assert.deepStrictEqual(f(),[]);
+assert.deepStrictEqual(f({allowPendingOil:true}),[base]);
+$("optimizer-oil-main-id").value="2";
+assert.deepStrictEqual(f({allowPendingOil:true}),[]);
+verified=true;
+assert.deepStrictEqual(f({allowPendingOil:true}),[oil]);
+"""
+        p=subprocess.run([node,"-e",harness,str(ROOT/"runner/webui/app.js")],
+                         cwd=ROOT,capture_output=True,text=True,timeout=15)
+        self.assertEqual(p.returncode,0,p.stderr)
+
     def test_real_start_handler_checks_simc_before_any_season_or_dps_work(self):
         """Execute production click handler: invalid SimC cannot spend API/Native."""
         node=shutil.which("node")

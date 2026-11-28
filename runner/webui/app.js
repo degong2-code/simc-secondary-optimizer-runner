@@ -1966,7 +1966,7 @@ async function bindExactInstalledGearVariant({sha,build,level,stillMatches}) {
     "추가 G/F Native는 실행하지 않았습니다.");
   return true;
 }
-function matchingInstalledGemVariants() {
+function matchingInstalledGemVariants({allowPendingOil=false}={}) {
   const data=state.oilCatalog;
   if(!installedConsumableScopeMatches(data))return [];
   const rows=Array.isArray(data.verified_gem_installs)?data.verified_gem_installs:[];
@@ -1977,10 +1977,15 @@ function matchingInstalledGemVariants() {
   if(!Number.isSafeInteger(flask)||flask<=0)return [];
   const oils={};
   if(oilUseIntent){
-    if(!selectedFullVerifiedOil())return [];
-    for(const [hand,id] of [["main_hand","optimizer-oil-main-id"],
-                            ["off_hand","optimizer-oil-off-id"]])
-      if(field(id))oils[hand]=Number(field(id));
+    const verified=selectedFullVerifiedOil();
+    // Default-on without any physical oil selection can prepare an O=0
+    // gem layout; buttonState/buildRequest still enforce oil before DPS.
+    // Never substitute O=0 for an explicitly requested unverified oil.
+    if(!verified && (!allowPendingOil||explicitOilPreparationRequested()))return [];
+    if(verified)
+      for(const [hand,id] of [["main_hand","optimizer-oil-main-id"],
+                              ["off_hand","optimizer-oil-off-id"]])
+        if(field(id))oils[hand]=Number(field(id));
   }
   const track=field("spec")==="warrior/fury"&&!$("manual-t-mode").checked?
     "fury_dual_2h":"general";
@@ -2045,7 +2050,7 @@ function renderVerifiedGemChoices(){
 async function reuseVerifiedGemVariant(){
   const special=field("season-existing-special-gem-id");
   const sockets=valueInt("season-target-socket-count");
-  const rows=matchingInstalledGemVariants().filter(v=>
+  const rows=matchingInstalledGemVariants({allowPendingOil:true}).filter(v=>
     v.special_gem_id===(special?Number(special):null)&&v.socket_total===sockets);
   const active=rows.find(v=>v.installed_manifest_sha256===
     state.seasonGear?.installed_manifest_sha256);
@@ -2059,7 +2064,7 @@ async function reuseVerifiedGemVariant(){
   const build=field("season-game-build")||state.verifiedInstalledBuildFromThisPage;
   const level=valueInt("ilevel");
   const bound=await bindExactInstalledGearVariant({sha,build,level,
-    stillMatches:()=>matchingInstalledGemVariants().some(v=>
+    stillMatches:()=>matchingInstalledGemVariants({allowPendingOil:true}).some(v=>
       v.installed_manifest_sha256===sha&&
       v.special_gem_id===(field("season-existing-special-gem-id")?
         Number(field("season-existing-special-gem-id")):null)&&
@@ -2686,7 +2691,7 @@ function optimizerNeedsSeasonPreparation() {
     const special=field("season-existing-special-gem-id");
     const sockets=Number(field("season-target-socket-count"));
     return !(typeof matchingInstalledGemVariants==="function" &&
-      matchingInstalledGemVariants().some(v=>
+      matchingInstalledGemVariants({allowPendingOil:true}).some(v=>
         v.installed_manifest_sha256===state.seasonGear?.installed_manifest_sha256 &&
         v.socket_total===sockets &&
         v.special_gem_id===(special?Number(special):null)));
