@@ -60,6 +60,41 @@ WEB_ASSETS = pathlib.Path(__file__).resolve().parent / "webui"
 PUBLIC_STATIC = frozenset(("/", "/assets/app.js", "/assets/styles.css"))
 
 
+def _project_user_equipment_compatibility(public, source_rows):
+    """Reproject only public choice metadata, never the sealed season DB.
+
+    v167 owns class/armor/primary and known subclass compatibility. Match
+    its special choices to the same supported slot inventory exposed to
+    the browser, and carry bounded source evidence for explicit diagnostics.
+    Keeping this projection outside v167 preserves existing A7 receipts.
+    """
+    import v169_source_first_representative_stage as representative
+    known_primary=set().union(*representative.PRIMARY_STAT_CODES.values())
+    choices=public["choices"]
+    visible={row["item_id"] for role in ("trinket","special_effect_gear_candidate")
+             for row in choices[role]}
+    origin={row["item_id"]:row for row in source_rows if row["item_id"] in visible}
+    forms=public["weapon_forms"]
+    inventory=public["selected_slot_inventory"]
+    for role in ("trinket","special_effect_gear_candidate"):
+        for row in choices[role]:
+            raw=origin[row["item_id"]]
+            codes=raw.get("stat_modifier_codes")
+            row["source_primary_codes"]=(sorted(set(codes)&known_primary)
+                if type(codes) is list and all(type(x) is int for x in codes)
+                else None)
+            mask=raw.get("allowed_class_mask")
+            row["source_allowed_class_mask"]=mask if type(mask) is int else None
+            if role=="special_effect_gear_candidate":
+                slot=row["inventory_type"]
+                allowed_forms={form for form,rules in inventory.items()
+                               if any(slot in types for types in rules.values())}
+                row["compatible_dps_specs"]=[
+                    spec for spec in row["compatible_dps_specs"]
+                    if forms.get(spec) in allowed_forms]
+    return public
+
+
 def _static_cache_bytes_equal(stored, requested):
     """Preserve exact cache-alias identity with bounded read memory.
 
@@ -4225,9 +4260,11 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                          "trinket","special_effect_gear_candidate",
                          "selectable_stat_craft")}
                 names=official_ko_env.read_names(jobs.root,game_build,ids)
-                base=season_gear.public_installed_v213_candidates(
-                    source,installed_manifest_sha256=installed_manifest_sha256,
-                    official_names=names)
+                base=_project_user_equipment_compatibility(
+                    season_gear.public_installed_v213_candidates(
+                        source,installed_manifest_sha256=installed_manifest_sha256,
+                        official_names=names),
+                    (row for group in groups.values() for row in group))
                 import v848_embellishment_recipe_source as embellishment_source
                 emb=embellishment_source.effective_installed_options(receipt,installed)
                 if emb is not None:
@@ -4263,7 +4300,9 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                         existing_special_ids=old_special_ids)
                     new_names=official_ko_env.read_names(jobs.root,game_build,
                                                          additions|special_ids)
-                    rows=season_gear.public_options(candidate,official_names=new_names)["choices"]
+                    rows=_project_user_equipment_compatibility(
+                        season_gear.public_options(candidate,official_names=new_names),
+                        candidate["items"])["choices"]
                     for role,ids,count_key in (
                         ("trinket",additions,"refreshed_trinket_count"),
                         ("special_effect_gear_candidate",special_ids,"refreshed_special_count")):
@@ -4289,8 +4328,9 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                       "special_effect_gear_candidate","selectable_stat_craft")}
             names=official_ko_env.read_names(
                 jobs.root,catalog["season_build"],ids)
-            return season_gear.public_options(catalog,
-                                              official_names=names)
+            return _project_user_equipment_compatibility(
+                season_gear.public_options(catalog,official_names=names),
+                catalog["items"])
         except (season_gear.GearBlocked, ValueError, OSError, KeyError):
             return {"schema":season_gear.SCHEMA,
                     "status":"SEASON_GEAR_CATALOG_UNAVAILABLE",
@@ -4420,7 +4460,9 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             special_ids=_refreshed_special_ids(refreshed,prior_ids,
                 existing_special_ids={r["item_id"] for r in base["choices"]["special_effect_gear_candidate"]})
             names=official_ko_env.read_names(jobs.root,game_build,new_ids|special_ids)
-            rows=season_gear.public_options(source,official_names=names)["choices"]
+            rows=_project_user_equipment_compatibility(
+                season_gear.public_options(source,official_names=names),
+                source["items"])["choices"]
             # Metadata may change even when no new equipment is admitted.
             # Project once over the union of the installed and new IDs.
             if role_review["status"]=="TRINKET_LOOT_SPEC_SOURCE_OBSERVED":

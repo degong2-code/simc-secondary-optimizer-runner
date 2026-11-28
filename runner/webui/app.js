@@ -1007,20 +1007,48 @@ async function refreshExistingSeasonTrinkets(gear,level,refreshEmbellishments=tr
        data.bonus_effect_source_status!=="POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED")||
       (data.special_generation_verified===false&&data.new_special_pending_count>0);
     const ids=new Set(Object.values(gear.choices).flat().map(x=>x.item_id));
+    // A restored GET may already contain a refreshed ID. The exact scoped
+    // POST can correct its public compatibility metadata without replacing
+    // physical identity, selected options, or the installed numeric budget.
+    const existing=new Map(),corrections=new Map();
+    for(const group of ["trinket","special_effect_gear_candidate"])
+      existing.set(group,new Map((gear.choices[group]||[]).map(x=>[x.item_id,x])));
+    const reconcileCompatibility=(group,item)=>{
+      const prior=existing.get(group).get(item.item_id);
+      if(!prior||prior.inventory_type!==item.inventory_type||
+         prior.class_id!==item.class_id||prior.subclass_id!==item.subclass_id||
+         !Array.isArray(item.compatible_dps_specs)||
+         !Object.prototype.hasOwnProperty.call(item,"source_primary_codes"))return;
+      const next={compatible_dps_specs:item.compatible_dps_specs,
+        primary_source_observed:item.primary_source_observed,
+        source_primary_codes:item.source_primary_codes,
+        source_allowed_class_mask:item.source_allowed_class_mask};
+      if(Object.entries(next).every(([k,v])=>JSON.stringify(prior[k])===JSON.stringify(v)))return;
+      if(!corrections.has(group))corrections.set(group,new Map());
+      corrections.get(group).set(item.item_id,{...prior,...next});
+    };
     const added=[];
     for(const item of data.new_trinkets||[]){
       if(!Number.isSafeInteger(item.item_id)||item.item_id<=0||
-         item.inventory_type!==12||ids.has(item.item_id)||
+         item.inventory_type!==12||
          typeof item.name!=="string"||!item.name)continue;
+      if(ids.has(item.item_id)){
+        reconcileCompatibility("trinket",item);continue;
+      }
       ids.add(item.item_id);added.push(item);
     }
     const specialAdded=[];
     for(const item of data.new_special_items||[]){
-      if(!Number.isSafeInteger(item.item_id)||item.item_id<=0||ids.has(item.item_id)||
+      if(!Number.isSafeInteger(item.item_id)||item.item_id<=0||
          !Number.isSafeInteger(item.inventory_type)||item.inventory_type===12||
          typeof item.name!=="string"||!item.name)continue;
+      if(ids.has(item.item_id)){
+        reconcileCompatibility("special_effect_gear_candidate",item);continue;
+      }
       ids.add(item.item_id);specialAdded.push(item);
     }
+    for(const [group,rows] of corrections)
+      gear.choices[group]=gear.choices[group].map(x=>rows.get(x.item_id)||x);
     gear.trinket_source_refresh=data.supplementary_delve_status;
     gear.loot_spec_source_status=data.loot_spec_source_status;
     const rolesChanged=mergeTrinketRoleMetadata(
@@ -1029,7 +1057,7 @@ async function refreshExistingSeasonTrinkets(gear,level,refreshEmbellishments=tr
     const coverageNote=Number.isSafeInteger(unresolved)&&unresolved>0
       ?" · 구렁 미확인 "+unresolved+"종":"";
     if(!added.length&&!specialAdded.length){
-      if(rolesChanged)refreshEquipmentSelectionUI();
+      if(rolesChanged||corrections.size)refreshEquipmentSelectionUI();
       if(coverageNote) $("season-gear-note").textContent=
         "기존 예산·목록 유지"+coverageNote+" · 시즌 전체 목록 완전성 미확인";
       return data;
@@ -1083,6 +1111,8 @@ function rememberEquipmentUpdate(gear,level,build,data){
   if(!gear)return;
   explicitEquipmentUpdates.set(gear,{
     level,build,status:equipmentDiagnosticCode(data?.status)||"RESPONSE_UNAVAILABLE",
+    source_generation_sha256:typeof data?.source_generation_sha256==="string"&&
+      /^[a-f0-9]{64}$/.test(data.source_generation_sha256)?data.source_generation_sha256:null,
     reason:equipmentDiagnosticCode(data?.reason),
     delve_status:equipmentDiagnosticCode(data?.supplementary_delve_status),
     bonus_effect_status:equipmentDiagnosticCode(data?.bonus_effect_source_status),
@@ -1106,12 +1136,29 @@ function equipmentDiagnosticSnapshot(){
   const current=verifiedInstalledGearScopeMatchesRun(build,level);
   const previous=gear&&explicitEquipmentUpdates.get(gear);
   const collect=(group,grid,search)=>{
-    const all=equipmentDiagnosticIds(gear?.choices?.[group]);
+    const rows=gear?.choices?.[group]||[];
+    const all=equipmentDiagnosticIds(rows);
+    const evidence=new Map();
+    const int=x=>Number.isSafeInteger(x)?x:null;
+    for(const row of rows){
+      if(!Number.isSafeInteger(row.item_id)||row.item_id<=0)continue;
+      const codes=Array.isArray(row.source_primary_codes)&&
+        row.source_primary_codes.every(Number.isSafeInteger)
+        ?[...new Set(row.source_primary_codes)].sort((a,b)=>a-b):null;
+      const facts={inventory_type:int(row.inventory_type),class_id:int(row.class_id),
+        subclass_id:int(row.subclass_id),allowed_class_mask:int(row.source_allowed_class_mask),
+        primary_codes:codes};
+      const key=JSON.stringify(facts);
+      if(!evidence.has(key))evidence.set(key,{...facts,item_ids:[]});
+      evidence.get(key).item_ids.push(row.item_id);
+    }
     const eligible=equipmentDiagnosticIds(eligibleEquipment(group));
     const rendered=equipmentDiagnosticIds([...($(grid)?.querySelectorAll("[data-item-id]")||[])]
       .map(node=>({item_id:Number(node.dataset.itemId)})));
     return {catalog_ids:all,eligible_ids:eligible,rendered_ids:rendered,
-      search_active:Boolean(field(search).trim())};
+      search_active:Boolean(field(search).trim()),
+      source_compatibility_groups:[...evidence.values()].map(x=>({
+        ...x,item_ids:[...new Set(x.item_ids)].sort((a,b)=>a-b)}))};
   };
   // No arbitrary payload spreads, raw paths, keys, talents, session data,
   // or user search text. Scope and lists are observed, not approval.

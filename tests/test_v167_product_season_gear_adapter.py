@@ -292,7 +292,7 @@ class ProductAdapterTests(unittest.TestCase):
 
 
 class EquipmentSpecCompatibility(unittest.TestCase):
-    def test_v869_all_26_primary_armor_and_supported_special_slot_matrix(self):
+    def test_v870_all_26_primary_armor_and_class_matrix(self):
         # Independent expected spec sets, not inferred from the production
         # contract being tested. No season-specific IDs or Native calls.
         cloth={"mage/arcane","mage/fire","mage/frost","priest/shadow",
@@ -332,18 +332,6 @@ class EquipmentSpecCompatibility(unittest.TestCase):
             for slot in (2,11,16):
                 self.assertEqual(eligible(category="special_effect_gear_candidate",
                     inventory_type=slot,subclass_id=sub,stat_modifier_codes=[71]),all_specs)
-        two_hand={"deathknight/unholy","warrior/fury","warrior/arms",
-                  "paladin/retribution","druid/feral","hunter/survival","monk/windwalker"}
-        frill=cloth|{"druid/balance","evoker/devastation"}
-        ranged={"hunter/beast_mastery","hunter/marksmanship"}
-        for slot,cl,sub,expected in (
-            (17,2,8,two_hand),(23,4,0,frill),(14,4,6,{"shaman/elemental"}),
-            (15,2,2,ranged),(26,2,19,set()),(13,2,15,all_specs-two_hand-ranged),
-            (12,4,0,set())):
-            with self.subTest(slot=slot,cl=cl,sub=sub):
-                self.assertEqual(eligible(category="special_effect_gear_candidate",
-                    inventory_type=slot,class_id=cl,subclass_id=sub,
-                    stat_modifier_codes=[71]),expected)
         self.assertEqual(eligible(allowed_class_mask=128,stat_modifier_codes=[5]),
                          {"mage/arcane","mage/fire","mage/frost"})
         self.assertEqual(eligible(allowed_class_mask=128,stat_modifier_codes=[3]),set())

@@ -2496,7 +2496,7 @@ const $=id=>nodes[id];
 let redraw=0,requests=0,stale=false,mode="trinket",specialSlots=0,mediaRefresh=0;
 const refreshOfficialEquipmentIcons=async current=>{assert.strictEqual(state.seasonGear,current);mediaRefresh++};
 let roleStatus="TRINKET_LOOT_SPEC_SOURCE_OBSERVED",roleMetadata,embOptions,craftRedraw=0;
-let bonusStatus="POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED",overlayPending=false;
+let bonusStatus="POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED",overlayPending=false,compatibilityCorrection=false;
 const refreshCraftChoices=()=>{craftRedraw++};
 const role={source:"SAME_BUILD_DB2_EXPLICIT_LOOT_SPEC_OVERRIDE",
   status:"EXPLICIT_SHARED_WITH_DPS",roles:["DPS","HEALER"]};
@@ -2523,7 +2523,10 @@ const fetch=async(url,opts)=>{
     bonus_effect_overlay_pending:overlayPending,
     loot_spec_source_status:roleStatus,trinket_loot_spec_metadata:roleMetadata,
     native_calls_now:0,budget_rebuilt:false,
-    new_trinkets:mode==="trinket"||mode==="mixed"?[
+    new_trinkets:compatibilityCorrection?[{
+      item_id:100,name:"Original",inventory_type:12,compatible_dps_specs:["warrior/fury"],
+      source_primary_codes:[72],source_allowed_class_mask:-1,primary_source_observed:true
+    }]:mode==="trinket"||mode==="mixed"?[
       {item_id:100,name:"Duplicate",inventory_type:12},
       {item_id:101,name:"New",inventory_type:12},
       {item_id:102,name:"Wrong slot",inventory_type:11}]:[],
@@ -2687,11 +2690,64 @@ const refresh=load("async function refreshExistingSeasonTrinkets(",
   assert.strictEqual(requests,8);
   assert.strictEqual(state.verifiedExistingBudget,budget);
   assert.strictEqual(pending.choiceRefreshInFlight,false);
+  const beforeRows=pending.choices.trinket,previousRedraw=redraw;
+  compatibilityCorrection=true;
+  await refresh(pending,334,true,true);
+  assert.strictEqual(requests,9);
+  assert(pending.choices.trinket!==beforeRows);
+  assert.deepStrictEqual(pending.choices.trinket.map(x=>x.item_id),[100,101]);
+  assert.deepStrictEqual(pending.choices.trinket[0].source_primary_codes,[72]);
+  assert.deepStrictEqual(pending.choices.trinket[0].compatible_dps_specs,["warrior/fury"]);
+  assert.strictEqual(redraw,previousRedraw+1);
+  assert.strictEqual(nodes.trinket1.value,"100");
+  assert.strictEqual(state.verifiedExistingBudget,budget);
+  await refresh(pending,334,true,true);
+  assert.strictEqual(redraw,previousRedraw+1);
 })().catch(e=>{console.error(e);process.exitCode=1});
 """
         result=subprocess.run([node,"-e",code,str(source)],capture_output=True,
                               text=True,timeout=20)
         self.assertEqual(result.returncode,0,result.stderr)
+
+    def test_v870_public_projection_preserves_raw_source_and_matches_slot_forms(self):
+        import copy
+        import v143_specialization_contracts as contracts
+        import v167_product_season_gear_adapter as adapter
+        rows=[]
+        for i,slot,cl,sub,codes in (
+            (1,17,2,8,[71]),(2,23,4,0,[71]),(3,14,4,6,[71]),
+            (4,15,2,2,[71]),(5,26,2,19,[71]),(6,13,2,15,[71]),
+            (7,12,4,0,[72]),(8,12,4,0,[-1,32]),(9,12,4,0,None)):
+            rows.append({"item_id":i,"inventory_type":slot,"class_id":cl,
+                         "subclass_id":sub,"allowed_class_mask":-1,
+                         "category":"trinket" if slot==12 else "special_effect_gear_candidate",
+                         "stat_modifier_codes":codes})
+        public={"choices":{group:[{**row,**adapter.equipment_primary_armor_compatibility(row)}
+                    for row in rows if row["category"]==group]
+                    for group in ("trinket","special_effect_gear_candidate")},
+                "weapon_forms":{k:v["weapon_form"] for k,v in contracts.CONTRACTS.items()},
+                "selected_slot_inventory":contracts.public_selected_slot_inventory()}
+        original=copy.deepcopy(rows)
+        result=api._project_user_equipment_compatibility(public,rows)
+        self.assertEqual(rows,original)
+        self.assertIs(result,public)
+        all_specs=set(contracts.CONTRACTS)
+        two={"deathknight/unholy","warrior/fury","warrior/arms",
+             "paladin/retribution","druid/feral","hunter/survival","monk/windwalker"}
+        frill={"mage/arcane","mage/fire","mage/frost","priest/shadow",
+               "warlock/affliction","warlock/demonology","warlock/destruction",
+               "druid/balance","evoker/devastation"}
+        ranged={"hunter/beast_mastery","hunter/marksmanship"}
+        expected={1:two,2:frill,3:{"shaman/elemental"},4:ranged,
+                  5:set(),6:all_specs-two-ranged}
+        for row in result["choices"]["special_effect_gear_candidate"]:
+            self.assertEqual(set(row["compatible_dps_specs"]),expected[row["item_id"]])
+            self.assertEqual(row["source_primary_codes"],[71])
+        trinkets=result["choices"]["trinket"]
+        self.assertEqual([x["source_primary_codes"] for x in trinkets],[[72],[],None])
+        self.assertNotIn("warlock/destruction",trinkets[0]["compatible_dps_specs"])
+        self.assertIn("warlock/destruction",trinkets[1]["compatible_dps_specs"])
+        self.assertIn("warlock/destruction",trinkets[2]["compatible_dps_specs"])
 
     def test_v868_equipment_diagnostic_reports_only_observed_public_ids(self):
         import shutil,subprocess
@@ -2707,7 +2763,7 @@ const a=raw.indexOf("const explicitEquipmentUpdates=new WeakMap()"),b=raw.indexO
 assert(a>=0&&b>a);
 const gear={season_build:"12.1.5.70961",source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
   private_path:"C:/secret/path",secret:"never export",special_source_refresh_pending:true,
-  choices:{trinket:[{item_id:17},{item_id:18}],special_effect_gear_candidate:[{item_id:19},{item_id:20}]}};
+  choices:{trinket:[{item_id:17,source_primary_codes:[72],source_allowed_class_mask:-1,inventory_type:12,class_id:4,subclass_id:0},{item_id:18,source_primary_codes:[72],source_allowed_class_mask:-1,inventory_type:12,class_id:4,subclass_id:0}],special_effect_gear_candidate:[{item_id:19},{item_id:20}]}};
 const state={seasonGear:gear,seasonGearTargetIlevel:334,token:"secret token"};
 const fields={ilevel:"334","season-game-build":"12.1.5.70961",spec:"warlock/destruction",
   "equipment-trinket-search":"private query","equipment-special-search":""};
@@ -2729,6 +2785,8 @@ const f=Function("state","field","$","verifiedInstalledGearScopeMatchesRun","spe
  assert.deepEqual(snapshot.trinkets.catalog_ids,[17,18]);
  assert.deepEqual(snapshot.trinkets.eligible_ids,[17]);
  assert.deepEqual(snapshot.trinkets.rendered_ids,[17]);
+ assert.deepEqual(snapshot.trinkets.source_compatibility_groups,[{
+  inventory_type:12,class_id:4,subclass_id:0,allowed_class_mask:-1,primary_codes:[72],item_ids:[17,18]}]);
  assert.equal(snapshot.trinkets.search_active,true);
  assert.equal(snapshot.update.reason,null);
  assert.deepEqual(snapshot.update.new_special_ids,[20]);
