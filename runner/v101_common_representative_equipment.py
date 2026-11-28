@@ -478,7 +478,8 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
                                            season_source_gear=None,
                                            season_source_tier=None,
                                            selected_refresh_rows=None,
-                                           _resolved_sources=None):
+                                           _resolved_sources=None,
+                                           installed_embellishments=None):
     """Source catalog item/slot consistency; not proc/effect certification."""
     if not user["special_items"] and not user["embellishments"]:
         return {}
@@ -519,8 +520,13 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
             slot,item_id=raw["slot"],raw["item_id"]
             options=raw["options"]
             if group=="crafted":
-                choice_metadata.check_embellishment(
-                    options.get("embellishment"),slot,need)
+                if installed_embellishments is None:
+                    choice_metadata.check_embellishment(
+                        options.get("embellishment"),slot,need)
+                else:
+                    entry=installed_embellishments.get(options.get("embellishment"))
+                    need(entry is not None and item_id in entry["item_ids"],
+                         "CURRENT_SEASON_EMBELLISHMENT_WRONG_PHYSICAL_ITEM:"+slot)
             # A catalyst piece uses the class-specific tier ID instead of a
             # separately catalogued seasonal item. SimC owns inheritance.
             catalyst=group=="special" and (
@@ -609,7 +615,8 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
                          tier_override=None,fifth_override=None,
                          flexible_current_tier=False,
                          season_source_gear=None,season_source_tier=None,
-                         selected_refresh_rows=None):
+                         selected_refresh_rows=None,
+                         installed_embellishments=None):
     """Overlay selected items and reassign tier 4pc without item-combo search.
 
     Mutates only its private rows/groups objects. Selected catalyst specials
@@ -637,7 +644,8 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
             key,user,tier_map,need,season_source_gear=season_source_gear,
             season_source_tier=season_source_tier,
             selected_refresh_rows=selected_refresh_rows,
-            _resolved_sources=resolved_sources)
+            _resolved_sources=resolved_sources,
+            installed_embellishments=installed_embellishments)
     taken=set()
     for group,selection in (("trinkets",user["trinkets"]),
                             ("special",user["special_items"]),

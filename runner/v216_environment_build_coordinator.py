@@ -10935,7 +10935,8 @@ def _install_verified_fresh_environment_only(*, compilation, staged,
         target_ilevel=target_ilevel,manual_final_T=manual_final_T,
         verified_DK_runeforge_source=verified_dk,
         source_optional_consumables=compilation.get(
-            "source_owned_optional_consumables"))
+            "source_owned_optional_consumables"),
+        source_embellishments=compilation.get("source_owned_embellishments"))
     key=installed["manifest_sha256"][:20]
     stage_id="fresh-v212-installed-"+key
     output="fresh_source/v212_installed_"+key+".json"
@@ -11318,6 +11319,24 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             if source_owned_v680 is not None:
                 source_compilation["source_owned_optional_consumables"]=(
                     source_owned_v680)
+            # Consume the already verified same-invocation v848 source.
+            # Optional errors must not block G/J/F/O or base installation.
+            try:
+                emb=collected.get("fresh_embellishment_recipe_source") or {}
+                if (source_compilation.get("status")=="FRESH_V191_V211_V213_COMPILED_UNADMITTED"
+                    and emb.get("status")=="RECIPE_OUTPUT_SOURCE_PROJECTED"):
+                    root=pathlib.Path(source_compilation["stage_root"]).resolve()
+                    paths,stamp=embellishment_source.upstream(
+                        root,emb["source_stage"],("candidate",))
+                    emb_doc,emb_sha=environment_manifest.read_json(paths["candidate"])
+                    catalog_doc,_=environment_manifest.read_json(
+                        source_compilation["source_catalog_path"])
+                    source_compilation["source_owned_embellishments"]=(
+                        embellishment_source.project_installed_options(
+                            emb_doc,catalog_doc,source_receipt_sha256=stamp,
+                            source_candidate_sha256=emb_sha))
+            except (OSError,ValueError,TypeError,KeyError,AttributeError):
+                progress["optional_embellishment_status"]="EXACT_INSTALL_PROJECTION_PENDING"
             # v680: the ONE ordinary build carries the exact pinned
             # Wago/SimC consumable source identity into the installed v212
             # owner. Source candidates alone are not valid SimC input

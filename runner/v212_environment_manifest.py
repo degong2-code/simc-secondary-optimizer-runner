@@ -847,7 +847,8 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
                                         trusted_policy_A_receipts_by_id,
                                         target_ilevel, manual_final_T=None,
                                         verified_DK_runeforge_source=None,
-                                        source_optional_consumables=None):
+                                        source_optional_consumables=None,
+                                        source_embellishments=None):
     """Assemble the actual fresh-season install from existing verified owners.
 
     INTERNAL ONLY: trusted_budget_evidence must originate from verified
@@ -930,6 +931,11 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
         simc_revision=source_catalog["simc_revision"],
         source=source_optional_consumables)
         if source_optional_consumables is not None else None)
+    if source_embellishments is not None:
+        import v848_embellishment_recipe_source as embellishment_source
+        embellishment_source.verify_installed_options(source_embellishments,
+            game_build=source_catalog["game_build"],simc_revision=source_catalog["simc_revision"],
+            catalog_sha=source_catalog["manifest_sha256"])
     payload={
         "schema":FRESH_SEASON_INSTALLED_SCHEMA,
         "status":"FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY",
@@ -975,6 +981,8 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
             prepared["prepared_options_sha256"],
         **({"installed_optional_consumables":optional}
            if optional is not None else {}),
+        **({"installed_embellishments":source_embellishments}
+           if source_embellishments is not None else {}),
         "published_verified_options":published,
         "published_verified_option_count":len(published),
         "optional_quality_pending_item_ids":
@@ -1049,6 +1057,11 @@ def verify_fresh_installed_environment(document):
             document["installed_optional_consumables"],
             game_build=document.get("game_build"),
             simc_revision=document.get("simc_revision"))
+    if "installed_embellishments" in document:
+        import v848_embellishment_recipe_source as embellishment_source
+        embellishment_source.verify_installed_options(document["installed_embellishments"],
+            game_build=document["game_build"],simc_revision=document["simc_revision"],
+            catalog_sha=document["source_catalog_manifest_sha256"])
     # A v212 E vector is only installed when v196 propagated the trusted
     # existing CHMV receipt; neither absence nor a changed signed value
     # may mean E=0. Legacy published rows without E remain unchanged.

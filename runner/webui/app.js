@@ -1063,6 +1063,7 @@ function installSeasonGearHints(catalog,{preserveSelection=false}={}) {
   state.verifiedExistingBudget=null;
   state.seasonGear=catalog?.status==="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY"
     ? catalog : null;
+  refreshCraftChoices();
   // Only an exact v212/SHA gear lookup below can set this run-level seal.
   state.seasonGearTargetIlevel=null;
   void refreshOfficialEquipmentIcons(state.seasonGear);
@@ -1144,8 +1145,9 @@ function syncCraftRow(row,restored=false) {
   const kind=row.querySelector('[data-field="embellishment"]');
   const slot=row.querySelector('[data-field="slot"]');
   const previous=slot.value;
-  const meta=state.options?.embellishments?.[kind.value];
-  const slots=(meta?.slots||[]).filter(x=>armorCraftSlots.has(x)&&!!chosenCraft(x));
+  const meta=craftMetadata()[kind.value];
+  const slots=meta?.item_ids?statOptions.filter(x=>!!chosenCraft(x,null,kind.value)):
+    (meta?.slots||[]).filter(x=>armorCraftSlots.has(x)&&!!chosenCraft(x));
   slot.replaceChildren(option("","적용 부위 선택"));
   for(const x of statOptions)if(slots.includes(x))
     slot.appendChild(option(x,slotNames[x]));
@@ -1157,7 +1159,7 @@ function syncCraftRow(row,restored=false) {
   const note=row.querySelector(".craft-slot-note");
   note.textContent=!kind.value?"장식 종류를 먼저 선택하면 호환 부위가 표시됩니다.":
     !meta?"검증되지 않은 이전 장식 · 새 계획은 재선택 필요":
-    slots.length?"지원 유형: 방어구 전용 · 목걸이/반지/무기에는 적용 불가":
+    slots.length?(meta?.item_ids?"정확한 제작장비별 적용 관계 확인":"지원 유형: 방어구 전용 · 목걸이/반지/무기에는 적용 불가"):
     "이 직업에서 선택 가능한 제작 방어구가 없습니다.";
 }
 
@@ -2211,10 +2213,35 @@ function craftSlot(item) {
   if(item.inventory_type===20)return "chest";
   return null;
 }
-function chosenCraft(slot,exactItemId=null) {
+function craftMetadata() {
+  return state.seasonGear?.embellishments??state.options?.embellishments??{};
+}
+function refreshCraftChoices(){
+  for(const row of $("crafted-rows").querySelectorAll(".gear-row")){
+    const selector=row.querySelector('[data-field="embellishment"]'),old=selector.value;
+    const choices=craftMetadata();
+    selector.replaceChildren(option("","장식 종류 선택"));
+    for(const [token,details] of Object.entries(choices))
+      selector.appendChild(option(token,details.name+(details.effect?" · "+details.effect:"")));
+    if(old&&!choices[old]){
+      const prior=option(old,old+" · 환경 재확인 필요");
+      prior.dataset.historic="true";selector.appendChild(prior);
+    }
+    selector.value=old;syncCraftRow(row,true);
+  }
+}
+function chosenCraft(slot,exactItemId=null,token=null) {
   const family=classArmor[field("spec").split("/")[0]];
   const rows=state.seasonGear?.choices?.selectable_stat_craft||[];
   const valid=rows.filter(item=>{
+    const meta=token?craftMetadata()[token]:null;
+    if(meta?.item_ids){
+      const spec=field("spec");
+      const form=state.seasonGear?.weapon_forms?.[spec];
+      const inventory=state.seasonGear?.selected_slot_inventory?.[form]?.[slot]||[];
+      return meta.item_ids.includes(item.item_id)&&inventory.includes(item.inventory_type)
+        &&item.compatible_dps_specs?.includes(spec);
+    }
     if(item.class_id!==4)return false;
     const actual=craftSlot(item);
     if(slot==="finger2") {
@@ -2378,6 +2405,10 @@ function fillGearRows(nodeId, entries) {
           const old=option(value,"이전 세션 특수장비 #"+value+" · 새 계획은 재선택");
           old.dataset.historic="true";input.appendChild(old);
         }
+      }
+      if(nodeId==="crafted-rows"&&name==="embellishment"&&value&&!craftMetadata()[value]){
+        const prior=option(value,value+" · 환경 재확인 필요");
+        prior.dataset.historic="true";input.appendChild(prior);
       }
       input.value=value;
     }
@@ -2608,7 +2639,8 @@ function selectedGear(nodeId, group) {
     if(isCraft) {
       if(!fields.slot||!fields.embellishment||!fields.stat_a||!fields.stat_b)
         throw Error("장식 종류·호환 부위·제작 스탯 2개를 선택해 주세요.");
-      if(!state.options?.embellishments?.[fields.embellishment]?.slots?.includes(fields.slot))
+      const meta=craftMetadata()[fields.embellishment];
+      if(!meta||(!meta.item_ids&&!meta.slots?.includes(fields.slot)))
         throw Error("이 장식은 선택 부위에 사용할 수 없습니다.");
       if(fields.stat_a===fields.stat_b)
         throw Error("제작 스탯은 서로 다른 두 가지를 선택해야 합니다.");
@@ -2618,7 +2650,7 @@ function selectedGear(nodeId, group) {
       if(fields.item_id&&!/^[1-9][0-9]{0,8}$/.test(fields.item_id))
         throw Error("제작장비 ItemID는 1~999999999의 정확한 양의 정수여야 합니다.");
       const resolved=chosenCraft(fields.slot,
-        fields.item_id?Number(fields.item_id):null);
+        fields.item_id?Number(fields.item_id):null,fields.embellishment);
       if(!resolved)throw Error(fields.item_id?
         "지정한 제작장비 ItemID가 이번 시즌의 해당 직업·부위 후보 목록에 없습니다. 다른 장비로 대체하지 않습니다.":
         "이 직업·부위에 사용할 시즌 제작장비가 없습니다.");
@@ -5380,13 +5412,7 @@ function installOptions(options) {
      row4_mastery:"특화",row4_vers:"유연"
   })[v]||label("omnium_talents",v));
   refreshDefaultConsumableSummaries();
-  for(const row of $("crafted-rows").querySelectorAll(".gear-row")){
-    const selector=row.querySelector('[data-field="embellishment"]');
-    selector.replaceChildren(option("","장식 종류 선택"));
-    for(const [token,details] of Object.entries(options.embellishments||{}))
-      selector.appendChild(option(token,details.name+" · "+details.effect));
-    syncCraftRow(row);
-  }
+  refreshCraftChoices();
 }
 
 function displaySimcConnectionFacts(result,restored=false){

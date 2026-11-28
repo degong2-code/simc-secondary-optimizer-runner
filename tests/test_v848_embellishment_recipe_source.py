@@ -209,3 +209,47 @@ class GenericRecipeSourceTests(unittest.TestCase):
             self.assertEqual(a["quality_status"],"QUALITY_EFFECT_OR_CONDITION_COMPARISON_PENDING")
             qualities("100")
             self.assertIsNone(engine.material_options(result,paths)[0]["preferred_physical_item_id"])
+
+    def test_installed_exact_craft_intersection_and_token_scope(self):
+        effect={"name_enUS":"New: Example's Lining","bonus_id":51,"item_effect_id":61}
+        physical={"item_id":11,"slot_ids":[31],
+                  "reagent_source_row":{"Flags":"0","ItemContextOffset":"0"},
+                  "tree_node_context":{"ChildItemBonusListID":"51","Flags":"0"}}
+        slot={"ID":"31","Name_lang":"Add Embellishment","PlayerConditionID":"0",
+              "Flags":"2","ReagentType":"0","ReagentSource":"1"}
+        def link(i,cond="0"):
+            return {"output":{"item_id":i,"item_class":4,"item_subclass":1,
+                              "inventory_type":1,"expansion_id":18,"recipe_spell_id":41+i},
+                    "slot_source":{**slot,"PlayerConditionID":cond},
+                    "recipe_source_row":{"SpellID":str(41+i),"ReagentCount":"1",
+                                         "ModifiedCraftingReagentSlotID":"31"}}
+        family={"preferred_physical_item_id":11,"simc_rows":[effect],
+                "quality_status":"UNRANKED_SINGLE_PHYSICAL_SOURCE",
+                "bonus_types":[23],"bonus_effect_ids":[61],
+                "physical_family":[{"physical":physical}],
+                "recipe_links":[link(21),link(22),link(23,"9"),link(24)]}
+        token="new_examples_lining"
+        source={"schema":engine.SCHEMA,"status":"RECIPE_OUTPUT_SOURCE_PROJECTED",
+                "game_build":"18.0.0.99999","simc_revision":"a"*40,"expansion_id":18,
+                "simc_token_counts":{token:1},"material_options":[family]}
+        def gear(i,role="selectable_stat_craft",sub=1):
+            return {"item_id":i,"class_id":4,"subclass_id":sub,"inventory_type":1,
+                    "category":role}
+        catalog={"game_build":source["game_build"],"simc_revision":source["simc_revision"],
+                 "manifest_sha256":"b"*64,"catalog":{"gear":{"slot_groups":{"head":[
+                     gear(21),gear(22,"plain_representative_candidate"),
+                     gear(23),gear(24,sub=2)]}}}}
+        def project():
+            return engine.project_installed_options(source,catalog,
+                source_receipt_sha256="c"*64,source_candidate_sha256="d"*64)
+        installed=project()
+        self.assertEqual(installed["options"][token]["item_ids"],[21])
+        self.assertEqual(installed["options"][token]["material_item_id"],11)
+        self.assertTrue(engine.verify_installed_options(installed,
+            game_build=source["game_build"],simc_revision=source["simc_revision"],
+            catalog_sha=catalog["manifest_sha256"]))
+        source["simc_token_counts"][token]=2
+        self.assertEqual(project()["options"],{})
+        source["simc_token_counts"][token]=1
+        source["material_options"]=[family,family]
+        self.assertEqual(project()["options"],{})

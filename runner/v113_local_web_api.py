@@ -4188,6 +4188,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 base=season_gear.public_installed_v213_candidates(
                     source,installed_manifest_sha256=installed_manifest_sha256,
                     official_names=names)
+                if "installed_embellishments" in installed:
+                    base["embellishments"]=installed["installed_embellishments"]["options"]
                 # Gear source selection is also a specific G budget track.
                 # This is the already verified v212 receipt, not a new read.
                 base["reference_G_track"]=installed.get(

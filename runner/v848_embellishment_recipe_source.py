@@ -247,6 +247,17 @@ def recipe_outputs(matches,paths,*,game_build,simc_revision,expansion_id):
             "matches":projected,"native_calls":0,"ui_promotion":False}
 
 
+def simc_token(name):
+    """Mirror the ASCII portion of pinned SimC util::tokenize for inputs.
+    The item serializer accepts only safe alphanumeric/underscore tokens;
+    unsupported characters and ambiguous names remain unregistered.
+    """
+    return "".join(c.lower() if c.isascii() and c.isalpha() else
+                   "_" if c==" " else c
+                   for c in name.lstrip("_+")
+                   if c.isascii() and (c.isalnum() or c in " _+.%"))
+
+
 def material_options(result,paths):
     """Preserve physical-family and exact recipe evidence before publication.
 
@@ -350,6 +361,116 @@ def material_options(result,paths):
                 "static_CHMV_owner":"EXISTING_SELECTED_PHYSICAL_VARIANT_NOT_MEASURED_HERE",
                 "ui_selectable":False})
     return options
+
+
+def project_installed_options(source,catalog,*,source_receipt_sha256,source_candidate_sha256):
+    """Exact recipe-output intersection with the existing same-season v213.
+    No recipe lists go to the UI, no static rating assumed, no effect gate.
+    Conditional/unknown source shapes remain optional pending.
+    """
+    need(source.get("schema")==SCHEMA and
+         source.get("status")=="RECIPE_OUTPUT_SOURCE_PROJECTED" and
+         source.get("game_build")==catalog["game_build"] and
+         source.get("simc_revision")==catalog["simc_revision"],
+         "EMBELLISHMENT_INSTALL_SOURCE_IDENTITY_DRIFT")
+    gear={row["item_id"]:row for group in catalog["catalog"]["gear"]["slot_groups"].values()
+          for row in group if row.get("category")=="selectable_stat_craft"}
+    counts=source.get("simc_token_counts",{})
+    options={}; ambiguous=set(); pending={}
+    for family in source.get("material_options",[]):
+        preferred=family.get("preferred_physical_item_id")
+        simc=family.get("simc_rows",[])
+        if len(simc)!=1 or not preferred:
+            continue
+        effect=simc[0];token=simc_token(effect["name_enUS"])
+        if not re.fullmatch(r"[a-z0-9_]{1,140}",token) or counts.get(token)!=1:
+            pending[token]="SIMC_TOKEN_NOT_UNIQUE_OR_SERIALIZABLE"
+            continue
+        if token in options or token in ambiguous:
+            options.pop(token,None);ambiguous.add(token)
+            pending[token]="DISTINCT_MATERIAL_FAMILY_TOKEN_COLLISION"
+            continue
+        if (family.get("quality_status") not in
+                ("HIGHEST_SOURCE_QUALITY_SAME_EFFECT_SCOPE","UNRANKED_SINGLE_PHYSICAL_SOURCE")
+            or family.get("bonus_types")!=[23]
+            or family.get("bonus_effect_ids")!=[effect["item_effect_id"]]):
+            pending[token]="MATERIAL_QUALITY_OR_EFFECT_SCOPE_PENDING"
+            continue
+        physical=[m["physical"] for m in family["physical_family"]
+                  if m["physical"]["item_id"]==preferred]
+        if len(physical)!=1:continue
+        material=physical[0]
+        reagent=material.get("reagent_source_row",{})
+        node=material.get("tree_node_context",{})
+        # Only direct unconditional tree nodes; no implicit context branches.
+        if (not reagent or not node or
+            int(reagent.get("Flags",-1))!=0 or int(reagent.get("ItemContextOffset",-1))!=0 or
+            any(int(v)!=0 for k,v in node.items()
+                if k not in ("ParentItemBonusTreeID","ChildItemBonusListID")) or
+            int(node.get("ChildItemBonusListID",0))!=effect["bonus_id"]):
+            pending[token]="CONDITIONAL_REAGENT_OR_BONUS_TREE_PENDING"
+            continue
+        ids=set()
+        for link in family["recipe_links"]:
+            out=link["output"];slot=link["slot_source"];recipe=link["recipe_source_row"]
+            row=gear.get(out["item_id"])
+            if row is None:continue
+            if (out.get("item_class")!=row.get("class_id") or
+                out.get("item_subclass")!=row.get("subclass_id") or
+                out.get("inventory_type")!=row.get("inventory_type") or
+                out.get("expansion_id")!=source["expansion_id"]):
+                continue
+            # Use explicit Add Embellishment relation, not armor-slot guesses.
+            # Retain only the observed normal optional-slot shape. Unknown
+            # flags, explicit player conditions and unknown nonzero fields
+            # are not silently accepted. ReagentSource is acquisition metadata.
+            if (slot.get("Name_lang")!="Add Embellishment" or
+                int(slot.get("PlayerConditionID",-1))!=0 or
+                int(slot.get("Flags",-1)) not in (0,2) or
+                int(slot.get("ReagentType",-1))!=0 or
+                int(slot.get("ReagentSource",0)) not in (0,1) or
+                any(int(v)!=0 for k,v in slot.items() if k.startswith("Field_")) or
+                int(slot["ID"]) not in material["slot_ids"] or
+                int(recipe.get("ModifiedCraftingReagentSlotID",0))!=int(slot["ID"]) or
+                int(recipe.get("SpellID",0))!=out["recipe_spell_id"] or
+                int(recipe.get("ReagentCount",0))!=1 or
+                any(int(v)!=0 for k,v in recipe.items() if k.startswith("Field_"))):
+                continue
+            ids.add(out["item_id"])
+        if not ids:
+            pending[token]="NO_EXACT_UNCONDITIONAL_SELECTABLE_CRAFT"
+            continue
+        options[token]={"name":effect["name_enUS"],
+            "effect":reagent.get("Description_lang",""),
+            "material_item_id":preferred,"bonus_id":effect["bonus_id"],
+            "item_effect_id":effect["item_effect_id"],"item_ids":sorted(ids)}
+    return {"game_build":catalog["game_build"],"simc_revision":catalog["simc_revision"],
+            "source_catalog_manifest_sha256":catalog["manifest_sha256"],
+            "source_receipt_sha256":source_receipt_sha256,
+            "source_candidate_sha256":source_candidate_sha256,
+            "options":options,"pending":pending}
+
+
+def verify_installed_options(registry,*,game_build,simc_revision,catalog_sha):
+    need(type(registry) is dict and registry.get("game_build")==game_build and
+         registry.get("simc_revision")==simc_revision and
+         registry.get("source_catalog_manifest_sha256")==catalog_sha and
+         all(type(registry.get(k)) is str and re.fullmatch(r"[a-f0-9]{64}",registry[k])
+             for k in ("source_receipt_sha256","source_candidate_sha256")) and
+         type(registry.get("options")) is dict and type(registry.get("pending")) is dict,
+         "EMBELLISHMENT_INSTALLED_SCOPE_INVALID")
+    for token,row in registry["options"].items():
+        need(type(row) is dict and re.fullmatch(r"[a-z0-9_]{1,140}",token) and
+             type(row.get("name")) is str and simc_token(row["name"])==token and
+             type(row.get("effect")) is str and
+             all(type(row.get(k)) is int and row[k]>0 for k in
+                 ("material_item_id","bonus_id","item_effect_id")) and
+             type(row.get("item_ids")) is list and bool(row["item_ids"]) and
+             all(type(i) is int and i>0 for i in row["item_ids"]) and
+             row["item_ids"]==sorted(set(row["item_ids"])) and token not in registry["pending"],
+             "EMBELLISHMENT_INSTALLED_OPTION_INVALID:"+token)
+    return True
+
 
 def pending(reason,calls=0):
     return {"schema":SCHEMA,"status":"EMBELLISHMENT_SOURCE_PENDING",
@@ -472,6 +593,11 @@ def collect(*,stage_root,build,expansion_id,wago_stage,spell_stage,simc_stage,
             result=recipe_outputs(project(entries,paths,expansion_id),paths,
                 game_build=build,simc_revision=revision,expansion_id=expansion_id)
             result["material_options"]=material_options(result,paths)
+            # Match the exact full generated table, including old expansions.
+            # A colliding normalized token must not select another effect.
+            counts=defaultdict(int)
+            for row in entries:counts[simc_token(row["name_enUS"])]+=1
+            result["simc_token_counts"]=dict(counts)
             result["source_identity"]=identity
             stages._atomic_write(root/relative,
                 (stages.canonical(result)+"\n").encode("utf8"))

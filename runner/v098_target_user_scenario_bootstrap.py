@@ -1745,6 +1745,12 @@ def build(user,folder,binary,revision,static_cache_path=None,
         if (season_selected_static_cache_path is not None or
             (static_special_probe_only and season_source_bundle is not None))
         else None)
+    installed_embellishments=None
+    if user["embellishments"] and fresh_installed_environment_path is not None:
+        emb_install,_=installed_manifest.read_json(fresh_installed_environment_path)
+        installed_manifest.verify_fresh_installed_environment(emb_install)
+        if "installed_embellishments" in emb_install:
+            installed_embellishments=emb_install["installed_embellishments"]["options"]
     if pure_stage or source_free:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need,
@@ -1755,7 +1761,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
             season_source_tier=(season_source_bundle["tier"]
                                 if season_source_bundle is not None else None),
             **({"selected_refresh_rows":selected_refresh_rows}
-               if selected_refresh_rows else {}))
+               if selected_refresh_rows else {}),
+            **({"installed_embellishments":installed_embellishments}
+               if installed_embellishments is not None else {}))
     else:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need)
