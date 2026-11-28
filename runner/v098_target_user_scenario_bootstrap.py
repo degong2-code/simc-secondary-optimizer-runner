@@ -1749,10 +1749,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
     if user["embellishments"] and fresh_installed_environment_path is not None:
         emb_install,_=installed_manifest.read_json(fresh_installed_environment_path)
         installed_manifest.verify_fresh_installed_environment(emb_install)
-        if "installed_embellishments" in emb_install:
-            installed_embellishments=emb_install["installed_embellishments"]["options"]
-        elif emb_install.get("installed_embellishments_pending") is True:
-            installed_embellishments={}
+        import v848_embellishment_recipe_source as embellishment_source
+        installed_embellishments=embellishment_source.effective_installed_options(
+            fresh_installed_environment_path,emb_install)
     if pure_stage or source_free:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need,

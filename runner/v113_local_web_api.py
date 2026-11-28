@@ -1666,10 +1666,21 @@ class LocalJobs:
                      "fresh_source"/("v113_profile_"+digest[:20]+".json")).exists())
                 if snapshot is not None or (
                         not has_profile and not auto_initial_core_build):
+                    # Normal explicit Build reuse may extend only optional
+                    # source choices. The original installed SHA/profile/GJFO
+                    # stay unchanged, and normal GET/restore remains read-only.
+                    optional_emb={}
+                    if type(digest) is str:
+                        with self.season_source_lock:
+                            optional_emb=environment_build.refresh_existing_embellishments(
+                                stage_root=self.root/"_fresh_season_sources"/("wago_"+game_build),
+                                installed_manifest_sha256=digest)
+                    total_network=version_network_calls+optional_emb.get("network_calls",0)
                     return self._with_verified_ko_localization(
                         game_build,target_ilevel,{**prior,
                     "verified_v113_profile_source_restored":snapshot is not None,
-                    "network_calls":version_network_calls,
+                    **({"optional_embellishment_refresh":optional_emb} if optional_emb else {}),
+                    "network_calls":total_network,
                     "web_environment_scope":{
                     "schema":"v113_web_season_environment_build_scope_v1",
                     "game_build":game_build,
@@ -1688,7 +1699,7 @@ class LocalJobs:
                     "target_ilevel":target_ilevel,
                     "reference_G_track":reference_G_track,
                     "environment_ready":True,"environment_installed":True,
-                    "native_calls":0,"network_calls":version_network_calls,
+                    "native_calls":0,"network_calls":total_network,
                     "dps_optimization_started":False,
                     "reused_verified_installed_season":True,
                     "auto_initial_core_build_requested":
@@ -4188,11 +4199,12 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 base=season_gear.public_installed_v213_candidates(
                     source,installed_manifest_sha256=installed_manifest_sha256,
                     official_names=names)
-                if "installed_embellishments" in installed:
-                    base["embellishments"]=installed["installed_embellishments"]["options"]
-                elif installed.get("installed_embellishments_pending") is True:
-                    base["embellishments"]={}
-                    base["embellishments_source_pending"]=True
+                import v848_embellishment_recipe_source as embellishment_source
+                emb=embellishment_source.effective_installed_options(receipt,installed)
+                if emb is not None:
+                    base["embellishments"]=emb
+                    if not emb and installed.get("installed_embellishments_pending") is True:
+                        base["embellishments_source_pending"]=True
                 # Gear source selection is also a specific G budget track.
                 # This is the already verified v212 receipt, not a new read.
                 base["reference_G_track"]=installed.get(

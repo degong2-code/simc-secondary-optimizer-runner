@@ -476,6 +476,134 @@ def verify_installed_options(registry,*,game_build,simc_revision,catalog_sha):
     return True
 
 
+# Same v213 source scope applies across installed targets and G/J/F/O variants.
+# The optional registry is a sealed derivative, not a second v212 install.
+BACKFILL_VERSION="embellishment-installed-source-attachment-v1"
+
+def _backfill_identity(installed):
+    return {k:installed[k] for k in ("game_build","simc_revision",
+        "source_catalog_manifest_sha256","source_catalog_artifact_sha256")}
+
+def _backfill_location(installed):
+    identity=_backfill_identity(installed)
+    sid="embellishment-install-"+stages.digest(
+        stages.canonical(identity).encode("utf8"))[:24]
+    return identity,sid,{"registry":"source/"+sid+".json"}
+
+def read_installed_attachment(root,installed):
+    """Read a small exact-source sealed registry; never scan raw DB2 on GET."""
+    identity,sid,outputs=_backfill_location(installed)
+    paths,receipt_path=stages._safe_paths(root,sid,outputs)
+    path=paths["registry"][1]
+    if not path.exists() and not receipt_path.exists():return None
+    need(path.is_file() and 0<path.stat().st_size<=1_000_000,
+         "EMBELLISHMENT_ATTACHMENT_MISSING_OR_SIZE")
+    raw=path.read_bytes()
+    registry=json.loads(raw)
+    verify_installed_options(registry,game_build=identity["game_build"],
+        simc_revision=identity["simc_revision"],
+        catalog_sha=identity["source_catalog_manifest_sha256"])
+    inputs={**identity,"source_receipt_sha256":registry["source_receipt_sha256"],
+            "source_candidate_sha256":registry["source_candidate_sha256"]}
+    receipt=stages._read_receipt(receipt_path)
+    need(receipt.get("status")=="COMPLETE" and
+         receipt.get("outputs",{}).get("registry")=={
+             "path":outputs["registry"],"size":len(raw),"sha256":stages.digest(raw)},
+         "EMBELLISHMENT_ATTACHMENT_OUTPUT_DRIFT")
+    stages._check_identity(receipt,sid,BACKFILL_VERSION,
+        stages._input_sha(sid,BACKFILL_VERSION,inputs),paths)
+    return registry
+
+def effective_installed_options(installed_path,installed):
+    """One consumer for menu and selected-profile validation.
+    None is the unchanged pre-v851 compatibility path only.
+    A corrupt attachment or explicit source pending must not restore old tokens.
+    """
+    if "installed_embellishments" in installed:
+        return installed["installed_embellishments"]["options"]
+    try:
+        root=Path(installed_path).parent.parent
+        registry=read_installed_attachment(root,installed)
+        if registry is not None:return registry["options"]
+    except (OSError,ValueError,TypeError,KeyError,AttributeError,
+            stages.StageExecutionBlocked):
+        return {}
+    return {} if installed.get("installed_embellishments_pending") is True else None
+
+def attach_installed_options(root,installed,catalog,source,*,source_receipt_sha256,
+                             source_candidate_sha256):
+    identity,sid,outputs=_backfill_location(installed)
+    need(catalog["manifest_sha256"]==identity["source_catalog_manifest_sha256"],
+         "EMBELLISHMENT_ATTACHMENT_CATALOG_DRIFT")
+    existing=read_installed_attachment(root,installed)
+    if existing is not None:return existing
+    registry=project_installed_options(source,catalog,
+        source_receipt_sha256=source_receipt_sha256,
+        source_candidate_sha256=source_candidate_sha256)
+    verify_installed_options(registry,game_build=identity["game_build"],
+        simc_revision=identity["simc_revision"],
+        catalog_sha=identity["source_catalog_manifest_sha256"])
+    inputs={**identity,"source_receipt_sha256":source_receipt_sha256,
+            "source_candidate_sha256":source_candidate_sha256}
+    encoded=(stages.canonical(registry)+"\n").encode("utf8")
+    need(len(encoded)<=1_000_000,"EMBELLISHMENT_ATTACHMENT_SIZE")
+    stages.execute_stage(root=root,stage_id=sid,stage_version=BACKFILL_VERSION,
+        inputs=inputs,outputs=outputs,
+        execute=lambda:stages._atomic_write(Path(root)/outputs["registry"],encoded),
+        validate=lambda files:files["registry"].read_bytes()==encoded)
+    return read_installed_attachment(root,installed)
+
+def read_sealed_projection(root,catalog):
+    """Reuse an actual v848/v217 source projection; not a raw source rescan.
+    Different source generations may coexist only if their material/token
+    relations agree. Never pick an ambiguous newest generation.
+    """
+    root=Path(root)
+    receipts=root/".stage_receipts"
+    if not receipts.is_dir() or receipts.is_symlink():return None
+    candidates=sorted(receipts.glob("embellishment-source-*.json"))
+    if len(candidates)>64:return None
+    matched=None;signature=None
+    for path in candidates:
+        try:
+            sid=path.stem
+            if not re.fullmatch(r"embellishment-source-[a-f0-9]{24}",sid):continue
+            outputs={"candidate":"source/"+sid+".json"}
+            files,receipt_path=stages._safe_paths(root,sid,outputs)
+            receipt=stages._read_receipt(receipt_path)
+            p=files["candidate"][1]
+            if not p.is_file() or not 0<p.stat().st_size<=25_000_000:continue
+            raw=p.read_bytes();sha=stages.digest(raw);source=json.loads(raw)
+            if (source.get("schema")!=SCHEMA or
+                source.get("status")!="RECIPE_OUTPUT_SOURCE_PROJECTED" or
+                source.get("game_build")!=catalog["game_build"] or
+                source.get("simc_revision")!=catalog["simc_revision"] or
+                source.get("expansion_id")!=catalog["expansion_id"] or
+                type(source.get("simc_token_counts")) is not dict or
+                source.get("native_calls")!=0 or source.get("ui_promotion") is not False):
+                continue
+            identity=source["source_identity"]
+            if sid!="embellishment-source-"+stages.digest(
+                    stages.canonical(identity).encode("utf8"))[:24]:continue
+            if any(identity.get(k)!=source[k] for k in
+                   ("game_build","simc_revision","expansion_id")):continue
+            if (receipt.get("status")!="COMPLETE" or
+                receipt.get("outputs",{}).get("candidate")!={
+                    "path":outputs["candidate"],"size":len(raw),"sha256":sha}):
+                continue
+            stages._check_identity(receipt,sid,"embellishment-recipe-source-v1",
+                stages._input_sha(sid,"embellishment-recipe-source-v1",identity),files)
+            current=stages.digest(stages.canonical({
+                "material_options":source["material_options"],
+                "simc_token_counts":source["simc_token_counts"]}).encode("utf8"))
+            if signature is not None and current!=signature:
+                raise ValueError("EMBELLISHMENT_MULTIPLE_SEALED_PROJECTIONS")
+            signature=current;matched=(source,receipt["receipt_sha256"],sha)
+        except (OSError,TypeError,KeyError,AttributeError,stages.StageExecutionBlocked):
+            continue
+    return matched
+
+
 def pending(reason,calls=0):
     return {"schema":SCHEMA,"status":"EMBELLISHMENT_SOURCE_PENDING",
             "reason":reason,"candidate_path":None,

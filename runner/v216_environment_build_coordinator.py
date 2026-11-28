@@ -4233,6 +4233,107 @@ def _resolve_selectable_generation(found):
     return preferred[0] if len(preferred)==1 else None
 
 
+def refresh_existing_embellishments(*,stage_root,installed_manifest_sha256,transport=None):
+    """An optional extension of an already verified installed source scope.
+    Reuse compact attachment first; then sealed v848; only then consume the
+    necessary original v161/v281/v229 outputs and missing small source tables.
+    No G/J/F/O, profile, SimC process, new v212 manifest or session writes.
+    """
+    root=pathlib.Path(stage_root)
+    calls=0
+    def result(status,registry=None,reason=None):
+        return {"status":status,"reason":reason,
+            "option_count":len(registry["options"]) if registry is not None else None,
+            "network_calls":calls,"native_calls":0,"budget_rebuilt":False}
+    try:
+        need(type(installed_manifest_sha256) is str and
+             re.fullmatch(r"[a-f0-9]{64}",installed_manifest_sha256),
+             "EMBELLISHMENT_EXISTING_INSTALL_SHA_REQUIRED")
+        installed_path=root/"fresh_source"/(
+            "v212_installed_"+installed_manifest_sha256[:20]+".json")
+        if not installed_path.is_file():return result("EMBELLISHMENT_SOURCE_PENDING")
+        installed,_=environment_manifest.read_json(installed_path)
+        environment_manifest.verify_fresh_installed_environment(installed)
+        need(installed["manifest_sha256"]==installed_manifest_sha256 and
+             root.name=="wago_"+installed["game_build"],
+             "EMBELLISHMENT_EXISTING_INSTALL_SCOPE_DRIFT")
+        if "installed_embellishments" in installed:
+            return result("EMBELLISHMENT_INSTALLED_OPTIONS_REUSED",
+                          installed["installed_embellishments"])
+        old=embellishment_source.read_installed_attachment(root,installed)
+        if old is not None:return result("EMBELLISHMENT_ATTACHMENT_REUSED",old)
+        catalog_path=root/"fresh_source"/"v213_candidate_catalog.json"
+        catalog,raw_sha=environment_manifest.read_json(catalog_path)
+        source_to_catalog.verify_catalog(catalog)
+        build=installed["game_build"];rev=installed["simc_revision"]
+        need(raw_sha==installed["source_catalog_artifact_sha256"] and
+             catalog["manifest_sha256"]==installed["source_catalog_manifest_sha256"] and
+             catalog["game_build"]==build and catalog["simc_revision"]==rev,
+             "EMBELLISHMENT_EXISTING_CATALOG_DRIFT")
+        source=embellishment_source.read_sealed_projection(root,catalog)
+        if source is None:
+            def verified_subset(sid,expected,version):
+                files,path=stage_engine._safe_paths(root,sid,expected)
+                receipt=stage_engine._read_receipt(path)
+                need(receipt.get("status")=="COMPLETE" and receipt.get("stage_id")==sid
+                     and receipt.get("stage_version")==version and
+                     all(receipt.get("output_paths",{}).get(k)==v for k,v in expected.items()),
+                     "EMBELLISHMENT_ORIGINAL_STAGE_SCOPE_DRIFT")
+                actual,_=stage_engine._snapshot(files)
+                need(all(receipt["outputs"].get(k)==v for k,v in actual.items()),
+                     "EMBELLISHMENT_ORIGINAL_STAGE_OUTPUT_DRIFT")
+                return {**receipt,"status":"REUSED_VERIFIED"},actual
+            wago,records=verified_subset("fresh-wago-db2",{
+                "receipt":"wago/receipt.json","Item":"wago/Item.csv",
+                "ItemSparse":"wago/ItemSparse.csv","CraftingData":"wago/CraftingData.csv"},
+                "v161-normal-collector-1")
+            raw=json.loads((root/"wago/receipt.json").read_text("utf8"))
+            need(raw.get("schema")=="v161_wago_zero_seed_csv_snapshot_v1" and
+                 raw.get("build")==build and raw.get("locale")=="enUS" and
+                 all(raw.get("tables",{}).get(k,{}).get("sha256")==records[k]["sha256"]
+                     and raw["tables"][k].get("bytes")==records[k]["size"]
+                     for k in ("Item","ItemSparse","CraftingData")),
+                 "EMBELLISHMENT_ORIGINAL_WAGO_SCOPE_DRIFT")
+            # Prefer the corrected existing v281 source. Both versions own
+            # the same-build raw SpellEffect; never fetch it again here.
+            spell=None
+            for sid,version,paths in (
+                ("fresh-consumable-simc-spell-effect-source-other",
+                 "v281-real-other-consumables-v2",
+                 {"spell_effect":"source/v284_SpellEffect.csv",
+                  "candidate":"source/v284_simc_consumable_relations.json"}),
+                ("fresh-consumable-simc-spell-effect-source",
+                 "v281-same-build-db2-simc-source-join-v1",
+                 consumable_simc_relation.OUT)):
+                if not (root/".stage_receipts"/(sid+".json")).exists():continue
+                spell,_=verified_subset(sid,paths,version)
+                break
+            need(spell is not None,"EMBELLISHMENT_ORIGINAL_SPELL_SOURCE_PENDING")
+            simc,_=verified_subset("fresh-v229-pinned-simc-generated",
+                {simc_source.RECEIPT:"source/v229_pinned_generated/"+simc_source.RECEIPT},
+                "source-three-small-files-no-native-v1")
+            simc_doc=json.loads((root/simc["output_paths"][simc_source.RECEIPT]).read_text("utf8"))
+            need(simc_doc.get("simc_revision")==rev,
+                 "EMBELLISHMENT_ORIGINAL_SIMC_REVISION_DRIFT")
+            observed=_fresh_embellishment_source(stage_root=root,build=build,
+                expansion_id=catalog["expansion_id"],wago_stage=wago,
+                spell_stage=spell,simc_stage=simc,transport=transport)
+            calls=observed["network_calls_by_stage"]
+            if observed["status"]!="RECIPE_OUTPUT_SOURCE_PROJECTED":
+                return result("EMBELLISHMENT_SOURCE_PENDING",reason=observed.get("reason"))
+            source=embellishment_source.read_sealed_projection(root,catalog)
+        need(source is not None,"EMBELLISHMENT_SEALED_PROJECTION_PENDING")
+        doc,stamp,sha=source
+        registry=embellishment_source.attach_installed_options(root,installed,catalog,doc,
+            source_receipt_sha256=stamp,source_candidate_sha256=sha)
+        return result("EMBELLISHMENT_ATTACHMENT_READY",registry)
+    except (OSError,ValueError,TypeError,KeyError,AttributeError,
+            stage_engine.StageExecutionBlocked,environment_manifest.EnvironmentBlocked) as exc:
+        reason=str(exc).split(":",1)[0]
+        return result("EMBELLISHMENT_SOURCE_PENDING",reason=reason if
+            re.fullmatch(r"[A-Z][A-Z0-9_]{1,119}",reason) else "EMBELLISHMENT_SOURCE_UNAVAILABLE")
+
+
 def read_sealed_selectable_gear_generation(*,stage_root,build,generation_sha256=None):
     """Read an existing derived source plus its A7 proof; no HTTP or writes.
 
