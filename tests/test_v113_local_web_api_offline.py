@@ -738,10 +738,16 @@ class LocalWebAPIOffline(unittest.TestCase):
                               None, {**missing_overlay,"network_calls":0},
                               equivalent,equivalent]) as sealed,
               mock.patch.object(web.season_gear,"public_options",
-                 side_effect=lambda source,**kw:{"choices":{
-                    role:[r for r in source["items"] if r["category"]==role]
-                    for role in ("trinket","special_effect_gear_candidate",
-                                 "selectable_stat_craft")}})):
+                 side_effect=lambda source,**kw:{
+                    "choices":{
+                        role:[{**r,**web.season_gear.equipment_primary_armor_compatibility(r)}
+                              for r in source["items"] if r["category"]==role]
+                        for role in ("trinket","special_effect_gear_candidate",
+                                     "selectable_stat_craft")},
+                    "weapon_forms":{k:v["weapon_form"] for k,v in
+                        __import__("v143_specialization_contracts").CONTRACTS.items()},
+                    "selected_slot_inventory":
+                        __import__("v143_specialization_contracts").public_selected_slot_inventory()})):
             # The actual browser uses api(..., {method:"POST",payload:{}}).
             # Keep the production JSON-only middleware unchanged.
             self.assertEqual(self.client.post(url,headers=self.headers).status_code,415)
@@ -794,6 +800,9 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertFalse(report["bonus_effect_overlay_pending"])
         self.assertEqual(report["source_generation_sha256"],"e"*64)
         self.assertEqual(report["new_special_items"][1]["required_options"],{"bonus_id":"12345"})
+        self.assertIsNone(report["new_trinkets"][0]["source_primary_codes"])
+        self.assertIn("warlock/destruction",report["new_trinkets"][0]["compatible_dps_specs"])
+        self.assertEqual(report["new_special_items"][0]["source_primary_codes"],None)
         self.assertEqual(report["bonus_effect_source_status"],
                          "POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED")
         self.assertTrue(report["special_generation_verified"])
