@@ -594,6 +594,35 @@ const apply=Function("state","$","field","valueInt",
         self.assertIn('장신구 1 선택 · 다시 클릭하여 해제',js)
         self.assertIn('장신구 2 선택 · 다시 클릭하여 해제',js)
 
+    def test_v841_historic_trinkets_replaced_in_distinct_slots(self):
+        """Actual slot resolver: two stale IDs cannot consume two valid clicks."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function nextUnapprovedTrinketSlot(");
+const b=raw.indexOf("function drawInlineEquipment()",a);
+assert(a>=0&&b>a);
+const values={trinket1:"270173",trinket2:"270175"};
+const valid=new Set(["910001","910002","910003"]);
+const next=Function("seasonChoice","field",raw.slice(a,b)+
+ "\nreturn nextUnapprovedTrinketSlot;")((group,id)=>group==="trinket"&&valid.has(id),
+ id=>values[id]);
+assert.equal(next("trinket2"),"trinket1");
+values.trinket1="910001";assert.equal(next("trinket1"),"trinket2");
+values.trinket2="910002";assert.equal(next("trinket2"),"trinket2");
+values.trinket1="";assert.equal(next("trinket2"),"trinket1");
+assert(raw.includes('const target=owned||nextUnapprovedTrinketSlot(activeTrinketSlot);'));
+assert(raw.includes('activeTrinketSlot=owned||nextUnapprovedTrinketSlot(target);'));
+console.log("V841_HISTORIC_TRINKET_REPLACEMENT_PASS");
+"""
+        result=subprocess.run([node,"-e",script,str(ROOT/"runner/webui/app.js")],
+                              cwd=ROOT,capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V841_HISTORIC_TRINKET_REPLACEMENT_PASS",result.stdout)
+
     def test_v359_inline_equipment_and_stat_cap_location(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text

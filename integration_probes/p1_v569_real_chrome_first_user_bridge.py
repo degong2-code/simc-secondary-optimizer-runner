@@ -209,6 +209,9 @@ def main():
                 el=d.find_element(By.CSS_SELECTOR,
                   "#equipment-trinket-grid button[data-item-id='"+item+"']")
                 visible_click(d,el)
+            s=snap(d)
+            print("V841_SELECTED_TRINKETS "+json.dumps(s,ensure_ascii=True),flush=True)
+            need(s["trinkets"]==["910001","910002"],"V841_TWO_DISTINCT_CURRENT_TRINKETS")
             # Card interaction uses the actual product DOM and event handlers.
             special=d.find_element(By.CSS_SELECTOR,
                 "#equipment-special-grid button[data-item-id='910003']")
@@ -222,14 +225,17 @@ def main():
               oil.value="off";oil.dispatchEvent(new Event("change",{bubbles:true}));
             """)
             idle(d)
+            print("V841_BEFORE_PENDING "+json.dumps(snap(d),ensure_ascii=True),flush=True)
             d.execute_script("window.__v569.mode='pending'")
             click(d);s=snap(d)
+            print("V841_AFTER_PENDING "+json.dumps(s,ensure_ascii=True),flush=True)
             need(s["builds"]==4 and s["dps"]==0 and s["sha"] is None
                  and s["trinkets"]==["910001","910002"] and s["special"]==["910003"]
                  and s["specialLevel"]=="330" and s["specialHistoric"]=="true",
                  "V840_PENDING_PRESERVES_GEAR")
             d.execute_script("window.__v569.mode='ready'")
             click(d);s=snap(d)
+            print("V841_AFTER_RETRY "+json.dumps(s,ensure_ascii=True),flush=True)
             need(s["builds"]==5 and s["dps"]==0 and s["level"]==330 and s["sha"]=="d"*64
                  and s["trinkets"]==["910001","910002"] and s["special"]==["910003"]
                  and s["specialLevel"]=="330" and not s["specialHistoric"],
@@ -243,6 +249,7 @@ def main():
             need(s["trinkets"]==["910001","910002"] and not s["disabled"]
                  and s["dps"]==0,"SECOND_CLICK_NOT_AVAILABLE")
             click(d);s=snap(d)
+            print("V841_AFTER_DPS_REQUEST "+json.dumps(s,ensure_ascii=True),flush=True)
             need(s["dps"]==1 and s["builds"]==5 and s["gears"]==3,
                  "SAME_SHA_SECOND_CLICK_NOT_USED")
             receipt.update(status="PASS_REAL_CHROME_FIRST_CLICK_SYNTHETIC_HTTP",
@@ -250,6 +257,15 @@ def main():
               first_click_native_zero=True,wrong_sha_rejected=True,
               user_selected_two_trinkets=True,failed_build_retains_gear=True,
               retry_restores_gear=True,explicit_clear_removes_fields=True)
+        except Exception as exc:
+            receipt["status"]="FAIL"
+            receipt["failure_type"]=type(exc).__name__
+            if isinstance(exc,RuntimeError):
+                receipt["failure_code"]=str(exc)
+            if d:
+                try:receipt["last_snapshot"]=snap(d)
+                except Exception:pass
+            raise
         finally:
             if d:d.quit()
             p.terminate()

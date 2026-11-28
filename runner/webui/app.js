@@ -316,6 +316,11 @@ function inlineEquipmentCard(item,{type,selected,disabled,reason="",onSelect}){
   b.addEventListener("click",onSelect);
   return b;
 }
+// A preserved historical ID is visible intent, not a filled current slot.
+function nextUnapprovedTrinketSlot(fallback){
+  return ["trinket1","trinket2"].find(id=>
+    !seasonChoice("trinket",field(id)))||fallback;
+}
 function drawInlineEquipment(){
   const trinketGrid=$("equipment-trinket-grid");
   const specialGrid=$("equipment-special-grid");
@@ -344,12 +349,10 @@ function drawInlineEquipment(){
         // A second click on an already-selected item must clear the slot
         // that actually owns that item, regardless of the current focus.
         const owned=used1?"trinket1":used2?"trinket2":null;
-        const target=owned||(!field("trinket1")?"trinket1":
-          !field("trinket2")?"trinket2":activeTrinketSlot);
+        const target=owned||nextUnapprovedTrinketSlot(activeTrinketSlot);
         const node=$(target);
         node.value=owned?"":id;
-        activeTrinketSlot=owned||(!field("trinket1")?"trinket1":
-          !field("trinket2")?"trinket2":target);
+        activeTrinketSlot=owned||nextUnapprovedTrinketSlot(target);
         node.dispatchEvent(new Event("change",{bubbles:true}));
       }});
     if(used1)b.dataset.slot="1";
@@ -357,7 +360,8 @@ function drawInlineEquipment(){
     trinketGrid.appendChild(b);
   }
   $("equipment-trinket-status").textContent=state.seasonGear?
-    "장신구 "+((field("trinket1")?1:0)+(field("trinket2")?1:0))+"/2 선택"+
+    "장신구 "+(["trinket1","trinket2"].filter(id=>
+      seasonChoice("trinket",field(id))).length)+"/2 현재 시즌 선택"+
     " · 현재 전문화 후보 "+trinkets.length+"종"+
     (tQuery?" 중 검색 결과 "+tFiltered.length+"종":"") :
     "시즌 선택지 미확인";
