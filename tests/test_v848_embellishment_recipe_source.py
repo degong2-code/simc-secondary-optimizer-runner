@@ -175,10 +175,10 @@ class GenericRecipeSourceTests(unittest.TestCase):
                 with paths[name].open("w",encoding="utf8",newline="") as f:
                     w=csv.writer(f);w.writerow(columns);w.writerows(values)
             table("CraftingQuality",engine.RAW["CraftingQuality"],
-                  [(999,1,42),(3,2,42)])
+                  [(999,1,42),(3,2,43)])
             def qualities(high):
                 table("CraftingReagentQuality",engine.RAW["CraftingReagentQuality"],
-                      [(1,101,9,0,"80",0),(2,102,9,1,high,0)])
+                      [(1,101,9,0,"80",15),(2,102,9,1,high,5)])
             def p(i,rank,mid,cat,slot):
                 return {"item_id":i,"crafting_quality_id":rank,
                     "modified_reagent_id":mid,"category_id":cat,
@@ -192,7 +192,7 @@ class GenericRecipeSourceTests(unittest.TestCase):
                 "physical_rows":[p(101,999,10,9,1),p(102,3,10,9,1),
                                  p(103,0,11,8,2)],
                 "bonus_types":[23],"recipe_slot_sources":[slot(1,11,201),slot(2,22,202)]}]}
-            qualities("100")
+            qualities("80")
             options=engine.material_options(result,paths)
             self.assertEqual(len(options),2)
             a,b=options
@@ -201,8 +201,11 @@ class GenericRecipeSourceTests(unittest.TestCase):
             self.assertEqual(b["recipe_output_item_ids"],[202])
             self.assertEqual(b["preferred_physical_item_id"],103)
             self.assertFalse(a["ui_selectable"])
-            self.assertFalse(a["quality_dominance_verified"])
+            self.assertTrue(a["quality_dominance_verified"])
+            self.assertEqual(a["quality_status"],"HIGHEST_SOURCE_QUALITY_SAME_EFFECT_SCOPE")
             qualities("70")
             a=engine.material_options(result,paths)[0]
             self.assertIsNone(a["preferred_physical_item_id"])
             self.assertEqual(a["quality_status"],"QUALITY_EFFECT_OR_CONDITION_COMPARISON_PENDING")
+            qualities("100")
+            self.assertIsNone(engine.material_options(result,paths)[0]["preferred_physical_item_id"])

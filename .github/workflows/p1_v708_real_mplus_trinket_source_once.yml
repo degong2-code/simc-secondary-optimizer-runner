@@ -297,7 +297,7 @@ jobs:
           python-version: '3.12'
       - run: python -m unittest -v tests.test_v848_embellishment_recipe_source
   embellishment-material-scope:
-    if: ${{ contains(github.event.head_commit.message, '[v850-material-scope-once]') }}
+    if: ${{ contains(github.event.head_commit.message, '[v850-material-scope-once]') || contains(github.event.head_commit.message, '[v850-material-scope-replay]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     env:
@@ -333,7 +333,19 @@ jobs:
           name: p1-v848-embellishment-recipe-output
           path: out/v850/spell
           github-token: ${{ github.token }}
-      - run: python -u integration_probes/p1_v850_embellishment_material_scope_once.py --root out/v850/source --prior out/v850/prior --spell-root out/v850/spell/source --out out/v850
+      - uses: actions/download-artifact@v4
+        if: ${{ contains(github.event.head_commit.message, '[v850-material-scope-replay]') }}
+        with:
+          run-id: 46119716679
+          name: p1-v850-material-scope
+          path: out/v850
+          github-token: ${{ github.token }}
+      - name: Reuse exact quality CSVs without new requests
+        if: ${{ contains(github.event.head_commit.message, '[v850-material-scope-replay]') }}
+        run: python -u integration_probes/p1_v850_embellishment_material_scope_once.py --root out/v850/source --prior out/v850/prior --spell-root out/v850/spell/source --out out/v850 --reuse-quality-only
+      - name: Observe only two missing quality sources
+        if: ${{ !contains(github.event.head_commit.message, '[v850-material-scope-replay]') }}
+        run: python -u integration_probes/p1_v850_embellishment_material_scope_once.py --root out/v850/source --prior out/v850/prior --spell-root out/v850/spell/source --out out/v850
       - uses: actions/upload-artifact@v6
         if: always()
         with:

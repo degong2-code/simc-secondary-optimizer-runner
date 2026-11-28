@@ -77,12 +77,15 @@ def project(entries,paths,expansion):
     for e in entries:by_pair[(e["bonus_id"],e["item_effect_id"])].append(e)
     wanted_bonus_ids={b for b,e in by_pair}
     bonus_types=defaultdict(set);effects=defaultdict(set)
+    all_effect_ids=defaultdict(set)
     for r in rows(paths["ItemBonus"],("ParentItemBonusListID","Type","Value_0")):
         b=number(r,"ParentItemBonusListID");kind=number(r,"Type")
         if b not in wanted_bonus_ids:continue
         bonus_types[b].add(kind)
-        if kind==23 and (b,number(r,"Value_0")) in by_pair:
-            effects[b].add(number(r,"Value_0"))
+        if kind==23:
+            effect_id=number(r,"Value_0")
+            all_effect_ids[b].add(effect_id)
+            if (b,effect_id) in by_pair:effects[b].add(effect_id)
     trees=defaultdict(list)
     for r in rows(paths["ItemBonusTreeNode"],("ID","ParentItemBonusTreeID",
                     "ChildItemBonusListID","ChildItemBonusTreeID","ChildItemBonusListGroupID")):
@@ -132,6 +135,7 @@ def project(entries,paths,expansion):
         sids=sorted({s for r in physical for s in r["slot_ids"]})
         result.append({"simc_rows":by_pair[pair],"physical_rows":physical,
             "bonus_types":sorted(bonus_types[pair[0]]),
+            "bonus_effect_ids":sorted(all_effect_ids[pair[0]]),
             "recipe_slot_sources":[{"slot":slots[s],
                 "recipe_spell_count":len(spells[s]),
                 "recipe_spell_ids":sorted(spells[s]),
@@ -231,6 +235,7 @@ def recipe_outputs(matches,paths,*,game_build,simc_revision,expansion_id):
                           "slot_condition_resolved":False})
         projected.append({"simc_rows":match["simc_rows"],
             "physical_rows":match["physical_rows"],"bonus_types":match["bonus_types"],
+            "bonus_effect_ids":match.get("bonus_effect_ids",[]),
             "recipe_slot_sources":slots,
             "recipe_output_item_scope_verified":False,
             "quality_dominance_verified":False,"ui_selectable":False})
@@ -306,23 +311,29 @@ def material_options(result,paths):
             elif all(m["quality_source_row"] is not None and
                      len(m["reagent_quality_source_rows"])==1 for m in members):
                 ranks=[number(m["quality_source_row"],"QualityTier") for m in members]
-                atlas={number(m["quality_source_row"],"CraftingQualityAtlasSetID")
-                       for m in members}
                 values=[m["reagent_quality_source_rows"][0] for m in members]
-                # All other source fields must agree; unknown or changed
-                # conditions are not interpreted as equivalent. Do not infer
-                # dominance solely from the higher QualityTier.
-                ignored={"ID","ItemID","OrderIndex","ReagentEffectPct"}
+                # CraftingQualityAtlasSetID references UI textures only.
+                # MaxDifficultyAdjustment affects the crafting process, not
+                # an already completed item at the requested final ilvl.
+                # Retain both in raw evidence but compare final-item effect
+                # and application fields. Unknown fields must agree. Without
+                # effect component direction proof, even a greater effect
+                # percentage is not assumed to be non-inferior.
+                ignored={"ID","ItemID","OrderIndex","ReagentEffectPct",
+                         "MaxDifficultyAdjustment"}
                 rest=[{k:v for k,v in r.items() if k not in ignored} for r in values]
                 try:
                     pct=[Decimal(r["ReagentEffectPct"]) for r in values]
                     winner=max(range(len(ranks)),key=ranks.__getitem__)
-                    if (len(atlas)==1 and len(set(ranks))==len(ranks)
-                        and min(ranks)>0 and all(r==rest[0] for r in rest)
+                    ordered=sorted(range(len(ranks)),key=ranks.__getitem__)
+                    order_indices=[number(values[i],"OrderIndex") for i in ordered]
+                    if (len(set(ranks))==len(ranks) and min(ranks)>0
+                        and order_indices==sorted(set(order_indices))
+                        and all(r==rest[0] for r in rest)
                         and all(v.is_finite() and v>=0 for v in pct)
-                        and pct[winner]>=max(pct)):
+                        and all(v==pct[winner] for v in pct)):
                         preferred=members[winner]["physical"]["item_id"]
-                        status="HIGHEST_SOURCE_QUALITY_CANDIDATE"
+                        status="HIGHEST_SOURCE_QUALITY_SAME_EFFECT_SCOPE"
                     else:status="QUALITY_EFFECT_OR_CONDITION_COMPARISON_PENDING"
                 except (InvalidOperation,ValueError):
                     status="QUALITY_EFFECT_OR_CONDITION_COMPARISON_PENDING"
@@ -333,7 +344,8 @@ def material_options(result,paths):
                 "recipe_output_item_ids":sorted({r["output"]["item_id"] for r in links}),
                 "quality_status":status,"preferred_physical_item_id":preferred,
                 "bonus_types":match["bonus_types"],
-                "quality_dominance_verified":False,
+                "bonus_effect_ids":match.get("bonus_effect_ids",[]),
+                "quality_dominance_verified":status=="HIGHEST_SOURCE_QUALITY_SAME_EFFECT_SCOPE",
                 "exact_application_verified":False,
                 "static_CHMV_owner":"EXISTING_SELECTED_PHYSICAL_VARIANT_NOT_MEASURED_HERE",
                 "ui_selectable":False})

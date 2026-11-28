@@ -14,6 +14,7 @@ def main():
     p.add_argument("--prior",type=Path,required=True)
     p.add_argument("--spell-root",type=Path,required=True)
     p.add_argument("--out",type=Path,required=True)
+    p.add_argument("--reuse-quality-only",action="store_true")
     a=p.parse_args();root=a.root.resolve();a.out.mkdir(parents=True,exist_ok=True)
     doc={"status":"SOURCE_PENDING","native_calls":0,"new_source_requests":0}
     try:
@@ -31,6 +32,7 @@ def main():
             if table in ("CraftingQuality","CraftingReagentQuality"):
                 url="https://wago.tools/db2/"+table+"/csv?"+urlencode({"build":build,"locale":"enUS"})
                 def obtain():
+                    engine.need(not a.reuse_quality_only,"QUALITY_REUSE_REQUIRED")
                     doc["new_source_requests"]+=1
                     with urlopen(Request(url,headers={"User-Agent":"SIMC-Secondary-CraftingSource/1.0"}),timeout=75) as resp:
                         engine.need(resp.status==200,"QUALITY_HTTP")
@@ -56,11 +58,15 @@ def main():
         doc.update(status="MATERIAL_SCOPE_PROJECTED",game_build=build,
             exact_recipe_spell_count=result["exact_recipe_spell_count"],
             options=opts,family_count=len(opts),
-            preferred_count=sum(o["preferred_physical_item_id"] is not None for o in opts))
+            preferred_count=sum(o["preferred_physical_item_id"] is not None for o in opts),
+            ranked_quality_same_scope_count=sum(o["quality_dominance_verified"] for o in opts))
+        if a.reuse_quality_only:
+            engine.need(doc["new_source_requests"]==0,"QUALITY_REPLAY_NETWORK_DRIFT")
     except Exception as exc:
         doc["first_blocker"]={"type":type(exc).__name__,"code":str(exc)[:240]}
     (a.out/"V850_MATERIAL_SCOPE.json").write_text(json.dumps(doc,ensure_ascii=False,sort_keys=True,indent=2)+"\n",encoding="utf8")
     print("V850",doc["status"],"requests",doc["new_source_requests"],"families",doc.get("family_count"),
-          "preferred",doc.get("preferred_count"),"native0","blocker",doc.get("first_blocker"))
+          "preferred",doc.get("preferred_count"),"ranked",doc.get("ranked_quality_same_scope_count"),
+          "native0","blocker",doc.get("first_blocker"))
     return 0 if doc["status"]=="MATERIAL_SCOPE_PROJECTED" else 2
 if __name__=="__main__":raise SystemExit(main())
