@@ -9103,6 +9103,7 @@ def _fresh_special_gem_J_exclusion_source(*, preflight, compilation, j):
         g=preflight.get("v277_native_G_preprofile_unadmitted") or {}
         delta=proof.get("buffed_CHMV_delta")
         if (special not in rank.get("preferred_rank_item_ids_source_only",[])
+                or socket.get("status")!="EXACT_SIMC_SOCKET_BONUS_STATIC_BOUND"
                 or proof.get("status")!="EXACT_LINKED_SPECIAL_STATIC_ZERO"
                 or proof.get("item_id")!=special or proof.get("enchant_id")!=exact["enchant_id"]
                 or any(proof.get(k)!=preflight.get(k) for k in ("game_build","simc_revision"))

@@ -85,10 +85,15 @@ def _special_gem_preparation_rows(rank,*,game_build,simc_revision,target_ilevel)
         return []
     out=[]
     try:
-        preferred=set(rank["preferred_rank_item_ids_source_only"])
+        # Reproject the same small sealed cohort. An older v832 snapshot
+        # need not be rewritten merely to expose the newly supported linked
+        # preparation candidates; neither source data nor installed J changes.
+        projected=environment_build.enchant_classifier.primary_gem_quality_projection(
+            rank["candidate_rows"])
+        preferred=set(projected["preferred_rank_item_ids_source_only"])
         for row in rank["candidate_rows"]:
             i=row["item_id"];meta=row["metadata"];enc=row["enchant_source_row"]
-            direct=rank["direct_static_CHMV_source_by_item_id"].get(str(i),{})
+            direct=projected["direct_static_CHMV_source_by_item_id"].get(str(i),{})
             vector=direct.get("direct_static_CHMV_vector_source_only")
             linked=bool(direct.get("linked_equip_spell_ids_source_only"))
             if (i not in preferred or type(i) is not int or i<=0
@@ -1001,12 +1006,19 @@ class LocalJobs:
             if previous is not None and previous!=payload:
                 prior=previous["environment_result"]["source_compilation"]
                 current=payload["environment_result"]["source_compilation"]
-                if ("primary_gem_rank_source_unadmitted" not in prior and
-                        "primary_gem_rank_source_unadmitted" in current):
+                old_rank=prior.get("primary_gem_rank_source_unadmitted")
+                new_rank=current.get("primary_gem_rank_source_unadmitted")
+                same_cohort=(type(old_rank) is dict and type(new_rank) is dict and
+                    all(old_rank.get(k)==new_rank.get(k) for k in (
+                        "game_build","simc_revision","v221_stage_receipt_sha256",
+                        "v230_stage_receipt_sha256","enchant_source_sha256","candidate_rows")))
+                if type(new_rank) is dict and (old_rank is None or same_cohort):
                     without_rank={**payload,"environment_result":{
                         **payload["environment_result"],"source_compilation":{
-                            k:v for k,v in current.items()
-                            if k!="primary_gem_rank_source_unadmitted"}}}
+                            **{k:v for k,v in current.items()
+                               if k!="primary_gem_rank_source_unadmitted"},
+                            **({"primary_gem_rank_source_unadmitted":old_rank}
+                               if old_rank is not None else {})}}}
                     if without_rank==previous:
                         payload=previous
                         self._verified_fresh_profile_result=previous["environment_result"]
