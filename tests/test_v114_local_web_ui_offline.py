@@ -2409,7 +2409,7 @@ function load(start,end){
 }
 const gear={source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
   season_build:"12.2.0.99999",installed_manifest_sha256:"a".repeat(64),
-  source_catalog_manifest_sha256:"b".repeat(64),
+  source_catalog_manifest_sha256:"b".repeat(64),embellishments:{},
   choices:{trinket:[{item_id:100,name:"Original",inventory_type:12}],
     special_effect_gear_candidate:[],selectable_stat_craft:[]}};
 const budget={T:3107};
@@ -2426,7 +2426,8 @@ nodes["season-gear-note"]={textContent:""};
 const $=id=>nodes[id];
 let redraw=0,requests=0,stale=false,mode="trinket",specialSlots=0,mediaRefresh=0;
 const refreshOfficialEquipmentIcons=async current=>{assert.strictEqual(state.seasonGear,current);mediaRefresh++};
-let roleStatus="TRINKET_LOOT_SPEC_SOURCE_OBSERVED",roleMetadata;
+let roleStatus="TRINKET_LOOT_SPEC_SOURCE_OBSERVED",roleMetadata,embOptions,craftRedraw=0;
+const refreshCraftChoices=()=>{craftRedraw++};
 const role={source:"SAME_BUILD_DB2_EXPLICIT_LOOT_SPEC_OVERRIDE",
   status:"EXPLICIT_SHARED_WITH_DPS",roles:["DPS","HEALER"]};
 const refreshSpecialSlots=()=>{specialSlots++};
@@ -2441,7 +2442,9 @@ const fetch=async(url,opts)=>{
   assert.strictEqual(opts.body,"{}");
   if(stale)state.seasonGearTargetIlevel=335;
   return {ok:true,json:async()=>({
-    schema:"season_selectable_gear_refresh_v1",status:"SEASON_TRINKET_SOURCE_REFRESHED",
+    schema:"season_selectable_gear_refresh_v1",
+    status:mode==="emb"?"SEASON_SELECTABLE_GEAR_REFRESH_PENDING":"SEASON_TRINKET_SOURCE_REFRESHED",
+    ...(embOptions?{embellishments:embOptions,embellishment_source_status:"EMBELLISHMENT_ATTACHMENT_READY"}:{}),
     season_build:gear.season_build,target_ilevel:334,
     installed_manifest_sha256:gear.installed_manifest_sha256,
     source_catalog_manifest_sha256:gear.source_catalog_manifest_sha256,
@@ -2569,6 +2572,20 @@ const refresh=load("async function refreshExistingSeasonTrinkets(",
   await refresh(pending,334);
   assert.strictEqual(requests,2);
   assert.strictEqual(redraw,2);
+  // Same exact scope, previously missing optional source, no trinket refresh
+  // success required; retain original selection and numeric budget.
+  pending.embellishments_source_pending=true;
+  mode="emb";embOptions={new_reagent:{item_ids:[201],name:"New Reagent"}};
+  await refresh(pending,334,false);
+  assert.strictEqual(requests,2);
+  await refresh(pending,334);
+  assert.strictEqual(requests,3);
+  assert.strictEqual(craftRedraw,1);
+  assert.deepStrictEqual(pending.embellishments,embOptions);
+  assert.strictEqual(pending.embellishments_source_pending,false);
+  assert.strictEqual(state.verifiedExistingBudget,budget);
+  await refresh(pending,334);
+  assert.strictEqual(requests,3);
 })().catch(e=>{console.error(e);process.exitCode=1});
 """
         result=subprocess.run([node,"-e",code,str(source)],capture_output=True,

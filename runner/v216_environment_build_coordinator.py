@@ -4233,7 +4233,8 @@ def _resolve_selectable_generation(found):
     return preferred[0] if len(preferred)==1 else None
 
 
-def refresh_existing_embellishments(*,stage_root,installed_manifest_sha256,transport=None):
+def refresh_existing_embellishments(*,stage_root,installed_manifest_sha256,transport=None,
+                                    include_options=False):
     """An optional extension of an already verified installed source scope.
     Reuse compact attachment first; then sealed v848; only then consume the
     necessary original v161/v281/v229 outputs and missing small source tables.
@@ -4244,6 +4245,7 @@ def refresh_existing_embellishments(*,stage_root,installed_manifest_sha256,trans
     def result(status,registry=None,reason=None):
         return {"status":status,"reason":reason,
             "option_count":len(registry["options"]) if registry is not None else None,
+            **({"options":registry["options"]} if include_options and registry is not None else {}),
             "network_calls":calls,"native_calls":0,"budget_rebuilt":False}
     try:
         need(type(installed_manifest_sha256) is str and

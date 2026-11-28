@@ -4284,7 +4284,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
 
     @app.post("/api/v1/season-gear/refresh")
     def refresh_installed_season_gear(game_build: str,target_ilevel: int,
-                                      installed_manifest_sha256: str):
+                                      installed_manifest_sha256: str,
+                                      refresh_embellishments: bool=True):
         """Refresh choices without re-installing the verified numeric scope.
 
         Trinkets use the existing exact-ID profile path. Special choices
@@ -4304,6 +4305,19 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         if (base.get("source_scope")!="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"
             or base.get("installed_manifest_sha256")!=installed_manifest_sha256):
             return result
+        # Existing variant preparation may not invoke normal Build at all.
+        # Use the same optional source owner; a failed trinket refresh must
+        # not suppress an already verified embellishment attachment.
+        if refresh_embellishments and (
+                "embellishments" not in base or base.get("embellishments_source_pending")):
+            with jobs.season_source_lock:
+                optional=environment_build.refresh_existing_embellishments(
+                    stage_root=jobs.root/"_fresh_season_sources"/("wago_"+game_build),
+                    installed_manifest_sha256=installed_manifest_sha256,include_options=True)
+            result["embellishment_source_status"]=optional["status"]
+            result["network_calls_now"]+=optional["network_calls"]
+            if "options" in optional:
+                result["embellishments"]=optional["options"]
         try:
             with jobs.season_source_lock:
                 refreshed=jobs.season_gear_refresh_cache.get(game_build)
@@ -4344,7 +4358,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 role_review=environment_build.refresh_trinket_loot_spec_sources(
                     stage_root=jobs.root/"_fresh_season_sources"/("wago_"+game_build),
                     build=game_build)
-            result["network_calls_now"]=refreshed["network_calls"]+role_review["network_calls_by_stage"]
+            result["network_calls_now"]+=refreshed["network_calls"]+role_review["network_calls_by_stage"]
             result["loot_spec_source_status"]=role_review["status"]
             source=refreshed["candidate"]
             prior_ids={r["item_id"] for rows in base["choices"].values() for r in rows}

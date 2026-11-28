@@ -962,27 +962,37 @@ async function refreshOfficialEquipmentIcons(gear){
   }
 }
 
-async function refreshExistingSeasonTrinkets(gear,level) {
+async function refreshExistingSeasonTrinkets(gear,level,refreshEmbellishments=true) {
   // Called only by a current user environment preparation, not historical
   // session browsing. An optional list update never resets T or selection.
-  if(!gear||gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"||
-     (["SUPPLEMENTARY_SOURCE_OBSERVED","SUPPLEMENTARY_SOURCE_PARTIAL"]
+  if(!gear||gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES")return;
+  const needsEmb=refreshEmbellishments&&(!gear.embellishments||gear.embellishments_source_pending);
+  if(!needsEmb&&["SUPPLEMENTARY_SOURCE_OBSERVED","SUPPLEMENTARY_SOURCE_PARTIAL"]
        .includes(gear.trinket_source_refresh)&&
-       gear.loot_spec_source_status==="TRINKET_LOOT_SPEC_SOURCE_OBSERVED"))return;
+       gear.loot_spec_source_status==="TRINKET_LOOT_SPEC_SOURCE_OBSERVED")return;
   try{
     const params=new URLSearchParams({game_build:gear.season_build,
-      target_ilevel:String(level),installed_manifest_sha256:gear.installed_manifest_sha256});
+      target_ilevel:String(level),installed_manifest_sha256:gear.installed_manifest_sha256,
+      refresh_embellishments:String(Boolean(needsEmb))});
     const data=await api("/api/v1/season-gear/refresh?"+params.toString(),
       {method:"POST",payload:{}});
     if(state.seasonGear!==gear||Number(field("ilevel"))!==level||
        state.seasonGearTargetIlevel!==level||
        data?.schema!=="season_selectable_gear_refresh_v1"||
-       data.status!=="SEASON_TRINKET_SOURCE_REFRESHED"||
        data.season_build!==gear.season_build||
        data.target_ilevel!==level||
        data.installed_manifest_sha256!==gear.installed_manifest_sha256||
        data.source_catalog_manifest_sha256!==gear.source_catalog_manifest_sha256||
        data.native_calls_now!==0||data.budget_rebuilt!==false)return;
+    if(data.embellishments&&typeof data.embellishments==="object"&&
+       !Array.isArray(data.embellishments)&&
+       ["EMBELLISHMENT_ATTACHMENT_READY","EMBELLISHMENT_ATTACHMENT_REUSED",
+        "EMBELLISHMENT_INSTALLED_OPTIONS_REUSED"].includes(data.embellishment_source_status)){
+      gear.embellishments=data.embellishments;
+      gear.embellishments_source_pending=false;
+      refreshCraftChoices();
+    }
+    if(data.status!=="SEASON_TRINKET_SOURCE_REFRESHED")return;
     const ids=new Set(Object.values(gear.choices).flat().map(x=>x.item_id));
     const added=[];
     for(const item of data.new_trinkets||[]){
@@ -4397,7 +4407,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
           updateBudgetPreview();
         if(installedScope.reused_verified_installed_season===true &&
            typeof refreshExistingSeasonTrinkets==="function")
-          void refreshExistingSeasonTrinkets(gear,level);
+          void refreshExistingSeasonTrinkets(gear,level,!data.optional_embellishment_refresh);
       }catch(error){
         installSeasonGearHints(null,{preserveSelection:true});
         $("season-gear-note").textContent=
