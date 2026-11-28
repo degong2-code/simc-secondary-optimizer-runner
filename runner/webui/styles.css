@@ -442,7 +442,7 @@ body::before{display:none}
 }
 #view-optimizer .optimizer-environment-strip .btn{min-height:26px;padding:3px 8px}
 #optimizer-form{
-  display:grid;grid-template-columns:minmax(0,1fr);
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   align-items:stretch;gap:10px
 }
 #optimizer-form>.panel{
@@ -451,9 +451,9 @@ body::before{display:none}
   box-shadow:none;background:var(--paper)
 }
 #optimizer-form>.profile-panel{grid-column:1;grid-row:1}
-#optimizer-form>.fixed-gear-panel{grid-column:1;grid-row:2}
-#optimizer-form>.conditions-panel{grid-column:1;grid-row:3}
-#optimizer-form>.submit-panel{grid-column:1;grid-row:4;padding:10px 14px}
+#optimizer-form>.conditions-panel{grid-column:2;grid-row:1}
+#optimizer-form>.fixed-gear-panel{grid-column:1/-1;grid-row:2}
+#optimizer-form>.submit-panel{grid-column:1/-1;grid-row:3;padding:10px 14px}
 #optimizer-form .section-head{margin:0 0 9px;min-height:24px;align-items:center}
 #optimizer-form .section-head>div{display:flex;align-items:center;gap:9px}
 #optimizer-form .section-head .eyebrow{
@@ -762,7 +762,7 @@ body{background:#24252B;color:var(--ink)}
  border:0!important;border-radius:0!important;
  padding:12px 16px 15px
 }
-#optimizer-form>.profile-panel{border-right:0!important}
+#optimizer-form>.profile-panel{border-right:1px solid #575047!important}
 #optimizer-form>.profile-panel,#optimizer-form>.conditions-panel{
  border-bottom:1px solid #716043!important
 }
@@ -1771,7 +1771,7 @@ body{background:#24252B;color:var(--ink)}
 .selected-special-control .btn{white-space:nowrap;font-size:11px}
 @media(max-width:520px){.selected-special-control{grid-template-columns:minmax(0,1fr) auto}.selected-special-control>span{grid-column:1/-1}}
 
-/* v865: source-order workflow and independent calculation history. */
+/* v865: independent calculation history and equipment preparation. */
 #optimizer-form>.fixed-gear-panel{border-bottom:1px solid #716043!important}
 #optimizer-form .equipment-preparation{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 #optimizer-form .equipment-preparation .actions{margin:0;flex-wrap:wrap}
@@ -1783,3 +1783,77 @@ body{background:#24252B;color:var(--ink)}
 #view-history .history-advanced{margin-top:16px}
 #view-history .history-advanced .restore-controls,#view-history .history-advanced .hint{margin:10px 12px}
 @media(max-width:540px){.top-nav .nav-item{font-size:10px;padding:8px 5px}.top-nav{overflow-x:auto;justify-content:flex-start}#view-history #recent-session-id{font-size:11px}}
+
+/* v866 — retain the user's compact v861 two-column layout. Improve type,
+   control contrast and visible selection without introducing new panels.
+   Scope overrides after the legacy dense input rules; no runtime styling JS. */
+#view-optimizer .view-intro .intro-desc{font-size:13px;line-height:1.5;color:#D0CDCA}
+#view-optimizer .optimizer-environment-strip{font-size:12px;color:#DDD6CD}
+#optimizer-form .section-head h2{font-size:18px;color:#F4F0E8}
+#optimizer-form .section-head .micro{font-size:12px;color:#C8C1B8}
+#optimizer-form .field label,#optimizer-form .check-row label,
+#optimizer-form .stat-cap-line>label,#optimizer-form .manual-toggle{font-size:12px;line-height:1.4;color:#EEEAE4}
+#optimizer-form .field label small,#optimizer-form .fold>summary small{font-size:11px;color:#C0BBB4}
+#optimizer-form .hint,#optimizer-form .compact-guidance summary{font-size:12px;line-height:1.5;color:#C8C3BC}
+#optimizer-form .budget-mode-heading strong{font-size:14px;color:#F3E8D6}
+#optimizer-form .budget-mode-heading .hint,#optimizer-form .budget-figure span{font-size:12px;color:#C8C3BC}
+#optimizer-form .budget-figure strong{font-size:21px;font-variant-numeric:tabular-nums}
+#optimizer-form input:not([type=checkbox]),#optimizer-form select,#optimizer-form textarea,
+#optimizer-form .conditions-panel .env-input-grid input:not([type=checkbox]),
+#optimizer-form .conditions-panel .env-input-grid select,#optimizer-form .env-enchant-grid select,
+#optimizer-form .conditions-panel .env-input-grid > #season-verified-budget-group > select{
+ font-size:13px!important;min-height:36px!important;
+ background:#202127!important;border-color:#65616A!important;color:#F5F3EF!important
+}
+#optimizer-form .conditions-panel .env-input-grid select,
+#optimizer-form .conditions-panel .env-input-grid input:not([type=checkbox]),
+#optimizer-form .env-enchant-grid select,
+#optimizer-form .conditions-panel .env-input-grid > #season-verified-budget-group > select{height:36px!important}
+#optimizer-form .conditions-panel .env-input-grid>.env-grid-cell>.field,
+#optimizer-form .conditions-panel .env-input-grid #season-gem-layout>.field,
+#optimizer-form .env-enchant-grid>.field{grid-template-rows:auto 36px;gap:5px}
+#optimizer-form .conditions-panel .env-input-grid .field>label,
+#optimizer-form .env-enchant-grid .field>label{font-size:12px;line-height:1.4;white-space:normal;overflow:visible;overflow-wrap:anywhere}
+#optimizer-form :is(input,select,textarea):focus-visible{outline:2px solid #E8B34B;outline-offset:2px}
+#optimizer-form input:disabled,#optimizer-form select:disabled,#optimizer-form textarea:disabled,
+#optimizer-form .env-enchant-grid select:disabled{color:#BDB8B2!important;background:#303138!important;opacity:1;cursor:not-allowed}
+#optimizer-form .fold>summary,#optimizer-form .env-enchant-panel>summary{font-size:12px;color:#E7D0A9}
+#optimizer-form .btn,#optimizer-form .equipment-preparation .btn{font-size:12px;min-height:36px}
+#optimizer-form .env-variant-action #user-variant-prepare-btn{font-size:12px;min-height:36px;height:auto}
+#optimizer-form .conditions-panel #user-variant-status{font-size:12px;line-height:1.5;color:#D2C8B9;max-height:none;overflow:visible;overflow-wrap:anywhere}
+#optimizer-form .conditions-panel #food-application-status,
+#optimizer-form .conditions-panel #potion-application-status,
+#optimizer-form .conditions-panel #optimizer-oil-toggle-status,
+#optimizer-form .conditions-panel #season-verified-budget-status{font-size:11px;line-height:1.5;color:#CBC5BD}
+#optimizer-form .conditions-panel #season-verified-budget-status,
+#optimizer-form #equipment-refresh-status{overflow-wrap:anywhere}
+#optimizer-form .gear-section-heading h3{font-size:15px;color:#F0CC8C}
+#optimizer-form .gear-section-heading>span{font-size:12px;color:#C8C1B8}
+#optimizer-form .fixed-gear-panel .inline-item-label,
+#optimizer-form .fixed-gear-panel .inline-item-name,
+#optimizer-form .fixed-gear-panel .inline-item-role{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+#optimizer-form .gear-section .inline-item{font-size:13px;min-height:42px;line-height:1.35;padding:5px 6px;border-left:3px solid transparent!important}
+#optimizer-form .gear-section .inline-item[aria-pressed=true]{background:#443827!important;border-left-color:#E8B34B!important;color:#FFE4AC}
+#optimizer-form .gear-section .inline-item:disabled{opacity:1;color:#A7A4A4;cursor:not-allowed}
+#optimizer-form .gear-section .inline-item-mark{font-size:15px;min-width:14px}
+#optimizer-form .fixed-gear-panel .inline-item-role{font-size:11px;color:#C8C1B8}
+#optimizer-form .fixed-gear-panel .equipment-inline-status,
+#optimizer-form .fixed-gear-panel #season-gear-note,
+#optimizer-form .fixed-gear-panel .equipment-inline-empty{font-size:12px;line-height:1.5;color:#C8C3BC}
+#optimizer-form .choice-results .choice-result{font-size:13px;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+#optimizer-form .choice-result[aria-selected=true]{background:#443827;color:#FFE4AC;font-weight:750}
+#optimizer-form .submit-panel{flex-wrap:wrap;gap:8px}
+#optimizer-form .submit-panel #start-btn{font-size:14px;min-height:42px}
+#optimizer-form #optimizer-submit-note{font-size:13px}
+#view-history #recent-session-id{font-size:13px;line-height:1.65}
+#view-results .stat-heading{font-size:14px;color:#F5F3EF}
+#view-results .stat-heading>span:last-child{font-size:16px;font-weight:750}
+#view-results .stat-line{height:10px}
+#view-results .metrics span,#view-results .result-footer span{font-size:12px;color:#C8C3BC}
+#view-results .budget,#view-results .result-warning{font-size:12px;line-height:1.5}
+#view-results .alt-stat-summary{font-size:12px;line-height:1.6}
+@media(max-width:540px){
+ #optimizer-form .section-head h2{font-size:16px}
+ #optimizer-form .section-head .micro{font-size:11px}
+ #view-history #recent-session-id{font-size:12px}
+}

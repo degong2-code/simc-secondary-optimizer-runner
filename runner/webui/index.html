@@ -51,7 +51,7 @@
             
     <div class="two">
               <div class="field"><label for="race">종족 <small>대표 종족 자동 선택 · 변경 가능</small></label><input id="race" list="race-list" placeholder="예: 드워프" spellcheck="false"><datalist id="race-list"><option value="인간" label="human"></option><option value="드워프" label="dwarf"></option><option value="나이트 엘프" label="night_elf"></option><option value="노움" label="gnome"></option><option value="드레나이" label="draenei"></option><option value="늑대인간" label="worgen"></option><option value="판다렌" label="pandaren"></option><option value="오크" label="orc"></option><option value="언데드" label="undead"></option><option value="타우렌" label="tauren"></option><option value="트롤" label="troll"></option><option value="블러드 엘프" label="blood_elf"></option><option value="고블린" label="goblin"></option><option value="드랙티르" label="dracthyr"></option><option value="공허 엘프" label="void_elf"></option><option value="빛벼림 드레나이" label="lightforged_draenei"></option><option value="검은무쇠 드워프" label="dark_iron_dwarf"></option><option value="쿨 티란" label="kul_tiran"></option><option value="기계노움" label="mechagnome"></option><option value="토석인" label="earthen"></option><option value="나이트본" label="nightborne"></option><option value="높은산 타우렌" label="highmountain_tauren"></option><option value="마그하르 오크" label="maghar_orc"></option><option value="잔달라 트롤" label="zandalari_troll"></option><option value="불페라" label="vulpera"></option></datalist><p class="hint" id="race-default-note">종족 미입력 시 dwarf를 사용합니다.</p></div>
-              <div class="field"><label for="ilevel">목표 아이템레벨 <small>시즌 환경 구축 때 Myth 일반 상한 자동 확인 · 직접 수정하면 수동값 우선</small></label><input id="ilevel" type="number" min="1" max="1000" step="1" value="334" required><p class="hint">334는 기존 시즌 초기 표시값입니다. 새 시즌에는 실제 원본 확인 후 갱신하며, 자동 판정이 불가능하면 이 값을 직접 입력하세요.</p></div>
+              <div class="field"><label for="ilevel">목표 아이템레벨 <small>시즌 기본값 · 직접 변경 가능</small></label><input id="ilevel" type="number" min="1" max="1000" step="1" value="334" required><p class="hint">새 시즌의 기본값은 확인된 최고 신화 장비 레벨로 갱신합니다. 직접 입력한 값이 우선합니다.</p></div>
             </div>
             
     <div class="budget-mode">
@@ -66,53 +66,18 @@
       <label for="max-single-stat-percent">개별 스탯 최대 비율</label>
       <div class="stat-cap-control"><input id="max-single-stat-percent" type="number" min="25" max="100" step="1" value="60" required><span>%</span></div>
     </div>
-            <details class="compact-guidance"><summary>자동 예산·구성 변경 유의사항</summary><p class="hint">소켓 수·특수보석·영약·기름은 개별 최적화 조건입니다. 선택을 바꾸면 해당 시즌의 J/F/O와 실행 프로필을 다시 검증해야 하며, 검증 전에는 자동으로 이전 구성의 예산을 적용하지 않습니다.</p></details>
+            <details class="compact-guidance"><summary>스탯 총합 계산 기준</summary><p class="hint">소켓 수·특수보석·영약·기름은 개별 최적화 조건입니다. 선택을 바꾸면 해당 시즌의 J/F/O와 실행 프로필을 다시 검증해야 하며, 검증 전에는 자동으로 이전 구성의 예산을 적용하지 않습니다.</p></details>
         
     <div class="field"><label for="talents">특성 코드 <small>선택 · 비우면 기본 대표 특성</small></label><textarea id="talents" rows="2" placeholder="직접 입력하지 않으면 기본 대표 특성 사용" spellcheck="false"></textarea><p class="hint" id="talents-default-note">특성 미입력 시 선택한 전문화의 검증된 기본 대표 특성을 사용합니다.</p></div>
             
   
-  </section>
-  <section class="panel fixed-gear-panel" aria-labelledby="equipment-title">
-    <div class="section-head"><div><p class="eyebrow">02</p><h2 id="equipment-title">장비 선택</h2></div><span class="micro">장신구 2개 필수 · 특수효과는 선택</span></div>
-    <div class="equipment-preparation"><p id="equipment-prepare-status" class="hint" role="status" aria-live="polite">장비 선택 준비 상태 확인 중</p><div class="actions"><button type="button" id="equipment-prepare-btn" class="btn primary" disabled>장비 목록 준비</button><button type="button" id="equipment-refresh-btn" class="btn secondary" disabled>장비 목록 업데이트</button></div></div>
-    <p class="hint">찾는 장비가 없으면 목록을 업데이트하세요. 기존 계산과 목표 스탯 총합은 유지됩니다.</p>
-    <p id="equipment-refresh-status" class="hint" role="status" aria-live="polite"></p>
-    
-<div class="gear-section gear-trinkets">
-  <div class="gear-section-heading"><h3>장신구</h3><span>2개 필수</span></div>
-  <div class="equipment-source-controls"><div class="two">
-              <div class="field equipment-source"><label for="trinket1">장신구 1 · 필수</label><select id="trinket1" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket1">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket1">선택된 장신구 없음</p></div>
-              <div class="field equipment-source"><label for="trinket2">장신구 2 · 필수</label><select id="trinket2" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket2">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket2">선택된 장신구 없음</p></div>
-            </div></div>
-  <div class="inline-equipment">
-  <label class="equipment-filter"><span class="visually-hidden">장신구 검색</span><input id="equipment-trinket-search" type="search" autocomplete="off" placeholder="장신구 이름·ItemID 검색" aria-controls="equipment-trinket-grid"></label>
-  <div id="equipment-trinket-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 장신구 바로 선택">
-    <p class="equipment-inline-empty">장신구 목록 확인 중…</p>
-  </div>
-  <p id="equipment-trinket-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
-</div><p class="hint" id="season-gear-note">이번 시즌 장신구·특수효과 선택 목록 확인 중 · 일반장비·티어·무기는 내부 자동 구성</p>
-</div>
-<div class="gear-section gear-special">
-  <div class="gear-section-heading"><h3>특수효과 장비</h3><span>선택</span></div>
-  <div class="inline-equipment inline-equipment-special">
-  <label class="equipment-filter"><span class="visually-hidden">특수효과 장비 검색</span><input id="equipment-special-search" type="search" autocomplete="off" placeholder="특수효과 장비 이름·ItemID 검색" aria-controls="equipment-special-grid"></label>
-  <div id="equipment-special-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 특수효과 장비 바로 선택">
-    <p class="equipment-inline-empty">특수효과 장비 목록 확인 중…</p>
-  </div>
-  <p id="equipment-special-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
-  <div id="equipment-selected-specials" aria-label="선택한 특수효과 장비 설정" hidden></div>
-</div>
-<div hidden class="gear-special-details" aria-hidden="true">
-<p class="hint" hidden>일반 장비·티어4세트와 선택한 장식 제작장비의 정확한 ID는 내부에서 구성합니다. 특수장비의 보너스·촉매 원본 ID도 일반 사용자에게 입력받지 않습니다. 이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용하며, 정확한 L이 있는 경우 그대로 재사용합니다. 누락된 경우 '예산 미리 확인'(Native 0회)은 차단될 수 있으나, 사용자가 'SimC 최적화 실행'을 승인하면 내부 생성한 대표 프로필에서 정적 SimC Native 최대 1회로 선택 장비의 정확한 L을 확보·캐시합니다. 이후 최적화 계산을 진행하며, 미확정 L을 0으로 간주하지 않습니다. 현재 검증된 장식은 일반 방어구용 안감 2종입니다. 목걸이·반지·무기용 장식은 별도의 실제 호환 토큰이 검증되기 전까지 선택할 수 없습니다.</p><div id="special-rows"></div>
-</div>
-</div>
-<div class="gear-section gear-embellishments profile-embellishments">
+  <div class="gear-section gear-embellishments profile-embellishments">
   <div class="gear-section-heading"><h3>장식</h3><span>최대 2개</span></div>
   <p id="craft-compatibility-note" class="hint" role="note">장식별 장착 가능한 부위만 표시됩니다. 장신구·무기 장식은 검증된 선택지가 아직 없습니다.</p><div id="crafted-rows"></div>
 </div>
 </section>
-<section class="panel conditions-panel" aria-labelledby="conditions-title">
- <div class="section-head"><div><p class="eyebrow">03</p><h2 id="conditions-title">소모품 및 전투조건</h2></div></div>
+  <section class="panel conditions-panel" aria-labelledby="conditions-title">
+ <div class="section-head"><div><p class="eyebrow">02</p><h2 id="conditions-title">소모품 및 전투조건</h2></div></div>
  
 <div class="env-input-grid" aria-label="전투 및 소모품 입력">
    <div class="env-grid-cell"><div class="field"><label for="targets">대상 수</label><input id="targets" type="number" min="1" max="40" value="1" required></div></div>
@@ -222,6 +187,42 @@
               <p class="hint">영약 F, 일반 보석 J 및 무기 기름 O의 기존 예산은 그대로 유지됩니다. 원시 DB2 후보를 임의로 유효한 SimC 선택으로 표시하지 않습니다.</p>
             </details>
  </details>
+
+</section>
+<section class="panel fixed-gear-panel" aria-labelledby="equipment-title">
+    <div class="section-head"><div><p class="eyebrow">03</p><h2 id="equipment-title">장비 선택</h2></div><span class="micro">장신구 2개 필수 · 특수효과는 선택</span></div>
+    <div class="equipment-preparation"><p id="equipment-prepare-status" class="hint" role="status" aria-live="polite">장비 선택 준비 상태 확인 중</p><div class="actions"><button type="button" id="equipment-prepare-btn" class="btn primary" disabled>장비 목록 준비</button><button type="button" id="equipment-refresh-btn" class="btn secondary" disabled>장비 목록 업데이트</button></div></div>
+    <p class="hint">목록에 없는 장비는 업데이트로 확인하세요. 기존 계산과 목표 스탯 총합은 유지됩니다.</p>
+    <p id="equipment-refresh-status" class="hint" role="status" aria-live="polite"></p>
+    
+<div class="gear-section gear-trinkets">
+  <div class="gear-section-heading"><h3>장신구</h3><span>2개 필수</span></div>
+  <div class="equipment-source-controls"><div class="two">
+              <div class="field equipment-source"><label for="trinket1">장신구 1 · 필수</label><select id="trinket1" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket1">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket1">선택된 장신구 없음</p></div>
+              <div class="field equipment-source"><label for="trinket2">장신구 2 · 필수</label><select id="trinket2" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket2">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket2">선택된 장신구 없음</p></div>
+            </div></div>
+  <div class="inline-equipment">
+  <label class="equipment-filter"><span class="visually-hidden">장신구 검색</span><input id="equipment-trinket-search" type="search" autocomplete="off" placeholder="장신구 이름·ItemID 검색" aria-controls="equipment-trinket-grid"></label>
+  <div id="equipment-trinket-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 장신구 바로 선택">
+    <p class="equipment-inline-empty">장신구 목록 확인 중…</p>
+  </div>
+  <p id="equipment-trinket-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
+</div><p class="hint" id="season-gear-note">이번 시즌 장신구·특수효과 선택 목록 확인 중 · 일반장비·티어·무기는 내부 자동 구성</p>
+</div>
+<div class="gear-section gear-special">
+  <div class="gear-section-heading"><h3>특수효과 장비</h3><span>선택</span></div>
+  <div class="inline-equipment inline-equipment-special">
+  <label class="equipment-filter"><span class="visually-hidden">특수효과 장비 검색</span><input id="equipment-special-search" type="search" autocomplete="off" placeholder="특수효과 장비 이름·ItemID 검색" aria-controls="equipment-special-grid"></label>
+  <div id="equipment-special-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 특수효과 장비 바로 선택">
+    <p class="equipment-inline-empty">특수효과 장비 목록 확인 중…</p>
+  </div>
+  <p id="equipment-special-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
+  <div id="equipment-selected-specials" aria-label="선택한 특수효과 장비 설정" hidden></div>
+</div>
+<div hidden class="gear-special-details" aria-hidden="true">
+<p class="hint" hidden>일반 장비·티어4세트와 선택한 장식 제작장비의 정확한 ID는 내부에서 구성합니다. 특수장비의 보너스·촉매 원본 ID도 일반 사용자에게 입력받지 않습니다. 이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용하며, 정확한 L이 있는 경우 그대로 재사용합니다. 누락된 경우 '예산 미리 확인'(Native 0회)은 차단될 수 있으나, 사용자가 'SimC 최적화 실행'을 승인하면 내부 생성한 대표 프로필에서 정적 SimC Native 최대 1회로 선택 장비의 정확한 L을 확보·캐시합니다. 이후 최적화 계산을 진행하며, 미확정 L을 0으로 간주하지 않습니다. 현재 검증된 장식은 일반 방어구용 안감 2종입니다. 목걸이·반지·무기용 장식은 별도의 실제 호환 토큰이 검증되기 전까지 선택할 수 없습니다.</p><div id="special-rows"></div>
+</div>
+</div>
 
 </section>
 <section class="panel submit-panel" aria-label="최적화 실행">

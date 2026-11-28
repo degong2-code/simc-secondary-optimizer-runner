@@ -15,7 +15,7 @@ class IDs(HTMLParser):
 
 
 class OptionsEditorial(unittest.TestCase):
-    def test_v865_embellishment_in_equipment_step_without_id_changes(self):
+    def test_v866_embellishment_restored_to_profile_without_id_changes(self):
         html=(ROOT/"runner/webui/index.html").read_text("utf8")
         parser=IDs();parser.feed(html)
         self.assertEqual(len(parser.ids),len(set(parser.ids)))
@@ -24,12 +24,12 @@ class OptionsEditorial(unittest.TestCase):
         form=html.split('<form id="optimizer-form"',1)[1].split('</form>',1)[0]
         profile=form.split('<section class="panel profile-panel"',1)[1].split('</section>',1)[0]
         gear=form.split('<section class="panel fixed-gear-panel"',1)[1].split('</section>',1)[0]
-        self.assertNotIn('id="crafted-rows"',profile)
-        self.assertIn('id="crafted-rows"',gear)
+        self.assertNotIn('id="crafted-rows"',gear)
+        self.assertIn('id="crafted-rows"',profile)
         self.assertIn('id="special-rows"',gear)
-        self.assertIn('profile-embellishments',gear)
-        for left,right in zip(("input-title","equipment-title","special-rows","crafted-rows","conditions-title"),
-                              ("equipment-title","special-rows","crafted-rows","conditions-title","start-btn")):
+        self.assertIn('profile-embellishments',profile)
+        for left,right in zip(("input-title","crafted-rows","conditions-title","equipment-title","special-rows"),
+                              ("crafted-rows","conditions-title","equipment-title","special-rows","start-btn")):
             self.assertLess(form.index('id="'+left+'"'),form.index('id="'+right+'"'))
 
     def test_source_identifier_and_optional_icon_routes_are_non_authoritative(self):

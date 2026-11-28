@@ -513,13 +513,13 @@ const apply=Function("state","$","field","valueInt",
         self.assertIn('gear-section gear-trinkets',gear)
         self.assertIn('gear-section gear-special',gear)
         profile=form.split('<section class="panel profile-panel"',1)[1].split('</section>',1)[0]
-        self.assertIn('gear-section gear-embellishments profile-embellishments',gear)
+        self.assertIn('gear-section gear-embellishments profile-embellishments',profile)
         self.assertIn('id="special-rows"',gear)
-        self.assertIn('id="crafted-rows"',gear)
-        self.assertNotIn('id="crafted-rows"',profile)
-        self.assertLess(form.index('id="input-title"'),form.index('id="equipment-title"'))
-        self.assertLess(form.index('id="equipment-title"'),form.index('id="conditions-title"'))
-        self.assertLess(form.index('id="conditions-title"'),form.index('id="start-btn"'))
+        self.assertIn('id="crafted-rows"',profile)
+        self.assertNotIn('id="crafted-rows"',gear)
+        self.assertLess(form.index('id="input-title"'),form.index('id="conditions-title"'))
+        self.assertLess(form.index('id="conditions-title"'),form.index('id="equipment-title"'))
+        self.assertLess(form.index('id="equipment-title"'),form.index('id="start-btn"'))
         self.assertIn('class="equipment-source-controls"',gear)
         self.assertNotIn('https://fonts.googleapis.com',css)
         self.assertEqual(form.count('id="season-verified-flask"'),1)
@@ -733,15 +733,21 @@ console.log("V865_HISTORY_AND_PREPARE_PASS");
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertIn("V865_HISTORY_AND_PREPARE_PASS",result.stdout)
 
-    def test_v865_form_uses_natural_source_order_and_full_width_steps(self):
+    def test_v866_form_restores_user_preferred_compact_two_columns(self):
         page=self.client.get("/").text
         css=self.client.get("/assets/styles.css").text
         js=self.client.get("/assets/app.js").text
-        self.assertIn('#optimizer-form{\n  display:grid;grid-template-columns:minmax(0,1fr)',css)
+        self.assertIn('#optimizer-form{\n  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)',css)
         self.assertIn('#optimizer-form>.profile-panel{grid-column:1;grid-row:1}',css)
-        self.assertIn('#optimizer-form>.fixed-gear-panel{grid-column:1;grid-row:2}',css)
-        self.assertIn('#optimizer-form>.conditions-panel{grid-column:1;grid-row:3}',css)
-        self.assertIn('#optimizer-form>.submit-panel{grid-column:1;grid-row:4',css)
+        self.assertIn('#optimizer-form>.conditions-panel{grid-column:2;grid-row:1}',css)
+        self.assertIn('#optimizer-form>.fixed-gear-panel{grid-column:1/-1;grid-row:2}',css)
+        self.assertIn('#optimizer-form>.submit-panel{grid-column:1/-1;grid-row:3',css)
+        editorial=css.split('/* v866 — retain',1)[1]
+        self.assertIn('font-size:13px!important;min-height:36px!important',editorial)
+        self.assertIn('border-left-color:#E8B34B!important',editorial)
+        self.assertIn('max-height:none;overflow:visible',editorial)
+        self.assertIn('white-space:normal;overflow:visible;text-overflow:clip',editorial)
+        self.assertIn('#view-results .stat-heading>span:last-child{font-size:16px;font-weight:750}',editorial)
         self.assertIn('@media(max-width:970px)',css)
         self.assertIn('<details class="fold profile-import">',page)
         self.assertIn('id="class-choice-tiles" hidden',page)
