@@ -733,6 +733,22 @@ console.log("V865_HISTORY_AND_PREPARE_PASS");
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertIn("V865_HISTORY_AND_PREPARE_PASS",result.stdout)
 
+    def test_v867_native_select_proxy_does_not_inherit_full_width_grid(self):
+        css=self.client.get("/assets/styles.css").text
+        js=self.client.get("/assets/app.js").text
+        # Keep native form ownership and validity; only its visual proxy
+        # is clipped. Full-size environment rules must not override it.
+        self.assertIn('select.classList.add("choice-native-select")',js)
+        self.assertIn('select.setAttribute("aria-hidden","true")',js)
+        final=css.split('/* v867: visual-only proxy selects',1)[1]
+        proxy=final.split('#optimizer-form select.choice-native-select[aria-hidden="true"]{',1)[1].split('}',1)[0]
+        for rule in ('position:absolute!important','inset-inline-start:0',
+                     'width:1px!important','min-width:1px!important','max-width:1px!important',
+                     'height:1px!important','min-height:1px!important','max-height:1px!important',
+                     'opacity:0!important','pointer-events:none!important','clip-path:inset(50%)'):
+            self.assertIn(rule,proxy)
+        self.assertIn('.equipment-preparation .actions .btn{flex:0 0 auto;white-space:nowrap',final)
+
     def test_v866_form_restores_user_preferred_compact_two_columns(self):
         page=self.client.get("/").text
         css=self.client.get("/assets/styles.css").text

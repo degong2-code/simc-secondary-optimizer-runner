@@ -1857,3 +1857,17 @@ body{background:#24252B;color:var(--ink)}
  #optimizer-form .section-head .micro{font-size:11px}
  #view-history #recent-session-id{font-size:12px}
 }
+
+/* v867: visual-only proxy selects must remain clipped to one pixel even
+   when the owning environment grid applies full-width control sizing. */
+#optimizer-form select.choice-native-select[aria-hidden="true"]{
+ position:absolute!important;inset-inline-start:0;inset-inline-end:auto;
+ width:1px!important;min-width:1px!important;max-width:1px!important;
+ height:1px!important;min-height:1px!important;max-height:1px!important;
+ box-sizing:border-box!important;border:0!important;
+ padding:0!important;margin:0!important;opacity:0!important;pointer-events:none!important;
+ clip-path:inset(50%);
+}
+#optimizer-form .equipment-preparation .actions{flex:0 0 auto;flex-direction:row;max-width:100%}
+#optimizer-form .equipment-preparation .actions .btn{flex:0 0 auto;white-space:nowrap;min-height:36px;height:auto;max-width:100%}
+#optimizer-form .equipment-preparation .hint{min-width:0;flex:1 1 180px;overflow-wrap:anywhere}
