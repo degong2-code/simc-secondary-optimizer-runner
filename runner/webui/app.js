@@ -1667,18 +1667,18 @@ async function chooseInstalledFlask() {
       const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
       return {slot:read("slot"),item_id:Number(read("item_id")),
               ...(read("ilevel")?{ilevel:Number(read("ilevel"))}:{}),
+              option_source_build:row.dataset?.optionSourceBuild??state.seasonGear?.season_build??"",
+              option_source_level:row.dataset?.optionSourceLevel??String(read("ilevel")||state.seasonGearTargetIlevel||field("ilevel")),
               options:{bonus_id:read("bonus_id"),
                        redirected_base_stats:read("redirected_base_stats")}};
-    }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
+    }).filter(x=>Number.isSafeInteger(x.item_id)&&x.item_id>0);
   installSeasonGearHints(gear);
   state.seasonGearTargetIlevel=level;
   setTrinketSelection("trinket1",priorTrinkets[0]);
   setTrinketSelection("trinket2",priorTrinkets[1]);
-  fillGearRows("special-rows",priorSpecial.filter(entry=>{
-    const item=gear.choices.special_effect_gear_candidate.find(
-      x=>x.item_id===entry.item_id);
-    return item&&specialAllowedSlots(item).includes(entry.slot);
-  }));
+  // Keep incompatible historical choices visible; never silently omit a
+  // user-selected effect after an environment rebind.
+  fillGearRows("special-rows",priorSpecial);
   state.seasonOptionRequestEpoch++;
   renderSeasonOptionCatalog(null);
   try {
@@ -1939,18 +1939,16 @@ async function bindExactInstalledGearVariant({sha,build,level,stillMatches}) {
       const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
       return {slot:read("slot"),item_id:Number(read("item_id")),
               ...(read("ilevel")?{ilevel:Number(read("ilevel"))}:{}),
+        option_source_build:row.dataset?.optionSourceBuild??state.seasonGear?.season_build??"",
+        option_source_level:row.dataset?.optionSourceLevel??String(read("ilevel")||state.seasonGearTargetIlevel||field("ilevel")),
         options:{bonus_id:read("bonus_id"),
                  redirected_base_stats:read("redirected_base_stats")}};
-    }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
+    }).filter(x=>Number.isSafeInteger(x.item_id)&&x.item_id>0);
   installSeasonGearHints(gear);
   state.seasonGearTargetIlevel=level;
   setTrinketSelection("trinket1",oldTrinkets[0]);
   setTrinketSelection("trinket2",oldTrinkets[1]);
-  fillGearRows("special-rows",oldSpecial.filter(entry=>{
-    const item=gear.choices.special_effect_gear_candidate.find(
-      row=>row.item_id===entry.item_id);
-    return item&&specialAllowedSlots(item).includes(entry.slot);
-  }));
+  fillGearRows("special-rows",oldSpecial);
   state.seasonOptionRequestEpoch++;
   renderSeasonOptionCatalog(null);
   try{
@@ -2149,6 +2147,13 @@ function syncGearOptionOwnership(row,reset=false) {
   const bonusScope=JSON.stringify([item,read("ilevel"),
     ...(craft?[read("slot"),read("embellishment"),read("stat_a"),read("stat_b")]:[])]);
   if(!reset){
+    if(!craft&&!item&&row.dataset.optionItem){
+      // A deliberate deselection clears the entire optional row.
+      for(const name of ["slot","ilevel","bonus_id","redirected_base_stats"]){
+        const control=node(name);
+        if(control)control.value="";
+      }
+    }
     if(row.dataset.optionItem!==item){
       const redirect=node("redirected_base_stats");
       if(redirect)redirect.value="";
@@ -2219,7 +2224,18 @@ function gearInputs(nodeId, config) {
     note.className="hint "+(isSpecial?"auto-slot-note":"craft-slot-note");
     note.textContent=isSpecial?"장비를 선택하면 부위가 자동 지정됩니다.":
       "장식 종류를 먼저 선택하면 호환 부위가 표시됩니다.";
-    row.appendChild(note);group.appendChild(row);
+    row.appendChild(note);
+    const clear=document.createElement("button");
+    clear.type="button";clear.className="btn secondary gear-clear";
+    clear.textContent="이 장비 선택 해제";
+    clear.addEventListener("click",()=>{
+      for(const input of row.querySelectorAll("[data-field]"))input.value="";
+      syncGearOptionOwnership(row,true);
+      if(isSpecial)refreshSpecialSlots();else syncCraftRow(row);
+      refreshEquipmentSelectionUI();syncSearchChoices();updateBudgetPreview();
+      buttonState(state.running,state.longrunResultReady);
+    });
+    row.appendChild(clear);group.appendChild(row);
     syncGearOptionOwnership(row,true);
     for(const name of ["item_id","ilevel",...(isSpecial?[]:
         ["slot","embellishment","stat_a","stat_b"])]){
@@ -2274,6 +2290,10 @@ function fillGearRows(nodeId, entries) {
       }
       input.value=value;
     }
+    // Do not relabel options from an earlier build as newly source-bound.
+    // The fields are browser-only provenance; never submit them as SimC options.
+    row.dataset.optionSourceBuild=entry?.option_source_build??state.seasonGear?.season_build??"";
+    row.dataset.optionSourceLevel=entry?.option_source_level??String(entry?.ilevel??field("ilevel"));
     syncGearOptionOwnership(row,true);
   }
   const add=group.querySelector(".gear-group > button");
@@ -2484,6 +2504,16 @@ function selectedGear(nodeId, group) {
         !Number.isSafeInteger(selectedLevel)||selectedLevel>1000))
       throw Error("장비 아이템 레벨은 1~1000의 정수여야 합니다.");
     const levelField=selectedLevel===null?{}:{ilevel:selectedLevel};
+    // A prior build or implicit target change cannot grant authority to
+    // hidden options; keep the selection visible and require a new choice.
+    // Same-build F/J/O manifest changes do not invalidate these item options.
+    if((fields.bonus_id||fields.redirected_base_stats) &&
+       typeof row.dataset?.optionSourceBuild==="string" &&
+       (!row.dataset.optionSourceBuild ||
+        row.dataset.optionSourceBuild!==state.seasonGear?.season_build ||
+        (fields.bonus_id&&row.dataset.optionSourceLevel!==
+          String(selectedLevel??field("ilevel")))))
+      throw Error("이전 시즌/레벨의 장비 옵션이 남아 있습니다. 해당 장비의 ‘이 장비 선택 해제’ 후 현재 조건으로 다시 선택하세요.");
     if(isCraft) {
       if(!fields.slot||!fields.embellishment||!fields.stat_a||!fields.stat_b)
         throw Error("장식 종류·호환 부위·제작 스탯 2개를 선택해 주세요.");
@@ -4222,22 +4252,20 @@ async function buildSeasonEnvironment(forUserVariant=false) {
           const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
           return {slot:read("slot"),item_id:Number(read("item_id")),
               ...(read("ilevel")?{ilevel:Number(read("ilevel"))}:{}),
+            option_source_build:row.dataset?.optionSourceBuild??state.seasonGear?.season_build??"",
+            option_source_level:row.dataset?.optionSourceLevel??String(read("ilevel")||state.seasonGearTargetIlevel||field("ilevel")),
             options:{bonus_id:read("bonus_id"),
                      redirected_base_stats:read("redirected_base_stats")}};
-        }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
+        }).filter(x=>Number.isSafeInteger(x.item_id)&&x.item_id>0);
         installSeasonGearHints(gear);
         state.seasonGearTargetIlevel=level;
         setTrinketSelection("trinket1",priorTrinkets[0]);
         setTrinketSelection("trinket2",priorTrinkets[1]);
-        // Reuse the chosen special item only when the exact new source still
-        // offers the same physical ID in its compatible equipment slot.
-        const retained=priorSpecial.filter(entry=>{
-          const selected=gear.choices.special_effect_gear_candidate.find(
-            item=>item.item_id===entry.item_id);
-          return selected&&specialAllowedSlots(selected).includes(entry.slot);
-        });
-        fillGearRows("special-rows",retained);
-        if(retained.length!==priorSpecial.length ||
+        // Preserve every explicit choice, even when the new catalogue has
+        // no approved matching ID/slot. fillGearRows marks historic choices;
+        // selectedGear rejects them instead of quietly omitting their effect.
+        fillGearRows("special-rows",priorSpecial);
+        if(priorSpecial.length ||
            (priorTrinkets[0]&&!field("trinket1")) ||
            (priorTrinkets[1]&&!field("trinket2")))
           updateBudgetPreview();

@@ -1836,8 +1836,10 @@ console.log("V477_PINNED_TRINKET_GEAR_PREFLIGHT_PASS");
         self.assertIn("다른 시즌 패키지 목록을 대신 사용하지 않습니다.",js)
         self.assertIn('setTrinketSelection("trinket1",priorTrinkets[0]);',js)
         self.assertIn('setTrinketSelection("trinket2",priorTrinkets[1]);',js)
-        self.assertIn('fillGearRows("special-rows",retained);',js)
-        self.assertIn("specialAllowedSlots(selected).includes(entry.slot)",js)
+        self.assertIn('fillGearRows("special-rows",priorSpecial);',js)
+        self.assertIn("option_source_build:row.dataset?.optionSourceBuild",js)
+        self.assertNotIn("priorSpecial.filter(entry=>",js)
+        self.assertNotIn("oldSpecial.filter(entry=>",js)
         # Never restore stale equipment captured before the asynchronous GET.
         build=js[js.index("async function buildSeasonEnvironment("):
                  js.index("function showEnvironmentBuild(")]
@@ -2162,6 +2164,51 @@ console.log("V837_GEAR_OPTION_OWNERSHIP_PASS");
                               cwd=ROOT,capture_output=True,text=True,timeout=15)
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertIn("V837_GEAR_OPTION_OWNERSHIP_PASS",result.stdout)
+
+    def test_v838_preserved_gear_option_provenance_blocks_stale_new_plan(self):
+        """Actual serialization: saved source/level never silently becomes current."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function selectedGear(nodeId, group) {");
+const b=raw.indexOf("function verifiedInstalledGearScopeMatchesRun(",a);
+assert(a>=0&&b>a);
+const old="12.1.5.70961",next="12.1.5.71000";
+const state={seasonGear:{season_build:old}};
+let level="334",values={item_id:"100",slot:"head",ilevel:"",
+  bonus_id:"13846",redirected_base_stats:"200"},compatible=true;
+const row={dataset:{optionSourceBuild:old,optionSourceLevel:"334"},
+ querySelectorAll:()=>Object.entries(values).map(([field,value])=>({dataset:{field},value}))};
+const $=()=>({querySelectorAll:()=>[row]});
+const f=Function("state","$","field","refreshSpecialSlots","seasonChoice",
+ raw.slice(a,b)+"\nreturn selectedGear;")(state,$,()=>level,()=>{},()=>compatible);
+const get=()=>f("special-rows","special_items");
+assert.deepStrictEqual(get(),[{slot:"head",item_id:100,
+ options:{bonus_id:"13846",redirected_base_stats:"200"}}]);
+state.seasonGear={season_build:old,installed_manifest_sha256:"b".repeat(64)};
+assert.equal(get().length,1); // F/J/O SHA changes are not source build changes.
+level="330";assert.throws(get,/이전 시즌\/레벨/);
+values.ilevel="334";assert.equal(get()[0].ilevel,334);
+state.seasonGear.season_build=next;assert.throws(get,/이전 시즌\/레벨/);
+state.seasonGear.season_build=old;row.dataset.optionSourceBuild="";
+assert.throws(get,/이전 시즌\/레벨/);
+row.dataset.optionSourceBuild=old;
+compatible=false;assert.throws(get,/이번 시즌 특수효과 장비 목록/);
+compatible=true;values={item_id:"101",slot:"head",ilevel:"330",
+ bonus_id:"",redirected_base_stats:""};
+state.seasonGear.season_build=next;
+assert.deepStrictEqual(get(),[{slot:"head",item_id:101,ilevel:330,options:{}}]);
+values={item_id:"",slot:"",ilevel:"",bonus_id:"",redirected_base_stats:""};
+assert.deepStrictEqual(get(),[]);
+console.log("V838_GEAR_OPTION_SOURCE_SCOPE_PASS");
+"""
+        result=subprocess.run([node,"-e",script,str(ROOT/"runner/webui/app.js")],
+                              cwd=ROOT,capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V838_GEAR_OPTION_SOURCE_SCOPE_PASS",result.stdout)
 
     def test_v7002_real_browser_refresh_posts_json_and_preserves_budget(self):
         """Execute the production refresh AND api transport, not a mocked api."""
