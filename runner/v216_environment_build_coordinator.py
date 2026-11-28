@@ -10937,7 +10937,8 @@ def _install_verified_fresh_environment_only(*, compilation, staged,
         source_optional_consumables=compilation.get(
             "source_owned_optional_consumables"),
         source_embellishments=compilation.get("source_owned_embellishments"),
-        embellishment_source_checked=True)
+        embellishment_source_checked=compilation.get(
+            "embellishment_source_checked") is True)
     key=installed["manifest_sha256"][:20]
     stage_id="fresh-v212-installed-"+key
     output="fresh_source/v212_installed_"+key+".json"
@@ -11322,6 +11323,12 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     source_owned_v680)
             # Consume the already verified same-invocation v848 source.
             # Optional errors must not block G/J/F/O or base installation.
+            # Only a normal collection/compile invocation establishes a
+            # checked-or-pending state. Existing installer callers without
+            # this source stage preserve their original manifest contract.
+            if (source_compilation.get("status")=="FRESH_V191_V211_V213_COMPILED_UNADMITTED"
+                    and "fresh_embellishment_recipe_source" in collected):
+                source_compilation["embellishment_source_checked"]=True
             try:
                 emb=collected.get("fresh_embellishment_recipe_source") or {}
                 if (source_compilation.get("status")=="FRESH_V191_V211_V213_COMPILED_UNADMITTED"
