@@ -2539,7 +2539,7 @@ const mergeTrinketRoleMetadata=load("function mergeTrinketRoleMetadata(",
 const trinketLootRoleLabel=load("function trinketLootRoleLabel(",
   "function mergeTrinketRoleMetadata(");
 const refresh=load("async function refreshExistingSeasonTrinkets(",
-                   "async function updateVisibleEquipmentChoices(");
+                   "const explicitEquipmentUpdates=new WeakMap()");
 (async()=>{
   stale=true;
   roleMetadata={"100":role};
