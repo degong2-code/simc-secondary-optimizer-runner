@@ -1160,7 +1160,7 @@ function syncCraftRow(row,restored=false) {
   note.textContent=!kind.value?"장식 종류를 먼저 선택하면 호환 부위가 표시됩니다.":
     !meta?"검증되지 않은 이전 장식 · 새 계획은 재선택 필요":
     slots.length?(meta?.item_ids?"정확한 제작장비별 적용 관계 확인":"지원 유형: 방어구 전용 · 목걸이/반지/무기에는 적용 불가"):
-    "이 직업에서 선택 가능한 제작 방어구가 없습니다.";
+    "이 전문화에서 선택 가능한 제작장비가 없습니다.";
 }
 
 function showRepresentativeScope() {
@@ -2217,7 +2217,7 @@ function craftMetadata() {
   return state.seasonGear?.embellishments??state.options?.embellishments??{};
 }
 function refreshCraftChoices(){
-  for(const row of $("crafted-rows").querySelectorAll(".gear-row")){
+  for(const row of ($("crafted-rows")?.querySelectorAll(".gear-row")||[])){
     const selector=row.querySelector('[data-field="embellishment"]'),old=selector.value;
     const choices=craftMetadata();
     selector.replaceChildren(option("","장식 종류 선택"));
@@ -2235,6 +2235,7 @@ function chosenCraft(slot,exactItemId=null,token=null) {
   const rows=state.seasonGear?.choices?.selectable_stat_craft||[];
   const valid=rows.filter(item=>{
     const meta=token?craftMetadata()[token]:null;
+    if(token&&!meta)return false;
     if(meta?.item_ids){
       const spec=field("spec");
       const form=state.seasonGear?.weapon_forms?.[spec];

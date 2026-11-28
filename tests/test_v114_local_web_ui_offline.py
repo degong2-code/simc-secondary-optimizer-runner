@@ -2372,8 +2372,8 @@ const controls={trinket1:select("101"),trinket2:select("102"),
 const state={seasonGear:{season_build:"12.1.5.70961"},seasonGearTargetIlevel:334,
  verifiedExistingBudget:{T:3107}};
 const install=Function("state","$","option","field","refreshOfficialEquipmentIcons",
- "refreshSpecialSlots","refreshEquipmentSelectionUI",raw.slice(a,b)+
- "\nreturn installSeasonGearHints;")(state,id=>controls[id],opt,()=>"334",()=>{},()=>{},()=>{});
+ "refreshSpecialSlots","refreshEquipmentSelectionUI","refreshCraftChoices",raw.slice(a,b)+
+ "\nreturn installSeasonGearHints;")(state,id=>controls[id],opt,()=>"334",()=>{},()=>{},()=>{},()=>{});
 install(null,{preserveSelection:true});
 assert.equal(state.seasonGear,null);assert.equal(state.seasonGearTargetIlevel,null);
 assert.equal(state.verifiedExistingBudget,null);

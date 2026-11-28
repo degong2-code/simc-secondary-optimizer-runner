@@ -253,3 +253,5 @@ class GenericRecipeSourceTests(unittest.TestCase):
         source["simc_token_counts"][token]=1
         source["material_options"]=[family,family]
         self.assertEqual(project()["options"],{})
+        source["material_options"]=[{**family,"preferred_physical_item_id":None},family]
+        self.assertEqual(project()["options"],{})

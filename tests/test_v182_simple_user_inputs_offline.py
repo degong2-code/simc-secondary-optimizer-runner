@@ -119,7 +119,7 @@ class SimpleUserInputs(unittest.TestCase):
         self.assertIn("crafted_stats=32/36",profile)
         js=(ROOT/"runner/webui/app.js").read_text("utf8")
         html=(ROOT/"runner/webui/index.html").read_text("utf8")
-        for marker in ('function oilCompatibility()','function chosenCraft(slot,exactItemId=null)',
+        for marker in ('function oilCompatibility()','function chosenCraft(slot,exactItemId=null,token=null)',
             'function selectedGear(nodeId, group)','row4_crit','row4_vers',
             'refreshSpecialSlots()', 'syncCraftRow(row)'):
 
@@ -133,6 +133,46 @@ class SimpleUserInputs(unittest.TestCase):
         self.assertLess(html.index('id="crafted-rows"'),html.index('id="conditions-title"'))
         self.assertIn("Omnium Folio · 4열 스탯",html)
 
+
+    def test_v852_actual_craft_choice_respects_recipe_item_and_weapon_form(self):
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function craftSlot(");
+const b=raw.indexOf("// Restored hidden options",a);
+assert(a>=0&&b>a);
+let spec="mage/frost";
+const state={options:{embellishments:{legacy:{slots:["head"]}}},
+ seasonGear:{embellishments:{lining:{item_ids:[102,103,104]}},
+ weapon_forms:{"mage/frost":"one_hand_frill","warrior/fury":"dual_two_hand"},
+ selected_slot_inventory:{one_hand_frill:{head:[1],main_hand:[13],off_hand:[23]},
+ dual_two_hand:{main_hand:[17],off_hand:[17]}},
+ choices:{selectable_stat_craft:[
+ {item_id:101,class_id:4,subclass_id:1,inventory_type:1,compatible_dps_specs:["mage/frost"]},
+ {item_id:102,class_id:4,subclass_id:1,inventory_type:1,compatible_dps_specs:["mage/frost"]},
+ {item_id:103,class_id:2,subclass_id:7,inventory_type:13,compatible_dps_specs:["mage/frost"]},
+ {item_id:104,class_id:2,subclass_id:8,inventory_type:17,compatible_dps_specs:["warrior/fury"]}]}}};
+const choose=Function("state","field","classArmor",raw.slice(a,b)+"\nreturn {chosenCraft,craftMetadata};")(
+ state,()=>spec,{mage:1,warrior:4});
+assert.equal(choose.chosenCraft("head",null,"lining").item_id,102);
+assert.equal(choose.chosenCraft("head",101,"lining"),null);
+assert.equal(choose.chosenCraft("main_hand",null,"lining").item_id,103);
+assert.equal(choose.chosenCraft("off_hand",null,"lining"),null);
+spec="warrior/fury";
+assert.equal(choose.chosenCraft("main_hand",null,"lining").item_id,104);
+assert.equal(choose.chosenCraft("off_hand",104,"lining").item_id,104);
+state.seasonGear.embellishments={};
+assert.deepStrictEqual(choose.craftMetadata(),{});
+assert.equal(choose.chosenCraft("main_hand",104,"lining"),null);
+console.log("V852_EXACT_CRAFT_CHOICE_PASS");
+"""
+        result=subprocess.run([node,"-e",script,str(ROOT/"runner/webui/app.js")],
+                              cwd=ROOT,capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V852_EXACT_CRAFT_CHOICE_PASS",result.stdout)
 
     def test_loot_role_display_and_metadata_only_refresh_preserve_all_items(self):
         import shutil, subprocess

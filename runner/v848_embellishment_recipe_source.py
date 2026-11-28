@@ -376,8 +376,13 @@ def project_installed_options(source,catalog,*,source_receipt_sha256,source_cand
     gear={row["item_id"]:row for group in catalog["catalog"]["gear"]["slot_groups"].values()
           for row in group if row.get("category")=="selectable_stat_craft"}
     counts=source.get("simc_token_counts",{})
-    options={}; ambiguous=set(); pending={}
-    for family in source.get("material_options",[]):
+    options={}; pending={}
+    families=source.get("material_options",[])
+    family_token_counts=defaultdict(int)
+    for family in families:
+        for token in {simc_token(row["name_enUS"]) for row in family.get("simc_rows",[])}:
+            family_token_counts[token]+=1
+    for family in families:
         preferred=family.get("preferred_physical_item_id")
         simc=family.get("simc_rows",[])
         if len(simc)!=1 or not preferred:
@@ -386,8 +391,7 @@ def project_installed_options(source,catalog,*,source_receipt_sha256,source_cand
         if not re.fullmatch(r"[a-z0-9_]{1,140}",token) or counts.get(token)!=1:
             pending[token]="SIMC_TOKEN_NOT_UNIQUE_OR_SERIALIZABLE"
             continue
-        if token in options or token in ambiguous:
-            options.pop(token,None);ambiguous.add(token)
+        if family_token_counts[token]!=1:
             pending[token]="DISTINCT_MATERIAL_FAMILY_TOKEN_COLLISION"
             continue
         if (family.get("quality_status") not in

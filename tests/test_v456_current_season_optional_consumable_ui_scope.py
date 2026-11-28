@@ -156,7 +156,10 @@ function populateSelect(id,values,labeler){
 function refreshDefaultConsumableSummaries(){}
 function syncCraftRow(){}
 `;
-const inner=raw.slice(a,b);
+const ca=raw.indexOf("function craftMetadata()");
+const cb=raw.indexOf("function chosenCraft(",ca);
+assert(ca>=0&&cb>ca);
+const inner=raw.slice(ca,cb)+raw.slice(a,b);
 const saved=raw.slice(rs,re);
 const fn=Function("options",harness+inner+String.raw`
 installOptions(options);
