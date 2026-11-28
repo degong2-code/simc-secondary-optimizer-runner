@@ -89,6 +89,13 @@ class EnvironmentKoTests(unittest.TestCase):
         self.assertEqual(result["status"],loc.STATUS_PARTIAL)
         self.assertFalse(result["source_only_names_not_item_approval"] is False)
 
+    def test_verified_enchant_scroll_ids_join_existing_name_worklist(self):
+        doc=install()
+        doc["published_verified_options"]=[{"enchant_id":99012,"ui_selectable":True}]
+        roles=loc.verified_environment_items(doc,enchant_scroll_ids={99012:240014})
+        self.assertEqual(roles[240014],["verified_enchant"])
+        self.assertNotIn(99012,roles)
+
     def test_pinned_77_static_names_reused_without_network_or_new_approval(self):
         product=gear.public_options(gear.read())
         build=product["season_build"]

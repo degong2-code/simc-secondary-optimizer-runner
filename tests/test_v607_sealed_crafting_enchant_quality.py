@@ -65,6 +65,44 @@ class SealedCraftingQualityTests(unittest.TestCase):
         self.assertNotIn("no_inferior_effect_components_verified",row)
         self.assertNotIn("same_effect_and_use_conditions_verified",row)
 
+    def test_v846_recover_physical_scroll_from_exact_installed_quality_sha(self):
+        import json
+        import tempfile
+        import v335_environment_official_ko_localization as loc
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            (root/"fresh_source").mkdir()
+            (root/"source").mkdir()
+            v191rel="fresh_source/v191_candidate.json"
+            v583id="fresh-v583-enchant-join-"+"d"*20
+            v583rel="source/v583_permanent_join_"+"d"*20+".json"
+            def seal(stage_id,version,rel,doc):
+                return build.stage_engine.execute_stage(
+                    root=root,stage_id=stage_id,stage_version=version,
+                    inputs={"test":"source"},outputs={"candidate":rel},
+                    execute=lambda:(root/rel).write_text(json.dumps(doc),"utf8"))
+            first=seal("fresh-v191","1",v191rel,self.v191)
+            joined=seal(v583id,"v583-source-only-join-v1",v583rel,self.v583)
+            source={**self.catalog,"source_provenance":{"v191":{
+                "sha256":build.digest((root/v191rel).read_bytes())}}}
+            quality=build._v607_sealed_highest_crafting_quality(
+                catalog=source,original_v191=self.v191,physical_v583=self.v583,
+                v191_sha=first["receipt_sha256"],v583_sha=joined["receipt_sha256"])
+            installed={"game_build":self.build,"simc_revision":self.rev,
+                "source_catalog_manifest_sha256":source["manifest_sha256"],
+                "original_v217_stage_receipts":{"v191_stage":first["receipt_sha256"]},
+                "published_verified_options":[{"enchant_id":99012,"ui_selectable":True,
+                    "quality_source_sha256":quality[99012]["quality_source_sha256"]}]}
+            before=copy.deepcopy(installed)
+            self.assertEqual(loc.verified_enchant_scroll_ids(root,installed,source),
+                             {99012:240014})
+            self.assertEqual(installed,before)
+            installed["published_verified_options"][0]["quality_source_sha256"]="0"*64
+            self.assertEqual(loc.verified_enchant_scroll_ids(root,installed,source),{})
+            installed=before
+            (root/v583rel).write_text("{}",encoding="utf8")
+            self.assertEqual(loc.verified_enchant_scroll_ids(root,installed,source),{})
+
     def test_different_crafting_data_not_same_quality_family(self):
         altered=copy.deepcopy(self.v583)
         altered["matches"][0]["physical_items"][0]["crafting_data_id"]=90002

@@ -2050,7 +2050,8 @@ def _reuse_v277_G_in_preprofile(*, catalog, target_ilevel, native_G,
 
 
 def _v607_sealed_highest_crafting_quality(*, catalog, original_v191,
-                                          physical_v583, v191_sha, v583_sha):
+                                          physical_v583, v191_sha, v583_sha,
+                                          display_item_ids=None):
     """Exact same-crafting-family top rank; never spell strength or DPS proof.
 
     Both caller-supplied documents MUST first be authenticated against their
@@ -2194,6 +2195,10 @@ def _v607_sealed_highest_crafting_quality(*, catalog, original_v191,
                  "crafting_data_id":crafting_id,"ranks":selected,
                  "highest_enchant_id":eid,
                  "game_build":catalog["game_build"]}
+        # Optional read-only display projection from the SAME exact rank
+        # witness. Never insert a display field into the sealed proof.
+        if display_item_ids is not None:
+            display_item_ids[eid]=selected[-1]["physical_item_id"]
         ready[eid]={
             "verified_quality_rank":source["quality_rank"],
             "quality_source_sha256":digest(canonical(payload).encode("utf8")),

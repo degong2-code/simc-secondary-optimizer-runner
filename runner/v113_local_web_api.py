@@ -3843,6 +3843,10 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             if option_source_verified:
                 if exact:
                     confirmed=doc["published_verified_options"]
+                    scroll_ids=official_ko_env.verified_enchant_scroll_ids(
+                        source_path.parent.parent,doc,source)
+                    scroll_names=(official_ko_env.read_names(jobs.root,game_build,
+                                    set(scroll_ids.values())) if scroll_ids else {})
                     registered={"status":(
                         "INSTALLED_POLICY_A_REGISTRATIONS_RUNTIME_BINDING_PENDING"
                         if confirmed else "NO_VERIFIED_INSTALLED_ENCHANTS"),
@@ -3852,6 +3856,11 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                             "simc_token":entry["simc_token"],
                             "highest_verified_quality_rank":
                                 entry["highest_verified_quality_rank"],
+                            **({"physical_scroll_item_id":scroll_ids[entry["enchant_id"]],
+                                **({"official_name_ko":scroll_names[
+                                    scroll_ids[entry["enchant_id"]]]}
+                                   if scroll_ids[entry["enchant_id"]] in scroll_names else {})}
+                               if entry["enchant_id"] in scroll_ids else {}),
                             **({"verified_fixed_E":
                                     dict(entry["verified_fixed_E"]),
                                 "chmv_budget_receipt_sha256":

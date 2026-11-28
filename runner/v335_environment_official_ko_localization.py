@@ -120,8 +120,90 @@ def read_names(root,build,ids):
     except (LocalizationBlocked,OSError,TypeError,ValueError):
         return {}
 
+def verified_enchant_scroll_ids(stage_root,installed,source_catalog):
+    """Recover only the physical scroll whose existing quality proof matches.
+
+    Callers already authenticated the exact v212 and v213. Old installs
+    contain the quality SHA, not the physical item ID. Reuse v607's original
+    comparison against sealed compact v191/v583 outputs; no DB2 or Native.
+    """
+    if type(source_catalog) is not dict:
+        return {}
+    try:
+        import v216_environment_build_coordinator as build
+        import v217_stage_execution_engine as stages
+        stage_root=pathlib.Path(stage_root)
+        if (stage_root.is_symlink() or
+            any(source_catalog.get(k)!=installed.get(k)
+                for k in ("game_build","simc_revision")) or
+            source_catalog.get("manifest_sha256")!=
+                installed.get("source_catalog_manifest_sha256")):
+            return {}
+        wanted={r["enchant_id"]:r["quality_source_sha256"]
+                for r in installed["published_verified_options"]
+                if r.get("ui_selectable") is True}
+        if not wanted:return {}
+        receipt_root=stage_root/".stage_receipts"
+        if receipt_root.is_symlink():return {}
+        v191=stages._read_receipt(receipt_root/"fresh-v191.json")
+        source=stage_root/"fresh_source"/"v191_candidate.json"
+        if (v191.get("status")!="COMPLETE" or
+            v191.get("stage_id")!="fresh-v191" or
+            v191.get("receipt_sha256")!=installed.get(
+                "original_v217_stage_receipts",{}).get("v191_stage") or
+            v191.get("output_paths")!={"candidate":"fresh_source/v191_candidate.json"} or
+            not source.is_file() or source.is_symlink() or
+            source.stat().st_size>25_000_000):return {}
+        original_raw=source.read_bytes()
+        original_sha=sha(original_raw)
+        if (v191.get("outputs",{}).get("candidate",{}).get("sha256")!=original_sha or
+            source_catalog["source_provenance"]["v191"]["sha256"]!=original_sha):
+            return {}
+        original=json.loads(original_raw)
+        # Bound the number of historical projections inspected. No arbitrary
+        # first match on the latest revision; each installed SHA is checked.
+        receipts=sorted(receipt_root.glob("fresh-v583-enchant-join-*.json"))
+        if len(receipts)>32:return {}
+        found={}
+        conflicts=set()
+        for receipt_path in receipts:
+            try:
+                stage_id=receipt_path.stem
+                if not re.fullmatch(r"fresh-v583-enchant-join-[a-f0-9]{20}",stage_id):
+                    continue
+                receipt=stages._read_receipt(receipt_path)
+                relative="source/v583_permanent_join_"+stage_id.rsplit("-",1)[1]+".json"
+                candidate=stage_root/relative
+                if (receipt.get("status")!="COMPLETE" or
+                    receipt.get("stage_id")!=stage_id or
+                    receipt.get("stage_version")!="v583-source-only-join-v1" or
+                    receipt.get("output_paths")!={"candidate":relative} or
+                    not candidate.is_file() or candidate.is_symlink() or
+                    candidate.stat().st_size>25_000_000):continue
+                raw=candidate.read_bytes()
+                if receipt.get("outputs",{}).get("candidate",{}).get("sha256")!=sha(raw):
+                    continue
+                physical=json.loads(raw)
+                projected={}
+                quality=build._v607_sealed_highest_crafting_quality(
+                    catalog=source_catalog,original_v191=original,
+                    physical_v583=physical,v191_sha=v191["receipt_sha256"],
+                    v583_sha=receipt["receipt_sha256"],display_item_ids=projected)
+                for eid,proof in quality.items():
+                    if wanted.get(eid)!=proof["quality_source_sha256"]:continue
+                    iid=projected[eid]
+                    if eid in found and found[eid]!=iid:conflicts.add(eid)
+                    else:found[eid]=iid
+            except (OSError,ValueError,TypeError,KeyError,AttributeError,IndexError):
+                continue
+            if set(found)==set(wanted):break
+        return {eid:iid for eid,iid in found.items() if eid not in conflicts}
+    except (OSError,ValueError,TypeError,KeyError,AttributeError,IndexError):
+        return {}
+
+
 def verified_environment_items(installed,physical_layout=None,
-                               *,catalog=None):
+                               *,catalog=None,enchant_scroll_ids=None):
     """Worklist is source-owned; *no* new selection/admission from names."""
     manifests.verify_fresh_installed_environment(installed)
     roles={}
@@ -152,6 +234,9 @@ def verified_environment_items(installed,physical_layout=None,
         if type(opt) is dict and opt.get("ui_selectable") is True:
             i=opt.get("physical_item_id",opt.get("item_id"))
             if type(i) is int:add("verified_enchant",i)
+    if enchant_scroll_ids:
+        for i in enchant_scroll_ids.values():
+            add("verified_enchant",i)
     if catalog is not None:
         need(type(catalog) is dict and
              catalog.get("status")=="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY" and
@@ -262,10 +347,12 @@ def _store(root,build,rows,requested,roles):
     return True
 
 def build_from_verified_install(root,installed,physical_layout=None,
-                                *,catalog=None,allow_network=True,credentials=None):
+                                *,catalog=None,allow_network=True,credentials=None,
+                                enchant_scroll_ids=None):
     """Automatic Environment Build stage: never another item-admission gate."""
     game_build=installed["game_build"]
-    roles=verified_environment_items(installed,physical_layout,catalog=catalog)
+    roles=verified_environment_items(installed,physical_layout,catalog=catalog,
+                                     enchant_scroll_ids=enchant_scroll_ids)
     return _build_for_roles(root,game_build,roles,allow_network=allow_network,
                             credentials=credentials)
 
@@ -385,6 +472,7 @@ def build_for_environment(root,game_build,result,*,target_ilevel,credentials=Non
     # belonging to this v212 receipt; the old static *names* may still seed
     # the intersection of this exact current worklist.
     catalog=None
+    scroll_ids={}
     catalog_path=path.parent/"v213_candidate_catalog.json"
     if catalog_path.is_file() and not catalog_path.is_symlink():
         try:
@@ -395,8 +483,11 @@ def build_for_environment(root,game_build,result,*,target_ilevel,credentials=Non
                 installed_catalog.get("game_build")==game_build):
                 catalog=gear.public_installed_v213_candidates(
                     installed_catalog,installed_manifest_sha256=source)
+                scroll_ids=verified_enchant_scroll_ids(
+                    path.parent.parent,doc,installed_catalog)
         except (OSError,ValueError,KeyError,TypeError):
             # Optional translation must not invalidate core installation.
             catalog=None
     return build_from_verified_install(root,doc,physical,catalog=catalog,
+        enchant_scroll_ids=scroll_ids,
         **({"credentials":credentials} if credentials is not None else {}))
