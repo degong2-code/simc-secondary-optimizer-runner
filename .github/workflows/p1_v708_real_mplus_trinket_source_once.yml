@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/p1_v708_real_mplus_trinket_source_once.yml
       - integration_probes/p1_v708_real_mplus_trinket_source_once.py
+      - integration_probes/p1_v847_embellishment_source_once.py
 permissions:
   contents: read
   actions: read
@@ -184,5 +185,46 @@ jobs:
         with:
           name: p1-v719-context-free-bonus-replay
           path: out/v719/V719_CONTEXT_FREE_BONUS_REPLAY.json
+          if-no-files-found: warn
+          retention-days: 30
+  embellishment-source:
+    if: ${{ contains(github.event.head_commit.message, '[v847-embellishment-source-once]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PYTHONPATH: runner:.
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 45371957303
+          name: p1-v708-public-70961-db2-reuse
+          path: out/v847/source
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 45431936045
+          name: p1-v716-public-70961-bonus-source-reuse
+          path: out/v847/source
+          github-token: ${{ github.token }}
+      - name: Observe only missing crafting relations against original source
+        run: |
+          python -m py_compile integration_probes/p1_v847_embellishment_source_once.py
+          python -u integration_probes/p1_v847_embellishment_source_once.py --root out/v847/source --out out/v847
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: p1-v847-crafting-reagent-source
+          path: |
+            out/v847/V847_EMBELLISHMENT_SOURCE.json
+            out/v847/source/source/raw_ModifiedCrafting*.csv
+            out/v847/source/source/raw_MCRSlotXMCRCategory.csv
+            out/v847/source/.stage_receipts/season-crafting-raw-*.json
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 30
