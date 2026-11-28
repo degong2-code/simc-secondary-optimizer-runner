@@ -4407,7 +4407,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
           updateBudgetPreview();
         if(installedScope.reused_verified_installed_season===true &&
            typeof refreshExistingSeasonTrinkets==="function")
-          void refreshExistingSeasonTrinkets(gear,level,!data.optional_embellishment_refresh);
+          void refreshExistingSeasonTrinkets(gear,level,!report.optional_embellishment_refresh);
       }catch(error){
         installSeasonGearHints(null,{preserveSelection:true});
         $("season-gear-note").textContent=
