@@ -8787,6 +8787,57 @@ def _fresh_source_owner_crosscheck_selected_J_F(*, owner_numeric,
 
 
 
+def _fresh_special_gem_J_exclusion_source(*, preflight, compilation, j):
+    """Return the existing exact direct-zero source for selected special J.
+
+    The physical special gem is excluded from ordinary J only in the source
+    scope where direct CHMV is known zero. No effect/proc or socket legality
+    certification is implied; SimC remains the owner of nonstatic effects.
+    Ordinary-only J retains its original identity.
+    """
+    layout=preflight.get("physical_gem_layout_unadmitted") or {}
+    special=layout.get("special_gem_id")
+    if special is None and j.get("special_gem_item_id") is None:
+        return {"status":"ORDINARY_ONLY"}
+    if (type(special) is not int or special<=0
+            or j.get("special_gem_item_id")!=special
+            or special in (j.get("ordinary_gem_item_ids") or [])):
+        return {"status":"SPECIAL_GEM_LAYOUT_OR_J_IDENTITY_PENDING"}
+    rank=compilation.get("primary_gem_rank_source_unadmitted") or {}
+    selected=compilation.get("selected_special_gem_direct_CHMV_source_only") or {}
+    exact=(rank.get("direct_static_CHMV_source_by_item_id") or {}).get(str(special))
+    if (rank.get("status")!="PRIMARY_GEM_RANK_SOURCE_PROJECTED_UNADMITTED"
+            or type(exact) is not dict or exact.get("item_id")!=special
+            or type(exact.get("enchant_id")) is not int
+            or exact["enchant_id"]<=0
+            or rank.get("game_build")!=preflight.get("game_build")
+            or rank.get("simc_revision")!=preflight.get("simc_revision")
+            or rank.get("v221_stage_receipt_sha256")!=j.get("v221_stage_receipt_sha256")
+            or any(type(rank.get(k)) is not str or
+                   season_budget_contract.SHA.fullmatch(rank[k]) is None
+                   for k in ("v221_stage_receipt_sha256","enchant_source_sha256"))
+            or any(selected.get(k)!=v for k,v in exact.items())
+            or any(selected.get(k)!=rank.get(k) for k in (
+                "game_build","simc_revision","v221_stage_receipt_sha256",
+                "enchant_source_sha256"))
+            or selected.get("ordinary_J_includes_selected_special") is not False):
+        return {"status":"SPECIAL_GEM_EXACT_SAME_BUILD_SOURCE_PENDING"}
+    vector=exact.get("direct_static_CHMV_vector_source_only")
+    if (exact.get("source_basis")!=
+            "EXACT_PRIMARY_OR_ARMOR_COMPONENTS_NO_LINKED_SPELL"
+            or type(vector) is not dict
+            or set(vector)!=set(season_budget_contract.STATS)
+            or any(type(v) is not int or v!=0 for v in vector.values())):
+        return {"status":"SPECIAL_GEM_DIRECT_CHMV_ACCOUNTING_PENDING"}
+    return {"status":"SPECIAL_GEM_DIRECT_ZERO_SOURCE_BOUND",
+            "item_id":special,"enchant_id":exact["enchant_id"],
+            "game_build":rank["game_build"],
+            "simc_revision":rank["simc_revision"],
+            "v221_stage_receipt_sha256":rank["v221_stage_receipt_sha256"],
+            "enchant_source_sha256":rank["enchant_source_sha256"],
+            "direct_static_CHMV_vector":dict(vector)}
+
+
 def _fresh_source_owner_original_J_F_components(*, preflight, compilation,
                                                  staged, owner_numeric,
                                                  quality_scope,
@@ -8825,7 +8876,12 @@ def _fresh_source_owner_original_J_F_components(*, preflight, compilation,
     j=owner_numeric.get("J")
     jq=quality_scope.get("J")
     socket=compilation.get("selected_J_intrinsic_socket_origin_unadmitted")
+    special_J=(_fresh_special_gem_J_exclusion_source(
+        preflight=preflight,compilation=compilation,j=j)
+        if type(j) is dict else None)
     if (type(j) is dict and type(jq) is dict and type(socket) is dict and
+            special_J["status"] in (
+                "ORDINARY_ONLY","SPECIAL_GEM_DIRECT_ZERO_SOURCE_BOUND") and
             socket.get("status") in (
                 "J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY",
                 "J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY")
@@ -8878,6 +8934,8 @@ def _fresh_source_owner_original_J_F_components(*, preflight, compilation,
                  "v232_stage_receipt_sha256":
                      socket["v232_stage_receipt_sha256"],
                  "socket_counts":dict(socket["selected_socket_counts"])}
+            if special_J["status"]!="ORDINARY_ONLY":
+                src["special_gem_direct_zero_source"]=special_J
             out["J"]={
                 "rating":j["rating"],"game_build":build,
                 "source_catalog_manifest_sha256":manifest,
@@ -10935,7 +10993,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     else:
                         declared_counts=physical_gems.declared_full_socket_counts(
                             available_slots=sorted(selected_slots),
-                            socket_total=target_sockets,need=need)
+                            socket_total=target_sockets,need=need,
+                            intrinsic_socket_counts=(selected_slots
+                                if special_id is not None else None))
                         progress["simc_declared_full_socket_counts_source_only"]=(
                             dict(declared_counts))
                         source_compilation[
@@ -11627,6 +11687,13 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             source_compilation[
                 "original_J_F_verified_components_not_full_environment"]=owner_J_F
             progress["original_J_F_verified_component_names"]=sorted(owner_J_F)
+            if type(jf_numeric.get("J")) is dict and (
+                    preflight.get("physical_gem_layout_unadmitted") or {}).get(
+                        "special_gem_id") is not None:
+                progress["selected_special_gem_J_accounting_status"]=(
+                    _fresh_special_gem_J_exclusion_source(
+                        preflight=preflight,compilation=source_compilation,
+                        j=jf_numeric["J"])["status"])
             # No selected oil hand has NO physical item to authenticate.
             # The v222 exact explicit-none proof is created later; do not
             # perform optional source-owner O verification to install base.

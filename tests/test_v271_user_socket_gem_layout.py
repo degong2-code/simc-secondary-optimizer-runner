@@ -70,6 +70,24 @@ class SocketLayoutTests(unittest.TestCase):
         self.assertNotIn("gem_id=240967",profile)
         self.assertEqual(rows["head"]["options"]["gem_id"],"311101")
 
+    def test_v828_selected_special_prefers_original_intrinsic_socket_positions(self):
+        slots=["head","neck","finger1","finger2","wrists","waist"]
+        intrinsic={"head":0,"neck":2,"finger1":1,"finger2":1,"wrists":0,"waist":1}
+        actual=sockets.declared_full_socket_counts(
+            available_slots=slots,socket_total=5,need=self.need,
+            intrinsic_socket_counts=intrinsic)
+        self.assertEqual(actual,intrinsic)
+        self.assertEqual(sockets.declared_full_socket_counts(
+            available_slots=slots,socket_total=4,need=self.need),
+            {"head":1,"neck":1,"finger1":1,"finger2":1,"wrists":0,"waist":0})
+        partial={**intrinsic,"waist":0}
+        declared=sockets.declared_full_socket_counts(
+            available_slots=slots,socket_total=5,need=self.need,
+            intrinsic_socket_counts=partial)
+        self.assertEqual(declared,{**partial,"head":1})
+        # A prospective missing slot is still distinct from intrinsic proof.
+        self.assertEqual(sum(partial.values()),4)
+
     def test_p3_fm_four_stat_default_uses_each_nominal_type_once(self):
         source={
             stat:{"item_id":311100+i,"raw_nominal_points":40+i}

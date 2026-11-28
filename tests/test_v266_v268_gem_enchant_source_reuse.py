@@ -329,6 +329,77 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
         with self.assertRaises(classifier.SourceBlocked):
             classifier.primary_gem_quality_projection(drift)
 
+    def test_v828_original_J_owner_consumes_exact_special_direct_zero(self):
+        from runner import v211_enchant_source_effect_classification as classifier
+        from runner import v216_environment_build_coordinator as engine
+        import copy
+        path=Path(__file__).resolve().parents[1]/"docs/development/research_receipts/p1_v821_70961_primary_gem_enchant_compact.json"
+        doc=json.loads(path.read_text("utf8"))
+        projected=classifier.primary_gem_quality_projection(doc["candidate_rows"])
+        build=doc["game_build"]; rev=doc["simc_revision"]
+        rank={**projected,"status":"PRIMARY_GEM_RANK_SOURCE_PROJECTED_UNADMITTED",
+              "game_build":build,"simc_revision":rev,
+              "v221_stage_receipt_sha256":"a"*64,"enchant_source_sha256":"b"*64}
+        ids=[11,12,13,14]
+        pre={"schema":engine.FRESH_SOURCE_PREFLIGHT_SCHEMA,"environment_ready":False,
+             "game_build":build,"simc_revision":rev,
+             "source_catalog_manifest_sha256":"c"*64,
+             "physical_gem_layout_unadmitted":{"special_gem_id":240983,
+                 "ordinary_gem_ids":ids}}
+        numeric={"J":{"rating":92,"special_gem_item_id":240983,
+             "ordinary_gem_item_ids":ids,
+             "per_item_nominal_rating":{str(i):23 for i in ids},
+             "v221_stage_receipt_sha256":"a"*64,"source_identity_sha256":"d"*64}}
+        quality={"J":{"ordinary_gem_item_ids":ids,
+             "v221_stage_receipt_sha256":"a"*64,"v230_stage_receipt_sha256":"e"*64,
+             "real_socket_proof_required":True,
+             "same_enchant_quality_groups_source_only":[
+                 {"observed_item_ids":[i],"comparable_effect_source_only":True,
+                  "best_discovered_effect_item_id_source_only":i} for i in ids]}}
+        staged={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+                "stage_status":"REUSED_VERIFIED","stage_receipt_sha256":"f"*64}
+        # Synthetic physically supported five-socket case, not actual
+        # 70961 representative installation; the source gem rows are real.
+        socket={"status":"J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY",
+                "additional_socket_proof_required_by_slot":{},
+                "observed_J_unadmitted":92,"v232_stage_receipt_sha256":"1"*64,
+                "selected_socket_counts":{"head":1,"neck":2,"finger1":1,"finger2":1}}
+        comp={"simc_revision":rev,"primary_gem_rank_source_unadmitted":rank,
+              "selected_J_intrinsic_socket_origin_unadmitted":socket}
+        def bind(i):
+            comp["selected_special_gem_direct_CHMV_source_only"]={
+                **rank["direct_static_CHMV_source_by_item_id"][str(i)],
+                **{k:rank[k] for k in ("game_build","simc_revision",
+                    "v221_stage_receipt_sha256","enchant_source_sha256")},
+                "ordinary_J_includes_selected_special":False}
+            pre["physical_gem_layout_unadmitted"]["special_gem_id"]=i
+            numeric["J"]["special_gem_item_id"]=i
+        def admit():
+            return engine._fresh_source_owner_original_J_F_components(
+                preflight=pre,compilation=comp,staged=staged,
+                owner_numeric=numeric,quality_scope=quality,effect_observations=[])
+        bind(240983)
+        self.assertEqual(admit()["J"]["rating"],92)
+        proof=admit()["J"]["source_sha256"]
+        bind(240971)
+        self.assertNotEqual(admit()["J"]["source_sha256"],proof)
+        bind(240967)
+        self.assertNotIn("J",admit())
+        bind(240983)
+        for key,value in (("game_build","12.1.5.0"),("enchant_source_sha256","0"*64),
+                          ("direct_static_CHMV_vector_source_only",None),
+                          ("item_id",240971)):
+            with self.subTest(field=key):
+                original=copy.deepcopy(comp["selected_special_gem_direct_CHMV_source_only"])
+                comp["selected_special_gem_direct_CHMV_source_only"][key]=value
+                self.assertNotIn("J",admit())
+                comp["selected_special_gem_direct_CHMV_source_only"]=original
+        # The existing additional-socket gate must still reject reachable
+        # bonus candidates without actual physical applicability.
+        socket["status"]="J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING"
+        socket["additional_socket_proof_required_by_slot"]={"head":1}
+        self.assertNotIn("J",admit())
+
     def test_same_build_source_and_scaling_schema_must_be_explicit(self):
         with self.assertRaisesRegex(source.EnchantSourceBlocked,
                                     "EXACT_SAME_BUILD"):

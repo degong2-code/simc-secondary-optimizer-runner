@@ -199,7 +199,8 @@ FULL_SOCKET_SLOT_ORDER=("head","neck","finger1","finger2","wrists",
                         "waist","feet","hands","legs","shoulders","chest",
                         "back","main_hand","off_hand")
 
-def declared_full_socket_counts(*,available_slots,socket_total,need):
+def declared_full_socket_counts(*,available_slots,socket_total,need,
+                                intrinsic_socket_counts=None):
     """Fixed gem_id positions over source-observed representative slot names.
 
     This is a profile declaration, not proof that equipment has sockets.
@@ -216,10 +217,26 @@ def declared_full_socket_counts(*,available_slots,socket_total,need):
          "SOCKET_DECLARED_GEAR_SLOT_CAPACITY_EXCEEDED")
     planned={s:0 for s in sorted(available_slots)}
     missing=socket_total
-    for layer in range(3):
-        for s in ordered:
+    if intrinsic_socket_counts is not None:
+        need(type(intrinsic_socket_counts) is dict
+             and set(intrinsic_socket_counts)==set(planned)
+             and all(type(n) is int and 0<=n<=3
+                     for n in intrinsic_socket_counts.values()),
+             "SOCKET_DECLARED_INTRINSIC_SOURCE_COUNTS_INVALID")
+        # Consume actual source-observed sockets first. A remaining
+        # declaration is only a prospective layout, not socket proof.
+        for layer in range(3):
+            for slot in ordered:
+                if missing==0: break
+                if layer<intrinsic_socket_counts[slot]:
+                    planned[slot]+=1
+                    missing-=1
             if missing==0: break
-            planned[s]+=1
+    for layer in range(3):
+        for slot in ordered:
+            if missing==0: break
+            if planned[slot]>layer: continue
+            planned[slot]+=1
             missing-=1
         if missing==0: break
     need(missing==0,"SOCKET_DECLARED_LAYOUT_COUNT_DRIFT")
