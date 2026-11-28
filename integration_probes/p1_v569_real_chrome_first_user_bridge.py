@@ -29,11 +29,13 @@ window.fetch=async (resource,config={})=>{
    s.builds++;s.calls.push("build");
    const body=JSON.parse(config.body);
    if(body.auto_initial_core_build!==true||
-      body.auto_myth_target_source_build!==BUILD||
-      body.auto_myth_target_source_sha256!=="b".repeat(64))
+      (s.builds<=3&&(body.auto_myth_target_source_build!==BUILD||
+       body.auto_myth_target_source_sha256!=="b".repeat(64))))
      throw Error("V569_WRONG_BUILD_REQUEST");
+   const level=body.target_ilevel;
+   if(level!==(s.builds<=3?334:330))throw Error("V840_WRONG_TARGET_LEVEL");
    if(s.mode==="pending")return reply({
-     web_environment_scope:{game_build:BUILD,target_ilevel:334,
+     web_environment_scope:{game_build:BUILD,target_ilevel:level,
        environment_ready:false,environment_installed:false},
      zero_history_build:{requires:["GEM_J_PENDING"]},
      source_compilation:{missing:[]}});
@@ -41,7 +43,7 @@ window.fetch=async (resource,config={})=>{
      installed_manifest_sha256:SHA,installed_source_game_build:BUILD,
      verified_v113_profile_source_restored:true,
      G:2850,J:92,F:165,O:0,B:3107,T:3107,
-     web_environment_scope:{game_build:BUILD,target_ilevel:334,
+     web_environment_scope:{game_build:BUILD,target_ilevel:level,
        active_season_reverified_in_this_lookup:true,
        environment_ready:true,environment_installed:true}});
  }
@@ -53,16 +55,24 @@ window.fetch=async (resource,config={})=>{
      source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
      installed_manifest_sha256:s.mode==="wrong-sha"?"c".repeat(64):SHA,
      season_build:BUILD,weapon_forms:{"paladin/retribution":"two_hand"},
+     selected_slot_inventory:{two_hand:{head:[1]}},
      choices:{trinket:[{item_id:910001,name:"Synthetic Alpha"},
                          {item_id:910002,name:"Synthetic Beta"}],
-       special_effect_gear_candidate:[],selectable_stat_craft:[]}});
+       special_effect_gear_candidate:[{item_id:910003,name:"Synthetic Special",
+        inventory_type:1,class_id:4,subclass_id:4}],selectable_stat_craft:[]}});
  }
+ if(p==="/api/v1/season-gear/refresh"||p==="/api/v1/season-item-icons")
+   return reply({});
+ if(p==="/api/v1/verified-oil-loadouts")
+   return reply({schema:"v113_verified_installed_oil_loadouts_v1",game_build:BUILD,
+     target_ilevel:Number(u.searchParams.get("ilevel")),items:[]});
  if(p==="/api/v1/longrun/start"&&m==="POST"){
    s.calls.push("dps");s.dps++;
    const body=JSON.parse(config.body);s.last=body;
    if(body.installed_manifest_sha256!==SHA||
       body.installed_season_game_build!==BUILD||
-      body.controls.trinket_ids.join(",")!=="910001,910002")
+      body.controls.trinket_ids.join(",")!=="910001,910002"||
+      body.controls.ilevel!==330)
      throw Error("V569_WRONG_DPS_SHA_OR_IDS");
    return reply({session_id:"0123456789abcdef0123",status:"QUEUED"});
  }
@@ -85,7 +95,12 @@ def snap(d):
        sha:state.seasonGear?.installed_manifest_sha256||null,
        level:state.seasonGearTargetIlevel,
        build:state.verifiedInstalledBuildFromThisPage,
-       trinkets:[field("trinket1"),field("trinket2")]};
+       trinkets:[field("trinket1"),field("trinket2")],
+       special:[...document.querySelectorAll('#special-rows select[data-field="item_id"]')]
+          .map(x=>x.value).filter(Boolean),
+       specialLevel:document.querySelector('#special-rows [data-field="ilevel"]').value,
+       specialHistoric:document.querySelector('#special-rows select[data-field="item_id"]')
+          .selectedOptions[0]?.dataset.historic||null};
     """)
 def idle(d):
     WebDriverWait(d,30).until(lambda x:x.execute_script("return !!state.token&&!state.busy"))
@@ -158,6 +173,13 @@ def main():
                 "document.getElementById('start-btn').textContent.includes('시즌 환경 준비') && "+
                 "!state.busy"))
             d.execute_script(INSTALL)
+            # The current product validates path/revision before any Build.
+            # These synthetic values never reach a real Native endpoint.
+            d.execute_script("""
+              document.getElementById("binary").value="C:\\simc\\simc.exe";
+              document.getElementById("revision").value="710c2408bf";
+              buttonState(state.running,state.longrunResultReady);
+            """)
             cold=snap(d)
             print("V569_COLD_SCREEN "+json.dumps(cold,ensure_ascii=True),flush=True)
             need(cold["label"]=="시즌 환경 준비 · 장신구 목록 불러오기"
@@ -185,23 +207,47 @@ def main():
                 el=d.find_element(By.CSS_SELECTOR,
                   "#equipment-trinket-grid button[data-item-id='"+item+"']")
                 visible_click(d,el)
-            oil=d.find_element(By.ID,"optimizer-oil-enabled")
-            if oil.is_selected():visible_click(d,oil)
+            # Card interaction uses the actual product DOM and event handlers.
+            special=d.find_element(By.CSS_SELECTOR,
+                "#equipment-special-grid button[data-item-id='910003']")
+            visible_click(d,special)
             d.execute_script("""
-              document.getElementById("binary").value="C:\\\\simc\\\\simc.exe";
-              document.getElementById("revision").value="710c2408bf";
-              buttonState(state.running,state.longrunResultReady);
+              const level=document.querySelector('#special-rows [data-field="ilevel"]');
+              level.value="330";level.dispatchEvent(new Event("input",{bubbles:true}));
+              const target=document.getElementById("ilevel");
+              target.value="330";target.dispatchEvent(new Event("input",{bubbles:true}));
+              const oil=document.getElementById("optimizer-oil-use-mode");
+              oil.value="off";oil.dispatchEvent(new Event("change",{bubbles:true}));
             """)
+            idle(d)
+            d.execute_script("window.__v569.mode='pending'")
+            click(d);s=snap(d)
+            need(s["builds"]==4 and s["dps"]==0 and s["sha"] is None
+                 and s["trinkets"]==["910001","910002"] and s["special"]==["910003"]
+                 and s["specialLevel"]=="330" and s["specialHistoric"]=="true",
+                 "V840_PENDING_PRESERVES_GEAR")
+            d.execute_script("window.__v569.mode='ready'")
+            click(d);s=snap(d)
+            need(s["builds"]==5 and s["dps"]==0 and s["level"]==330
+                 and s["trinkets"]==["910001","910002"] and s["special"]==["910003"]
+                 and s["specialLevel"]=="330" and not s["specialHistoric"],
+                 "V840_RETRY_REBINDS_EXACT_GEAR")
+            # Explicit clear is the user's decision, not a hidden rebind effect.
+            clear=d.find_element(By.CSS_SELECTOR,"#special-rows .gear-clear")
+            visible_click(d,clear)
+            need(snap(d)["special"]==[] and snap(d)["specialLevel"]=="",
+                 "V840_EXPLICIT_CLEAR_REMOVES_ALL_FIELDS")
             s=snap(d)
             need(s["trinkets"]==["910001","910002"] and not s["disabled"]
                  and s["dps"]==0,"SECOND_CLICK_NOT_AVAILABLE")
             click(d);s=snap(d)
-            need(s["dps"]==1 and s["builds"]==3 and s["gears"]==2,
+            need(s["dps"]==1 and s["builds"]==5 and s["gears"]==3,
                  "SAME_SHA_SECOND_CLICK_NOT_USED")
             receipt.update(status="PASS_REAL_CHROME_FIRST_CLICK_SYNTHETIC_HTTP",
-              build_requests=3,gear_requests=2,dps_requests_synthetic=1,
+              build_requests=5,gear_requests=3,dps_requests_synthetic=1,
               first_click_native_zero=True,wrong_sha_rejected=True,
-              user_selected_two_trinkets=True)
+              user_selected_two_trinkets=True,failed_build_retains_gear=True,
+              retry_restores_gear=True,explicit_clear_removes_fields=True)
         finally:
             if d:d.quit()
             p.terminate()
