@@ -2629,21 +2629,37 @@ function explicitOilPreparationRequested() {
     ["main","off"].some(hand=>Boolean(field("optimizer-oil-"+hand+"-id")||
                                       field("season-oil-"+hand+"-id")));
 }
+function explicitGemPreparationRequested() {
+  const sockets=field("season-target-socket-count");
+  return Boolean(field("season-existing-special-gem-id")) ||
+    (sockets!=="" && Number(sockets)!==4);
+}
+function activeExpandedGemLayout() {
+  const rows=state.oilCatalog?.verified_gem_installs;
+  const active=Array.isArray(rows)?rows.find(v=>
+    v.installed_manifest_sha256===state.seasonGear?.installed_manifest_sha256):null;
+  return Boolean(active&&(active.special_gem_id!==null||active.socket_total!==4));
+}
+function explicitSelectedEnvironmentRequested() {
+  return explicitOilPreparationRequested()||explicitGemPreparationRequested()||
+    (activeExpandedGemLayout()&&!field("season-verified-budget"));
+}
 async function prepareUserSelectedEnvironment() {
-  // A new explicit oil is incompatible with an O=0 installed-budget SHA.
-  // Reuse an exact already installed F/J/O layout even for four sockets;
-  // only a genuine miss uses the existing user-variant Build.
-  if(explicitOilPreparationRequested()){
+  // An ordinary O=0/four-gem SHA cannot authorize a changed physical layout.
+  // Prefer the existing exact variant; never start a default Build instead.
+  if(explicitOilPreparationRequested()||explicitGemPreparationRequested()){
+    if(field("season-verified-budget")){
+      $("season-verified-budget").value="";
+      state.verifiedExistingBudget=null;
+    }
     if(typeof reuseVerifiedGemVariant==="function" &&
        await reuseVerifiedGemVariant())return true;
     return buildSeasonEnvironment(true);
   }
   if(field("season-verified-budget"))
     return prepareSelectedExistingEnvironment();
-  // Non-default layouts use an exact installed snapshot before any Build.
-  if(typeof reuseVerifiedGemVariant==="function" &&
-     (field("season-existing-special-gem-id")||
-      Number(field("season-target-socket-count"))!==4) &&
+  // Returning to four ordinary gems must not use the prior expanded SHA.
+  if(activeExpandedGemLayout()&&typeof reuseVerifiedGemVariant==="function" &&
      await reuseVerifiedGemVariant())return true;
   // No accidental Native run simply because a valid ordinary installation
   // has not been chosen yet. Advanced variants retain explicit Build consent.
@@ -2662,27 +2678,40 @@ function optimizerNeedsSeasonPreparation() {
   // Status refresh must not raise before withBusy() can show an input error.
   // A temporarily invalid ilvl is not a verified installed season scope.
   if(!validTargetIlevel())return true;
-  return !verifiedInstalledGearScopeMatchesRun(build,Number(field("ilevel")));
+  if(!verifiedInstalledGearScopeMatchesRun(build,Number(field("ilevel"))))return true;
+  // The gear list alone proves neither the physical gem layout nor its spec.
+  // Only an exact installed variant from the existing verified catalogue
+  // can authorize a non-default layout (or a return from one).
+  if(explicitGemPreparationRequested()||activeExpandedGemLayout()){
+    const special=field("season-existing-special-gem-id");
+    const sockets=Number(field("season-target-socket-count"));
+    return !(typeof matchingInstalledGemVariants==="function" &&
+      matchingInstalledGemVariants().some(v=>
+        v.installed_manifest_sha256===state.seasonGear?.installed_manifest_sha256 &&
+        v.socket_total===sockets &&
+        v.special_gem_id===(special?Number(special):null)));
+  }
+  return false;
 }
 // v568: existing v113/v216/v212 source owners only. This user click does
 // not automatically run DPS; exact installed SHA gear is required first.
 async function prepareSeasonBeforeOptimizerStart() {
   if(!optimizerNeedsSeasonPreparation())return false;
   // Exact selected sources must not invoke Native Build from optimizer entry.
-  if(/^[a-f0-9]{64}$/.test(field("season-verified-budget")) &&
+  const selectedVariant=explicitSelectedEnvironmentRequested();
+  if(!selectedVariant && /^[a-f0-9]{64}$/.test(field("season-verified-budget")) &&
      typeof oilUseIntent==="boolean" && !oilUseIntent){
     await prepareSelectedExistingEnvironment();
     setNotice("기존 설치본 연결 완료 · 장신구·특성을 확인한 뒤 최적 스탯 찾기를 다시 눌러 주세요.");
     return true;
   }
-  const selectedOil=explicitOilPreparationRequested();
-  const report=selectedOil?
+  const report=selectedVariant?
     await prepareUserSelectedEnvironment():await buildSeasonEnvironment(false);
   if(report===null)return true; // cancellation or stale response
   // The exact installed read-only path returns true, not a Build receipt.
-  if(selectedOil&&report===true&&!optimizerNeedsSeasonPreparation()){
+  if(selectedVariant&&report===true&&!optimizerNeedsSeasonPreparation()){
     switchView("optimizer");
-    setNotice("선택한 기름의 기존 검증 환경 연결 완료 · 장신구·특성을 확인한 뒤 최적 스탯 찾기를 다시 눌러 주세요.");
+    setNotice("선택 구성의 기존 검증 환경 연결 완료 · 장신구·특성을 확인한 뒤 최적 스탯 찾기를 다시 눌러 주세요.");
     return true;
   }
   if(report?.web_environment_scope?.environment_ready!==true ||
@@ -3068,7 +3097,7 @@ function buttonState(active=false,ready=false) {
   }
   const needsEnvironment=Boolean(state.token)&&optimizerNeedsSeasonPreparation();
   $("start-btn").textContent=needsEnvironment?
-    (typeof explicitOilPreparationRequested==="function"&&explicitOilPreparationRequested()?
+    (typeof explicitSelectedEnvironmentRequested==="function"&&explicitSelectedEnvironmentRequested()?
       "선택 환경 검증·준비":"시즌 환경 준비 · 장신구 목록 불러오기"):"최적 스탯 찾기";
   // An unavailable oil is a real executable-profile blocker, not a button
   // condition the user should discover only after a failed click. The
@@ -5804,8 +5833,11 @@ function registerHandlers() {
   $("season-build-btn").addEventListener("click",()=>withBusy(()=>buildSeasonEnvironment(false)));
   $("season-diagnostic-copy-btn").addEventListener("click",copySeasonBuildDiagnostic);
   $("user-variant-prepare-btn").addEventListener("click",()=>withBusy(prepareUserSelectedEnvironment));
-  $("season-target-socket-count").addEventListener("input",updateSeasonSocketBreakdown);
-  $("season-existing-special-gem-id").addEventListener("input",updateSeasonSocketBreakdown);
+  for(const id of ["season-target-socket-count","season-existing-special-gem-id"])
+    $(id).addEventListener("input",()=>{
+      updateSeasonSocketBreakdown();
+      buttonState(state.running,state.longrunResultReady);
+    });
   $("season-verified-special-gem").addEventListener("change",()=>withBusy(chooseVerifiedGem));
   for(const id of ["season-target-socket-count","season-existing-special-gem-id",
     "season-verified-flask","optimizer-oil-loadout","optimizer-oil-use-mode","spec"])
