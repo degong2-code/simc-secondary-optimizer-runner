@@ -7,7 +7,12 @@ interpret a missing CHMV observation as zero. Recipe output relations are
 physical source facts, not assertions that a final item is legally craftable.
 """
 import csv
+import json
 import re
+from pathlib import Path
+from urllib.request import Request, urlopen
+import v217_stage_execution_engine as stages
+import v275_pinned_simc_compiler_inputs as pinned
 from collections import defaultdict
 import v229_simc_only_source_seed as seed
 import v281_consumable_simc_relation as spells
@@ -20,6 +25,10 @@ RAW={
  "ModifiedCraftingSpellSlot":("ID","SpellID","ModifiedCraftingReagentSlotID","Slot","ReagentCount"),
 }
 MAX_ROWS=400_000
+MAX_RAW=8_000_000
+DEFINITION="embellishment_data.inc"
+DEFINITION_PATH="engine/dbc/generated/"+DEFINITION
+STAGED=frozenset(("EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED"))
 # Actual equipment craft relation: Effect=288, misc[0] -> CraftingData.ID.
 # Effect=301 is the distinct enchant recipe path used by v583. Unknown
 # effect kinds are pending, not inferred from coincident numeric IDs.
@@ -62,9 +71,11 @@ def project(entries,paths,expansion):
     # Exact physical reagent -> tree -> type23 bonus/effect -> SimC row.
     by_pair=defaultdict(list)
     for e in entries:by_pair[(e["bonus_id"],e["item_effect_id"])].append(e)
+    wanted_bonus_ids={b for b,e in by_pair}
     bonus_types=defaultdict(set);effects=defaultdict(set)
     for r in rows(paths["ItemBonus"],("ParentItemBonusListID","Type","Value_0")):
         b=number(r,"ParentItemBonusListID");kind=number(r,"Type")
+        if b not in wanted_bonus_ids:continue
         bonus_types[b].add(kind)
         if kind==23 and (b,number(r,"Value_0")) in by_pair:
             effects[b].add(number(r,"Value_0"))
@@ -218,3 +229,150 @@ def recipe_outputs(matches,paths,*,game_build,simc_revision,expansion_id):
             "pending_recipe_spell_count":len(pending),
             "exact_output_item_count":len({x["item_id"] for x in exact.values()}),
             "matches":projected,"native_calls":0,"ui_promotion":False}
+
+
+def pending(reason,calls=0):
+    return {"schema":SCHEMA,"status":"EMBELLISHMENT_SOURCE_PENDING",
+            "reason":reason,"candidate_path":None,
+            "network_calls_by_stage":calls,"native_calls":0,
+            "automatic_ui_promotion":False}
+
+def valid_raw(raw,table):
+    if not isinstance(raw,bytes) or not 0<len(raw)<=MAX_RAW:return False
+    try:
+        line=raw.split(b"\n",1)[0].decode("utf-8-sig")
+        return set(RAW[table])<=set(next(csv.reader([line])))
+    except (ValueError,StopIteration,csv.Error):return False
+
+def upstream(root,summary,keys):
+    """Consume the current invocation's already verified v217 owners.
+
+    v216 has authenticated the large raw files, so do not rehash them again.
+    Require the exact COMPLETE receipt and output contract; this helper is
+    not an external arbitrary-path or untrusted install admission endpoint.
+    """
+    need(type(summary) is dict and summary.get("status") in STAGED,
+         "EMBELLISHMENT_UPSTREAM_PENDING")
+    paths,receipt_path=stages._safe_paths(root,summary["stage_id"],
+                                         summary["output_paths"])
+    receipt=stages._read_receipt(receipt_path)
+    need(receipt.get("status")=="COMPLETE" and
+         receipt.get("stage_id")==summary["stage_id"] and
+         receipt.get("receipt_sha256")==summary["receipt_sha256"] and
+         receipt.get("output_paths")==summary["output_paths"],
+         "EMBELLISHMENT_UPSTREAM_RECEIPT_DRIFT")
+    out={}
+    for key in keys:
+        rel,p=paths[key]
+        record=receipt["outputs"][key]
+        need(p.is_file() and record["path"]==rel and
+             record["size"]==p.stat().st_size,"EMBELLISHMENT_UPSTREAM_OUTPUT_DRIFT")
+        out[key]=p
+    return out,receipt["receipt_sha256"]
+
+def pinned_definition(root,build,revision,*,transport=None,calls):
+    """One optional small generated table using v275's Git-tree owner."""
+    need(seed.BUILD.fullmatch(build) and seed.REV.fullmatch(revision),
+         "EMBELLISHMENT_PINNED_IDENTITY")
+    rel="source/embellishment_simc_"+revision
+    outputs={"definition":rel+"/"+DEFINITION,"meta":rel+"/source.json"}
+    inputs={"game_build":build,"simc_revision":revision,"path":DEFINITION_PATH}
+    def fetch(req,timeout):
+        calls[0]+=1
+        return (urlopen if transport is None else transport)(req,timeout=timeout)
+    def execute():
+        record=pinned.pinned_git_blobs(revision=revision,
+                     paths={DEFINITION:DEFINITION_PATH},transport=fetch)[DEFINITION]
+        need(0<record["size"]<=200_000,"EMBELLISHMENT_DEFINITION_SIZE")
+        req=Request(seed.RAW_BASE+revision+"/"+DEFINITION_PATH,
+                    headers={"User-Agent":"SIMC-Secondary-Embellishment/1.0"})
+        with fetch(req,90) as response:
+            need(response.status==200,"EMBELLISHMENT_DEFINITION_HTTP")
+            raw=response.read(record["size"]+1)
+        need(len(raw)==record["size"],"EMBELLISHMENT_DEFINITION_SIZE_DRIFT")
+        read_simc(raw,build,record["sha"])
+        stages._atomic_write(root/outputs["definition"],raw)
+        stages._atomic_write(root/outputs["meta"],(stages.canonical({
+            **inputs,"git_blob_sha1":record["sha"],"sha256":seed.digest(raw),
+            "size":len(raw)})+"\n").encode("utf8"))
+    def validate(files):
+        meta=json.loads(files["meta"].read_text("utf8"))
+        raw=files["definition"].read_bytes()
+        return (all(meta.get(k)==v for k,v in inputs.items()) and
+                meta.get("size")==len(raw) and meta.get("sha256")==seed.digest(raw)
+                and bool(read_simc(raw,build,meta["git_blob_sha1"])))
+    receipt=stages.execute_stage(root=root,stage_id="embellishment-simc-"+revision,
+        stage_version="pinned-embellishment-source-v1",inputs=inputs,outputs=outputs,
+        execute=execute,validate=validate)
+    meta=json.loads((root/outputs["meta"]).read_text("utf8"))
+    raw=(root/outputs["definition"]).read_bytes()
+    return read_simc(raw,build,meta["git_blob_sha1"]),receipt["receipt_sha256"]
+
+def collect(*,stage_root,build,expansion_id,wago_stage,spell_stage,simc_stage,
+            crafting_table,bonus_table,transport=None,calls=None):
+    """Normal Build optional projection; no separate season DB or Native."""
+    root=Path(stage_root).resolve()
+    calls=[0] if calls is None else calls
+    if (type(expansion_id) is not int or expansion_id<=0 or
+        any(type(s) is not dict or s.get("status") not in STAGED
+            for s in (wago_stage,spell_stage,simc_stage))):
+        return pending("EMBELLISHMENT_EXISTING_SOURCE_OR_EXPANSION_PENDING",calls[0])
+    try:
+        paths,wstamp=upstream(root,wago_stage,("Item","ItemSparse","CraftingData","receipt"))
+        need(json.loads(paths.pop("receipt").read_text("utf8"))["build"]==build,
+             "EMBELLISHMENT_WAGO_BUILD_DRIFT")
+        spell,sstamp=upstream(root,spell_stage,("spell_effect","candidate"))
+        sc=json.loads(spell["candidate"].read_text("utf8"))
+        need(sc.get("simc_relation_source",{}).get("game_build")==build,
+             "EMBELLISHMENT_SPELL_BUILD_DRIFT")
+        paths["SpellEffect"]=spell["spell_effect"]
+        simc,simstamp=upstream(root,simc_stage,(seed.RECEIPT,))
+        original=json.loads(simc[seed.RECEIPT].read_text("utf8"))
+        revision=original["simc_revision"]
+        need(original.get("schema")==seed.SCHEMA and
+             original.get("simc_generated_build")==build and
+             original.get("provenance_tree_blob_authenticated") is True and
+             seed.REV.fullmatch(revision),"EMBELLISHMENT_SIMC_BUILD_DRIFT")
+        entries,definition_stamp=pinned_definition(root,build,revision,
+                                                   transport=transport,calls=calls)
+        raw_stamps={}
+        for name in ("ItemBonus","ItemBonusTreeNode"):
+            paths[name],raw_stamps[name]=bonus_table(name)
+        for name in RAW:
+            paths[name],raw_stamps[name]=crafting_table(name)
+        identity={"game_build":build,"expansion_id":expansion_id,
+            "simc_revision":revision,"v161_stage":wstamp,"v281_stage":sstamp,
+            "v229_stage":simstamp,"simc_definition_stage":definition_stamp,
+            "raw_stages":raw_stamps,
+            "code_sha256":stages.module_dependency_fingerprint([Path(__file__)])["sha256"]}
+        generation="embellishment-source-"+stages.digest(
+            stages.canonical(identity).encode("utf8"))[:24]
+        relative="source/"+generation+".json"
+        def execute():
+            result=recipe_outputs(project(entries,paths,expansion_id),paths,
+                game_build=build,simc_revision=revision,expansion_id=expansion_id)
+            result["source_identity"]=identity
+            stages._atomic_write(root/relative,
+                (stages.canonical(result)+"\n").encode("utf8"))
+        def validate(files):
+            result=json.loads(files["candidate"].read_text("utf8"))
+            return (result.get("schema")==SCHEMA and
+                    result.get("source_identity")==identity and
+                    result.get("native_calls")==0 and
+                    result.get("ui_promotion") is False)
+        stage=stages.execute_stage(root=root,stage_id=generation,
+            stage_version="embellishment-recipe-source-v1",inputs=identity,
+            outputs={"candidate":relative},execute=execute,validate=validate)
+        result=json.loads((root/relative).read_text("utf8"))
+        return {"schema":SCHEMA,"status":result["status"],
+                "candidate_path":str((root/relative).resolve()),
+                "source_stage":{k:v for k,v in stage.items() if k!="result"},
+                "matched_effect_count":len(result["matches"]),
+                "exact_recipe_spell_count":result["exact_recipe_spell_count"],
+                "pending_recipe_spell_count":result["pending_recipe_spell_count"],
+                "network_calls_by_stage":calls[0],"native_calls":0,
+                "automatic_ui_promotion":False}
+    except (OSError,ValueError,TypeError,KeyError,AttributeError,IndexError) as exc:
+        reason=str(exc).split(":",1)[0]
+        return pending(reason if re.fullmatch(r"[A-Z][A-Z0-9_]{1,119}",reason)
+                       else "EMBELLISHMENT_OPTIONAL_SOURCE_UNAVAILABLE",calls[0])

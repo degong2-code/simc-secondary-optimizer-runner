@@ -38,6 +38,7 @@ import v278_sealed_simc_consumable_native_pair as native_effect_pair
 import v280_consumable_item_use_spell_source as item_spell_bridge
 import v281_consumable_simc_relation as consumable_simc_relation
 import v583_permanent_enchant_physical_source as permanent_enchant_source
+import v848_embellishment_recipe_source as embellishment_source
 import v285_consumable_weapon_source as consumable_weapon_source
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
@@ -3962,6 +3963,57 @@ def _season_bonus_raw_table(*,root,build,table,transport,attempted):
         obtain=obtain,validate_bytes=lambda raw:bonus_effect_review.valid_raw_table(raw,table))
 
 
+def _fresh_embellishment_source(*,stage_root,build,expansion_id,wago_stage,
+                                 spell_stage,simc_stage,transport=None):
+    """Optional normal Build source stage; reuse original same-build owners."""
+    root=pathlib.Path(stage_root)
+    calls=[0]
+    def crafting_table(table):
+        url="https://wago.tools/db2/"+table+"/csv?"+urlencode(
+            {"build":build,"locale":"enUS"})
+        def obtain():
+            calls[0]+=1
+            req=Request(url,headers={"User-Agent":"SIMC-Secondary-CraftingSource/1.0",
+                                    "Accept":"text/csv"})
+            with (urlopen if transport is None else transport)(req,timeout=75) as response:
+                need(response.status==200,"CRAFTING_SOURCE_HTTP_NON_200")
+                raw=response.read(embellishment_source.MAX_RAW+1)
+            need(embellishment_source.valid_raw(raw,table),"CRAFTING_SOURCE_INVALID")
+            return raw
+        path,_,stamp=_sealed_season_raw_source(root=root,
+            source_id="season-crafting-raw-"+table,build=build,url=url,
+            relative="source/raw_"+table+".csv",obtain=obtain,
+            validate_bytes=lambda raw:embellishment_source.valid_raw(raw,table))
+        return path,stamp
+    def bonus_table(table):
+        # The older v250 node source is still valid for the same build.
+        shared=root/".stage_receipts"/("season-bonus-raw-"+table+".json")
+        legacy=root/".stage_receipts"/"fresh-v250-raid-bonus-corroboration.json"
+        if table=="ItemBonusTreeNode" and not shared.exists() and legacy.is_file():
+            receipt=stage_engine._read_receipt(legacy)
+            if receipt.get("status")=="COMPLETE":
+                expected={name:"source/v250_bonus_"+name+".csv" for name in raid_bonus.TABLES}
+                expected["result"]="source/v250_raid_bonus_corroboration.json"
+                paths,_=stage_engine._safe_paths(root,
+                    "fresh-v250-raid-bonus-corroboration",expected)
+                need(receipt.get("output_paths")==expected,"CRAFTING_V250_SCOPE_DRIFT")
+                subset={k:paths[k] for k in (table,"result")}
+                actual,_=stage_engine._snapshot(subset)
+                info=json.loads(paths["result"][1].read_text("utf8"))
+                need(all(receipt["outputs"].get(k)==v for k,v in actual.items())
+                     and info.get("game_build")==build
+                     and info.get("source_evidence",{}).get(table+"_sha256")==
+                         actual[table]["sha256"],"CRAFTING_V250_SOURCE_DRIFT")
+                return paths[table][1],receipt["receipt_sha256"]
+        path,_,stamp=_season_bonus_raw_table(root=root,build=build,table=table,
+            transport=transport,attempted=calls)
+        return path,stamp
+    return embellishment_source.collect(stage_root=root,build=build,
+        expansion_id=expansion_id,wago_stage=wago_stage,spell_stage=spell_stage,
+        simc_stage=simc_stage,crafting_table=crafting_table,bonus_table=bonus_table,
+        transport=transport,calls=calls)
+
+
 def _review_selectable_bonus_effects(*,stage_root,build,gear,transport=None):
     """Review authenticated equipment using shared same-build bonus raw.
 
@@ -5663,7 +5715,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    gem_enchant_transport=None,
                                    simc_compiler_transport=None,
                                    auto_four_stat_gems=False,
-                                   myth_target_source_only=False):
+                                   myth_target_source_only=False,
+                                   embellishment_transport=None):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -6040,6 +6093,16 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             item_spells=fresh_item_spell,simc_effects=simc_consumable_relation,
             pinned_simc=pinned_classifier,
             transport=permanent_enchant_quality_transport)
+    # Optional source stage; injected collectors never silently use LIVE.
+    if (embellishment_transport is None and any(x is not None for x in
+            (fetch,simc_transport,bonus_transport,spell_effect_transport,
+             simc_compiler_transport))):
+        embellishments=embellishment_source.pending("EMBELLISHMENT_INJECTED_TRANSPORT_PENDING")
+    else:
+        embellishments=_fresh_embellishment_source(stage_root=stage_root,
+            build=expected_game_build,expansion_id=_original_v163_enchant_expansion_id(linked),
+            wago_stage=stage,spell_stage=simc_consumable_relation.get("source_stage"),
+            simc_stage=pinned_simc.get("source_stage"),transport=embellishment_transport)
     # Same-build source class/inventory masks for exact SimC-linked oils.
     # No item/weapon approval and no calls when upstream remains PENDING.
     if fetch is not None and spell_equipped_transport is None:
@@ -6086,6 +6149,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_consumable_item_spell_source":fresh_item_spell,
         "fresh_consumable_simc_effect_relation":simc_consumable_relation,
         "fresh_permanent_enchant_item_source":permanent_source,
+        "fresh_embellishment_recipe_source":embellishments,
         "fresh_consumable_weapon_source":weapon_source,
         "fresh_gem_enchant_raw_source":gem_enchant_csv,
         "fresh_one_spec_character_level_policy":
@@ -6119,6 +6183,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             fresh_item_spell["network_calls_by_stage"]+
             simc_consumable_relation["network_calls_by_stage"]+
             permanent_source["network_calls_by_stage"]+
+            embellishments["network_calls_by_stage"]+
             weapon_source["network_calls_by_stage"]+
             pinned_classifier["network_calls_by_stage"]+
             compiler_tier["network_calls_by_stage"]+

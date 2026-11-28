@@ -282,3 +282,16 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 30
+  embellishment-normal-source-offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    env:
+      PYTHONPATH: runner:.
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest -v tests.test_v848_embellishment_recipe_source
