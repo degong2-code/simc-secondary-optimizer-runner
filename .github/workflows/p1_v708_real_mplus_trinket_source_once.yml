@@ -9,6 +9,7 @@ on:
       - integration_probes/p1_v848_embellishment_recipe_output_once.py
       - runner/v848_embellishment_recipe_source.py
       - tests/test_v848_embellishment_recipe_source.py
+      - integration_probes/p1_v850_embellishment_material_scope_once.py
 permissions:
   contents: read
   actions: read
@@ -295,3 +296,53 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest -v tests.test_v848_embellishment_recipe_source
+  embellishment-material-scope:
+    if: ${{ contains(github.event.head_commit.message, '[v850-material-scope-once]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PYTHONPATH: runner:integration_probes:.
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 45371957303
+          name: p1-v708-public-70961-db2-reuse
+          path: out/v850/source
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 45431936045
+          name: p1-v716-public-70961-bonus-source-reuse
+          path: out/v850/source
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 46117689178
+          name: p1-v847-crafting-reagent-source
+          path: out/v850/prior
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 46118153783
+          name: p1-v848-embellishment-recipe-output
+          path: out/v850/spell
+          github-token: ${{ github.token }}
+      - run: python -u integration_probes/p1_v850_embellishment_material_scope_once.py --root out/v850/source --prior out/v850/prior --spell-root out/v850/spell/source --out out/v850
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: p1-v850-material-scope
+          path: |
+            out/v850/V850_MATERIAL_SCOPE.json
+            out/v850/source/source/raw_CraftingQuality.csv
+            out/v850/source/source/raw_CraftingReagentQuality.csv
+            out/v850/source/.stage_receipts/season-crafting-raw-Crafting*Quality.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30

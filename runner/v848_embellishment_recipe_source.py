@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 import v217_stage_execution_engine as stages
 import v275_pinned_simc_compiler_inputs as pinned
 from collections import defaultdict
+from decimal import Decimal, InvalidOperation
 import v229_simc_only_source_seed as seed
 import v281_consumable_simc_relation as spells
 
@@ -23,6 +24,9 @@ RAW={
  "ModifiedCraftingReagentSlot":("ID","Name_lang","Flags","PlayerConditionID","ReagentType"),
  "MCRSlotXMCRCategory":("ID","ModifiedCraftingCategoryID","ModifiedCraftingReagentSlotID"),
  "ModifiedCraftingSpellSlot":("ID","SpellID","ModifiedCraftingReagentSlotID","Slot","ReagentCount"),
+ "CraftingQuality":("ID","QualityTier","CraftingQualityAtlasSetID"),
+ "CraftingReagentQuality":("ID","ItemID","ModifiedCraftingCategoryID","OrderIndex",
+                           "ReagentEffectPct","MaxDifficultyAdjustment"),
 }
 MAX_ROWS=400_000
 MAX_RAW=8_000_000
@@ -96,8 +100,11 @@ def project(entries,paths,expansion):
         if slots.get(sid,{}).get("Name_lang")=="Add Embellishment":
             categories[number(r,"ModifiedCraftingCategoryID")].add(sid)
     spells=defaultdict(set)
+    recipe_rows=defaultdict(list)
     for r in rows(paths["ModifiedCraftingSpellSlot"],RAW["ModifiedCraftingSpellSlot"]):
-        spells[number(r,"ModifiedCraftingReagentSlotID")].add(number(r,"SpellID"))
+        sid=number(r,"ModifiedCraftingReagentSlotID")
+        spells[sid].add(number(r,"SpellID"))
+        recipe_rows[sid].append(r)
     found=defaultdict(list)
     for r in rows(paths["ItemSparse"],("ID","Display_lang","ExpansionID","ModifiedCraftingReagentItemID")):
         if number(r,"ExpansionID")!=expansion:continue
@@ -111,7 +118,8 @@ def project(entries,paths,expansion):
                 if source["name_enUS"]!=r["Display_lang"]:continue
                 found[(b,e)].append({
                     "item_id":number(r,"ID"),"modified_reagent_id":mid,
-                    "category_id":category,"tree_id":number(reagent,"ItemBonusTreeID"),
+                    "category_id":category,"reagent_source_row":reagent,
+                    "tree_id":number(reagent,"ItemBonusTreeID"),
                     "tree_node_id":number(node,"ID"),
                     "tree_node_context":{k:v for k,v in node.items() if k!="ID"},
                     "slot_ids":sorted(categories[category])})
@@ -126,7 +134,9 @@ def project(entries,paths,expansion):
             "bonus_types":sorted(bonus_types[pair[0]]),
             "recipe_slot_sources":[{"slot":slots[s],
                 "recipe_spell_count":len(spells[s]),
-                "recipe_spell_ids":sorted(spells[s])} for s in sids],
+                "recipe_spell_ids":sorted(spells[s]),
+                "recipe_source_rows":sorted(recipe_rows[s],key=lambda r:number(r,"ID"))}
+                for s in sids],
             "recipe_output_item_scope_verified":False,
             "quality_dominance_verified":False,"ui_selectable":False})
     return result
@@ -217,6 +227,7 @@ def recipe_outputs(matches,paths,*,game_build,simc_revision,expansion_id):
                           "pending_recipe_spells":[{"spell_id":s,"reason":pending[s],
                               "observed_effect_codes":sorted(observed.get(s,()))}
                               for s in sids if s in pending],
+                          "recipe_source_rows":slot.get("recipe_source_rows",[]),
                           "slot_condition_resolved":False})
         projected.append({"simc_rows":match["simc_rows"],
             "physical_rows":match["physical_rows"],"bonus_types":match["bonus_types"],
@@ -230,6 +241,103 @@ def recipe_outputs(matches,paths,*,game_build,simc_revision,expansion_id):
             "exact_output_item_count":len({x["item_id"] for x in exact.values()}),
             "matches":projected,"native_calls":0,"ui_promotion":False}
 
+
+def material_options(result,paths):
+    """Preserve physical-family and exact recipe evidence before publication.
+
+    Never merge different modified-reagent/category/tree identities just
+    because they use the same effect. Recipe applicability is item-specific,
+    not a union of every slot permitted by the effect. Rank IDs are foreign
+    keys, not rank numbers. Compare only source-backed quality families.
+    """
+    wanted={p["item_id"] for m in result["matches"] for p in m["physical_rows"]}
+    quality_ids={p["crafting_quality_id"] for m in result["matches"]
+                 for p in m["physical_rows"] if p.get("crafting_quality_id")}
+    quality={}
+    for row in rows(paths["CraftingQuality"],RAW["CraftingQuality"]):
+        key=number(row,"ID")
+        if key in quality_ids:
+            need(key not in quality,"DUPLICATE_CRAFTING_QUALITY_ID")
+            quality[key]=row
+    reagent_quality=defaultdict(list)
+    for row in rows(paths["CraftingReagentQuality"],RAW["CraftingReagentQuality"]):
+        iid=number(row,"ItemID")
+        if iid in wanted:reagent_quality[iid].append(row)
+    options=[]
+    for match in result["matches"]:
+        family=defaultdict(list)
+        slots={number(s["slot"],"ID"):s for s in match["recipe_slot_sources"]}
+        for physical in match["physical_rows"]:
+            key=(physical["modified_reagent_id"],physical["category_id"],
+                 physical["tree_id"],physical["tree_node_id"],
+                 tuple(physical["slot_ids"]))
+            family[key].append(physical)
+        for key,materials in sorted(family.items()):
+            mid,category,tree,node,slot_ids=key
+            # Same ItemID appearing twice is not a unique physical witness.
+            seen=set(); members=[]
+            for p in sorted(materials,key=lambda x:x["item_id"]):
+                iid=p["item_id"]
+                need(iid not in seen,"DUPLICATE_EMBELLISHMENT_FAMILY_ITEM")
+                seen.add(iid)
+                rank=quality.get(p["crafting_quality_id"])
+                qr=[r for r in reagent_quality[iid]
+                    if number(r,"ModifiedCraftingCategoryID")==category]
+                members.append({"physical":p,"quality_source_row":rank,
+                                "reagent_quality_source_rows":qr})
+            links=[]
+            for sid in slot_ids:
+                slot=slots[sid]
+                by_recipe=defaultdict(list)
+                for r in slot.get("recipe_source_rows",[]):
+                    by_recipe[number(r,"SpellID")].append(r)
+                for output in slot["exact_recipe_outputs"]:
+                    recipe=output["recipe_spell_id"]
+                    # Retain original slot conditions and row, not merely
+                    # the inventory type or recipe spell ID.
+                    if len(by_recipe[recipe])==1:
+                        links.append({"output":output,"slot_source":slot["slot"],
+                                      "recipe_source_row":by_recipe[recipe][0]})
+            preferred=None
+            status="QUALITY_SOURCE_PENDING"
+            if len(members)==1 and members[0]["physical"]["crafting_quality_id"]==0:
+                status="UNRANKED_SINGLE_PHYSICAL_SOURCE"
+                preferred=members[0]["physical"]["item_id"]
+            elif all(m["quality_source_row"] is not None and
+                     len(m["reagent_quality_source_rows"])==1 for m in members):
+                ranks=[number(m["quality_source_row"],"QualityTier") for m in members]
+                atlas={number(m["quality_source_row"],"CraftingQualityAtlasSetID")
+                       for m in members}
+                values=[m["reagent_quality_source_rows"][0] for m in members]
+                # All other source fields must agree; unknown or changed
+                # conditions are not interpreted as equivalent. Do not infer
+                # dominance solely from the higher QualityTier.
+                ignored={"ID","ItemID","OrderIndex","ReagentEffectPct"}
+                rest=[{k:v for k,v in r.items() if k not in ignored} for r in values]
+                try:
+                    pct=[Decimal(r["ReagentEffectPct"]) for r in values]
+                    winner=max(range(len(ranks)),key=ranks.__getitem__)
+                    if (len(atlas)==1 and len(set(ranks))==len(ranks)
+                        and min(ranks)>0 and all(r==rest[0] for r in rest)
+                        and all(v.is_finite() and v>=0 for v in pct)
+                        and pct[winner]>=max(pct)):
+                        preferred=members[winner]["physical"]["item_id"]
+                        status="HIGHEST_SOURCE_QUALITY_CANDIDATE"
+                    else:status="QUALITY_EFFECT_OR_CONDITION_COMPARISON_PENDING"
+                except (InvalidOperation,ValueError):
+                    status="QUALITY_EFFECT_OR_CONDITION_COMPARISON_PENDING"
+            options.append({"simc_rows":match["simc_rows"],
+                "modified_reagent_id":mid,"category_id":category,
+                "tree_id":tree,"tree_node_id":node,
+                "physical_family":members,"recipe_links":links,
+                "recipe_output_item_ids":sorted({r["output"]["item_id"] for r in links}),
+                "quality_status":status,"preferred_physical_item_id":preferred,
+                "bonus_types":match["bonus_types"],
+                "quality_dominance_verified":False,
+                "exact_application_verified":False,
+                "static_CHMV_owner":"EXISTING_SELECTED_PHYSICAL_VARIANT_NOT_MEASURED_HERE",
+                "ui_selectable":False})
+    return options
 
 def pending(reason,calls=0):
     return {"schema":SCHEMA,"status":"EMBELLISHMENT_SOURCE_PENDING",
@@ -351,6 +459,7 @@ def collect(*,stage_root,build,expansion_id,wago_stage,spell_stage,simc_stage,
         def execute():
             result=recipe_outputs(project(entries,paths,expansion_id),paths,
                 game_build=build,simc_revision=revision,expansion_id=expansion_id)
+            result["material_options"]=material_options(result,paths)
             result["source_identity"]=identity
             stages._atomic_write(root/relative,
                 (stages.canonical(result)+"\n").encode("utf8"))

@@ -101,7 +101,9 @@ class GenericRecipeSourceTests(unittest.TestCase):
                 "ModifiedCraftingReagentItem":b"ID,ModifiedCraftingCategoryID,ItemBonusTreeID\n301,901,801\n",
                 "ModifiedCraftingReagentSlot":b"ID,Name_lang,Flags,PlayerConditionID,ReagentType\n1001,Add Embellishment,0,0,1\n",
                 "MCRSlotXMCRCategory":b"ID,ModifiedCraftingCategoryID,ModifiedCraftingReagentSlotID\n1,901,1001\n",
-                "ModifiedCraftingSpellSlot":b"ID,SpellID,ModifiedCraftingReagentSlotID,Slot,ReagentCount\n1,501,1001,0,1\n"}
+                "ModifiedCraftingSpellSlot":b"ID,SpellID,ModifiedCraftingReagentSlotID,Slot,ReagentCount\n1,501,1001,0,1\n",
+                "CraftingQuality":b"ID,QualityTier,CraftingQualityAtlasSetID\n14,2,1\n",
+                "CraftingReagentQuality":b"ID,ItemID,ModifiedCraftingCategoryID,OrderIndex,ReagentEffectPct,MaxDifficultyAdjustment\n1,101,901,2,100,0\n"}
             raw=(f"// Embellishment data, wow build {build}\n"
                  "static constexpr std::array<embellishment_data_t, 1> __embellishment_data { {\n"
                  '  { "New reagent", 601, 701, 1101 },\n} };\n').encode()
@@ -132,7 +134,11 @@ class GenericRecipeSourceTests(unittest.TestCase):
                 self.assertEqual(first["status"],"RECIPE_OUTPUT_SOURCE_PROJECTED",first)
                 self.assertEqual(first["exact_recipe_spell_count"],1)
                 self.assertEqual(first["matched_effect_count"],1)
-                self.assertEqual(first["network_calls_by_stage"],7)
+                self.assertEqual(first["network_calls_by_stage"],9)
+                options=json.loads(pathlib.Path(first["candidate_path"]).read_text("utf8"))["material_options"]
+                self.assertEqual(options[0]["recipe_output_item_ids"],[201])
+                self.assertEqual(options[0]["preferred_physical_item_id"],101)
+                self.assertFalse(options[0]["ui_selectable"])
                 original=pathlib.Path(first["candidate_path"]).read_bytes()
                 before=len(calls)
                 second=collect(sa)
@@ -158,3 +164,45 @@ class GenericRecipeSourceTests(unittest.TestCase):
                 self.assertEqual(bad["status"],"EMBELLISHMENT_SOURCE_PENDING")
                 self.assertEqual(bad["network_calls_by_stage"],0)
                 self.assertFalse(bad["automatic_ui_promotion"])
+
+
+    def test_material_family_scope_and_noninferiority_not_numeric_id_order(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            paths={}
+            def table(name,columns,values):
+                paths[name]=root/(name+".csv")
+                with paths[name].open("w",encoding="utf8",newline="") as f:
+                    w=csv.writer(f);w.writerow(columns);w.writerows(values)
+            table("CraftingQuality",engine.RAW["CraftingQuality"],
+                  [(999,1,42),(3,2,42)])
+            def qualities(high):
+                table("CraftingReagentQuality",engine.RAW["CraftingReagentQuality"],
+                      [(1,101,9,0,"80",0),(2,102,9,1,high,0)])
+            def p(i,rank,mid,cat,slot):
+                return {"item_id":i,"crafting_quality_id":rank,
+                    "modified_reagent_id":mid,"category_id":cat,
+                    "tree_id":mid+10,"tree_node_id":mid+20,"slot_ids":[slot]}
+            def slot(sid,recipe,item):
+                return {"slot":{"ID":str(sid),"PlayerConditionID":"0"},
+                    "exact_recipe_outputs":[{"recipe_spell_id":recipe,"item_id":item}],
+                    "recipe_source_rows":[{"ID":str(recipe),"SpellID":str(recipe),
+                                          "ReagentCount":"1"}]}
+            result={"matches":[{"simc_rows":[{"bonus_id":5,"item_effect_id":6}],
+                "physical_rows":[p(101,999,10,9,1),p(102,3,10,9,1),
+                                 p(103,0,11,8,2)],
+                "bonus_types":[23],"recipe_slot_sources":[slot(1,11,201),slot(2,22,202)]}]}
+            qualities("100")
+            options=engine.material_options(result,paths)
+            self.assertEqual(len(options),2)
+            a,b=options
+            self.assertEqual(a["preferred_physical_item_id"],102)
+            self.assertEqual(a["recipe_output_item_ids"],[201])
+            self.assertEqual(b["recipe_output_item_ids"],[202])
+            self.assertEqual(b["preferred_physical_item_id"],103)
+            self.assertFalse(a["ui_selectable"])
+            self.assertFalse(a["quality_dominance_verified"])
+            qualities("70")
+            a=engine.material_options(result,paths)[0]
+            self.assertIsNone(a["preferred_physical_item_id"])
+            self.assertEqual(a["quality_status"],"QUALITY_EFFECT_OR_CONDITION_COMPARISON_PENDING")
