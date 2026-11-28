@@ -806,6 +806,10 @@ def verify_exact_J_socket_source(scope,*,game_build,simc_revision,target_ilevel,
              "source_review_sha256","v232_stage_receipt_sha256",
              "original_G_native_sha256","active_native_sha256","native_binary_sha256")),
          "FRESH_J_SOCKET_SOURCE_IDENTITY_DRIFT")
+    representative=scope.get("representative_spec")
+    need(representative is None or
+         (type(representative) is str and representative in specs.CONTRACTS),
+         "FRESH_J_SOCKET_REPRESENTATIVE_SPEC_INVALID")
     counts=scope.get("socket_counts")
     ids=scope.get("physical_item_ids_by_slot")
     bonuses=scope.get("source_socket_bonus_by_slot")

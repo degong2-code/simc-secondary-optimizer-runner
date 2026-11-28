@@ -8041,6 +8041,11 @@ def _fresh_socket_bonus_source_projection(*,collected,compilation):
             original["selected_intrinsic_socket_count_by_slot_source_only"]==counts,
             "V824_SOCKET_PHYSICAL_SOURCE_DRIFT")
         selected=original["selected_G_slot_ids"]
+        character=original["character"]
+        representative_spec=character["class"]+"/"+character["spec"]
+        need(simc_representative.chooser.contracts.lookup(
+            character["class"],character["spec"]) is not None,
+            "V831_SOCKET_REPRESENTATIVE_SPEC_UNSUPPORTED")
         projection=doc["socket_bonus_source_only"]
         by_id={r["item_id"]:r for r in projection["items"]}
         by_bonus={r["bonus_id"]:r for r in projection["bonus_lists"]}
@@ -8050,6 +8055,7 @@ def _fresh_socket_bonus_source_projection(*,collected,compilation):
             "game_build":collected["expected_game_build"],
             "simc_revision":compilation["simc_revision"],
             "intrinsic_socket_counts_by_slot":dict(counts),
+            "representative_spec":representative_spec,
             "selected_rows":[{"slot":slot,"item_id":selected[slot],
                 "candidate_bonus_lists":[by_bonus[b] for b in
                     by_id.get(selected[slot],{}).get("candidate_bonus_list_ids",[])]}
@@ -9057,6 +9063,8 @@ def _fresh_original_J_socket_bonus_scope(*,preflight,compilation,j,socket):
                 "game_build":preflight["game_build"],
                 "simc_revision":preflight["simc_revision"],
                 "target_ilevel":g["target_ilevel"],
+                **({"representative_spec":source["representative_spec"]}
+                   if source.get("representative_spec") is not None else {}),
                 "J":j["rating"],"socket_counts":dict(counts),
                 "socket_total":layout["socket_total"],
                 "ordinary_gem_ids":list(layout["ordinary_gem_ids"]),

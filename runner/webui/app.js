@@ -1986,8 +1986,11 @@ function matchingInstalledGemVariants() {
     "fury_dual_2h":"general";
   return rows.filter(v=>{
     const ids=v.selected_oil_item_ids_by_hand||{};
+    const selectedSpec=field("spec");
+    const exactTrack=v.socket_profile_spec==="warrior/fury"?"fury_dual_2h":track;
     return /^[a-f0-9]{64}$/.test(v.installed_manifest_sha256||"") &&
-      v.flask_item_id===flask && v.reference_G_track===track &&
+      (!v.socket_profile_spec||v.socket_profile_spec===selectedSpec) &&
+      v.flask_item_id===flask && v.reference_G_track===exactTrack &&
       Number.isSafeInteger(v.socket_total)&&v.socket_total>=4&&v.socket_total<=64 &&
       (v.special_gem_id===null ||
        Number.isSafeInteger(v.special_gem_id)&&v.special_gem_id>0&&v.socket_total>=5) &&
@@ -3881,7 +3884,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   // This is a separate explicit per-user numeric/source preparation.
   // A new selectable budget cannot silently borrow G/J/F/O from the
   // canonical four-gem season environment.
-  const reference_G_track=(
+  let reference_G_track=(
     field("spec")==="warrior/fury"&&!field("final_T"))
     ?"fury_dual_2h":"general";
   const nativeRequested=$("season-native-g").checked||forUserVariant;
@@ -3943,6 +3946,8 @@ async function buildSeasonEnvironment(forUserVariant=false) {
      requested_sockets>64)
     throw Error("일반보석은 4개 이상, 선택 특수보석까지 넣는 경우 5개 이상이 필요합니다.");
   const source_target_socket_count=requested_sockets;
+  const socket_profile_spec=forUserVariant&&requested_sockets>4?field("spec"):null;
+  if(socket_profile_spec==="warrior/fury")reference_G_track="fury_dual_2h";
   if(auto_select_observed_F_no_oil&&(!auto_native_F_requested||auto_native_O_requested))
     throw Error("영약 자동 선택은 F Native 측정을 켜고 기름 O 측정을 끈 상태에서만 사용할 수 있습니다.");
   // A selected, scaled oil uses only the existing SimC precombat gear
@@ -4056,6 +4061,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
                               selected_flask_item_id,
                               selected_oil_item_ids_by_hand,
                               existing_special_gem_id,source_target_socket_count,
+                              ...(socket_profile_spec?{socket_profile_spec}:{}),
                               refresh_reason,
                               ...(autoMythTargetSourceBuild?{
                                 auto_myth_target_source_build:autoMythTargetSourceBuild,

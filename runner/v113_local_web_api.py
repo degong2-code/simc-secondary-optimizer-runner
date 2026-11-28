@@ -73,7 +73,7 @@ def _static_cache_bytes_equal(stored, requested):
                 hashlib.file_digest(candidate,"sha256").digest())
 
 def _verified_snapshot_gem_layout_matches(result, *, special_gem_id,
-                                          socket_total):
+                                          socket_total,representative_spec=None):
     """Reject a verified-budget cache hit for a different SimC gem profile."""
     compilation=(result.get("source_compilation")
                  if type(result) is dict else None)
@@ -83,8 +83,11 @@ def _verified_snapshot_gem_layout_matches(result, *, special_gem_id,
             layout.get("schema")!="v271_user_socket_gem_layout_stage_v1"):
         return False
     ordinary=layout.get("ordinary_gem_ids")
+    installed_spec=result.get("verified_socket_profile_spec")
     return (
-        layout.get("status")==
+        (representative_spec is None or installed_spec is None or
+         installed_spec==representative_spec)
+        and layout.get("status")==
             "PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING"
         and layout.get("special_gem_id")==special_gem_id
         and layout.get("socket_total")==socket_total
@@ -580,6 +583,10 @@ class SeasonEnvironmentBuildRequest(BaseModel):
     existing_special_gem_id: int | None = Field(default=None,ge=1,le=999999999)
     # Declared final gem sockets; the v216 source must still validate gem IDs.
     source_target_socket_count: int | None = Field(default=None,ge=4,le=64)
+    # Only a selected expanded socket profile needs its actual representative.
+    # This is class/spec syntax, not an item list or user-supplied proof.
+    socket_profile_spec: str | None = Field(
+        default=None,pattern=r"^[a-z_]+/[a-z_]+$",max_length=64)
     simc_revision_hint: str | None = Field(
         default=None,pattern=r"^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$")
     refresh_reason: str | None = Field(
@@ -888,6 +895,9 @@ class LocalJobs:
                 environment_build.original_optional_enchant_source_reference(
                     result),
             "verified_target_ilevel":doc["target_ilevel"],
+            **({"verified_socket_profile_spec":socket_scope["representative_spec"]}
+               if socket_scope is not None and socket_scope.get("representative_spec")
+               is not None else {}),
             "verified_oil_item_ids_by_hand":dict(installed_oils)}
         return doc["manifest_sha256"]
 
@@ -1022,7 +1032,9 @@ class LocalJobs:
                 "WEB_FRESH_PROFILE_SNAPSHOT_RESULT_INVALID")
         if required_gem_layout is not None:
             if (type(required_gem_layout) is not dict or
-                    set(required_gem_layout)!={"special_gem_id","socket_total"}):
+                    set(required_gem_layout) not in (
+                        {"special_gem_id","socket_total"},
+                        {"special_gem_id","socket_total","representative_spec"})):
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_REQUIRED_GEM_LAYOUT_INVALID")
             if not _verified_snapshot_gem_layout_matches(
@@ -1372,6 +1384,7 @@ class LocalJobs:
                                  auto_initial_core_simc_binary=None,
                                  existing_special_gem_id=None,
                                  source_target_socket_count=None,
+                                 socket_profile_spec=None,
                                  refresh_reason=None,
                                  auto_myth_target_source_build=None,
                                  auto_myth_target_source_sha256=None,
@@ -1448,6 +1461,20 @@ class LocalJobs:
                      <=source_target_socket_count<=64)):
             raise environment_manifest.EnvironmentBlocked(
                 "SEASON_DECLARED_SOCKET_COUNT_INVALID")
+        reference_key=("warrior","fury") if reference_G_track=="fury_dual_2h" else (
+            "paladin","retribution")
+        probe_race="dwarf"
+        if socket_profile_spec is not None:
+            key=tuple(socket_profile_spec.split("/")) if type(socket_profile_spec) is str else ()
+            if (key not in sessions.SUPPORTED
+                    or (existing_special_gem_id is None and
+                        (source_target_socket_count is None or source_target_socket_count<=4))
+                    or (key==("warrior","fury"))!=(reference_G_track=="fury_dual_2h")):
+                raise environment_manifest.EnvironmentBlocked(
+                    "SEASON_SOCKET_PROFILE_SPEC_OR_TRACK_INVALID")
+            reference_key=key
+            # Existing legal starter race; never assume dwarf can be every class.
+            probe_race=sessions.source_defaults(key)["race"]
         # Resolve the requested build BEFORE any installed source reuse.
         # Without an explicit build, recheck Blizzard's inexpensive version
         # endpoint once. Never silently treat the newest installed *past*
@@ -1493,7 +1520,7 @@ class LocalJobs:
             not auto_native_F_requested and not auto_native_O_requested and
             selected_flask_item_id is None and not selected_oils and
             not auto_select_observed_F_no_oil and
-            existing_special_gem_id is None):
+            existing_special_gem_id is None and socket_profile_spec is None):
             try:
                 with self.season_source_lock:
                     prior=environment_build.find_verified_installed_season_environment(
@@ -1621,12 +1648,9 @@ class LocalJobs:
                 fresh_collection_inputs={
                     "expected_game_build":game_build,
                     "representative_request":{
-                        "class":("warrior" if reference_G_track=="fury_dual_2h"
-                                 else "paladin"),
-                        "spec":("fury" if reference_G_track=="fury_dual_2h"
-                                else "retribution"),
+                        "class":reference_key[0],"spec":reference_key[1],
                         "target_ilevel":target_ilevel},
-                    "g_probe_character":{"race":"dwarf"},
+                    "g_probe_character":{"race":probe_race},
                     "simc_revision_hint":simc_revision_hint,
                     **({"credentials":source_credentials}
                        if source_credentials is not None else {}),
@@ -1682,9 +1706,9 @@ class LocalJobs:
             "retail_version_network_calls":version_network_calls,
             "active_season_reverified_in_this_lookup":
                 discovered_build is not None,
-            "internal_numeric_probe":(
-                "warrior/fury" if reference_G_track=="fury_dual_2h"
-                else "paladin/retribution"),
+            "internal_numeric_probe":"/".join(reference_key),
+            **({"socket_profile_spec":socket_profile_spec}
+               if socket_profile_spec is not None else {}),
             "reference_G_track_requested":reference_G_track,
             "numeric_probe_not_whole_season_G_certification":True,
             "local_native_G_requested":native_G_binary is not None,
@@ -1907,6 +1931,10 @@ class LocalJobs:
                             "installed_manifest_sha256":doc["manifest_sha256"],
                             "special_gem_id":special,
                             "socket_total":sockets,
+                            **({"socket_profile_spec":doc[
+                                "official_J_physical_socket_source"]["representative_spec"]}
+                               if (doc.get("official_J_physical_socket_source") or {}).get(
+                                   "representative_spec") is not None else {}),
                             "flask_item_id":flask["physical_item_id"],
                             "selected_oil_item_ids_by_hand":dict(ids),
                             "reference_G_track":doc.get(
@@ -2508,6 +2536,8 @@ class LocalJobs:
             # Legacy sessions and non-334 plans keep the original route.
             ch=user["character"]
             key=(ch["class"],ch["spec"])
+            if gem_choice is not None and sockets>4:
+                gem_choice["representative_spec"]="/".join(key)
             current_season=params.current_season_product
             pinned_build=params.installed_season_game_build
             if pinned_build is not None and not current_season:
@@ -2795,7 +2825,10 @@ class LocalJobs:
         """
         gems=(None if params.user_socket_total is None else {
             "socket_total":params.user_socket_total,
-            "special_gem_id":params.user_special_gem_id})
+            "special_gem_id":params.user_special_gem_id,
+            **({"representative_spec":user["character"]["class"]+"/"+
+                   user["character"]["spec"]}
+               if params.user_socket_total>4 else {})})
         if (params.user_special_gem_id is not None and
                 (params.user_socket_total is None or
                  params.user_socket_total<5)):
@@ -4419,6 +4452,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 reference_G_track=request.reference_G_track,
                 existing_special_gem_id=request.existing_special_gem_id,
                 source_target_socket_count=request.source_target_socket_count,
+                **({"socket_profile_spec":request.socket_profile_spec}
+                   if request.socket_profile_spec is not None else {}),
                 refresh_reason=request.refresh_reason,
                 **({"auto_myth_target_source_build":
                         request.auto_myth_target_source_build}

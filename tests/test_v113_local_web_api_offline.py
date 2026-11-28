@@ -1735,6 +1735,53 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertFalse((self.root/"runs").exists())
 
 
+    def test_v831_expanded_socket_profile_routes_actual_user_spec(self):
+        stub={"status":"SOURCE_ONLY_PENDING","environment_ready":False,
+              "environment_installed":False,"native_calls":0}
+        for key in (("mage","fire"),("druid","balance"),
+                    ("evoker","devastation"),("demon_hunter","havoc"),
+                    ("warrior","fury")):
+            with self.subTest(spec=key),mock.patch.object(
+                    web.environment_build,"build_environment",return_value=stub) as build:
+                got=self.post("/api/v1/environment/season-build",{
+                    "game_build":"12.2.0.99999","target_ilevel":334,
+                    "socket_profile_spec":"/".join(key),"source_target_socket_count":5,
+                    "existing_special_gem_id":311200,
+                    "reference_G_track":"fury_dual_2h" if key==("warrior","fury") else "general"})
+                self.assertEqual(got.status_code,200,got.text)
+                inputs=build.call_args.kwargs["fresh_collection_inputs"]
+                self.assertEqual(inputs["representative_request"],{
+                    "class":key[0],"spec":key[1],"target_ilevel":334})
+                self.assertEqual(inputs["g_probe_character"]["race"],
+                                 web.sessions.source_defaults(key)["race"])
+        for extra in ({"socket_profile_spec":"evoker/augmentation"},
+                      {"socket_profile_spec":"warrior/fury"},
+                      {"socket_profile_spec":"mage/fire","source_target_socket_count":4,
+                       "existing_special_gem_id":None}):
+            with self.subTest(extra=extra),mock.patch.object(
+                    web.environment_build,"build_environment",
+                    side_effect=AssertionError("INVALID_SOURCE_MUST_NOT_COLLECT")) as build:
+                got=self.post("/api/v1/environment/season-build",{
+                    "game_build":"12.2.0.99999","target_ilevel":334,
+                    "source_target_socket_count":5,"existing_special_gem_id":311200,
+                    **extra})
+                self.assertIn(got.status_code,(400,409,422))
+                build.assert_not_called()
+
+    def test_v831_scoped_socket_install_cannot_match_other_spec(self):
+        snapshot={"verified_socket_profile_spec":"mage/fire",
+            "source_compilation":{"physical_gem_layout_unadmitted":{
+                "schema":"v271_user_socket_gem_layout_stage_v1",
+                "status":"PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING",
+                "socket_total":5,"special_gem_id":240983,
+                "ordinary_gem_ids":[201,202,203,204]}}}
+        self.assertTrue(web._verified_snapshot_gem_layout_matches(snapshot,
+            special_gem_id=240983,socket_total=5,representative_spec="mage/fire"))
+        self.assertFalse(web._verified_snapshot_gem_layout_matches(snapshot,
+            special_gem_id=240983,socket_total=5,representative_spec="paladin/retribution"))
+        self.assertFalse(web._verified_snapshot_gem_layout_matches(snapshot,
+            special_gem_id=240983,socket_total=6,representative_spec="mage/fire"))
+
     def test_fury_season_build_routes_only_distinct_G_rep_to_v216(self):
         # The 25-spec default remains Ret; explicit Fury auto budget
         # selects the sealed dual-twohand G profile before any Numeric READY.
