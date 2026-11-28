@@ -512,11 +512,12 @@ def merge_effect_option_rows(base,rows):
 
 
 def equipment_primary_armor_compatibility(row):
-    """Display-only exclusion on positive source evidence, not BiS ranking.
+    """Shared installed/refreshed user-choice projection, not BiS ranking.
 
-    An absent primary code on a proc/secondary-only trinket proves nothing.
-    Keep unknowns visible until a reliable specialization/role source exists.
-    Do not mutate or discard the original source catalog.
+    Use the existing 26 DPS contracts, source class/armor/primary metadata
+    and the product's actual supported special-equipment slot forms.
+    Unknown primary stays visible; loot-spec roles are annotations, not
+    equippability or DPS evidence. Never mutate the source catalogue.
     """
     import v143_specialization_contracts as specs
     import v169_source_first_representative_stage as representative
@@ -529,6 +530,15 @@ def equipment_primary_armor_compatibility(row):
               else set())
     slot=row.get("inventory_type")
     armor=slot in (1,3,5,6,7,8,9,10,20)
+    special=row.get("category")=="special_effect_gear_candidate"
+    # Use the same physical inventory contract exposed to the browser.
+    # It describes supported representative forms, not every weapon a
+    # character could equip in game. No item IDs or seasonal rules here.
+    allowed_forms=None
+    if special and type(slot) is int:
+        allowed_forms={form for form in specs.WEAPON_FORMS
+                       if any(slot in types for types in
+                              specs.selected_slot_inventory(form).values())}
     eligible=[]
     for key,contract in sorted(specs.CONTRACTS.items()):
         cls=key.split("/")[0]
@@ -543,6 +553,8 @@ def equipment_primary_armor_compatibility(row):
         if row.get("category")!="selectable_stat_craft" and observed and not observed&primary_codes[contract["primary"]]:
             continue
         if not representative.weapon_subclass_compatible(key,row):
+            continue
+        if allowed_forms is not None and contract["weapon_form"] not in allowed_forms:
             continue
         eligible.append(key)
     return {"compatible_dps_specs":eligible,

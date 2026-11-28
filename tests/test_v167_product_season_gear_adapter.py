@@ -292,6 +292,67 @@ class ProductAdapterTests(unittest.TestCase):
 
 
 class EquipmentSpecCompatibility(unittest.TestCase):
+    def test_v869_all_26_primary_armor_and_supported_special_slot_matrix(self):
+        # Independent expected spec sets, not inferred from the production
+        # contract being tested. No season-specific IDs or Native calls.
+        cloth={"mage/arcane","mage/fire","mage/frost","priest/shadow",
+               "warlock/affliction","warlock/demonology","warlock/destruction"}
+        leather={"demonhunter/devourer","demonhunter/havoc","druid/balance","druid/feral",
+                 "monk/windwalker","rogue/assassination","rogue/outlaw","rogue/subtlety"}
+        mail={"evoker/devastation","hunter/beast_mastery","hunter/marksmanship",
+              "hunter/survival","shaman/elemental","shaman/enhancement"}
+        plate={"deathknight/frost","deathknight/unholy","paladin/retribution",
+               "warrior/arms","warrior/fury"}
+        all_specs=cloth|leather|mail|plate
+        intelligence=cloth|{"demonhunter/devourer","druid/balance","evoker/devastation","shaman/elemental"}
+        strength=plate
+        agility=all_specs-intelligence-strength
+        self.assertEqual(len(all_specs),26)
+        def eligible(**changes):
+            row={"category":"trinket","inventory_type":12,"class_id":4,
+                 "subclass_id":0,"allowed_class_mask":-1,"stat_modifier_codes":[]}
+            row.update(changes)
+            original=copy.deepcopy(row)
+            actual=set(adapter.equipment_primary_armor_compatibility(row)["compatible_dps_specs"])
+            self.assertEqual(row,original)
+            return actual
+        for codes,expected in [([3],agility),([4],strength),([5],intelligence),
+                ([71],all_specs),([72],strength|agility),([73],agility|intelligence),
+                ([74],strength|intelligence),([3,5],agility|intelligence),
+                ([-1,32,36,49],all_specs),([],all_specs),(None,all_specs)]:
+            with self.subTest(codes=codes):
+                self.assertEqual(eligible(stat_modifier_codes=codes),expected)
+        for sub,family in enumerate((cloth,leather,mail,plate),1):
+            for slot in (1,3,5,6,7,8,9,10,20):
+                for codes,primary in [([3],agility),([4],strength),([5],intelligence),
+                                      ([71],all_specs),([],all_specs)]:
+                    with self.subTest(sub=sub,slot=slot,codes=codes):
+                        self.assertEqual(eligible(category="special_effect_gear_candidate",
+                            inventory_type=slot,subclass_id=sub,stat_modifier_codes=codes),family&primary)
+            for slot in (2,11,16):
+                self.assertEqual(eligible(category="special_effect_gear_candidate",
+                    inventory_type=slot,subclass_id=sub,stat_modifier_codes=[71]),all_specs)
+        two_hand={"deathknight/unholy","warrior/fury","warrior/arms",
+                  "paladin/retribution","druid/feral","hunter/survival","monk/windwalker"}
+        frill=cloth|{"druid/balance","evoker/devastation"}
+        ranged={"hunter/beast_mastery","hunter/marksmanship"}
+        for slot,cl,sub,expected in (
+            (17,2,8,two_hand),(23,4,0,frill),(14,4,6,{"shaman/elemental"}),
+            (15,2,2,ranged),(26,2,19,set()),(13,2,15,all_specs-two_hand-ranged),
+            (12,4,0,set())):
+            with self.subTest(slot=slot,cl=cl,sub=sub):
+                self.assertEqual(eligible(category="special_effect_gear_candidate",
+                    inventory_type=slot,class_id=cl,subclass_id=sub,
+                    stat_modifier_codes=[71]),expected)
+        self.assertEqual(eligible(allowed_class_mask=128,stat_modifier_codes=[5]),
+                         {"mage/arcane","mage/fire","mage/frost"})
+        self.assertEqual(eligible(allowed_class_mask=128,stat_modifier_codes=[3]),set())
+        # Provisional craft stat distribution is not a fixed primary filter.
+        self.assertEqual(eligible(category="selectable_stat_craft",inventory_type=5,
+                                  subclass_id=2,stat_modifier_codes=[4]),leather)
+        # Loot source role alone cannot forbid a physically compatible trinket.
+        self.assertEqual(eligible(loot_spec_metadata={"roles":["TANK"]}),all_specs)
+
     def test_fixed_primary_armor_class_and_unknown(self):
         def eligible(**changes):
             row={"category":"trinket","inventory_type":12,"class_id":4,
