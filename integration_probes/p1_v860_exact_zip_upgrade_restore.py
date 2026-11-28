@@ -228,8 +228,9 @@ def run(args):
                 need(not status["active"] and status["progress"]["native_attempts"]==0,
                      "NEW_READ_ONLY_NO_NATIVE")
                 blocked=call("/api/v1/sessions/"+sid+"/cache-only",{},expected=422)
-                need(blocked.get("detail",{}).get("code")=="CACHE_ONLY_REQUIRES_COMPLETED_REAL_SESSION",
+                need(blocked.get("detail",{}).get("code")=="V106_CACHE_ONLY_REQUIRES_COMPLETED_REAL_SESSION",
                      "UNVERIFIED_CACHE_MUST_NOT_RUN",blocked)
+                stage("NEW_PACKAGE_RESTORED_AND_UNVERIFIED_CACHE_BLOCKED")
             after=inventory(app)
             need(before==after and (envpath/"pyvenv.cfg").read_bytes()==cfg,
                  "PERSISTED_BYTES_DRIFT",sorted(set(before)^set(after))+
