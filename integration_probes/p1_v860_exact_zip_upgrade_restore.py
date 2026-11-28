@@ -119,7 +119,10 @@ def run(args):
     save()
     try:
         with tempfile.TemporaryDirectory(prefix="v860-upgrade-") as temp:
-            work=pathlib.Path(temp)
+            # Windows TEMP can contain an 8.3 alias (RUNNER~1). The
+            # product resolves its runs root and managed binary path.
+            # Establish the same physical root before writing any fixture.
+            work=pathlib.Path(temp).resolve(strict=True)
             old,receipt["old_archive"]=unpack(args.old,work/"old",OLD_SHA)
             new,receipt["new_archive"]=unpack(args.new,work/"new")
             need(receipt["old_archive"]["sha256"]!=receipt["new_archive"]["sha256"],
@@ -159,16 +162,25 @@ def run(args):
             def read_settings(call):
                 m=call("/api/v1/simc-updates/status")
                 p=call("/api/v1/simc-connection/status")
-                need(m["active_binary"]==str(binary) and m["installed"]["sha256"]==sha
-                     and m["native_calls_now"]==0,"MANAGED_POINTER")
-                need(p["saved"]["binary"]==str(binary) and p["saved"]["revision"]==revision
-                     and p["verified_now"] is False and p["native_calls_now"]==0,"CONNECTION")
+                expected={"active_binary":str(binary),"sha256":sha,"native_calls_now":0}
+                actual={"active_binary":m.get("active_binary"),
+                        "sha256":(m.get("installed") or {}).get("sha256"),
+                        "native_calls_now":m.get("native_calls_now")}
+                need(actual==expected,"MANAGED_POINTER",{"expected":expected,"actual":actual})
+                expected={"binary":str(binary),"revision":revision,
+                          "verified_now":False,"native_calls_now":0}
+                saved=p.get("saved") or {}
+                actual={"binary":saved.get("binary"),"revision":saved.get("revision"),
+                        "verified_now":p.get("verified_now"),
+                        "native_calls_now":p.get("native_calls_now")}
+                need(actual==expected,"CONNECTION",{"expected":expected,"actual":actual})
                 g=call(gear)
                 need(g["count"]==0 and g["status"]=="SEASON_GEAR_INSTALLED_SOURCE_UNAVAILABLE",
                      "UNVERIFIED_SEASON_MUST_NOT_PROMOTE",g)
                 return m["installed"],p["saved"]
             with server(old,python,env,args.out/"old-server.log") as call:
                 settings=read_settings(call)
+                stage("OLD_PACKAGE_MANAGED_CONNECTION_AND_PENDING_SEASON")
                 defaults=call("/api/v1/defaults")
                 controls=dict(next(x for x in defaults["archetypes"]
                                    if x["class"]=="paladin" and x["spec"]=="retribution"))
