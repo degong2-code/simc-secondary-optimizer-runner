@@ -996,7 +996,17 @@ async function refreshExistingSeasonTrinkets(gear,level) {
   }
 }
 
-function installSeasonGearHints(catalog) {
+function installSeasonGearHints(catalog,{preserveSelection=false}={}) {
+  // Failed/stale Build may revoke authority without erasing user intent.
+  // Only retain IDs as historical display values, not as candidate approval.
+  const previousBuild=state.seasonGear?.season_build??"";
+  const previousLevel=state.seasonGearTargetIlevel;
+  const retain=(select,value,label)=>{
+    if(!preserveSelection||!value)return;
+    const old=option(value,label+" #"+value+" · 환경 재확인 필요");
+    old.dataset.historic="true";
+    select.appendChild(old);select.value=value;
+  };
   // Any exact-SHA gear rebinding revokes the previous numeric source scope.
   state.verifiedExistingBudget=null;
   state.seasonGear=catalog?.status==="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY"
@@ -1010,21 +1020,30 @@ function installSeasonGearHints(catalog) {
     (a.name_ko||a.name).localeCompare(b.name_ko||b.name,"ko-KR")||
     a.item_id-b.item_id);
   for(const fieldId of ["trinket1","trinket2"]) {
-    const node=$(fieldId);
+    const node=$(fieldId),value=node.value;
     node.replaceChildren(option("","이번 시즌 장신구 선택"));
     for(const item of sortedKorean(current.trinket))
       node.appendChild(option(item.item_id,(item.name_ko||item.name)));
+    retain(node,value,"기존 장신구");
   }
   for(const row of $("special-rows").querySelectorAll(".gear-row")) {
-    const element=row.querySelector('[data-field="item_id"]');
+    const element=row.querySelector('[data-field="item_id"]'),value=element.value;
+    if(preserveSelection&&value){
+      row.dataset.optionSourceBuild??=previousBuild;
+      row.dataset.optionSourceLevel??=String(
+        row.querySelector('[data-field="ilevel"]')?.value||previousLevel||field("ilevel"));
+    }
     element.replaceChildren(option("","이번 시즌 특수효과 장비 선택"));
     for(const item of sortedKorean(current.special_effect_gear_candidate))
       element.appendChild(option(item.item_id,(item.name_ko||item.name)));
+    retain(element,value,"기존 특수장비");
   }
   refreshSpecialSlots();
   refreshEquipmentSelectionUI();
   if(!state.seasonGear) {
-    node.textContent="시즌 선택 목록이 없습니다. 새 장신구·특수효과 선택은 보류됩니다. 기존 세션 조회는 가능합니다.";
+    node.textContent=preserveSelection?
+      "시즌 선택 목록 재확인 필요 · 기존 장비 선택은 보존하되 새 실행에 승인하지 않습니다.":
+      "시즌 선택 목록이 없습니다. 새 장신구·특수효과 선택은 보류됩니다. 기존 세션 조회는 가능합니다.";
     return;
   }
   const specialCount=(current.special_effect_gear_candidate||[]).length;
@@ -1674,8 +1693,8 @@ async function chooseInstalledFlask() {
     }).filter(x=>Number.isSafeInteger(x.item_id)&&x.item_id>0);
   installSeasonGearHints(gear);
   state.seasonGearTargetIlevel=level;
-  setTrinketSelection("trinket1",priorTrinkets[0]);
-  setTrinketSelection("trinket2",priorTrinkets[1]);
+  setTrinketSelection("trinket1",priorTrinkets[0],true);
+  setTrinketSelection("trinket2",priorTrinkets[1],true);
   // Keep incompatible historical choices visible; never silently omit a
   // user-selected effect after an environment rebind.
   fillGearRows("special-rows",priorSpecial);
@@ -1946,8 +1965,8 @@ async function bindExactInstalledGearVariant({sha,build,level,stillMatches}) {
     }).filter(x=>Number.isSafeInteger(x.item_id)&&x.item_id>0);
   installSeasonGearHints(gear);
   state.seasonGearTargetIlevel=level;
-  setTrinketSelection("trinket1",oldTrinkets[0]);
-  setTrinketSelection("trinket2",oldTrinkets[1]);
+  setTrinketSelection("trinket1",oldTrinkets[0],true);
+  setTrinketSelection("trinket2",oldTrinkets[1],true);
   fillGearRows("special-rows",oldSpecial);
   state.seasonOptionRequestEpoch++;
   renderSeasonOptionCatalog(null);
@@ -4196,7 +4215,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       // Keep its diagnostic receipt, but never bind its GJFO/T or v212 SHA
       // after either the initial POST or the subsequent gear GET completes.
       state.verifiedInstalledBuildFromThisPage=null;
-      installSeasonGearHints(null);
+      installSeasonGearHints(null,{preserveSelection:true});
       renderSeasonOptionCatalog(null);
       updateBudgetPreview();
       displaySeasonBuildRecovery(null);
@@ -4259,8 +4278,8 @@ async function buildSeasonEnvironment(forUserVariant=false) {
         }).filter(x=>Number.isSafeInteger(x.item_id)&&x.item_id>0);
         installSeasonGearHints(gear);
         state.seasonGearTargetIlevel=level;
-        setTrinketSelection("trinket1",priorTrinkets[0]);
-        setTrinketSelection("trinket2",priorTrinkets[1]);
+        setTrinketSelection("trinket1",priorTrinkets[0],true);
+        setTrinketSelection("trinket2",priorTrinkets[1],true);
         // Preserve every explicit choice, even when the new catalogue has
         // no approved matching ID/slot. fillGearRows marks historic choices;
         // selectedGear rejects them instead of quietly omitting their effect.
@@ -4273,14 +4292,13 @@ async function buildSeasonEnvironment(forUserVariant=false) {
            typeof refreshExistingSeasonTrinkets==="function")
           void refreshExistingSeasonTrinkets(gear,level);
       }catch(error){
-        installSeasonGearHints(null);
-        fillGearRows("special-rows",[]);
+        installSeasonGearHints(null,{preserveSelection:true});
         $("season-gear-note").textContent=
           "검증 설치의 장신구·특수장비 후보 연결이 보류되었습니다. "+
           "다른 시즌 패키지 목록을 대신 사용하지 않습니다.";
       }
     }else{
-      installSeasonGearHints(null);
+      installSeasonGearHints(null,{preserveSelection:true});
     }
     if(forUserVariant) $("user-variant-status").textContent=(
       report.web_environment_scope?.environment_ready===true?

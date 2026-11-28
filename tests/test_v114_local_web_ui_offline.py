@@ -1834,8 +1834,8 @@ console.log("V477_PINNED_TRINKET_GEAR_PREFLIGHT_PASS");
         self.assertIn("installSeasonGearHints(gear)",js)
         self.assertIn("installSeasonGearHints(null)",js)
         self.assertIn("다른 시즌 패키지 목록을 대신 사용하지 않습니다.",js)
-        self.assertIn('setTrinketSelection("trinket1",priorTrinkets[0]);',js)
-        self.assertIn('setTrinketSelection("trinket2",priorTrinkets[1]);',js)
+        self.assertIn('setTrinketSelection("trinket1",priorTrinkets[0],true);',js)
+        self.assertIn('setTrinketSelection("trinket2",priorTrinkets[1],true);',js)
         self.assertIn('fillGearRows("special-rows",priorSpecial);',js)
         self.assertIn("option_source_build:row.dataset?.optionSourceBuild",js)
         self.assertNotIn("priorSpecial.filter(entry=>",js)
@@ -2209,6 +2209,51 @@ console.log("V838_GEAR_OPTION_SOURCE_SCOPE_PASS");
                               cwd=ROOT,capture_output=True,text=True,timeout=15)
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertIn("V838_GEAR_OPTION_SOURCE_SCOPE_PASS",result.stdout)
+
+    def test_v839_failed_environment_revokes_authority_without_erasing_gear(self):
+        """Real catalogue replacement with mock DOM; stale intent cannot approve a run."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function installSeasonGearHints(");
+const b=raw.indexOf("// Item.InventoryType",a);
+assert(a>=0&&b>a);
+const opt=(value,textContent)=>({value:String(value),textContent,dataset:{}});
+function select(value){
+ return {value,options:[],replaceChildren(...items){this.options=items;this.value=items[0]?.value||"";},
+ appendChild(x){this.options.push(x);}};
+}
+const item=select("100"),level={value:"330"},bonus={value:"13846"},redirect={value:"200"};
+const row={dataset:{optionSourceBuild:"12.1.5.70961",optionSourceLevel:"330"},
+ querySelector(sel){return {"item_id":item,ilevel:level,bonus_id:bonus,redirected_base_stats:redirect}[sel.split('"')[1]];}};
+const controls={trinket1:select("101"),trinket2:select("102"),
+ "season-gear-note":{},"special-rows":{querySelectorAll:()=>[row]}};
+const state={seasonGear:{season_build:"12.1.5.70961"},seasonGearTargetIlevel:334,
+ verifiedExistingBudget:{T:3107}};
+const install=Function("state","$","option","field","refreshOfficialEquipmentIcons",
+ "refreshSpecialSlots","refreshEquipmentSelectionUI",raw.slice(a,b)+
+ "\nreturn installSeasonGearHints;")(state,id=>controls[id],opt,()=>"334",()=>{},()=>{},()=>{});
+install(null,{preserveSelection:true});
+assert.equal(state.seasonGear,null);assert.equal(state.seasonGearTargetIlevel,null);
+assert.equal(state.verifiedExistingBudget,null);
+assert.equal(controls.trinket1.value,"101");assert.equal(controls.trinket2.value,"102");
+assert.equal(item.value,"100");assert.equal(level.value,"330");
+assert.equal(bonus.value,"13846");assert.equal(redirect.value,"200");
+assert.equal(item.options[1].dataset.historic,"true");
+assert.equal(row.dataset.optionSourceBuild,"12.1.5.70961");
+install(null,{preserveSelection:true});assert.equal(item.value,"100");
+assert.equal(row.dataset.optionSourceBuild,"12.1.5.70961");
+install(null);assert.equal(item.value,"");assert.equal(controls.trinket1.value,"");
+assert.equal((raw.match(/installSeasonGearHints\(null,\{preserveSelection:true\}\)/g)||[]).length,3);
+console.log("V839_FAILED_BUILD_GEAR_INTENT_PASS");
+"""
+        result=subprocess.run([node,"-e",script,str(ROOT/"runner/webui/app.js")],
+                              cwd=ROOT,capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V839_FAILED_BUILD_GEAR_INTENT_PASS",result.stdout)
 
     def test_v7002_real_browser_refresh_posts_json_and_preserves_budget(self):
         """Execute the production refresh AND api transport, not a mocked api."""
