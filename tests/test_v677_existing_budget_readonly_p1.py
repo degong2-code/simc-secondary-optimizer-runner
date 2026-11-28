@@ -315,7 +315,7 @@ const funcs=Function('state','field','$','oilUseIntent',
         script=r"""
 const fs=require("fs"),assert=require("assert");
 const raw=fs.readFileSync(process.argv[1],"utf8");
-const start=raw.indexOf("function matchingInstalledGemVariants()");
+const start=raw.indexOf("function matchingInstalledGemVariants(");
 const end=raw.indexOf("function runeCompatibility()",start);
 assert(start>=0&&end>start);
 const A="a".repeat(64),B="b".repeat(64);

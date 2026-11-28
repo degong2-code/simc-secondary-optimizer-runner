@@ -2119,6 +2119,50 @@ assert.strictEqual(fn(assert),true);
         self.assertIn('input.type="number";input.min="1";input.max="999999999";',
                       source.read_text(encoding="utf8"))
 
+    def test_v837_hidden_gear_options_are_owned_by_restored_item_and_level(self):
+        """Actual edit helper: do not transfer sealed options to another selection."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function syncGearOptionOwnership(");
+const b=raw.indexOf("function gearInputs(",a);
+assert(a>=0&&b>a);
+const sync=Function(raw.slice(a,b)+"\nreturn syncGearOptionOwnership;")();
+function row(group,values){
+ const nodes=Object.fromEntries(Object.entries(values).map(([k,value])=>[k,{value}]));
+ return {nodes,dataset:{group},querySelector(sel){return nodes[sel.split('"')[1]];}};
+}
+const special=row("special-rows",{item_id:"100",ilevel:"330",bonus_id:"13846",
+ redirected_base_stats:"200"});
+const n=special.nodes;
+sync(special,true);sync(special);
+assert.equal(n.bonus_id.value,"13846");assert.equal(n.redirected_base_stats.value,"200");
+n.ilevel.value="334";sync(special);
+assert.equal(n.bonus_id.value,"");assert.equal(n.redirected_base_stats.value,"200");
+n.bonus_id.value="999";sync(special,true);
+n.item_id.value="101";sync(special);
+assert.equal(n.bonus_id.value,"");assert.equal(n.redirected_base_stats.value,"");
+const crafted=row("crafted-rows",{item_id:"244579",ilevel:"330",slot:"head",
+ embellishment:"arcanoweave_lining",stat_a:"crit",stat_b:"haste",bonus_id:"777"});
+sync(crafted,true);sync(crafted);
+assert.equal(crafted.nodes.bonus_id.value,"777");
+crafted.nodes.item_id.value="244580";sync(crafted);
+assert.equal(crafted.nodes.bonus_id.value,"");
+crafted.nodes.bonus_id.value="888";sync(crafted,true);
+crafted.nodes.stat_b.value="mastery";sync(crafted);
+assert.equal(crafted.nodes.bonus_id.value,"");
+assert(raw.includes('()=>syncGearOptionOwnership(row)'));
+assert(raw.includes('syncGearOptionOwnership(row,true);'));
+console.log("V837_GEAR_OPTION_OWNERSHIP_PASS");
+"""
+        result=subprocess.run([node,"-e",script,str(ROOT/"runner/webui/app.js")],
+                              cwd=ROOT,capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V837_GEAR_OPTION_OWNERSHIP_PASS",result.stdout)
+
     def test_v7002_real_browser_refresh_posts_json_and_preserves_budget(self):
         """Execute the production refresh AND api transport, not a mocked api."""
         import shutil,subprocess

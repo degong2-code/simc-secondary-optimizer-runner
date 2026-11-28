@@ -2138,6 +2138,29 @@ function chosenCraft(slot,exactItemId=null) {
   return exactItemId===null?(valid[0]||null):
     (valid.find(item=>item.item_id===exactItemId)||null);
 }
+// Restored hidden options belong to the exact physical gear selection.
+// Editing a different item must not carry over the old catalyst/bonus IDs.
+// A level edit invalidates the old bonus list, not a same-item catalyst link.
+function syncGearOptionOwnership(row,reset=false) {
+  const node=name=>row.querySelector('[data-field="'+name+'"]');
+  const read=name=>node(name)?.value||"";
+  const item=read("item_id");
+  const craft=row.dataset.group==="crafted-rows";
+  const bonusScope=JSON.stringify([item,read("ilevel"),
+    ...(craft?[read("slot"),read("embellishment"),read("stat_a"),read("stat_b")]:[])]);
+  if(!reset){
+    if(row.dataset.optionItem!==item){
+      const redirect=node("redirected_base_stats");
+      if(redirect)redirect.value="";
+    }
+    if(row.dataset.optionBonusScope!==bonusScope){
+      const bonus=node("bonus_id");
+      if(bonus)bonus.value="";
+    }
+  }
+  row.dataset.optionItem=item;
+  row.dataset.optionBonusScope=bonusScope;
+}
 function gearInputs(nodeId, config) {
   const parent=$(nodeId),isSpecial=nodeId==="special-rows";
   const limit=isSpecial?8:2;
@@ -2197,6 +2220,13 @@ function gearInputs(nodeId, config) {
     note.textContent=isSpecial?"장비를 선택하면 부위가 자동 지정됩니다.":
       "장식 종류를 먼저 선택하면 호환 부위가 표시됩니다.";
     row.appendChild(note);group.appendChild(row);
+    syncGearOptionOwnership(row,true);
+    for(const name of ["item_id","ilevel",...(isSpecial?[]:
+        ["slot","embellishment","stat_a","stat_b"])]){
+      const input=row.querySelector('[data-field="'+name+'"]');
+      if(input)input.addEventListener(input.tagName==="SELECT"?"change":"input",
+        ()=>syncGearOptionOwnership(row));
+    }
   }
   if(isSpecial) {
     for(const row of group.querySelectorAll(".gear-row")){
@@ -2244,6 +2274,7 @@ function fillGearRows(nodeId, entries) {
       }
       input.value=value;
     }
+    syncGearOptionOwnership(row,true);
   }
   const add=group.querySelector(".gear-group > button");
   if(add)add.disabled=!rows.some(row=>row.hidden);

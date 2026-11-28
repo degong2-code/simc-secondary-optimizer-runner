@@ -18,6 +18,7 @@ function cut(a,b){
  return raw.slice(i,j)+'\n';
 }
 const code=cut('function validTargetIlevel() {','function setNotice(')+
+ cut('function explicitOilPreparationRequested()','async function prepareUserSelectedEnvironment()')+
  cut('function optimizerNeedsSeasonPreparation() {','// v568:')+
  cut('function buttonState(active=false,ready=false) {','async function withBusy(');
 const nodes={};
