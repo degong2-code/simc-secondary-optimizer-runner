@@ -1544,8 +1544,9 @@ function renderInstalledFlaskChoices(data) {
       variants.forEach((item,j)=>{
         const rev=typeof item.simc_revision==="string"?item.simc_revision.slice(0,7):"";
         const active=item.installed_manifest_sha256===activeSha;
-        const savedLabel=(active?"현재 연결 · ":"")+"저장본 "+(j+1)+
-          (rev?" · SimC "+rev:"");
+        const savedLabel=(active?"현재 연결 · ":"")+"구성 "+(i+1)+
+          " · "+flaskName+" · 영약 +"+item.F+" · 보석 +"+item.J+
+          " · 저장본 "+(j+1)+(rev?" · SimC "+rev:"");
         const candidate=option(item.installed_manifest_sha256,savedLabel);
         candidate.title=label+" · 영약 #"+item.flask_item_id+
           " (품질 "+item.flask_quality+") · 보석 "+
