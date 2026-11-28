@@ -23,6 +23,16 @@ echo  and starts the LOCAL app on 127.0.0.1.
 echo  No SimC calculation or season update is run.
 echo.
 
+rem v859: an existing working user runtime is sufficient even if a
+rem newer shell cannot discover the system Python used to create it.
+rem Check it before PATH, winget or any dependency repair prompt.
+set "VENV_DIR=%LOCALAPPDATA%\SIMC_Secondary_Optimizer\web-python"
+set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
+if exist "%VENV_PY%" (
+  "%VENV_PY%" -c "import sys,fastapi,uvicorn,py7zr; sys.exit(0 if sys.version_info.major == 3 and sys.version_info.minor >= 12 else 1)" >nul 2>&1
+  if not errorlevel 1 goto :start_app
+)
+
 :check_python
 set "SYS_PY="
 set "SYS_PY_EXE="
@@ -54,13 +64,6 @@ if not defined SYS_PY if not defined SYS_PY_EXE (
   )
 )
 if not defined SYS_PY if not defined SYS_PY_EXE goto :python_missing
-
-set "VENV_DIR=%LOCALAPPDATA%\SIMC_Secondary_Optimizer\web-python"
-set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
-if not exist "%VENV_PY%" goto :setup_venv
-"%VENV_PY%" -c "import sys,fastapi,uvicorn,py7zr; sys.exit(0 if sys.version_info.major == 3 and sys.version_info.minor >= 12 else 1)" >nul 2>&1
-if errorlevel 1 goto :setup_venv
-goto :start_app
 
 :setup_venv
 echo [SETUP] Python 3.12+ found. Web libraries need setup.

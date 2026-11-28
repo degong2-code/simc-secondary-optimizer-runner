@@ -148,6 +148,17 @@ class WindowsBetaPackageOffline(unittest.TestCase):
                       batch)
         self.assertIn('if /I "%~1"=="--check" (',batch)
 
+    def test_existing_user_runtime_precedes_python_discovery_and_install_consent(self):
+        batch=(ROOT/"START_HERE_AUTO_SETUP_AND_RUN.bat").read_text("utf8")
+        ready=batch.index('if not errorlevel 1 goto :start_app')
+        self.assertLess(batch.index('set "VENV_DIR=%LOCALAPPDATA%'),ready)
+        self.assertLess(ready,batch.index(':check_python'))
+        self.assertLess(ready,batch.index('where py'))
+        self.assertLess(ready,batch.index('choice /C YN /N /M "Install'))
+        self.assertIn('import sys,fastapi,uvicorn,py7zr',batch[:ready])
+        self.assertEqual(batch.count('set "VENV_DIR='),1)
+        self.assertEqual(batch.count('set "VENV_PY='),1)
+
     def test_missing_critical_file_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:
             with self.assertRaisesRegex(pack.PackageBlocked,"REQUIRED_FILE_MISSING"):

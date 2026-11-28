@@ -17,6 +17,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+import venv
 import zipfile
 
 def need(ok,why):
@@ -41,6 +42,67 @@ def http(base,path,*,token=None,payload=None,extra=None):
         try:content=json.loads(raw)
         except ValueError:content=raw.decode("utf8","replace")
         return exc.code,content
+
+def check_existing_user_runtime(root,work):
+    """Real extracted easy-start --check with a pre-existing user runtime.
+
+    The Python executable is functional but neither py nor python is on
+    the supplied PATH. The package must not attempt setup or touch user
+    data. Sentinels are byte-preservation fixtures, not valid Native evidence.
+    """
+    home=work/"existing-user-home"
+    local=work/"existing-user-appdata"
+    app_home=home/"SIMC_Secondary_Optimizer"
+    envpath=local/"SIMC_Secondary_Optimizer"/"web-python"
+    # CI already installed the exact test dependencies; no pip or download.
+    venv.create(str(envpath),system_site_packages=True,with_pip=False)
+    python=envpath/"Scripts"/"python.exe"
+    cfg=envpath/"pyvenv.cfg"
+    need(python.is_file() and cfg.is_file(),"V859_EXISTING_RUNTIME_MISSING")
+    fixture={
+        app_home/"simc-managed"/"versions"/"existing"/"simc.exe":
+            b"PREVIOUS_BINARY_SENTINEL_DO_NOT_RUN",
+        app_home/"simc-user-connection.json":b"PREVIOUS_CONNECTION_SENTINEL",
+        app_home/"runs"/"_fresh_season_sources"/"previous.json":
+            b"PREVIOUS_ENVIRONMENT_SENTINEL",
+        app_home/"runs"/("a"*20)/"V106_USER_RESULT.json":
+            b"PREVIOUS_RESULT_SENTINEL",
+        app_home/"runs"/("a"*20)/"generated"/"simc_results"/"previous.json":
+            b"PREVIOUS_CACHE_SENTINEL",
+    }
+    for path,raw in fixture.items():
+        path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_bytes(raw)
+    def state():
+        return {p.relative_to(app_home).as_posix():hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in app_home.rglob("*") if p.is_file()}
+    before=state()
+    old_cfg=cfg.read_bytes()
+    system32=pathlib.Path(os.environ["SystemRoot"])/"System32"
+    isolated_program_files=work/"empty-program-files"
+    isolated_program_files.mkdir()
+    env={**os.environ,"HOME":str(home),"USERPROFILE":str(home),
+         "LOCALAPPDATA":str(local),"ProgramFiles":str(isolated_program_files),
+         "PATH":str(system32),"PYTHONDONTWRITEBYTECODE":"1",
+         "PYTHONIOENCODING":"utf-8"}
+    # Prove the new process actually lacks the normal discovery route.
+    for name in ("py","python"):
+        located=subprocess.run([str(system32/"where.exe"),name],
+            cwd=root,env=env,capture_output=True,timeout=10)
+        need(located.returncode!=0,"V859_TEST_SYSTEM_PYTHON_STILL_DISCOVERABLE:"+name)
+    checked=subprocess.run([str(system32/"cmd.exe"),"/d","/c",
+                            str(root/"START_HERE_AUTO_SETUP_AND_RUN.bat"),"--check"],
+        cwd=root,env=env,stdin=subprocess.DEVNULL,capture_output=True,
+        text=True,encoding="utf8",errors="replace",timeout=35)
+    need(checked.returncode==0 and
+         "[READY] Local Python environment is working." in checked.stdout and
+         all(marker not in checked.stdout for marker in ("[SETUP]","[PYTHON]","[START]")),
+         "V859_EXISTING_RUNTIME_REUSE_FAILED:"+checked.stdout[-800:])
+    need(state()==before and cfg.read_bytes()==old_cfg,
+         "V859_EXISTING_USER_FILES_CHANGED")
+    print("V859_EXTRACTED_EASY_START_EXISTING_RUNTIME_NO_PATH_PASS",
+          "preserved_files",len(before),"native 0","pip 0",flush=True)
+
 
 def run(archive_path):
     with tempfile.TemporaryDirectory(prefix="v181_windows_beta_") as tmp:
@@ -105,6 +167,7 @@ def run(archive_path):
         need(check.returncode==0 and "READY:" in check.stdout,
              "ONE_CLICK_WINDOWS_DEPENDENCY_CHECK_FAILED:"+check.stdout[-600:])
         print("V181_WINDOWS_EXTRACTED_LAUNCHER_CHECK_PASS",flush=True)
+        check_existing_user_runtime(root,work)
         with socket.socket() as sock:
             sock.bind(("127.0.0.1",0))
             port=sock.getsockname()[1]
