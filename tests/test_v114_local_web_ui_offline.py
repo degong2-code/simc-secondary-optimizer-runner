@@ -2427,6 +2427,7 @@ const $=id=>nodes[id];
 let redraw=0,requests=0,stale=false,mode="trinket",specialSlots=0,mediaRefresh=0;
 const refreshOfficialEquipmentIcons=async current=>{assert.strictEqual(state.seasonGear,current);mediaRefresh++};
 let roleStatus="TRINKET_LOOT_SPEC_SOURCE_OBSERVED",roleMetadata,embOptions,craftRedraw=0;
+let bonusStatus="POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED";
 const refreshCraftChoices=()=>{craftRedraw++};
 const role={source:"SAME_BUILD_DB2_EXPLICIT_LOOT_SPEC_OVERRIDE",
   status:"EXPLICIT_SHARED_WITH_DPS",roles:["DPS","HEALER"]};
@@ -2449,6 +2450,7 @@ const fetch=async(url,opts)=>{
     installed_manifest_sha256:gear.installed_manifest_sha256,
     source_catalog_manifest_sha256:gear.source_catalog_manifest_sha256,
     supplementary_delve_status:"SUPPLEMENTARY_SOURCE_OBSERVED",
+    bonus_effect_source_status:bonusStatus,special_generation_verified:true,
     loot_spec_source_status:roleStatus,trinket_loot_spec_metadata:roleMetadata,
     native_calls_now:0,budget_rebuilt:false,
     new_trinkets:mode==="trinket"||mode==="mixed"?[
@@ -2467,7 +2469,7 @@ const mergeTrinketRoleMetadata=load("function mergeTrinketRoleMetadata(",
 const trinketLootRoleLabel=load("function trinketLootRoleLabel(",
   "function mergeTrinketRoleMetadata(");
 const refresh=load("async function refreshExistingSeasonTrinkets(",
-                   "function installSeasonGearHints(");
+                   "async function updateVisibleEquipmentChoices(");
 (async()=>{
   stale=true;
   roleMetadata={"100":role};
@@ -2586,11 +2588,35 @@ const refresh=load("async function refreshExistingSeasonTrinkets(",
   assert.strictEqual(state.verifiedExistingBudget,budget);
   await refresh(pending,334);
   assert.strictEqual(requests,3);
+  // Explicit gear refresh bypasses the prior completed display marker.
+  mode="none";embOptions=undefined;bonusStatus="BONUS_SOURCE_PENDING";
+  await refresh(pending,334,true,true);
+  assert.strictEqual(requests,4);
+  assert.strictEqual(pending.special_source_refresh_pending,true);
+  bonusStatus="POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED";
+  await refresh(pending,334);
+  assert.strictEqual(requests,5);
+  assert.strictEqual(pending.special_source_refresh_pending,false);
+  await refresh(pending,334);
+  assert.strictEqual(requests,5);
+  assert.strictEqual(state.verifiedExistingBudget,budget);
+  assert.strictEqual(pending.choiceRefreshInFlight,false);
 })().catch(e=>{console.error(e);process.exitCode=1});
 """
         result=subprocess.run([node,"-e",code,str(source)],capture_output=True,
                               text=True,timeout=20)
         self.assertEqual(result.returncode,0,result.stderr)
+
+    def test_v862_explicit_equipment_update_reuses_existing_scope(self):
+        page=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('id="equipment-refresh-btn"',page)
+        self.assertIn('id="equipment-refresh-status"',page)
+        self.assertIn('withBusy(updateVisibleEquipmentChoices)',js)
+        self.assertIn('refreshExistingSeasonTrinkets(gear,level,true,true)',js)
+        restore=js.split("async function restore(id) {",1)[1].split("function exactUserEnchantInputsMatch",1)[0]
+        self.assertNotIn("refreshExistingSeasonTrinkets",restore)
+        self.assertNotIn("updateVisibleEquipmentChoices",restore)
 
     def test_v695_inline_equipment_only_and_full_width_result(self):
         page=self.client.get("/").text

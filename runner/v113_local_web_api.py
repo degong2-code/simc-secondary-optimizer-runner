@@ -4412,6 +4412,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             result.update(status="SEASON_TRINKET_SOURCE_REFRESHED",
                 source_generation_sha256=refreshed["source_generation_sha256"],
                 supplementary_delve_status=refreshed["supplementary_delve_status"],
+                bonus_effect_source_status=refreshed.get("bonus_effect_review",{}).get("status"),
+                special_generation_verified=refreshed.get("special_generation_verified") is True,
                 supplementary_delve_unresolved_count=refreshed.get(
                     "supplementary_delve_unresolved_count"),
                 new_trinkets=[r for r in rows["trinket"] if r["item_id"] in new_ids],

@@ -962,14 +962,19 @@ async function refreshOfficialEquipmentIcons(gear){
   }
 }
 
-async function refreshExistingSeasonTrinkets(gear,level,refreshEmbellishments=true) {
-  // Called only by a current user environment preparation, not historical
-  // session browsing. An optional list update never resets T or selection.
-  if(!gear||gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES")return;
+async function refreshExistingSeasonTrinkets(gear,level,refreshEmbellishments=true,force=false) {
+  // An explicit equipment update or current environment preparation only;
+  // merely opening a historical result remains read-only.
+  if(!gear||gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"||
+     gear.choiceRefreshInFlight)return;
+  // Reuse the existing exact-scope source compiler and its sealed cache.
+  // An explicit retry must not be suppressed by previous partial coverage.
   const needsEmb=refreshEmbellishments&&(!gear.embellishments||gear.embellishments_source_pending);
-  if(!needsEmb&&["SUPPLEMENTARY_SOURCE_OBSERVED","SUPPLEMENTARY_SOURCE_PARTIAL"]
+  if(!force&&!needsEmb&&!gear.special_source_refresh_pending&&
+       ["SUPPLEMENTARY_SOURCE_OBSERVED","SUPPLEMENTARY_SOURCE_PARTIAL"]
        .includes(gear.trinket_source_refresh)&&
        gear.loot_spec_source_status==="TRINKET_LOOT_SPEC_SOURCE_OBSERVED")return;
+  gear.choiceRefreshInFlight=true;
   try{
     const params=new URLSearchParams({game_build:gear.season_build,
       target_ilevel:String(level),installed_manifest_sha256:gear.installed_manifest_sha256,
@@ -992,7 +997,14 @@ async function refreshExistingSeasonTrinkets(gear,level,refreshEmbellishments=tr
       gear.embellishments_source_pending=false;
       refreshCraftChoices();
     }
-    if(data.status!=="SEASON_TRINKET_SOURCE_REFRESHED")return;
+    if(data.status!=="SEASON_TRINKET_SOURCE_REFRESHED"){
+      gear.special_source_refresh_pending=true;
+      return data;
+    }
+    gear.special_source_refresh_pending=
+      (data.bonus_effect_source_status!==undefined&&
+       data.bonus_effect_source_status!=="POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED")||
+      (data.special_generation_verified===false&&data.new_special_pending_count>0);
     const ids=new Set(Object.values(gear.choices).flat().map(x=>x.item_id));
     const added=[];
     for(const item of data.new_trinkets||[]){
@@ -1019,7 +1031,7 @@ async function refreshExistingSeasonTrinkets(gear,level,refreshEmbellishments=tr
       if(rolesChanged)refreshEquipmentSelectionUI();
       if(coverageNote) $("season-gear-note").textContent=
         "기존 예산·목록 유지"+coverageNote+" · 시즌 전체 목록 완전성 미확인";
-      return;
+      return data;
     }
     // Only touch the selection controls for categories that actually changed.
     if(added.length){
@@ -1053,9 +1065,40 @@ async function refreshExistingSeasonTrinkets(gear,level,refreshEmbellishments=tr
     $("season-gear-note").textContent="기존 예산 유지 · 장신구 "+added.length+
       "종, 특수효과 장비 "+specialAdded.length+"종 추가"+
       coverageNote+" · 시즌 전체 목록 완전성 미확인";
+    return data;
   }catch{
     // Keep the original installed list usable if source refresh is pending.
+    gear.special_source_refresh_pending=true;
+  }finally{
+    gear.choiceRefreshInFlight=false;
   }
+}
+
+async function updateVisibleEquipmentChoices(){
+  const gear=state.seasonGear,level=Number(field("ilevel"));
+  const build=field("season-game-build")||state.verifiedInstalledBuildFromThisPage;
+  const note=$("equipment-refresh-status");
+  if(!verifiedInstalledGearScopeMatchesRun(build,level)){
+    note.textContent="먼저 계산 환경을 확인해 주세요. 기존 결과는 그대로 유지됩니다.";
+    return;
+  }
+  if(gear.choiceRefreshInFlight){
+    note.textContent="장비 목록을 확인 중입니다. 완료 후 다시 시도해 주세요.";
+    return;
+  }
+  note.textContent="저장된 시즌 자료로 장비 목록 확인 중 · 기존 계산은 유지";
+  const data=await refreshExistingSeasonTrinkets(gear,level,true,true);
+  if(state.seasonGear!==gear||Number(field("ilevel"))!==level)return;
+  if(!data||data.status!=="SEASON_TRINKET_SOURCE_REFRESHED"){
+    note.textContent="일부 장비 자료를 확인하지 못했습니다. 기존 목록과 결과는 유지됩니다."+
+      (typeof data?.reason==="string"?" ("+data.reason+")":"");
+    return;
+  }
+  const trinkets=eligibleEquipment("trinket"),specials=eligibleEquipment("special_effect_gear_candidate");
+  note.textContent="현재 전문화: 장신구 "+trinkets.length+"종, 특수효과 장비 "+specials.length+
+    "종 · 기존 예산 유지 · 추가 계산 없음"+
+    (gear.special_source_refresh_pending?" · 일부 특수효과 자료 확인 필요":"")+
+    " · 전체 시즌 목록 확인 전";
 }
 
 function installSeasonGearHints(catalog,{preserveSelection=false}={}) {
@@ -1073,6 +1116,8 @@ function installSeasonGearHints(catalog,{preserveSelection=false}={}) {
   state.verifiedExistingBudget=null;
   state.seasonGear=catalog?.status==="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY"
     ? catalog : null;
+  const equipmentRefreshNote=$("equipment-refresh-status");
+  if(equipmentRefreshNote)equipmentRefreshNote.textContent="";
   refreshCraftChoices();
   // Only an exact v212/SHA gear lookup below can set this run-level seal.
   state.seasonGearTargetIlevel=null;
@@ -3293,6 +3338,8 @@ function buttonState(active=false,ready=false) {
   $("plan-btn").disabled=busy||active||!state.token;
   $("season-build-btn").disabled=busy||active||!state.token;
   $("user-variant-prepare-btn").disabled=busy||active||!state.token;
+  const equipmentRefresh=$("equipment-refresh-btn");
+  if(equipmentRefresh)equipmentRefresh.disabled=busy||active||!state.token;
   if(busy){
     $("source-credentials-save-btn").disabled=true;
     $("source-credentials-clear-btn").disabled=true;
@@ -5982,6 +6029,7 @@ function registerHandlers() {
     // Existing oil ownership/selection/installation checks remain authoritative.
     withBusy(applyOilUseToggle);
   });
+  $("equipment-refresh-btn").addEventListener("click",()=>withBusy(updateVisibleEquipmentChoices));
   $("equipment-trinket-search").addEventListener("input",drawInlineEquipment);
   $("equipment-special-search").addEventListener("input",drawInlineEquipment);
   for(const launch of document.querySelectorAll("[data-equip-select]"))
