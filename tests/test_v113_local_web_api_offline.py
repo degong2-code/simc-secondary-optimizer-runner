@@ -560,62 +560,123 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(self.client.get(url).status_code,403)
 
     def test_v460_installed_v212_gear_candidates_source_bound_and_fail_closed(self):
-        """Existing v212/v213 sealed candidate catalogue only, zero Native."""
+        """v857: actual v216/v217 file reads and HTTP projection; synthetic schemas."""
         build="12.1.5.70783"
         digest="b"*64
-        catalog_sha="c"*64
-        docs=self.app.state.jobs.root/"_fresh_season_sources"/("wago_"+build)/"fresh_source"
+        stage_sha="d"*64
+        rev="a"*40
+        root=self.app.state.jobs.root/"_fresh_season_sources"/("wago_"+build)
+        docs=root/"fresh_source"
         docs.mkdir(parents=True)
-        (docs/("v212_installed_"+digest[:20]+".json")).write_text("{}")
-        (docs/"v213_candidate_catalog.json").write_text("{}")
-        doc={"manifest_sha256":digest,"game_build":build,
-             "target_ilevel":334,
-             "source_catalog_artifact_sha256":catalog_sha,
-             "source_catalog_manifest_sha256":"a"*64,
-             "official_O_physical_source":None}
         row={"item_id":269999,"name":"Current-season trinket","category":"trinket",
              "user_selectable":False,"inventory_type":12,"class_id":4,
              "subclass_id":0,"slot_hint":None}
-        catalog={"manifest_sha256":"a"*64,"game_build":build,
+        catalog={"manifest_sha256":"a"*64,"game_build":build,"simc_revision":rev,
                  "catalog":{"gear":{"count":1,"slot_groups":{"trinket":[row]}}}}
+        source=docs/"v213_candidate_catalog.json"
+        source.write_text(json.dumps(catalog),encoding="utf8")
+        raw=source.read_bytes()
+        catalog_sha=web.stage_engine.digest(raw)
+        doc={"manifest_sha256":digest,"game_build":build,
+             "target_ilevel":334,"simc_revision":rev,
+             "source_catalog_artifact_sha256":catalog_sha,
+             "source_catalog_manifest_sha256":"a"*64,
+             "staged_source_environment_sha256":stage_sha,
+             "trusted_budget_evidence_sha256":"e"*64,
+             "original_v196_prepared_options_sha256":"f"*64,
+             "official_O_physical_source":{"selected_oil_item_ids_by_hand":
+                                            {"main_hand":245678}}}
+        staged={"manifest_sha256":stage_sha,
+                "source_catalog_artifact_sha256":catalog_sha,
+                "target_ilevel":334,"original_v216_preflight_sha256":"1"*64}
+        for sid,version,inputs,name,value in (
+            ("fresh-v212-environment-"+stage_sha[:20],
+             "v212-fresh-source-environment-1",
+             {"manifest_sha256":stage_sha,"v216_preflight_sha256":"1"*64},
+             "v212_environment_"+stage_sha[:20]+".json",staged),
+            ("fresh-v212-installed-"+digest[:20],
+             "v212-fresh-installed-environment-1",
+             {"manifest_sha256":digest,"source_stage_sha256":stage_sha,
+              "trusted_budget_evidence_sha256":"e"*64,
+              "policy_A_prepared_sha256":"f"*64},
+             "v212_installed_"+digest[:20]+".json",doc)):
+            web.stage_engine.execute_stage(
+                root=root,stage_id=sid,stage_version=version,inputs=inputs,
+                outputs={"environment":"fresh_source/"+name},
+                execute=lambda name=name,value=value:
+                    (docs/name).write_text(json.dumps(value),encoding="utf8"))
         url=("/api/v1/season-gear?game_build="+build+
              "&target_ilevel=334&installed_manifest_sha256="+digest)
         with (mock.patch.object(web.environment_manifest,"read_json",
-                 side_effect=[(doc,"source"),(catalog,catalog_sha)]),
+                 wraps=web.environment_manifest.read_json) as read,
               mock.patch.object(web.environment_manifest,
-                 "verify_fresh_installed_environment",return_value=True),
+                 "verify_fresh_installed_environment",return_value=True) as installed_check,
+              mock.patch.object(web.environment_manifest,
+                 "verify_fresh_source_environment",return_value=True),
               mock.patch.object(web.environment_build,
                  "find_verified_installed_season_environment",
-                 return_value={"installed_manifest_sha256":digest}) as find,
+                 wraps=web.environment_build.find_verified_installed_season_environment) as find,
               mock.patch.object(web.source_to_catalog,"verify_catalog",
-                 return_value=True),
+                 return_value=True) as catalog_check,
+              mock.patch.object(web.stage_engine,"verify_stage",
+                 wraps=web.stage_engine.verify_stage) as stage_check,
               mock.patch.object(web.official_ko_env,"read_names",
                  return_value={269999:"현 시즌 장신구"}),
               mock.patch.object(web.season_gear,"read",
-                 side_effect=AssertionError("packaged v167 fallback forbidden"))):
+                 side_effect=AssertionError("packaged v167 fallback forbidden")),
+              mock.patch.object(web.subprocess,"Popen",
+                 side_effect=AssertionError("NO_NATIVE"))):
             result=self.client.get(url,headers=self.headers)
-        self.assertEqual(result.status_code,200,result.text)
-        payload=result.json()
-        self.assertEqual(payload["season_build"],build)
-        self.assertEqual(payload["installed_manifest_sha256"],digest)
-        self.assertEqual(payload["source_scope"],
-                         "VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES")
-        self.assertEqual(payload["choices"]["trinket"][0]["item_id"],269999)
-        self.assertEqual(payload["choices"]["trinket"][0]["name_ko"],
-                         "현 시즌 장신구")
-        self.assertFalse(payload["full_season_completeness_confirmed"])
-        self.assertEqual(payload["native_calls_now"],0)
-        self.assertEqual(find.call_args.kwargs[
-                         "expected_installed_manifest_sha256"],digest)
-        self.assertEqual(self.client.get(url.replace(
-            digest,"9"*64),headers=self.headers).json()["choices"]["trinket"],[])
-        self.assertEqual(self.client.get(url.replace(
-            "target_ilevel=334","target_ilevel=335"),
-            headers=self.headers).json()["choices"]["trinket"],[])
-        self.assertEqual(self.client.get(
-            "/api/v1/season-gear?game_build="+build,
-            headers=self.headers).status_code,422)
-        self.assertEqual(self.client.get(url).status_code,403)
+            self.assertEqual(result.status_code,200,result.text)
+            payload=result.json()
+            self.assertEqual(payload["season_build"],build)
+            self.assertEqual(payload["installed_manifest_sha256"],digest)
+            self.assertEqual(payload["source_scope"],
+                             "VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES")
+            self.assertEqual(payload["choices"]["trinket"][0]["item_id"],269999)
+            self.assertEqual(payload["choices"]["trinket"][0]["name_ko"],
+                             "현 시즌 장신구")
+            self.assertFalse(payload["full_season_completeness_confirmed"])
+            self.assertEqual(payload["native_calls_now"],0)
+            self.assertEqual(find.call_args.kwargs[
+                             "expected_installed_manifest_sha256"],digest)
+            self.assertTrue(find.call_args.kwargs["exact_catalog_documents"])
+            names=[call.args[0].name for call in read.call_args_list]
+            self.assertEqual(names,["v212_installed_"+digest[:20]+".json",
+                                    "v213_candidate_catalog.json",
+                                    "v212_environment_"+stage_sha[:20]+".json"])
+            self.assertEqual(installed_check.call_count,1)
+            # v167 retains its independent projection validation.
+            self.assertEqual(catalog_check.call_count,2)
+            self.assertEqual(stage_check.call_count,2)
+            # The same exact source is reread on the next request.
+            source.write_bytes(raw+b" ")
+            self.assertEqual(self.client.get(url,headers=self.headers).json()[
+                "choices"]["trinket"],[])
+            source.write_bytes(raw)
+            self.assertEqual(self.client.get(url,headers=self.headers).json()[
+                "choices"]["trinket"][0]["item_id"],269999)
+            # The normal O=0 lookup must not borrow a positive-O install.
+            self.assertIsNone(web.environment_build.find_verified_installed_season_environment(
+                self.app.state.jobs.root,334,expected_game_build=build,
+                expected_installed_manifest_sha256=digest))
+            (root/".stage_receipts"/("fresh-v212-installed-"+digest[:20]+".json")).unlink()
+            self.assertEqual(self.client.get(url,headers=self.headers).json()[
+                "choices"]["trinket"],[])
+            self.assertEqual(self.client.get(url.replace(
+                digest,"9"*64),headers=self.headers).json()["choices"]["trinket"],[])
+            self.assertEqual(self.client.get(url.replace(
+                "target_ilevel=334","target_ilevel=335"),
+                headers=self.headers).json()["choices"]["trinket"],[])
+            self.assertEqual(self.client.get(
+                "/api/v1/season-gear?game_build="+build,
+                headers=self.headers).status_code,422)
+            self.assertEqual(self.client.get(url).status_code,403)
+            with self.assertRaisesRegex(web.environment_build.EnvironmentBuildBlocked,
+                                        "V216_EXACT_CATALOG_DOCUMENT_SCOPE_REQUIRED"):
+                web.environment_build.find_verified_installed_season_environment(
+                    self.app.state.jobs.root,334,expected_game_build=build,
+                    exact_catalog_documents=True)
 
     def test_existing_gear_refresh_keeps_exact_installed_scope_and_adds_verified_specials(self):
         game_build="12.2.0.99999"
@@ -659,7 +720,7 @@ class LocalWebAPIOffline(unittest.TestCase):
                  "verify_fresh_installed_environment",return_value=True),
               mock.patch.object(web.environment_build,
                  "find_verified_installed_season_environment",
-                 return_value={"installed_manifest_sha256":digest}),
+                 return_value=(doc,catalog)),
               mock.patch.object(web.source_to_catalog,"verify_catalog",return_value=True),
               mock.patch.object(web.official_ko_env,"read_names",return_value={}),
               mock.patch.object(web.environment_build,"refresh_existing_season_gear_source",

@@ -236,8 +236,15 @@ def find_verified_installed_season_environment(
         selected_oil_item_ids_by_hand=None, selected_oil_hands=None,
         expected_installed_manifest_sha256=None,
         require_unique_unqualified=False,
-        required_reference_G_track=None):
+        required_reference_G_track=None,
+        exact_catalog_documents=False):
     """Read-only, exact-build v217/v212 reuse across all 26 DPS profiles.
+
+    Internal catalogue projection can request the already verified
+    (installed document, catalog document) pair for ONE exact install SHA.
+    This read-only mode derives O from that install, not a user's oil
+    selection; it cannot be combined with the ordinary selection modes.
+    The default result and O=0 semantics remain unchanged.
 
     A matching itemlevel alone is NEVER sufficient; even a fully sealed
     prior installed environment is stale for a different live game build.
@@ -257,6 +264,14 @@ def find_verified_installed_season_environment(
     need(type(expected_game_build) is str and
          re.fullmatch(r"\d+(?:\.\d+){3}",expected_game_build) is not None,
          "V216_REUSE_EXACT_GAME_BUILD_REQUIRED")
+    need(type(exact_catalog_documents) is bool and
+         (not exact_catalog_documents or
+          (expected_installed_manifest_sha256 is not None and
+           selected_oil_item_ids_by_hand is None and
+           selected_oil_hands is None and
+           not require_unique_unqualified and
+           required_reference_G_track is None)),
+         "V216_EXACT_CATALOG_DOCUMENT_SCOPE_REQUIRED")
     requested_oils=(
         {} if selected_oil_item_ids_by_hand is None
         else selected_oil_item_ids_by_hand)
@@ -339,8 +354,14 @@ def find_verified_installed_season_environment(
             installed_oils=(
                 physical_O.get("selected_oil_item_ids_by_hand")
                 if type(physical_O) is dict else {})
-            if (requested_hands is None and
-                    installed_oils!=requested_oils):
+            if exact_catalog_documents:
+                # Same physical oil-map constraints as normal exact reuse.
+                # The exact verified SHA identifies this browsing variant.
+                if (type(installed_oils) is not dict or len(installed_oils)>2 or
+                        not set(installed_oils)<={"main_hand","off_hand"} or
+                        not all(type(v) is int and v>0 for v in installed_oils.values())):
+                    continue
+            elif requested_hands is None and installed_oils!=requested_oils:
                 continue
             if (requested_hands is not None and
                     (type(installed_oils) is not dict or
@@ -388,6 +409,10 @@ def find_verified_installed_season_environment(
                 stage_engine.StageExecutionBlocked,
                 environment_manifest.EnvironmentBlocked):
             continue
+        if exact_catalog_documents:
+            # Already authenticated in this request, including both stage
+            # receipts. No extra read, mutation or cross-request retention.
+            return doc,catalog
         found={
             "schema":"v216_verified_installed_season_reuse_v1",
             "status":"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",

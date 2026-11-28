@@ -4180,37 +4180,15 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                       ("wago_"+game_build)/"fresh_source")
                 receipt=docs/("v212_installed_"+
                               installed_manifest_sha256[:20]+".json")
-                if (docs.is_symlink() or receipt.is_symlink() or
-                        not receipt.is_file()):
-                    return empty
-                installed,_=environment_manifest.read_json(
-                    receipt,environment_build.MAX_RECEIPT_BYTES)
-                environment_manifest.verify_fresh_installed_environment(
-                    installed)
-                if (installed["manifest_sha256"]!=installed_manifest_sha256 or
-                    installed["game_build"]!=game_build or
-                    installed["target_ilevel"]!=target_ilevel):
-                    return empty
-                physical=installed.get("official_O_physical_source")
-                oils=(physical.get("selected_oil_item_ids_by_hand")
-                      if type(physical) is dict else {})
                 matched=environment_build.find_verified_installed_season_environment(
                     jobs.root,target_ilevel,expected_game_build=game_build,
-                    selected_oil_item_ids_by_hand=oils,
-                    expected_installed_manifest_sha256=installed_manifest_sha256)
-                if (matched is None or
-                    matched["installed_manifest_sha256"]!=installed_manifest_sha256):
+                    expected_installed_manifest_sha256=installed_manifest_sha256,
+                    exact_catalog_documents=True)
+                if matched is None:
                     return empty
-                source_path=docs/"v213_candidate_catalog.json"
-                if source_path.is_symlink() or not source_path.is_file():
-                    return empty
-                source,raw_sha=environment_manifest.read_json(source_path)
-                source_to_catalog.verify_catalog(source)
-                if (raw_sha!=installed["source_catalog_artifact_sha256"] or
-                    source["manifest_sha256"]!=
-                        installed["source_catalog_manifest_sha256"] or
-                    source["game_build"]!=game_build):
-                    return empty
+                # The original v216 owner has already checked the exact
+                # v212, linked v213 bytes/revision and v217 receipts.
+                installed,source=matched
                 groups=source["catalog"]["gear"]["slot_groups"]
                 ids={item["item_id"] for rows in groups.values()
                      for item in rows if item.get("category") in (
