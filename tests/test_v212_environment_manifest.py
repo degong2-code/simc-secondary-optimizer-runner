@@ -861,6 +861,21 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
             self.assertTrue(p.verify_fresh_installed_environment(published))
             self.assertEqual(published["official_G"],2800)
             self.assertNotIn("official_G_reference_track",published)
+            self.assertNotIn("installed_embellishments_pending",published)
+            emb_pending=p.compile_fresh_installed_environment(
+                source_catalog=catalog,
+                source_artifact_sha256=artifact_sha,
+                staged_source_environment=staged_data,
+                trusted_budget_evidence=trusted_budget,
+                source_ui=ui_catalog.public_options(source_path),
+                trusted_policy_A_receipts_by_id={},
+                target_ilevel=334,embellishment_source_checked=True)
+            self.assertTrue(p.verify_fresh_installed_environment(emb_pending))
+            self.assertTrue(emb_pending["installed_embellishments_pending"])
+            self.assertNotIn("installed_embellishments",emb_pending)
+            self.assertEqual(emb_pending["official_T"],published["official_T"])
+            self.assertTrue(emb_pending["environment_ready"])
+            self.assertNotEqual(emb_pending["manifest_sha256"],published["manifest_sha256"])
             # One NEW zero-base install seals its source-owned optional
             # choices alongside original G/J/F/O; legacy manifest bytes,
             # BASE readiness and fixed accounting stay unchanged.

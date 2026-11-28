@@ -848,7 +848,8 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
                                         target_ilevel, manual_final_T=None,
                                         verified_DK_runeforge_source=None,
                                         source_optional_consumables=None,
-                                        source_embellishments=None):
+                                        source_embellishments=None,
+                                        embellishment_source_checked=False):
     """Assemble the actual fresh-season install from existing verified owners.
 
     INTERNAL ONLY: trusted_budget_evidence must originate from verified
@@ -982,7 +983,8 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
         **({"installed_optional_consumables":optional}
            if optional is not None else {}),
         **({"installed_embellishments":source_embellishments}
-           if source_embellishments is not None else {}),
+           if source_embellishments is not None else
+           {"installed_embellishments_pending":True} if embellishment_source_checked else {}),
         "published_verified_options":published,
         "published_verified_option_count":len(published),
         "optional_quality_pending_item_ids":
@@ -1057,6 +1059,10 @@ def verify_fresh_installed_environment(document):
             document["installed_optional_consumables"],
             game_build=document.get("game_build"),
             simc_revision=document.get("simc_revision"))
+    if "installed_embellishments_pending" in document:
+        need(document["installed_embellishments_pending"] is True and
+             "installed_embellishments" not in document,
+             "FRESH_INSTALLED_EMBELLISHMENT_PENDING_SCOPE_DRIFT")
     if "installed_embellishments" in document:
         import v848_embellishment_recipe_source as embellishment_source
         embellishment_source.verify_installed_options(document["installed_embellishments"],

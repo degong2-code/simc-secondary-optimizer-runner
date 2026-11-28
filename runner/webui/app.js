@@ -1157,7 +1157,9 @@ function syncCraftRow(row,restored=false) {
     optionOld.dataset.historic="true";slot.appendChild(optionOld);slot.value=previous;
   }
   const note=row.querySelector(".craft-slot-note");
-  note.textContent=!kind.value?"장식 종류를 먼저 선택하면 호환 부위가 표시됩니다.":
+  note.textContent=!kind.value?(state.seasonGear?.embellishments_source_pending?
+    "이번 시즌 장식 원본 확인 보류 · 일반 장비 최적화는 계속 가능":
+    "장식 종류를 먼저 선택하면 호환 부위가 표시됩니다."):
     !meta?"검증되지 않은 이전 장식 · 새 계획은 재선택 필요":
     slots.length?(meta?.item_ids?"정확한 제작장비별 적용 관계 확인":"지원 유형: 방어구 전용 · 목걸이/반지/무기에는 적용 불가"):
     "이 전문화에서 선택 가능한 제작장비가 없습니다.";

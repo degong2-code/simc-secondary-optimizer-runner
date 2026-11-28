@@ -4190,6 +4190,9 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     official_names=names)
                 if "installed_embellishments" in installed:
                     base["embellishments"]=installed["installed_embellishments"]["options"]
+                elif installed.get("installed_embellishments_pending") is True:
+                    base["embellishments"]={}
+                    base["embellishments_source_pending"]=True
                 # Gear source selection is also a specific G budget track.
                 # This is the already verified v212 receipt, not a new read.
                 base["reference_G_track"]=installed.get(

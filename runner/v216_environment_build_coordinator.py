@@ -10936,7 +10936,8 @@ def _install_verified_fresh_environment_only(*, compilation, staged,
         verified_DK_runeforge_source=verified_dk,
         source_optional_consumables=compilation.get(
             "source_owned_optional_consumables"),
-        source_embellishments=compilation.get("source_owned_embellishments"))
+        source_embellishments=compilation.get("source_owned_embellishments"),
+        embellishment_source_checked=True)
     key=installed["manifest_sha256"][:20]
     stage_id="fresh-v212-installed-"+key
     output="fresh_source/v212_installed_"+key+".json"

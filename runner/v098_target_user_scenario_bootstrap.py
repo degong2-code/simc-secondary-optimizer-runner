@@ -1751,6 +1751,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
         installed_manifest.verify_fresh_installed_environment(emb_install)
         if "installed_embellishments" in emb_install:
             installed_embellishments=emb_install["installed_embellishments"]["options"]
+        elif emb_install.get("installed_embellishments_pending") is True:
+            installed_embellishments={}
     if pure_stage or source_free:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need,
