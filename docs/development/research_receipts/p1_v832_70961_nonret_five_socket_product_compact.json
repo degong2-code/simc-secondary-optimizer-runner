@@ -1,0 +1,247 @@
+{
+  "F": 165,
+  "G": 2850,
+  "J": 115,
+  "J_owner": {
+    "budget_policy": "NOMINAL_ORDINARY_GEMS_ONLY",
+    "effect_quality_policy": "BEST_DISCOVERED_COMPARABLE",
+    "exact_representative_socket_source": {
+      "J": 115,
+      "active_native_sha256": "27ee9188a4835cfa6e5bc1e03437620ad5a6374dfc119dd229da1698140bb904",
+      "game_build": "12.1.5.70961",
+      "game_socket_legal_verified": false,
+      "native_binary_sha256": "4f4472ac8687d029cd7d6041741f44aa98750ea1b3e953dfa7002dee1f38879f",
+      "ordinary_gem_ids": [
+        240906,
+        240890,
+        240898,
+        240914,
+        240906
+      ],
+      "original_G_native_sha256": "ea5489736023ab9ade5616b00dedbd9611475f18ffacfe4791b66a83a22039a3",
+      "physical_item_ids_by_slot": {
+        "finger1": 268266,
+        "finger2": 251136,
+        "neck": 251142,
+        "waist": 268232,
+        "wrists": 268228
+      },
+      "representative_spec": "mage/fire",
+      "schema": "v830_exact_representative_socket_J_source_v1",
+      "simc_revision": "9933ffb946fb55b1fa66657b848f519ac19006e1",
+      "socket_counts": {
+        "finger1": 1,
+        "finger2": 1,
+        "neck": 1,
+        "waist": 1,
+        "wrists": 1
+      },
+      "socket_total": 5,
+      "source_review_sha256": "96bbc0ec379aacf71e45b58230442819ef580c11a380ac87ea9df6036e69ca06",
+      "source_socket_bonus_by_slot": {
+        "finger1": {
+          "added_socket_count": 1,
+          "bonus_id": 13668,
+          "item_id": 268266
+        },
+        "finger2": {
+          "added_socket_count": 1,
+          "bonus_id": 13668,
+          "item_id": 251136
+        },
+        "neck": {
+          "added_socket_count": 1,
+          "bonus_id": 13668,
+          "item_id": 251142
+        },
+        "waist": {
+          "added_socket_count": 1,
+          "bonus_id": 13668,
+          "item_id": 268232
+        },
+        "wrists": {
+          "added_socket_count": 1,
+          "bonus_id": 13668,
+          "item_id": 268228
+        }
+      },
+      "special_gem_id": null,
+      "special_slot": null,
+      "target_ilevel": 334,
+      "v232_stage_receipt_sha256": "8d270e21cb66586e46e398bf7f9ac134bec9b6f9e681c18e3e618037b5f60f7c"
+    },
+    "game_build": "12.1.5.70961",
+    "intrinsic_socket_receipt_sha256": "8d270e21cb66586e46e398bf7f9ac134bec9b6f9e681c18e3e618037b5f60f7c",
+    "original_J_source_sha256": "84d50f282ab3bf12716765e46e5e7fc2457ba35e46f0ae10708c43612630c009",
+    "rating": 115,
+    "source_catalog_manifest_sha256": "c31111af39b55dea0ec155128161548cfb856659b7373af4cbda9d746ba49962",
+    "source_sha256": "6bfe08bf31b57f670f14fdfd625b7080ae613ea91ac2dc7bbaf8ad127d008115",
+    "source_verification": "VALID_SAME_SEASON_SOURCE"
+  },
+  "O": {
+    "crit_rating": 0,
+    "haste_rating": 0,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "T": 3130,
+  "cache_only_new_native": 0,
+  "dps": 166496.15533060225,
+  "dps_native": 2,
+  "environment_installed": true,
+  "environment_native": 18,
+  "full_product_e2e": "PENDING",
+  "game_build": "12.1.5.70961",
+  "global_optimum_proven": false,
+  "installed_scope": {
+    "J": 115,
+    "active_native_sha256": "27ee9188a4835cfa6e5bc1e03437620ad5a6374dfc119dd229da1698140bb904",
+    "game_build": "12.1.5.70961",
+    "game_socket_legal_verified": false,
+    "native_binary_sha256": "4f4472ac8687d029cd7d6041741f44aa98750ea1b3e953dfa7002dee1f38879f",
+    "ordinary_gem_ids": [
+      240906,
+      240890,
+      240898,
+      240914,
+      240906
+    ],
+    "original_G_native_sha256": "ea5489736023ab9ade5616b00dedbd9611475f18ffacfe4791b66a83a22039a3",
+    "physical_item_ids_by_slot": {
+      "finger1": 268266,
+      "finger2": 251136,
+      "neck": 251142,
+      "waist": 268232,
+      "wrists": 268228
+    },
+    "representative_spec": "mage/fire",
+    "schema": "v830_exact_representative_socket_J_source_v1",
+    "simc_revision": "9933ffb946fb55b1fa66657b848f519ac19006e1",
+    "socket_counts": {
+      "finger1": 1,
+      "finger2": 1,
+      "neck": 1,
+      "waist": 1,
+      "wrists": 1
+    },
+    "socket_total": 5,
+    "source_review_sha256": "96bbc0ec379aacf71e45b58230442819ef580c11a380ac87ea9df6036e69ca06",
+    "source_socket_bonus_by_slot": {
+      "finger1": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268266
+      },
+      "finger2": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 251136
+      },
+      "neck": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 251142
+      },
+      "waist": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268232
+      },
+      "wrists": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268228
+      }
+    },
+    "special_gem_id": null,
+    "special_slot": null,
+    "target_ilevel": 334,
+    "v232_stage_receipt_sha256": "8d270e21cb66586e46e398bf7f9ac134bec9b6f9e681c18e3e618037b5f60f7c"
+  },
+  "installed_sha256": "6956fddcd2d172e4ad399d0891017ef38bafd1c4a094a923aeb0ca81e871df59",
+  "menu_registered": true,
+  "preparation_choices": [
+    {
+      "crafting_quality": 2,
+      "physical_item_id": 240971,
+      "source_name": "Stoic Eversong Diamond",
+      "status": "SOURCE_IDENTIFIED_PREPARATION_ONLY",
+      "user_selectable": false
+    },
+    {
+      "crafting_quality": 2,
+      "physical_item_id": 240983,
+      "source_name": "Indecipherable Eversong Diamond",
+      "status": "SOURCE_IDENTIFIED_PREPARATION_ONLY",
+      "user_selectable": false
+    }
+  ],
+  "rating": {
+    "crit_rating": 0,
+    "haste_rating": 165,
+    "mastery_rating": 1087,
+    "versatility_rating": 1878
+  },
+  "representative_spec": "mage/fire",
+  "requires": [],
+  "revision": "9933ffb946fb55b1fa66657b848f519ac19006e1",
+  "schema": "p1_v832_actual_selected_special_gem_product_once_v1",
+  "selected_socket_bonus_native": {
+    "active_native_sha256": "27ee9188a4835cfa6e5bc1e03437620ad5a6374dfc119dd229da1698140bb904",
+    "bonus_plan": {
+      "finger1": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268266
+      },
+      "finger2": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 251136
+      },
+      "neck": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 251142
+      },
+      "waist": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268232
+      },
+      "wrists": {
+        "added_socket_count": 1,
+        "bonus_id": 13668,
+        "item_id": 268228
+      }
+    },
+    "game_build": "12.1.5.70961",
+    "game_socket_legal_verified": false,
+    "native_binary_sha256": "4f4472ac8687d029cd7d6041741f44aa98750ea1b3e953dfa7002dee1f38879f",
+    "network_calls": 0,
+    "new_native_calls": 1,
+    "original_G_native_sha256": "ea5489736023ab9ade5616b00dedbd9611475f18ffacfe4791b66a83a22039a3",
+    "simc_revision": "9933ffb946fb55b1fa66657b848f519ac19006e1",
+    "source_review_sha256": "96bbc0ec379aacf71e45b58230442819ef580c11a380ac87ea9df6036e69ca06",
+    "static_comparison": {
+      "exact_bonus_options_observed": true,
+      "physical_slots": 14,
+      "static_gear_unchanged": true
+    },
+    "status": "EXACT_SIMC_SOCKET_BONUS_STATIC_BOUND",
+    "v232_stage_receipt_sha256": "8d270e21cb66586e46e398bf7f9ac134bec9b6f9e681c18e3e618037b5f60f7c"
+  },
+  "sem": 641.4130249735626,
+  "socket_total": 5,
+  "special_gem_id": null,
+  "stage": "DPS_NATIVE_2",
+  "status": "PASS_ACTUAL_NONRET_FIVE_ORDINARY_GEMS_TWO_DPS_CACHE",
+  "target_ilevel": 334,
+  "worker_status": {
+    "completed_jobs": 2,
+    "native_attempts": 2,
+    "status": "PAUSED_CACHE_ONLY"
+  },
+  "workflow_run_id": 46100165625,
+  "workflow_job_id": 140840558842
+}

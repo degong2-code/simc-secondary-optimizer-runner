@@ -147,8 +147,21 @@ def primary_gem_quality_projection(candidate_rows):
                        or (typ==5 and arg in primary)
                        or (typ==4 and arg==0))
                       for typ,arg,amount,coeff in components))
+        linked=[arg for typ,arg,amount,coeff in components
+                if typ==3 and type(arg) is int and arg>0 and amount==coeff==0]
+        linked_candidate=(bool(linked) and enc["id_spell"]==0 and
+            enc["req_skill"]==enc["req_skill_value"]==0 and
+            any(typ==5 and arg in primary and (amount>0 or coeff>0)
+                for typ,arg,amount,coeff in components) and
+            all(amount>=0 and coeff>=0 and (
+                (typ==0 and arg==0 and amount==coeff==0) or
+                (typ==5 and arg in primary) or (typ==4 and arg==0) or
+                (typ==3 and arg in linked and amount==coeff==0))
+                for typ,arg,amount,coeff in components))
         direct_CHMV[str(item)]={
             "item_id":item,"enchant_id":enc["id"],
+            **({"linked_equip_spell_ids_source_only":linked}
+               if linked_candidate else {}),
             "direct_static_CHMV_vector_source_only":
                 {stat:0 for stat in STATS} if pure else None,
             "source_basis":("EXACT_PRIMARY_OR_ARMOR_COMPONENTS_NO_LINKED_SPELL"

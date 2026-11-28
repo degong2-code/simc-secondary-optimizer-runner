@@ -8224,6 +8224,98 @@ def _compare_native_socket_bonus_static(*,baseline,active,bonuses,
             "exact_bonus_options_observed":True}
 
 
+def _linked_special_gem_pair_profiles(socket_profile,layout):
+    """Same ordinary gems and socket bonuses; only selected special differs."""
+    counts=layout["socket_counts"];special=layout["special_gem_id"]
+    where=layout["special_slot"]
+    need(type(special) is int and special>0 and where in counts,
+         "V833_LINKED_GEM_LAYOUT_REQUIRED")
+    ordinary=iter(layout["ordinary_gem_ids"])
+    by_slot={s:[next(ordinary) for _ in range(n-int(s==where))]
+             for s,n in sorted(counts.items())}
+    need(next(ordinary,None) is None,"V833_LINKED_GEM_ORDINARY_COUNT_DRIFT")
+    before=[];after=[];seen=set()
+    for line in socket_profile.splitlines():
+        slot,_,tail=line.partition("=")
+        if slot not in by_slot:
+            before.append(line);after.append(line);continue
+        need(slot not in seen and ",gem_id=" not in tail,
+             "V833_LINKED_GEM_ORIGINAL_PROFILE_DRIFT")
+        seen.add(slot)
+        ids=by_slot[slot]
+        live=([special]+ids if slot==where else ids)
+        before.append(line+(",gem_id="+"/".join(map(str,ids)) if ids else ""))
+        after.append(line+(",gem_id="+"/".join(map(str,live)) if live else ""))
+    need(seen==set(counts),"V833_LINKED_GEM_SLOT_MISSING")
+    return "\n".join(before)+"\n","\n".join(after)+"\n",by_slot
+
+
+def _compare_linked_special_gem_static(*,baseline,active,layout,ordinary_by_slot,revision):
+    """v269 player CHMV delta; verify physical tokens, not spell activation."""
+    import v046_static_item_cache as static
+    from v234_source_only_one_native_G import SLOT_REMAP
+    left,b,bs=simc_snapshot_delta._gem_native_player(baseline,revision)
+    right,a,ats=simc_snapshot_delta._gem_native_player(active,revision)
+    need(type(left) is str and left==right and set(b)==set(a),
+         "V833_LINKED_GEM_NATIVE_PLAYER_DRIFT")
+    seen=set()
+    for raw_slot in b:
+        slot=SLOT_REMAP.get(raw_slot,raw_slot)
+        bn,bo=static.parse_encoded(b[raw_slot]["encoded_item"])
+        an,ao=static.parse_encoded(a[raw_slot]["encoded_item"])
+        bg=bo.pop("gem_id",None);ag=ao.pop("gem_id",None)
+        expected=ordinary_by_slot.get(slot,[])
+        actual=([layout["special_gem_id"]]+expected
+                if slot==layout["special_slot"] else expected)
+        need(bn==an and bo==ao and
+             bg==("/".join(map(str,expected)) if expected else None) and
+             ag==("/".join(map(str,actual)) if actual else None),
+             "V833_LINKED_GEM_NATIVE_INPUT_DRIFT:"+slot)
+        if slot in ordinary_by_slot:seen.add(slot)
+    need(seen==set(ordinary_by_slot),"V833_LINKED_GEM_NATIVE_SLOT_MISSING")
+    delta={s:round(ats[s]-bs[s],6) for s in season_budget_contract.STATS}
+    return {"buffed_CHMV_delta":delta,"static_CHMV_zero":all(v==0 for v in delta.values()),
+            "exact_physical_gem_options_observed":True}
+
+
+def _linked_special_gem_native(*,root,socket_profile,layout,special,binary,binary_sha,
+                               revision,game_build,original_G_sha):
+    """Only a selected linked candidate incurs a matched static pair."""
+    calls=0
+    try:
+        b,a,ordinary=_linked_special_gem_pair_profiles(socket_profile,layout)
+        identity=digest(canonical({"layout":layout,"source":special,
+                    "original_G_native_sha256":original_G_sha}).encode("utf8"))
+        raws=[]
+        for variant,profile in (("baseline",b),("active",a)):
+            case=native_effect_pair.run_case(stage_root=root,profile=profile,
+                source_identity=identity,binary=binary,binary_sha256=binary_sha,
+                revision=revision,variant=variant,timeout_seconds=180)
+            calls+=case["new_native_calls"]
+            receipt=case["receipt"]
+            need(receipt["status"]=="NATIVE_JSON2_CAPTURED",
+                 "V833_LINKED_GEM_NATIVE_"+receipt["status"])
+            raw=(case["folder"]/"native.json").read_bytes()
+            need(digest(raw)==receipt["native_json2_sha256"],
+                 "V833_LINKED_GEM_NATIVE_SHA_DRIFT")
+            raws.append(raw)
+        proof=_compare_linked_special_gem_static(baseline=raws[0],active=raws[1],
+            layout=layout,ordinary_by_slot=ordinary,revision=revision)
+        return {"status":"EXACT_LINKED_SPECIAL_STATIC_ZERO" if proof["static_CHMV_zero"]
+                    else "LINKED_SPECIAL_STATIC_CHMV_NONZERO_PENDING",
+                "new_native_calls":calls,"item_id":special["item_id"],
+                "enchant_id":special["enchant_id"],
+                "game_build":game_build,"simc_revision":revision,
+                "layout_sha256":digest(canonical(layout).encode("utf8")),
+                "original_G_native_sha256":original_G_sha,
+                "native_binary_sha256":binary_sha,
+                "baseline_native_sha256":digest(raws[0]),
+                "active_native_sha256":digest(raws[1]),**proof}
+    except (EnvironmentBuildBlocked,ValueError,KeyError,TypeError,OSError,StopIteration) as exc:
+        return {"status":"LINKED_SPECIAL_STATIC_ACCOUNTING_PENDING",
+                "new_native_calls":calls,"reason":str(exc).split("\n",1)[0][:240]}
+
+
 def _fresh_native_socket_bonus_application(*,collected,compilation,
                                            preflight,native_G,binary,j_socket):
     """One active Native, reusing verified v277 G baseline; not game legality."""
@@ -8233,15 +8325,20 @@ def _fresh_native_socket_bonus_application(*,collected,compilation,
     layout=preflight.get("physical_gem_layout_unadmitted") or {}
     bonuses=layout.get(physical_gems.SOCKET_BONUS_FIELD)
     if not bonuses or not binary:return pending
+    linked=False
     if layout.get("special_gem_id") is not None:
         special=compilation.get("selected_special_gem_direct_CHMV_source_only") or {}
         vector=special.get("direct_static_CHMV_vector_source_only")
+        linked=(bool(special.get("linked_equip_spell_ids_source_only")) and
+                special.get("item_id") in (compilation.get(
+                    "primary_gem_rank_source_unadmitted") or {}).get(
+                        "preferred_rank_item_ids_source_only",[]))
         if (special.get("item_id")!=layout["special_gem_id"]
                 or special.get("game_build")!=preflight["game_build"]
                 or special.get("simc_revision")!=preflight["simc_revision"]
-                or type(vector) is not dict
+                or (not linked and (type(vector) is not dict
                 or set(vector)!=set(season_budget_contract.STATS)
-                or any(type(v) is not int or v!=0 for v in vector.values())):
+                or any(type(v) is not int or v!=0 for v in vector.values())))):
             return {**pending,"reason":"SELECTED_SPECIAL_DIRECT_CHMV_ACCOUNTING_PENDING"}
     extra=j_socket.get("additional_socket_proof_required_by_slot")
     source=compilation.get("selected_representative_socket_bonus_source_only") or {}
@@ -8317,7 +8414,15 @@ def _fresh_native_socket_bonus_application(*,collected,compilation,
         proof=_compare_native_socket_bonus_static(
             baseline=baseline,active=raw,bonuses=bonuses,
             game_build=preflight["game_build"],revision=preflight["simc_revision"])
+        linked_result=None
+        if linked:
+            linked_result=_linked_special_gem_native(root=root,socket_profile=active,
+                layout=layout,special=special,binary=binfile,binary_sha=binary_sha,
+                revision=preflight["simc_revision"],game_build=preflight["game_build"],
+                original_G_sha=digest(baseline))
+            calls+=linked_result["new_native_calls"]
         return {**pending,"status":"EXACT_SIMC_SOCKET_BONUS_STATIC_BOUND",
+                **({"linked_special_static":linked_result} if linked else {}),
                 "new_native_calls":calls,"bonus_plan":bonuses,
                 "source_review_sha256":source["review_receipt_sha256"],
                 "v232_stage_receipt_sha256":source["v232_stage_receipt_sha256"],
@@ -8992,6 +9097,34 @@ def _fresh_special_gem_J_exclusion_source(*, preflight, compilation, j):
             or selected.get("ordinary_J_includes_selected_special") is not False):
         return {"status":"SPECIAL_GEM_EXACT_SAME_BUILD_SOURCE_PENDING"}
     vector=exact.get("direct_static_CHMV_vector_source_only")
+    if exact.get("linked_equip_spell_ids_source_only"):
+        socket=compilation.get("selected_socket_bonus_native") or {}
+        proof=socket.get("linked_special_static") or {}
+        g=preflight.get("v277_native_G_preprofile_unadmitted") or {}
+        delta=proof.get("buffed_CHMV_delta")
+        if (special not in rank.get("preferred_rank_item_ids_source_only",[])
+                or proof.get("status")!="EXACT_LINKED_SPECIAL_STATIC_ZERO"
+                or proof.get("item_id")!=special or proof.get("enchant_id")!=exact["enchant_id"]
+                or any(proof.get(k)!=preflight.get(k) for k in ("game_build","simc_revision"))
+                or proof.get("layout_sha256")!=digest(canonical(layout).encode("utf8"))
+                or proof.get("original_G_native_sha256")!=g.get("native_json2_sha256")
+                or proof.get("native_binary_sha256")!=socket.get("native_binary_sha256")
+                or proof.get("exact_physical_gem_options_observed") is not True
+                or proof.get("static_CHMV_zero") is not True
+                or type(delta) is not dict or set(delta)!=set(season_budget_contract.STATS)
+                or any(type(v) not in (int,float) or v!=0 for v in delta.values())
+                or not all(type(proof.get(k)) is str and season_budget_contract.SHA.fullmatch(proof[k])
+                    for k in ("baseline_native_sha256","active_native_sha256",
+                              "original_G_native_sha256","native_binary_sha256"))):
+            return {"status":"SPECIAL_GEM_DIRECT_CHMV_ACCOUNTING_PENDING"}
+        return {"status":"SPECIAL_GEM_DIRECT_ZERO_SOURCE_BOUND",
+                "item_id":special,"enchant_id":exact["enchant_id"],
+                "game_build":rank["game_build"],"simc_revision":rank["simc_revision"],
+                "v221_stage_receipt_sha256":rank["v221_stage_receipt_sha256"],
+                "enchant_source_sha256":rank["enchant_source_sha256"],
+                "direct_static_CHMV_vector":{s:0 for s in season_budget_contract.STATS},
+                "linked_special_static_proof":{k:v for k,v in proof.items()
+                    if k!="new_native_calls"}}
     if (exact.get("source_basis")!=
             "EXACT_PRIMARY_OR_ARMOR_COMPONENTS_NO_LINKED_SPELL"
             or type(vector) is not dict

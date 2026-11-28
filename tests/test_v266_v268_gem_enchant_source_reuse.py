@@ -400,6 +400,39 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
         socket["additional_socket_proof_required_by_slot"]={"head":1}
         self.assertNotIn("J",admit())
 
+    def test_v833_linked_special_pair_preserves_ordinary_gems_and_measures_CHMV(self):
+        from runner import v216_environment_build_coordinator as engine
+        from runner import v211_enchant_source_effect_classification as classifier
+        doc=json.loads((Path(__file__).resolve().parents[1]/
+            "docs/development/research_receipts/p1_v821_70961_primary_gem_enchant_compact.json").read_text("utf8"))
+        rank=classifier.primary_gem_quality_projection(doc["candidate_rows"])
+        self.assertEqual(rank["direct_static_CHMV_source_by_item_id"]["240967"][
+            "linked_equip_spell_ids_source_only"],[1258209])
+        self.assertIsNone(rank["direct_static_CHMV_source_by_item_id"]["240967"][
+            "direct_static_CHMV_vector_source_only"])
+        layout={"socket_counts":{"finger1":2,"neck":3},"special_slot":"finger1",
+                "special_gem_id":240967,"ordinary_gem_ids":[11,12,13,14]}
+        b,a,ordinary=engine._linked_special_gem_pair_profiles(
+            "finger1=item,id=1,ilevel=334,bonus_id=3\nneck=item,id=2,ilevel=334\n",layout)
+        self.assertEqual(a.replace("240967/",""),b)
+        self.assertEqual(ordinary,{"finger1":[11],"neck":[12,13,14]})
+        rev=doc["simc_revision"];stats={s:100 for s in engine.season_budget_contract.STATS}
+        def raw(profile,delta=0):
+            gear={line.split("=",1)[0]:{"encoded_item":line.split("=",1)[1]}
+                  for line in profile.splitlines()}
+            return json.dumps({"git_revision":rev,"sim":{"players":[{
+                "name":"test","gear":gear,"collected_data":{"buffed_stats":{
+                    "stats":{**stats,"crit_rating":100+delta}}}}]}}).encode()
+        proof=engine._compare_linked_special_gem_static(baseline=raw(b),active=raw(a),
+            layout=layout,ordinary_by_slot=ordinary,revision=rev)
+        self.assertTrue(proof["static_CHMV_zero"])
+        self.assertFalse(engine._compare_linked_special_gem_static(baseline=raw(b),
+            active=raw(a,1),layout=layout,ordinary_by_slot=ordinary,revision=rev)["static_CHMV_zero"])
+        with self.assertRaises(ValueError):
+            engine._compare_linked_special_gem_static(baseline=raw(b),
+                active=raw(a.replace("12/13/14","12/13/15")),layout=layout,
+                ordinary_by_slot=ordinary,revision=rev)
+
     def test_v830_actual_bonus_proof_consumed_by_original_J_and_profile(self):
         from runner import v216_environment_build_coordinator as engine
         from runner import v211_enchant_source_effect_classification as classifier

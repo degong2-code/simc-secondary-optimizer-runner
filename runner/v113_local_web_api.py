@@ -90,14 +90,16 @@ def _special_gem_preparation_rows(rank,*,game_build,simc_revision,target_ilevel)
             i=row["item_id"];meta=row["metadata"];enc=row["enchant_source_row"]
             direct=rank["direct_static_CHMV_source_by_item_id"].get(str(i),{})
             vector=direct.get("direct_static_CHMV_vector_source_only")
+            linked=bool(direct.get("linked_equip_spell_ids_source_only"))
             if (i not in preferred or type(i) is not int or i<=0
                     or meta["item_id"]!=i or enc["id_gem"]!=i
                     or direct.get("item_id")!=i or direct.get("enchant_id")!=enc["id"]
                     or row["physical_property"]["enchant_id"]!=enc["id"]
-                    or direct.get("source_basis")!="EXACT_PRIMARY_OR_ARMOR_COMPONENTS_NO_LINKED_SPELL"
-                    or type(vector) is not dict or set(vector)!=set(
-                        environment_build.season_budget_contract.STATS)
-                    or any(type(v) is not int or v!=0 for v in vector.values())
+                    or (not linked and (
+                        direct.get("source_basis")!="EXACT_PRIMARY_OR_ARMOR_COMPONENTS_NO_LINKED_SPELL"
+                        or type(vector) is not dict or set(vector)!=set(
+                            environment_build.season_budget_contract.STATS)
+                        or any(type(v) is not int or v!=0 for v in vector.values())))
                     or not enc["min_ilevel"]<=target_ilevel
                     or (enc["max_ilevel"] and target_ilevel>enc["max_ilevel"])
                     or type(meta["item_name"]) is not str or not meta["item_name"].strip()
@@ -105,6 +107,7 @@ def _special_gem_preparation_rows(rank,*,game_build,simc_revision,target_ilevel)
                 continue
             out.append({"physical_item_id":i,"source_name":meta["item_name"],
                         "crafting_quality":meta["crafting_quality"],
+                        **({"selected_static_pair_required":True} if linked else {}),
                         "status":"SOURCE_IDENTIFIED_PREPARATION_ONLY",
                         "user_selectable":False})
         if len({x["physical_item_id"] for x in out})!=len(out):return []

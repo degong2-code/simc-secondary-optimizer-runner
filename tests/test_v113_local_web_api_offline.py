@@ -871,7 +871,9 @@ class LocalWebAPIOffline(unittest.TestCase):
               "v230_stage_receipt_sha256":"b"*64,"enchant_source_sha256":"c"*64}
         args={"game_build":doc["game_build"],"simc_revision":doc["simc_revision"],"target_ilevel":334}
         rows=web._special_gem_preparation_rows(rank,**args)
-        self.assertEqual({x["physical_item_id"] for x in rows},{240971,240983})
+        self.assertEqual({x["physical_item_id"] for x in rows},{240967,240969,240971,240983})
+        self.assertEqual({x["physical_item_id"] for x in rows
+                          if x.get("selected_static_pair_required")},{240967,240969})
         self.assertTrue(all(x["source_name"] and x["user_selectable"] is False and
             x["status"]=="SOURCE_IDENTIFIED_PREPARATION_ONLY" for x in rows))
         self.assertEqual(web._special_gem_preparation_rows(rank,**{**args,"game_build":"12.1.5.0"}),[])
