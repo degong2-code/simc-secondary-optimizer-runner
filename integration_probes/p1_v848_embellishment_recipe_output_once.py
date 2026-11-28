@@ -14,6 +14,7 @@ def main():
     p.add_argument("--root",type=Path,required=True)
     p.add_argument("--prior",type=Path,required=True)
     p.add_argument("--out",type=Path,required=True)
+    p.add_argument("--reuse-only",action="store_true")
     a=p.parse_args();a.out.mkdir(parents=True,exist_ok=True);root=a.root.resolve()
     doc={"status":"SOURCE_PENDING","native_calls":0,"new_source_requests":0}
     try:
@@ -35,6 +36,7 @@ def main():
         # raw output, never download another SpellEffect.
         rel="source/v848_research_SpellEffect.csv"
         def execute():
+            engine.need(not a.reuse_only,"SEALED_SPELL_EFFECT_REUSE_REQUIRED")
             doc["new_source_requests"]+=1
             req=Request(url,headers={"User-Agent":"SIMC-Secondary-RecipeSource/1.0",
                                      "Accept":"text/csv"})
@@ -58,6 +60,9 @@ def main():
         paths["SpellEffect"]=root/rel
         result=engine.recipe_outputs(prior["matches"],paths,game_build=build,
                                      simc_revision=rev,expansion_id=exp)
+        if a.reuse_only:
+            engine.need(doc["new_source_requests"]==0,"REPLAY_NETWORK_DRIFT")
+            engine.need(receipt["receipt_sha256"]=="8435f18063e5c0f708773c07804126268bf526164cf4c2e7df7ce6eb4abb54b0","REPLAY_RECEIPT_DRIFT")
         doc.update(result,spell_effect_receipt_sha256=receipt["receipt_sha256"],
                    reused_wago_receipt_sha256=stamp,prior_sha256=hashlib.sha256(raw).hexdigest())
     except Exception as e:

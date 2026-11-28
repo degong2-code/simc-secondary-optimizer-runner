@@ -232,7 +232,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
   embellishment-recipe-output:
-    if: ${{ contains(github.event.head_commit.message, '[v848-recipe-output-once]') }}
+    if: ${{ contains(github.event.head_commit.message, '[v848-recipe-output-once]') || contains(github.event.head_commit.message, '[v848-recipe-output-replay]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
@@ -256,10 +256,21 @@ jobs:
           name: p1-v847-crafting-reagent-source
           path: out/v848/prior
           github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        if: ${{ contains(github.event.head_commit.message, '[v848-recipe-output-replay]') }}
+        with:
+          run-id: 46118153783
+          name: p1-v848-embellishment-recipe-output
+          path: out/v848
+          github-token: ${{ github.token }}
       - name: Generic source parser and arbitrary-build recipe tests
         run: python -m unittest -v tests.test_v848_embellishment_recipe_source
       - name: One missing source only, reuse exact v847 relation
+        if: ${{ !contains(github.event.head_commit.message, '[v848-recipe-output-replay]') }}
         run: python -u integration_probes/p1_v848_embellishment_recipe_output_once.py --root out/v848/source --prior out/v848/prior/V847_EMBELLISHMENT_SOURCE.json --out out/v848
+      - name: Replay preserved exact SpellEffect, forbid new source requests
+        if: ${{ contains(github.event.head_commit.message, '[v848-recipe-output-replay]') }}
+        run: python -u integration_probes/p1_v848_embellishment_recipe_output_once.py --root out/v848/source --prior out/v848/prior/V847_EMBELLISHMENT_SOURCE.json --out out/v848 --reuse-only
       - uses: actions/upload-artifact@v6
         if: always()
         with:

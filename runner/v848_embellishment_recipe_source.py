@@ -20,10 +20,11 @@ RAW={
  "ModifiedCraftingSpellSlot":("ID","SpellID","ModifiedCraftingReagentSlotID","Slot","ReagentCount"),
 }
 MAX_ROWS=400_000
-# Existing v583 source mapping: SPELL_EFFECT_CRAFTING=301, misc[0]
-# references CraftingData.ID. The actual result is CraftedItemID, never
-# the recipe SpellID or the reagent ItemID.
-CRAFT_EFFECT=301
+# Actual equipment craft relation: Effect=288, misc[0] -> CraftingData.ID.
+# Effect=301 is the distinct enchant recipe path used by v583. Unknown
+# effect kinds are pending, not inferred from coincident numeric IDs.
+CRAFT_EFFECT=288
+EQUIPMENT_CRAFT_TYPE=0
 def need(ok,code):
     if not ok:raise ValueError(code)
 def rows(path,columns):
@@ -179,6 +180,9 @@ def recipe_outputs(matches,paths,*,game_build,simc_revision,expansion_id):
         if cr is None or cr["item_id"]<=0:
             pending[sid]="CRAFTING_DATA_OUTPUT_MISSING"
             continue
+        if cr["crafting_type"]!=EQUIPMENT_CRAFT_TYPE:
+            pending[sid]="CRAFTING_DATA_TYPE_NOT_EQUIPMENT_OUTPUT"
+            continue
         iid=cr["item_id"]; meta=item.get(iid); sp=sparse.get(iid)
         if not meta or not sp:
             pending[sid]="OUTPUT_ITEM_METADATA_MISSING"
@@ -189,7 +193,7 @@ def recipe_outputs(matches,paths,*,game_build,simc_revision,expansion_id):
             pending[sid]="OUTPUT_ITEM_NOT_MATCHED_EXPANSION_EQUIPMENT"
             continue
         exact[sid]={**cr,**meta,"recipe_spell_id":sid,
-                    "effect_index":row["effect_index"],"expansion_id":sp["expansion_id"],
+                    "effect_code":row["effect"],"effect_index":row["effect_index"],"expansion_id":sp["expansion_id"],
                     "name_enUS":sp["name_enUS"]}
     projected=[]
     for match in matches:

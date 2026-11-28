@@ -21,11 +21,12 @@ class GenericRecipeSourceTests(unittest.TestCase):
                         w=csv.writer(f);w.writerow(fields);w.writerows(rows)
                     paths[name]=path
                 table("SpellEffect",["SpellID","Effect","EffectIndex","EffectMiscValue_0","DifficultyID"],
-                    [(base+1,301,0,base+11,0),(base+2,301,0,base+12,0),
-                     (base+3,301,0,base+13,0),(base+3,301,1,base+11,0),
-                     (base+4,54,0,base+11,0),(base+5,301,0,base+11,1)])
+                    [(base+1,288,0,base+11,0),(base+2,288,0,base+12,0),
+                     (base+3,288,0,base+13,0),(base+3,288,1,base+11,0),
+                     (base+4,54,0,base+11,0),(base+5,288,0,base+11,1),(base+7,301,0,base+11,0),
+                     (base+8,288,0,base+14,0)])
                 table("CraftingData",["ID","Type","CraftedItemID"],
-                    [(base+11,0,base+21),(base+12,0,base+22),(base+13,0,base+23)])
+                    [(base+11,0,base+21),(base+12,0,base+22),(base+13,0,base+23),(base+14,3,base+21)])
                 table("Item",["ID","ClassID","SubclassID","InventoryType"],
                     [(base+21,4,1,5),(base+22,4,1,6),(base+23,2,7,13)])
                 table("ItemSparse",["ID","ExpansionID","InventoryType","Display_lang"],
@@ -33,14 +34,18 @@ class GenericRecipeSourceTests(unittest.TestCase):
                      (base+23,exp,13,"New sword")])
                 match={"simc_rows":[],"physical_rows":[],"bonus_types":[23],
                     "recipe_slot_sources":[{"slot":{"ID":"7","PlayerConditionID":"9"},
-                        "recipe_spell_ids":[base+i for i in range(1,7)]}]}
+                        "recipe_spell_ids":[base+i for i in range(1,9)]}]}
                 result=engine.recipe_outputs([match],paths,game_build=build,
                     simc_revision="a"*40,expansion_id=exp)
                 self.assertEqual(result["exact_recipe_spell_count"],1)
-                self.assertEqual(result["pending_recipe_spell_count"],5)
+                self.assertEqual(result["pending_recipe_spell_count"],7)
                 slot=result["matches"][0]["recipe_slot_sources"][0]
                 self.assertEqual(slot["exact_recipe_outputs"][0]["item_id"],base+21)
                 self.assertEqual(slot["exact_recipe_outputs"][0]["recipe_spell_id"],base+1)
+                self.assertEqual(slot["exact_recipe_outputs"][0]["effect_code"],288)
+                reasons={r["spell_id"]:r for r in slot["pending_recipe_spells"]}
+                self.assertEqual(reasons[base+7]["observed_effect_codes"],[301])
+                self.assertEqual(reasons[base+8]["reason"],"CRAFTING_DATA_TYPE_NOT_EQUIPMENT_OUTPUT")
                 self.assertFalse(slot["slot_condition_resolved"])
                 self.assertFalse(result["matches"][0]["ui_selectable"])
                 self.assertFalse(result["ui_promotion"])
