@@ -740,6 +740,8 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertEqual(initial.status_code,200)
             pending=self.client.post(url,headers=self.headers,json={})
             self.assertEqual(pending.json()["network_calls_now"],2)
+            self.assertEqual(pending.json()["bonus_effect_source_status"],
+                             "BONUS_EFFECT_SOURCE_PENDING")
             first=self.client.post(url,headers=self.headers,json={})
             second=self.client.post(url,headers=self.headers,json={})
             self.app.state.jobs.season_gear_refresh_cache.clear()
@@ -759,6 +761,9 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual([r["item_id"] for r in report["new_trinkets"]],[270000])
         self.assertEqual([r["item_id"] for r in report["new_special_items"]],[270001])
         self.assertEqual(report["new_special_pending_count"],1)
+        self.assertEqual(report["bonus_effect_source_status"],
+                         "POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED")
+        self.assertTrue(report["special_generation_verified"])
         self.assertFalse(report["budget_rebuilt"])
         self.assertEqual(report["native_calls_now"],0)
         self.assertEqual(report["network_calls_now"],1)

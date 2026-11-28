@@ -2586,19 +2586,25 @@ const refresh=load("async function refreshExistingSeasonTrinkets(",
   assert.deepStrictEqual(pending.embellishments,embOptions);
   assert.strictEqual(pending.embellishments_source_pending,false);
   assert.strictEqual(state.verifiedExistingBudget,budget);
+  // Optional embellishment success does not settle pending gear sources.
+  assert.strictEqual(pending.special_source_refresh_pending,true);
+  mode="none";embOptions=undefined;
   await refresh(pending,334);
-  assert.strictEqual(requests,3);
-  // Explicit gear refresh bypasses the prior completed display marker.
-  mode="none";embOptions=undefined;bonusStatus="BONUS_SOURCE_PENDING";
-  await refresh(pending,334,true,true);
   assert.strictEqual(requests,4);
+  assert.strictEqual(pending.special_source_refresh_pending,false);
+  await refresh(pending,334);
+  assert.strictEqual(requests,4);
+  // Explicit gear refresh bypasses the prior completed display marker.
+  bonusStatus="BONUS_SOURCE_PENDING";
+  await refresh(pending,334,true,true);
+  assert.strictEqual(requests,5);
   assert.strictEqual(pending.special_source_refresh_pending,true);
   bonusStatus="POTENTIAL_BONUS_EFFECT_LINKS_OBSERVED";
   await refresh(pending,334);
-  assert.strictEqual(requests,5);
+  assert.strictEqual(requests,6);
   assert.strictEqual(pending.special_source_refresh_pending,false);
   await refresh(pending,334);
-  assert.strictEqual(requests,5);
+  assert.strictEqual(requests,6);
   assert.strictEqual(state.verifiedExistingBudget,budget);
   assert.strictEqual(pending.choiceRefreshInFlight,false);
 })().catch(e=>{console.error(e);process.exitCode=1});
