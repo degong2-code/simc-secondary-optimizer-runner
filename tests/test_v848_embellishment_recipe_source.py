@@ -73,33 +73,47 @@ class GenericRecipeSourceTests(unittest.TestCase):
         stages=engine.stages
         build="13.0.0.80001"; exp=12
         with tempfile.TemporaryDirectory() as td:
-            root=pathlib.Path(td)
-            def seal(stage,files):
-                outputs={k:"fixture/"+stage+"/"+k for k in files}
+            root=pathlib.Path(td)/("wago_"+build)
+            root.mkdir()
+            def seal(stage,files,outputs=None,version="fixture-v1"):
+                outputs=outputs or {k:"fixture/"+stage+"/"+k for k in files}
                 def execute():
                     for key,data in files.items():
                         stages._atomic_write(root/outputs[key],data)
                 return stages.execute_stage(root=root,stage_id=stage,
-                    stage_version="fixture-v1",inputs={"game_build":build},
+                    stage_version=version,inputs={"game_build":build},
                     outputs=outputs,execute=execute)
-            wago=seal("fixture-wago",{
-                "receipt":json.dumps({"build":build}).encode(),
+            raw_tables={
                 "Item":b"ID,ClassID,SubclassID,InventoryType,CraftingQualityID\n101,0,0,0,14\n201,4,1,5,0\n",
                 "ItemSparse":b"ID,Display_lang,ExpansionID,ModifiedCraftingReagentItemID,InventoryType\n101,New reagent,12,301,0\n201,New robe,12,0,5\n",
-                "CraftingData":b"ID,Type,CraftedItemID\n401,0,201\n"})
-            spell=seal("fixture-spell",{
+                "CraftingData":b"ID,Type,CraftedItemID\n401,0,201\n"}
+            raw_tables["receipt"]=json.dumps({
+                "schema":"v161_wago_zero_seed_csv_snapshot_v1","build":build,
+                "locale":"enUS","tables":{k:{"sha256":stages.digest(v),"bytes":len(v)}
+                  for k,v in raw_tables.items()}}).encode()
+            wago=seal("fresh-wago-db2",raw_tables,
+                outputs={k:"wago/"+("receipt.json" if k=="receipt" else k+".csv")
+                         for k in raw_tables},version="v161-normal-collector-1")
+            spell=seal("fresh-consumable-simc-spell-effect-source-other",{
                 "candidate":json.dumps({"simc_relation_source":{"game_build":build}}).encode(),
-                "spell_effect":b"SpellID,Effect,EffectIndex,EffectMiscValue_0,DifficultyID\n501,288,0,401,0\n"})
+                "spell_effect":b"SpellID,Effect,EffectIndex,EffectMiscValue_0,DifficultyID\n501,288,0,401,0\n"},
+                outputs={"candidate":"source/v284_simc_consumable_relations.json",
+                         "spell_effect":"source/v284_SpellEffect.csv"},
+                version="v281-real-other-consumables-v2")
             def simc(rev):
-                return seal("fixture-simc-"+rev,{
+                return seal("fresh-v229-pinned-simc-generated" if rev=="a"*40 else
+                            "fixture-simc-"+rev,{
                     engine.seed.RECEIPT:json.dumps({"schema":engine.seed.SCHEMA,
                         "simc_generated_build":build,"simc_revision":rev,
-                        "provenance_tree_blob_authenticated":True}).encode()})
+                        "provenance_tree_blob_authenticated":True}).encode()},
+                    outputs={engine.seed.RECEIPT:"source/v229_pinned_generated/"+engine.seed.RECEIPT}
+                      if rev=="a"*40 else None,version="source-three-small-files-no-native-v1"
+                      if rev=="a"*40 else "fixture-v1")
             data={
                 "ItemBonus":b"ParentItemBonusListID,Type,Value_0\n601,23,701\n",
                 "ItemBonusTreeNode":b"ID,ParentItemBonusTreeID,ChildItemBonusListID,ChildItemBonusTreeID,ChildItemBonusListGroupID\n1,801,601,0,0\n",
-                "ModifiedCraftingReagentItem":b"ID,ModifiedCraftingCategoryID,ItemBonusTreeID\n301,901,801\n",
-                "ModifiedCraftingReagentSlot":b"ID,Name_lang,Flags,PlayerConditionID,ReagentType\n1001,Add Embellishment,0,0,1\n",
+                "ModifiedCraftingReagentItem":b"ID,ModifiedCraftingCategoryID,ItemBonusTreeID,Flags,ItemContextOffset\n301,901,801,0,0\n",
+                "ModifiedCraftingReagentSlot":b"ID,Name_lang,Flags,PlayerConditionID,ReagentType\n1001,Add Embellishment,2,0,0\n",
                 "MCRSlotXMCRCategory":b"ID,ModifiedCraftingCategoryID,ModifiedCraftingReagentSlotID\n1,901,1001\n",
                 "ModifiedCraftingSpellSlot":b"ID,SpellID,ModifiedCraftingReagentSlotID,Slot,ReagentCount\n1,501,1001,0,1\n",
                 "CraftingQuality":b"ID,QualityTier,CraftingQualityAtlasSetID\n14,2,1\n",
@@ -130,11 +144,48 @@ class GenericRecipeSourceTests(unittest.TestCase):
                     spell_stage=kw.get("spell_stage",spell),simc_stage=s,transport=transport)
             with patch.object(engine.pinned,"pinned_git_blobs",side_effect=tree) as pin:
                 sa=simc("a"*40)
+                # Old installed environment: no embellishment stage exists.
+                # Only catalog/manifest structural verification is mocked
+                # for this tiny fixture; original stage bytes and seals are real.
+                docs=root/"fresh_source";docs.mkdir()
+                catalog={"game_build":build,"simc_revision":"a"*40,
+                    "expansion_id":exp,"manifest_sha256":"b"*64,
+                    "catalog":{"gear":{"slot_groups":{"chest":[{
+                        "item_id":201,"category":"selectable_stat_craft",
+                        "class_id":4,"subclass_id":1,"inventory_type":5}]}}}}
+                catalog_raw=json.dumps(catalog).encode()
+                (docs/"v213_candidate_catalog.json").write_bytes(catalog_raw)
+                old={"game_build":build,"simc_revision":"a"*40,
+                     "source_catalog_manifest_sha256":"b"*64,
+                     "source_catalog_artifact_sha256":stages.digest(catalog_raw),
+                     "manifest_sha256":"d"*64,"official_T":3107}
+                path=docs/("v212_installed_"+old["manifest_sha256"][:20]+".json")
+                old_raw=json.dumps(old).encode();path.write_bytes(old_raw)
+                self.assertIsNone(engine.effective_installed_options(path,old))
+                def backfill():
+                    with patch.object(env.environment_manifest,"verify_fresh_installed_environment"), \
+                         patch.object(env.source_to_catalog,"verify_catalog"):
+                        return env.refresh_existing_embellishments(stage_root=root,
+                            installed_manifest_sha256=old["manifest_sha256"],transport=transport)
+                filled=backfill()
+                self.assertEqual(filled["status"],"EMBELLISHMENT_ATTACHMENT_READY",filled)
+                self.assertEqual(filled["network_calls"],9)
+                self.assertEqual(filled["option_count"],1)
+                self.assertEqual(filled["native_calls"],0)
+                self.assertFalse(filled["budget_rebuilt"])
+                self.assertEqual(path.read_bytes(),old_raw)
+                registry=engine.effective_installed_options(path,old)
+                self.assertEqual(registry["new_reagent"]["item_ids"],[201])
+                other={**old,"manifest_sha256":"e"*64,"official_T":3057}
+                self.assertEqual(engine.effective_installed_options(path,other),registry)
+                self.assertEqual(backfill()["status"],"EMBELLISHMENT_ATTACHMENT_REUSED")
+                self.assertEqual(len(calls),9)
+                # Existing normal collection reuses all original bytes.
                 first=collect(sa)
                 self.assertEqual(first["status"],"RECIPE_OUTPUT_SOURCE_PROJECTED",first)
                 self.assertEqual(first["exact_recipe_spell_count"],1)
                 self.assertEqual(first["matched_effect_count"],1)
-                self.assertEqual(first["network_calls_by_stage"],9)
+                self.assertEqual(first["network_calls_by_stage"],0)
                 options=json.loads(pathlib.Path(first["candidate_path"]).read_text("utf8"))["material_options"]
                 self.assertEqual(options[0]["recipe_output_item_ids"],[201])
                 self.assertEqual(options[0]["preferred_physical_item_id"],101)
@@ -164,6 +215,11 @@ class GenericRecipeSourceTests(unittest.TestCase):
                 self.assertEqual(bad["status"],"EMBELLISHMENT_SOURCE_PENDING")
                 self.assertEqual(bad["network_calls_by_stage"],0)
                 self.assertFalse(bad["automatic_ui_promotion"])
+                _,_,outputs=engine._backfill_location(old)
+                (root/outputs["registry"]).write_text("{}",encoding="utf8")
+                self.assertEqual(engine.effective_installed_options(path,old),{})
+                self.assertEqual(backfill()["status"],"EMBELLISHMENT_SOURCE_PENDING")
+                self.assertEqual(path.read_bytes(),old_raw)
 
 
     def test_material_family_scope_and_noninferiority_not_numeric_id_order(self):
