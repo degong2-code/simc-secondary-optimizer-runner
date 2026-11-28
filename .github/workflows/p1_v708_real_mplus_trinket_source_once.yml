@@ -6,6 +6,9 @@ on:
       - .github/workflows/p1_v708_real_mplus_trinket_source_once.yml
       - integration_probes/p1_v708_real_mplus_trinket_source_once.py
       - integration_probes/p1_v847_embellishment_source_once.py
+      - integration_probes/p1_v848_embellishment_recipe_output_once.py
+      - runner/v848_embellishment_recipe_source.py
+      - tests/test_v848_embellishment_recipe_source.py
 permissions:
   contents: read
   actions: read
@@ -225,6 +228,46 @@ jobs:
             out/v847/source/source/raw_ModifiedCrafting*.csv
             out/v847/source/source/raw_MCRSlotXMCRCategory.csv
             out/v847/source/.stage_receipts/season-crafting-raw-*.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
+  embellishment-recipe-output:
+    if: ${{ contains(github.event.head_commit.message, '[v848-recipe-output-once]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: runner:integration_probes:.
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 45371957303
+          name: p1-v708-public-70961-db2-reuse
+          path: out/v848/source
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 46117689178
+          name: p1-v847-crafting-reagent-source
+          path: out/v848/prior
+          github-token: ${{ github.token }}
+      - name: Generic source parser and arbitrary-build recipe tests
+        run: python -m unittest -v tests.test_v848_embellishment_recipe_source
+      - name: One missing source only, reuse exact v847 relation
+        run: python -u integration_probes/p1_v848_embellishment_recipe_output_once.py --root out/v848/source --prior out/v848/prior/V847_EMBELLISHMENT_SOURCE.json --out out/v848
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: p1-v848-embellishment-recipe-output
+          path: |
+            out/v848/V848_RECIPE_OUTPUT_SOURCE.json
+            out/v848/source/source/v848_research_SpellEffect.csv
+            out/v848/source/.stage_receipts/v848-research-recipe-spell-effect.json
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 30
