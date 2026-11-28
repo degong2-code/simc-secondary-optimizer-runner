@@ -51,11 +51,35 @@ class ExistingBudgetReadOnlyHTTP(unittest.TestCase):
                 "simc_input_token":"flask_of_thalassian_resistance_2"
             }
         }
+        stage_sha="b"*64
+        preflight_sha="c"*64
+        catalog_sha="d"*64
+        self.installed.update(staged_source_environment_sha256=stage_sha,
+            original_v216_preflight_sha256=preflight_sha,
+            source_catalog_artifact_sha256=catalog_sha,
+            original_v217_stage_receipts={})
         self.receipt=docs/("v212_installed_"+self.sha[:20]+".json")
         self.receipt.write_text(json.dumps(self.installed),encoding="utf8")
+        stage_name="v212_environment_"+stage_sha[:20]+".json"
+        stage_doc={"manifest_sha256":stage_sha,"game_build":self.build,
+            "target_ilevel":self.ilevel,"original_v216_preflight_sha256":preflight_sha,
+            "source_catalog_artifact_sha256":catalog_sha,
+            "original_v217_stage_receipts":{}}
+        web.stage_engine.execute_stage(
+            root=docs.parent,stage_id="fresh-v212-environment-"+stage_sha[:20],
+            stage_version="v212-fresh-source-environment-1",
+            inputs={"manifest_sha256":stage_sha,"v216_preflight_sha256":preflight_sha},
+            outputs={"environment":"fresh_source/"+stage_name},
+            execute=lambda:(docs/stage_name).write_bytes(
+                (web.stage_engine.canonical(stage_doc)+"\n").encode("utf8")))
         self.snapshot=docs/("v113_profile_"+self.sha[:20]+".json")
-        self.snapshot.write_text(json.dumps({
+        profile={
+            "schema":"v113_verified_v212_profile_source_snapshot_v1",
+            "installed_manifest_sha256":self.sha,
+            "source_catalog_artifact_sha256":catalog_sha,
             "environment_result":{"source_compilation":{
+                "preflight_sha256":preflight_sha,
+                "verified_environment_install":{"manifest_sha256":self.sha},
                 "physical_gem_layout_unadmitted":{
                     "schema":"v271_user_socket_gem_layout_stage_v1",
                     "status":"PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING",
@@ -63,7 +87,14 @@ class ExistingBudgetReadOnlyHTTP(unittest.TestCase):
                     "special_gem_id":None,"socket_total":4
                 }
             }}
-        }),encoding="utf8")
+        }
+        self.seal_profile(profile)
+        # Synthetic source schema only. Real file SHA, canonical profile
+        # bytes, v217 stage receipts and linked identity are exercised.
+        patch=mock.patch.object(web.environment_manifest,
+                                "verify_fresh_source_environment",return_value=True)
+        patch.start()
+        self.addCleanup(patch.stop)
         self.matched={
             "environment_ready":True,"environment_installed":True,
             "installed_manifest_sha256":self.sha,
@@ -72,6 +103,18 @@ class ExistingBudgetReadOnlyHTTP(unittest.TestCase):
             "B":3107,"T":3107
         }
         self.url="/api/v1/environment/installed-budget"
+
+    def seal_profile(self, profile):
+        raw=(web.stage_engine.canonical(profile)+"\n").encode("utf8")
+        sid="fresh-v113-profile-"+self.sha[:20]
+        web.stage_engine.execute_stage(
+            root=self.docs.parent,stage_id=sid,
+            stage_version="v113-fresh-v212-profile-snapshot-1",
+            inputs={"installed_manifest_sha256":self.sha,
+                    "source_catalog_artifact_sha256":self.installed["source_catalog_artifact_sha256"],
+                    "snapshot_sha256":web.stage_engine.digest(raw)},
+            outputs={"snapshot":"fresh_source/"+self.snapshot.name},
+            execute=lambda:self.snapshot.write_bytes(raw))
 
     def get(self,**kwargs):
         data={"game_build":self.build,"target_ilevel":self.ilevel,
@@ -89,6 +132,12 @@ class ExistingBudgetReadOnlyHTTP(unittest.TestCase):
             self.assertEqual(kwargs["selected_oil_item_ids_by_hand"],{})
             self.assertEqual(kwargs["required_reference_G_track"],"general")
             return dict(self.matched)
+        reads=[]
+        original_read=pathlib.Path.read_bytes
+        def count_read(path):
+            if path==self.snapshot:
+                reads.append(path)
+            return original_read(path)
         with mock.patch.object(web.environment_build,
                                "find_verified_installed_season_environment",
                                side_effect=find), \
@@ -96,13 +145,20 @@ class ExistingBudgetReadOnlyHTTP(unittest.TestCase):
                                "verify_fresh_installed_environment"), \
              mock.patch.object(web,
                                "_v672_verified_runtime_inputs_digest",
-                               return_value="verified-original-stage"), \
+                               side_effect=AssertionError("NO_EQUIVALENCE_DIGEST")), \
+             mock.patch.object(pathlib.Path,"read_bytes",count_read), \
+             mock.patch.object(web.stage_engine,"verify_stage",
+                               wraps=web.stage_engine.verify_stage) as verify, \
              mock.patch.object(web.subprocess,"Popen",
                                side_effect=AssertionError("NO_NATIVE")), \
              mock.patch.object(web.retail_build_source,"discover",
                                side_effect=AssertionError("NO_NETWORK")):
             response=self.get()
         self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(reads,[self.snapshot])
+        self.assertEqual([c.kwargs["stage_id"] for c in verify.call_args_list],
+                         ["fresh-v212-environment-"+"b"*20,
+                          "fresh-v113-profile-"+self.sha[:20]])
         data=response.json()
         self.assertEqual(data["status"],"VERIFIED_EXISTING_INSTALLED_BUDGET")
         self.assertEqual((data["G"],data["J"],data["F"],data["B"],data["T"]),
@@ -125,10 +181,7 @@ class ExistingBudgetReadOnlyHTTP(unittest.TestCase):
                                "find_verified_installed_season_environment",
                                side_effect=find), \
              mock.patch.object(web.environment_manifest,
-                               "verify_fresh_installed_environment"), \
-             mock.patch.object(web,
-                               "_v672_verified_runtime_inputs_digest",
-                               return_value="valid-stage"):
+                               "verify_fresh_installed_environment"):
             for kwargs in ({"selected_flask_item_id":241321},
                            {"reference_G_track":"fury_dual_2h"},
                            {"game_build":"12.1.5.70575"},
@@ -161,14 +214,28 @@ class ExistingBudgetReadOnlyHTTP(unittest.TestCase):
                                "find_verified_installed_season_environment",
                                return_value=dict(self.matched)), \
              mock.patch.object(web.environment_manifest,
-                               "verify_fresh_installed_environment"), \
-             mock.patch.object(web,
-                               "_v672_verified_runtime_inputs_digest",
-                               return_value="original-stage"):
+                               "verify_fresh_installed_environment"):
             self.assertEqual(self.get().status_code,200)
-            self.snapshot.write_text(json.dumps({"environment_result":{}}),
-                                     encoding="utf8")
-            self.assertEqual(self.get().status_code,409)
+            original=self.snapshot.read_bytes()
+            self.snapshot.write_bytes(original+b" ")
+            changed=self.get()
+            self.assertEqual(changed.status_code,409)
+            self.assertEqual(changed.json()["detail"]["check"],"SAVED_PROFILE_INPUTS")
+            self.snapshot.write_bytes(original)
+            self.assertEqual(self.get().status_code,200)
+            # A valid independently sealed but different gem layout must
+            # still fail the budget's FOUR_GEM_LAYOUT check.
+            profile=json.loads(original)
+            profile["environment_result"]["source_compilation"][
+                "physical_gem_layout_unadmitted"]["socket_total"]=5
+            receipt=self.docs.parent/".stage_receipts"/(
+                "fresh-v113-profile-"+self.sha[:20]+".json")
+            self.snapshot.unlink()
+            receipt.unlink()
+            self.seal_profile(profile)
+            wrong_layout=self.get()
+            self.assertEqual(wrong_layout.status_code,409)
+            self.assertEqual(wrong_layout.json()["detail"]["check"],"FOUR_GEM_LAYOUT")
             self.snapshot.unlink()
             self.assertEqual(self.get().status_code,409)
 
@@ -194,27 +261,24 @@ class ExistingBudgetReadOnlyHTTP(unittest.TestCase):
                                    return_value=dict(self.matched)), \
                  mock.patch.object(web.environment_manifest,
                                    "verify_fresh_installed_environment"):
-                original_snapshot=self.snapshot.read_text(encoding="utf8")
+                original_snapshot=self.snapshot.read_bytes()
                 self.snapshot.unlink()
                 missing_profile=self.get()
                 self.assertEqual(missing_profile.json()["detail"]["check"],
                                  "INSTALL_OR_PROFILE_RECEIPT")
-                self.snapshot.write_text(original_snapshot,encoding="utf8")
+                self.snapshot.write_bytes(original_snapshot)
                 wrong_flask=self.get(selected_flask_item_id=241321)
                 self.assertEqual(wrong_flask.json()["detail"]["check"],
                                  "FLASK_OR_OIL_PHYSICAL_IDENTITY")
                 with mock.patch.object(web,
-                                       "_v672_verified_runtime_inputs_digest",
+                                       "_verified_runtime_inputs_snapshot",
                                        return_value=None):
                     mismatch=self.get()
                 self.assertEqual(mismatch.json()["detail"]["check"],
                                  "SAVED_PROFILE_INPUTS")
-                with mock.patch.object(web,
-                                       "_v672_verified_runtime_inputs_digest",
-                                       return_value="original-stage"):
-                    self.installed["official_T"]=3108
-                    self.receipt.write_text(json.dumps(self.installed),encoding="utf8")
-                    total=self.get()
+                self.installed["official_T"]=3108
+                self.receipt.write_text(json.dumps(self.installed),encoding="utf8")
+                total=self.get()
                 self.assertEqual(total.json()["detail"]["check"],
                                  "GJFO_TOTAL_CONSISTENCY")
                 self.assertNotIn(str(self.root),total.text)

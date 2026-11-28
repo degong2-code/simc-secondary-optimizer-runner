@@ -340,13 +340,12 @@ def _verified_saved_profile_snapshot(docs, installed, snapshot):
         return None
 
 
-def _v672_verified_runtime_inputs_digest(docs, installed, snapshot, *,
-                                        return_component_digests=False):
-    """Prove saved runtime-input equivalence, NOT preflight or current Live.
+def _verified_runtime_inputs_snapshot(docs, installed, snapshot):
+    """Return the same verified staged source and decoded profile bytes.
 
     Called only after exact original v216/v212 installed receipt verification.
-    Independently verify v212 staged and v113 profile stage receipts too.
-    Removing only content-address linking fields cannot grant source approval.
+    Retain both original stage checks; no equivalence comparison, cache,
+    or second unverified snapshot read is needed for a single installation.
     """
     try:
         if (type(installed) is not dict or
@@ -386,6 +385,21 @@ def _v672_verified_runtime_inputs_digest(docs, installed, snapshot, *,
         snap=_verified_saved_profile_snapshot(docs,installed,snapshot)
         if snap is None:
             return None
+        return stage_doc,snap
+    except (ValueError,TypeError,KeyError,UnicodeError,OSError,
+            stage_engine.StageExecutionBlocked,
+            environment_manifest.EnvironmentBlocked):
+        return None
+
+
+def _v672_verified_runtime_inputs_digest(docs, installed, snapshot, *,
+                                        return_component_digests=False):
+    """Historical equivalence diagnostic; not single-install admission."""
+    verified=_verified_runtime_inputs_snapshot(docs,installed,snapshot)
+    if verified is None:
+        return None
+    stage_doc,snap=verified
+    try:
         runtime=snap["environment_result"]
         compilation=runtime["source_compilation"]
         # Compare all other sealed fields without reinterpreting values.
@@ -510,10 +524,10 @@ def _v677_verified_existing_budget(jobs, *, game_build, target_ilevel,
                 found.get("selected_oil_item_ids_by_hand")!={}):
             return None
         check("SAVED_PROFILE_INPUTS")
-        if _v672_verified_runtime_inputs_digest(
-                docs,doc,snapshot) is None:
+        verified=_verified_runtime_inputs_snapshot(docs,doc,snapshot)
+        if verified is None:
             return None
-        payload=json.loads(snapshot.read_bytes())
+        _,payload=verified
         original=payload.get("environment_result")
         check("FOUR_GEM_LAYOUT")
         if not _verified_snapshot_gem_layout_matches(
