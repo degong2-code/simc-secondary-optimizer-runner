@@ -433,6 +433,83 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                 active=raw(a.replace("12/13/14","12/13/15")),layout=layout,
                 ordinary_by_slot=ordinary,revision=rev)
 
+    def test_v834_intrinsic_call_reuses_pair_without_bonus_native(self):
+        from runner import v216_environment_build_coordinator as engine
+        from runner import v211_enchant_source_effect_classification as classifier
+        doc=json.loads((Path(__file__).resolve().parents[1]/
+            "docs/development/research_receipts/p1_v821_70961_primary_gem_enchant_compact.json").read_text("utf8"))
+        build=doc["game_build"];rev=doc["simc_revision"];special=240967
+        rank=classifier.primary_gem_quality_projection(doc["candidate_rows"])
+        selected={**rank["direct_static_CHMV_source_by_item_id"][str(special)],
+                  "game_build":build,"simc_revision":rev}
+        layout={"socket_counts":{"finger1":2,"neck":3},"socket_total":5,
+                "ordinary_gem_ids":[11,12,13,14],"special_slot":"finger1",
+                "special_gem_id":special}
+        counts=layout["socket_counts"];ids={"finger1":1,"neck":2}
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp).resolve()
+            profile=root/"profile.simc"
+            original=b"finger1=item,id=1,ilevel=334\nneck=item,id=2,ilevel=334\n"
+            profile.write_bytes(original)
+            binary=root/"simc";binary.write_bytes(b"synthetic binary")
+            saved=root/"G";saved.mkdir()
+            baseline=b"synthetic G JSON2"
+            (saved/"native.json").write_bytes(baseline)
+            rep=root/"candidate.json"
+            rep.write_text(json.dumps({"receipt_sha256":"a"*64,
+                "selected_G_slot_ids":ids,"selected_intrinsic_socket_count_by_slot_source_only":counts,
+                "game_build":build,"simc_revision":rev,"target_ilevel":334,
+                "character":{"class":"mage","spec":"fire"}}),encoding="utf8")
+            stage={"receipt_sha256":"b"*64,"output_paths":{"candidate":"candidate.json"},
+                   "outputs":{"candidate":{"sha256":engine.digest(rep.read_bytes())}}}
+            receipt=root/"profile_receipt.json"
+            receipt.write_text(json.dumps({"receipt_sha256":"c"*64,
+                "physical_profile_sha256":engine.digest(original),
+                "simc_revision":rev,"game_build_declared_by_simc_source":build,
+                "source_candidate_receipt_sha256":"a"*64,"selected_G_slot_ids":ids}),encoding="utf8")
+            native={"status":"G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING",
+                    "native_run_folder":str(saved),"source_profile_receipt_sha256":"c"*64,
+                    "native_json2_sha256":engine.digest(baseline),
+                    "native_binary_sha256":engine.native_effect_pair.file_sha(binary),
+                    "target_ilevel":334}
+            collected={"fresh_one_spec_physical_G_probe":{"profile_path":str(profile),
+                         "profile_receipt_path":str(receipt)},
+                       "fresh_one_spec_simc_representative":{"candidate_path":str(rep),
+                           "source_stage":{"stage_id":"rep","receipt_sha256":"b"*64}}}
+            comp={"stage_root":str(root),"primary_gem_rank_source_unadmitted":rank,
+                  "selected_special_gem_direct_CHMV_source_only":selected}
+            pre={"game_build":build,"simc_revision":rev,"physical_gem_layout_unadmitted":layout}
+            socket={"status":"J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY",
+                    "selected_socket_counts":counts,"intrinsic_socket_counts_by_slot":counts,
+                    "additional_socket_proof_required_by_slot":{},
+                    "v232_stage_receipt_sha256":"b"*64}
+            def execute():
+                return engine._fresh_native_socket_bonus_application(
+                    collected=collected,compilation=comp,preflight=pre,
+                    native_G=native,binary=binary,j_socket=socket)
+            with patch.object(engine.stage_engine,"_read_receipt",return_value=stage), \
+                 patch.object(engine,"_linked_special_gem_native",return_value={
+                     "status":"EXACT_LINKED_SPECIAL_STATIC_ZERO","new_native_calls":0}) as pair, \
+                 patch.object(engine.native_effect_pair,"run_case") as bonus:
+                result=execute()
+                self.assertEqual(result["status"],"EXACT_INTRINSIC_LINKED_SPECIAL_STATIC_BOUND",result)
+                self.assertEqual(result["physical_item_ids_by_slot"],ids)
+                self.assertEqual(result["new_native_calls"],0)
+                self.assertEqual(result["bonus_plan"],{})
+                pair.assert_called_once()
+                self.assertEqual(pair.call_args.kwargs["socket_profile"],original.decode())
+                self.assertEqual(pair.call_args.kwargs["original_G_sha"],engine.digest(baseline))
+                bonus.assert_not_called()
+                socket["additional_socket_proof_required_by_slot"]={"neck":1}
+                self.assertEqual(execute()["status"],"SELECTED_SOCKET_BONUS_NATIVE_PENDING")
+                socket["additional_socket_proof_required_by_slot"]={}
+                rep.write_bytes(rep.read_bytes()+b" ")
+                rejected=execute()
+                self.assertEqual(rejected["status"],"SELECTED_SOCKET_BONUS_NATIVE_PENDING",rejected)
+                self.assertIn("V834_INTRINSIC_REPRESENTATIVE_STAGE_DRIFT",rejected["reason"])
+                self.assertEqual(pair.call_count,1)
+                bonus.assert_not_called()
+
     def test_v834_intrinsic_linked_scope_reaches_manifest_and_profile(self):
         from runner import v216_environment_build_coordinator as engine
         from runner import v211_enchant_source_effect_classification as classifier
