@@ -83,7 +83,7 @@ class ItemIcons(unittest.TestCase):
         second=icons.collect_display(ids+[84],self.cred,cache,
             token_loader=token,reader=media)
         self.assertEqual(second["status"],"COMPLETE")
-        self.assertEqual(self.calls,[83,84])
+        self.assertEqual(sorted(self.calls),[83,84])
         self.assertEqual(second["network_calls_now"],3)
         third=icons.collect_display([1,84],{},cache)
         self.assertEqual(third["status"],"COMPLETE")

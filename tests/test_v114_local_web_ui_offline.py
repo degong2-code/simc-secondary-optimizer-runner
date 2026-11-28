@@ -2424,7 +2424,8 @@ for(const id of ["trinket1","trinket2"]){
 }
 nodes["season-gear-note"]={textContent:""};
 const $=id=>nodes[id];
-let redraw=0,requests=0,stale=false,mode="trinket",specialSlots=0;
+let redraw=0,requests=0,stale=false,mode="trinket",specialSlots=0,mediaRefresh=0;
+const refreshOfficialEquipmentIcons=async current=>{assert.strictEqual(state.seasonGear,current);mediaRefresh++};
 let roleStatus="TRINKET_LOOT_SPEC_SOURCE_OBSERVED",roleMetadata;
 const role={source:"SAME_BUILD_DB2_EXPLICIT_LOOT_SPEC_OVERRIDE",
   status:"EXPLICIT_SHARED_WITH_DPS",roles:["DPS","HEALER"]};
@@ -2482,6 +2483,7 @@ const refresh=load("async function refreshExistingSeasonTrinkets(",
   assert.strictEqual(nodes.trinket2.value,"100");
   assert.strictEqual(nodes.trinket1.options.length,2);
   assert.strictEqual(redraw,1);
+  assert.strictEqual(mediaRefresh,1);
   await refresh(gear,334);
   assert.strictEqual(requests,2);
   assert.strictEqual(specialSlots,0);

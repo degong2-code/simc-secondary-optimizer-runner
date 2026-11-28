@@ -892,10 +892,11 @@ async function refreshOfficialEquipmentIcons(gear){
     ...(gear?.choices?.trinket||[]),
     ...(gear?.choices?.special_effect_gear_candidate||[])
   ].map(x=>x.item_id));
+  const targetLevel=String(field("ilevel"));
   const scope=gear?.source_scope==="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"&&
     /^[0-9]+(?:\.[0-9]+){3}$/.test(gear.season_build||"")&&
     /^[a-f0-9]{64}$/.test(gear.installed_manifest_sha256||"")?
-    gear.season_build+":"+gear.installed_manifest_sha256+":"+field("ilevel")+
+    gear.season_build+":"+gear.installed_manifest_sha256+":"+targetLevel+
     ":"+[...legalIds].sort((a,b)=>a-b).join(","):"";
   if(!scope) {
     state.equipmentIconEpoch++;
@@ -909,13 +910,15 @@ async function refreshOfficialEquipmentIcons(gear){
   state.equipmentIconUrls.clear();
   const params=new URLSearchParams({
     game_build:gear.season_build,
-    target_ilevel:String(field("ilevel")),
+    target_ilevel:targetLevel,
     installed_manifest_sha256:gear.installed_manifest_sha256
   });
   try{
     const data=await api("/api/v1/season-item-icons?"+params.toString());
     if(state.equipmentIconEpoch!==epoch||state.equipmentIconScope!==scope||
-       state.seasonGear!==gear)return;
+       state.seasonGear?.installed_manifest_sha256!==gear.installed_manifest_sha256||
+       state.seasonGear?.season_build!==gear.season_build||
+       String(field("ilevel"))!==targetLevel)return;
     if(data?.schema!=="v665_official_blizzard_item_media_icons_v1"||
        !["COMPLETE","PARTIAL","CREDENTIALS_NOT_CONFIGURED",
          "MEDIA_PROVIDER_UNAVAILABLE"].includes(data.status)||

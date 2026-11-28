@@ -39,6 +39,70 @@ class OptionsEditorial(unittest.TestCase):
         self.assertIn('installed_manifest_sha256: str',server)
         self.assertIn("state.equipmentIconUrls.get(item.item_id)",js)
 
+    def test_v844_names_independent_of_media_and_same_sha_new_gear(self):
+        node=shutil.which("node")
+        if not node:self.skipTest("Node not available")
+        harness=r"""
+const fs=require('fs'),assert=require('assert');
+const raw=fs.readFileSync(process.argv[1],'utf8');
+const a=raw.indexOf('async function refreshOfficialEquipmentIcons(gear)');
+const b=raw.indexOf('async function refreshExistingSeasonTrinkets(',a);
+assert(a>=0&&b>a);
+const gear={source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
+ season_build:"12.1.5.70961",installed_manifest_sha256:"a".repeat(64),
+ choices:{trinket:[{item_id:1,name:"One"}],special_effect_gear_candidate:[]}};
+const state={seasonGear:gear,equipmentIconUrls:new Map(),
+ equipmentIconEpoch:0,equipmentIconScope:""};
+const first={value:"1",options:[{value:"1",textContent:"One"}]};
+const second={value:"",options:[{value:"1",textContent:"One"}]};
+const special={querySelectorAll:()=>[]};
+const $=id=>({trinket1:first,trinket2:second,"special-rows":special})[id];
+let level="334",calls=0,draws=0,respond;
+const field=id=>level;
+const api=async path=>{calls++;return respond(path)};
+const drawInlineEquipment=()=>{draws++};
+const refresh=Function("state","$","field","api","drawInlineEquipment",
+ "URLSearchParams",raw.slice(a,b)+"return refreshOfficialEquipmentIcons;")(
+ state,$,field,api,drawInlineEquipment,URLSearchParams);
+const reply=(status,icons,names_ko)=>({
+ schema:"v665_official_blizzard_item_media_icons_v1",status,icons,names_ko});
+const url="https://render.worldofwarcraft.com/us/icons/56/item.jpg";
+(async()=>{
+ respond=()=>reply("MEDIA_PROVIDER_UNAVAILABLE",{},{"1":"공식 이름","9":"불가"});
+ await refresh(gear);
+ assert.equal(gear.choices.trinket[0].name_ko,"공식 이름");
+ assert.equal(first.options[0].textContent,"공식 이름");
+ assert.equal(first.value,"1");
+ assert.equal(state.equipmentIconUrls.size,0);
+ assert.equal(calls,1);
+ respond=()=>reply("COMPLETE",{"1":url},{"1":"공식 이름"});
+ await refresh(gear);
+ assert.equal(calls,2);
+ await refresh(gear);
+ assert.equal(calls,2,"complete same scope no request");
+ gear.choices.trinket.push({item_id:2,name:"Two"});
+ first.options.push({value:"2",textContent:"Two"});
+ respond=()=>reply("COMPLETE",{"1":url,"2":url,"9":url},
+  {"1":"공식 이름","2":"새 공식 이름"});
+ await refresh(gear);
+ assert.equal(calls,3,"same SHA new visible IDs refresh");
+ assert.equal(first.options[1].textContent,"새 공식 이름");
+ assert.deepEqual([...state.equipmentIconUrls.keys()],[1,2]);
+ assert.equal(first.value,"1");
+ gear.choices.trinket.push({item_id:3,name:"Three"});
+ respond=()=>{level="335";return reply("COMPLETE",{"3":url},{"3":"오래된 응답"})};
+ await refresh(gear);
+ assert.equal(gear.choices.trinket[2].name_ko,undefined);
+ assert.equal(state.equipmentIconUrls.has(3),false);
+ assert.equal(draws,3);
+ console.log("V844_MEDIA_AND_NAME_SCOPE_PASS");
+})().catch(e=>{console.error(e.stack||e);process.exitCode=1});
+"""
+        proc=subprocess.run([node,"-e",harness,str(ROOT/"runner/webui/app.js")],
+            cwd=ROOT,text=True,capture_output=True,timeout=20)
+        self.assertEqual(proc.returncode,0,proc.stderr)
+        self.assertIn("V844_MEDIA_AND_NAME_SCOPE_PASS",proc.stdout)
+
     def test_actual_node_enchant_comparison_is_exact_and_effect_safe(self):
         node=shutil.which("node")
         if not node:self.skipTest("Node not available")
