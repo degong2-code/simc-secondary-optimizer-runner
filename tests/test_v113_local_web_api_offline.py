@@ -3831,6 +3831,47 @@ class LocalWebAPIOffline(unittest.TestCase):
         child.poll.return_value=0
         self.assertEqual(self.post("/api/v1/sessions/"+sid+"/cancel").status_code,409)
 
+    def test_v861_recent_session_summary_distinguishes_saved_budget_and_combat(self):
+        """Reuse sealed user bytes; no new Native, file writes or private fields."""
+        sid=self.plan()["session_id"]
+        root=self.root/"runs"
+        folder=root/sid
+        original=json.loads((folder/"V106_SESSION_IDENTITY.json").read_text("utf8"))
+        def fixture(final,combat):
+            # Index-only historic fixtures, not executable session plans.
+            identity=copy.deepcopy(original)
+            user=identity["user"]
+            if final=="missing":user["target"].pop("final_T",None)
+            else:user["target"]["final_T"]=final
+            user["combat"]=combat
+            key=sessions.sha(sessions.canonical(identity).encode("utf8"))[:20]
+            d=root/key;d.mkdir()
+            (d/"V106_SESSION_IDENTITY.json").write_text(json.dumps(identity),encoding="utf8")
+            (d/"user.json").write_text(json.dumps(user),encoding="utf8")
+            return key
+        manual=fixture(3500,{"targets":5,"duration_seconds":180,"raid_buffs":True})
+        old=fixture("missing",{"targets":True,"duration_seconds":"300"})
+        before={str(p):p.read_bytes() for p in root.rglob("*") if p.is_file()}
+        with mock.patch.object(web.subprocess,"Popen",side_effect=AssertionError("NO_NATIVE")):
+            response=self.client.get("/api/v1/sessions",headers=self.headers)
+        self.assertEqual(response.status_code,200,response.text)
+        data=response.json()
+        self.assertTrue(data["read_only"])
+        self.assertEqual(data["native_calls_now"],0)
+        items={x["session_id"]:x for x in data["sessions"]}
+        self.assertIsNone(items[sid]["requested_final_T"])
+        self.assertEqual(items[sid]["combat_targets"],1)
+        self.assertEqual(items[sid]["combat_duration_seconds"],300)
+        self.assertEqual(items[manual]["requested_final_T"],3500)
+        self.assertEqual(items[manual]["combat_targets"],5)
+        self.assertEqual(items[manual]["combat_duration_seconds"],180)
+        for key in ("requested_final_T","combat_targets","combat_duration_seconds"):
+            self.assertNotIn(key,items[old])
+        for item in items.values():
+            self.assertFalse(set(item)&{"user","talents","race","binary","trinkets",
+                                        "options","static_cache","combat"})
+        self.assertEqual(before,{str(p):p.read_bytes() for p in root.rglob("*") if p.is_file()})
+
     def test_v622_recent_sessions_uses_sealed_v293_completed_vs_paused_status(self):
         """Normal browser long-run results belong to V291, not legacy V106."""
         import hashlib

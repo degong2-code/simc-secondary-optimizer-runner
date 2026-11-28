@@ -2610,7 +2610,23 @@ class LocalJobs:
                     if (longrun_state.is_file() and
                             not longrun_state.is_symlink()):
                         source=longrun_state
+                # Already authenticated by the v106 seal above. Expose
+                # only bounded scalar user intent for distinguishing runs.
+                # Missing/invalid historical fields remain unknown, not
+                # defaults. These values are never an execution approval.
+                summary={}
+                requested_T=target.get("final_T")
+                if "final_T" in target and (requested_T is None or
+                        (type(requested_T) is int and 1<=requested_T<=100000)):
+                    summary["requested_final_T"]=requested_T
+                combat=user.get("combat")
+                if type(combat) is dict:
+                    for name,maximum in (("targets",40),("duration_seconds",3600)):
+                        value=combat.get(name)
+                        if type(value) is int and 1<=value<=maximum:
+                            summary["combat_"+name]=value
                 candidates.append((source.stat().st_mtime,{
+                    **summary,
                     "session_id":folder.name,
                     "class":character["class"],"spec":character["spec"],
                     "target_ilevel":target["ilevel"],

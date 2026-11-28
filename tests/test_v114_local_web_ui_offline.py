@@ -2923,6 +2923,52 @@ const flush=()=>new Promise(resolve=>setImmediate(resolve));
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertIn("V855_SAME_SESSION_POLL_EPOCH_PASS",result.stdout)
 
+    def test_v861_recent_session_list_shows_saved_conditions_without_defaulting(self):
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("async function loadRecentSessions() {");
+const b=raw.indexOf("// A restored new-season session",a);
+assert(a>=0&&b>a);
+const base={class:"paladin",spec:"retribution",target_ilevel:334,
+  result_saved:true,recorded_status:"PASS",updated_unix:1700000000};
+const ids=["a".repeat(20),"b".repeat(20),"c".repeat(20)];
+const rows=[
+ {...base,session_id:ids[0],requested_final_T:null,combat_targets:1,combat_duration_seconds:300},
+ {...base,session_id:ids[1],requested_final_T:3500,combat_targets:5,combat_duration_seconds:180},
+ {...base,session_id:ids[2],combat_targets:true,combat_duration_seconds:"300"}
+];
+const select={value:ids[1],options:[],replaceChildren(...x){this.options=x;this.value=x[0].value;},
+ appendChild(x){this.options.push(x)}};
+const button={},note={};
+const nodes={"recent-session-id":select,"recent-open-btn":button,"recent-session-note":note};
+let calls=0;
+const get=Function("$","api","option","specLabels","number","refreshResultNavigation",
+ raw.slice(a,b)+"\nreturn loadRecentSessions;")(
+ id=>nodes[id],async path=>{assert.equal(path,"/api/v1/sessions");calls++;
+ return {read_only:true,native_calls_now:0,sessions:rows};},
+ (value,text)=>({value,text}),{"paladin/retribution":"징벌 성기사"},x=>String(x),()=>{});
+(async()=>{
+ await get();
+ assert.equal(calls,1);
+ const labels=select.options.map(x=>x.text);
+ assert(labels[1].includes("자동 T · 대상 1명 · 300초"));
+ assert(labels[2].includes("수동 T 3500 · 대상 5명 · 180초"));
+ assert(labels[3].includes("T 입력 미확인"));
+ assert(!labels[3].includes("자동 T")&&!labels[3].includes("300초"));
+ assert(labels[2].includes("ID bbbbbb"));
+ assert.equal(select.value,ids[1]);assert.equal(button.disabled,false);
+ console.log("V861_SAVED_SESSION_CONDITIONS_PASS");
+})().catch(e=>{console.error(e);process.exitCode=1});
+"""
+        result=subprocess.run([node,"-e",script,str(ROOT/"runner/webui/app.js")],
+                              cwd=ROOT,capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V861_SAVED_SESSION_CONDITIONS_PASS",result.stdout)
+
     def test_v622_recent_session_index_uses_readable_status_not_raw_worker_code(self):
         """Completed and paused v293 sessions remain distinguishable after restart."""
         js=self.client.get("/assets/app.js").text

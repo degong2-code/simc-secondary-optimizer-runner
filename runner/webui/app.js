@@ -4842,8 +4842,22 @@ async function loadRecentSessions() {
       }[item.recorded_status]||item.recorded_status);
     const stamp=Number.isFinite(item.updated_unix)?
       new Date(item.updated_unix*1000).toLocaleString("ko-KR"):"";
+    // Intent from the sealed saved user, never an estimated automatic T.
+    const scope=["목표 "+item.target_ilevel];
+    if(item.requested_final_T===null)scope.push("자동 T");
+    else if(Number.isInteger(item.requested_final_T)&&
+      item.requested_final_T>=1&&item.requested_final_T<=100000)
+      scope.push("수동 T "+number(item.requested_final_T));
+    else scope.push("T 입력 미확인");
+    if(Number.isInteger(item.combat_targets)&&
+      item.combat_targets>=1&&item.combat_targets<=40)
+      scope.push("대상 "+item.combat_targets+"명");
+    if(Number.isInteger(item.combat_duration_seconds)&&
+      item.combat_duration_seconds>=1&&item.combat_duration_seconds<=3600)
+      scope.push(item.combat_duration_seconds+"초");
     list.appendChild(option(item.session_id,
-      label+" · 목표 "+item.target_ilevel+" · "+status+" · "+stamp));
+      [label,...scope,status,stamp,"ID "+item.session_id.slice(-6)]
+        .filter(Boolean).join(" · ")));
   }
   if(Array.from(list.options).some(x=>x.value===selected))list.value=selected;
   $("recent-open-btn").disabled=!list.value;
