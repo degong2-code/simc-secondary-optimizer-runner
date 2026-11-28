@@ -7,6 +7,7 @@ Runs entirely offline; SHA manifest for exact extracted bytes.
 """
 from __future__ import annotations
 import argparse
+import fnmatch
 import hashlib
 import json
 import pathlib
@@ -93,7 +94,17 @@ def source_catalog_identity(root):
         "automatic_ui_promotion":document["automatic_ui_promotion"],
     }
 
-def select(root=ROOT):
+def historical_season_source(relative):
+    """Same exclusion scope as the accepted v694/v714 first-user ZIP."""
+    p=pathlib.PurePosixPath(relative)
+    return ((p.parent.as_posix()=="data" and any(
+        fnmatch.fnmatchcase(p.name,pattern) for pattern in
+        ("current_season_*.json","v202_*.json","v206_*.json")))
+        or (p.parent.as_posix()=="data/season_ordinary_gem_nominal"
+            and p.suffix==".json"))
+
+
+def select(root=ROOT,*,legacy_source_catalog=False):
     root=pathlib.Path(root).resolve()
     choices={}
     for name in BASE_FILES:
@@ -111,8 +122,11 @@ def select(root=ROOT):
             if ("__pycache__" in p.parts or p.name.startswith(".")
                 or p.suffix.lower() not in extensions):
                 continue
+            if not legacy_source_catalog and historical_season_source(relative):
+                continue
             choices[relative]=p
-    need(all(k in choices for k in MANDATORY),
+    need(all(k in choices for k in MANDATORY
+             if legacy_source_catalog or not historical_season_source(k)),
          "MINIMUM_PRODUCT_RUNTIME_FILES_MISSING")
     need(not any(path.endswith(BANNED) or "/runs/" in path or
                  path.startswith(("tests/",".github/","docs/"))
@@ -121,7 +135,7 @@ def select(root=ROOT):
     need(len(choices)>=75,"ABNORMALLY_SMALL_PRODUCT_PACKAGE")
     return choices
 
-def write_file_list(target,root=ROOT):
+def write_file_list(target,root=ROOT,*,legacy_source_catalog=False):
     """Export current ZIP candidate paths from the ONE existing selector.
 
     File inclusion is not 78-element readiness, native verification, or
@@ -130,7 +144,7 @@ def write_file_list(target,root=ROOT):
     """
     target=pathlib.Path(target).resolve()
     need(target.suffix.lower()==".txt","FILE_LIST_EXTENSION_REQUIRED")
-    paths=sorted(select(root))
+    paths=sorted(select(root,legacy_source_catalog=legacy_source_catalog))
     target.parent.mkdir(parents=True,exist_ok=True)
     text=(
         "# SIMC Secondary Optimizer: CURRENT_BETA_PACKAGE_CANDIDATES\n"
@@ -143,11 +157,11 @@ def write_file_list(target,root=ROOT):
     return paths
 
 
-def build(target,root=ROOT):
+def build(target,root=ROOT,*,legacy_source_catalog=False):
     target=pathlib.Path(target).resolve()
     root=pathlib.Path(root).resolve()
-    choices=select(root)
-    source_identity=source_catalog_identity(root)
+    choices=select(root,legacy_source_catalog=legacy_source_catalog)
+    source_identity=(source_catalog_identity(root) if legacy_source_catalog else None)
     need(target.suffix.lower()==".zip","ZIP_EXTENSION_REQUIRED")
     target.parent.mkdir(parents=True,exist_ok=True)
     records=[]
@@ -166,6 +180,9 @@ def build(target,root=ROOT):
               "sessions_bundled":False,
               "runtime_identity_bytes_unchanged":True,
               "source_catalog":source_identity}
+    if not legacy_source_catalog:
+        manifest["package_variant"]="first_user_zero_history_candidate"
+        manifest["historical_season_sources_bundled"]=False
     manifest_raw=(json.dumps(manifest,ensure_ascii=False,
             indent=2,sort_keys=True)+"\n").encode("utf8")
     # DOS epoch permits reproducible metadata even across Linux/Windows.
@@ -187,13 +204,15 @@ def main(argv=None):
     output.add_argument("--out",type=pathlib.Path)
     output.add_argument("--list-files",type=pathlib.Path,
                         help="TXT inventory of current beta package inputs, not readiness")
+    parser.add_argument("--legacy-source-catalog",action="store_true",
+                        help="Explicit historical compatibility archive, not current-season authority")
     args=parser.parse_args(argv)
     if args.list_files is not None:
-        paths=write_file_list(args.list_files)
+        paths=write_file_list(args.list_files,legacy_source_catalog=args.legacy_source_catalog)
         print("V181_BETA_PACKAGE_FILE_LIST_PASS",args.list_files,
               "files",len(paths),"not_release_ready",flush=True)
         return
-    manifest=build(args.out)
+    manifest=build(args.out,legacy_source_catalog=args.legacy_source_catalog)
     print("V181_WINDOWS_SOURCE_ZIP_PASS",args.out,
           "files",manifest["file_count"],
           "no_simc_no_user_cache",flush=True)

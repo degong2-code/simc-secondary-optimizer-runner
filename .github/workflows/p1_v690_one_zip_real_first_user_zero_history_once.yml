@@ -71,7 +71,7 @@ jobs:
           python -m unittest -v tests.test_v278_sealed_simc_consumable_native_pair.TwoNativeOptions.test_windows_long_paths_use_short_temp_without_repeating_native
           if ($LASTEXITCODE -ne 0) { throw 'V693_SHORT_TEMP_CONTRACT_PRECHECK' }
           New-Item -ItemType Directory -Force out/v690 | Out-Null
-          python integration_probes/v181_windows_beta_packager.py --out out/v690/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+          python integration_probes/v181_windows_beta_packager.py --legacy-source-catalog --out out/v690/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
           if ($LASTEXITCODE -ne 0) { throw 'V690_CURRENT_HEAD_ZIP_PACKAGER' }
       - name: One contiguous real user new ZIP consent SimC auto install source build browser DPS
         shell: pwsh
@@ -149,7 +149,7 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           Copy-Item 'out/v694/legacy-package-only/v213_current_season_source_to_catalog.json' 'data/current_season_source_to_catalog.json'
-          python integration_probes/v181_windows_beta_packager.py --out out/v694/tested-parent.zip
+          python integration_probes/v181_windows_beta_packager.py --legacy-source-catalog --out out/v694/tested-parent.zip
           if ($LASTEXITCODE -ne 0) { throw 'V694_EXISTING_PACKAGER_FAILED' }
           @'
           import fnmatch, hashlib, json, pathlib, zipfile

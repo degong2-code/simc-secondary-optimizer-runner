@@ -48,31 +48,36 @@ class WindowsBetaPackageOffline(unittest.TestCase):
                     record=next(row for row in stored["files"] if row["path"]==rel)
                     self.assertEqual(hashlib.sha256(payload).hexdigest(),
                                      record["sha256"],rel)
-                source_raw=archive.read(
-                    pack.PREFIX+"/data/current_season_source_to_catalog.json")
-                source_doc=json.loads(source_raw)
-                self.assertEqual(stored["source_catalog"]["schema"],
-                                 "v213_current_season_source_to_catalog_v1")
-                self.assertEqual(stored["source_catalog"]["artifact_sha256"],
-                                 hashlib.sha256(source_raw).hexdigest())
-                self.assertEqual(stored["source_catalog"]["manifest_sha256"],
-                                 source_doc["manifest_sha256"])
-                self.assertEqual(stored["source_catalog"]["native_calls"],0)
-                self.assertEqual(stored["source_catalog"]["network_calls"],0)
-                self.assertFalse(stored["source_catalog"]["automatic_ui_promotion"])
+                self.assertIsNone(stored["source_catalog"])
+                self.assertFalse(stored["historical_season_sources_bundled"])
+                self.assertEqual(stored["package_variant"],"first_user_zero_history_candidate")
+                self.assertFalse(any(pack.historical_season_source(rel) for rel in packaged_paths))
                 for rec in stored["files"]:
                     source=archive.read(pack.PREFIX+"/"+rec["path"])
                     self.assertEqual(len(source),rec["size"],rec["path"])
                     self.assertEqual(hashlib.sha256(source).hexdigest(),
                                      rec["sha256"],rec["path"])
                 self.assertIn(pack.PREFIX+"/runner/webui/index.html",names)
-                self.assertIn(pack.PREFIX+"/data/current_season_product_gear_db.json",names)
+                self.assertNotIn(pack.PREFIX+"/data/current_season_product_gear_db.json",names)
                 self.assertIn(pack.PREFIX+"/runner/v335_environment_official_ko_localization.py",names)
-                self.assertIn(pack.PREFIX+"/data/current_season_gear_ko_KR_verified.json",names)
-                self.assertIn(pack.PREFIX+"/data/current_season_playable_terms_ko_KR_verified.json",names)
-                ko=json.loads(archive.read(pack.PREFIX+"/data/current_season_gear_ko_KR_verified.json"))
-                self.assertEqual(ko["status"],"COMPLETE")
-                self.assertEqual(len(ko["items"]),77)
+                self.assertNotIn(pack.PREFIX+"/data/current_season_source_to_catalog.json",names)
+
+    def test_explicit_legacy_archive_preserves_verified_source_contract(self):
+        if not (ROOT/"data/current_season_source_to_catalog.json").is_file():
+            self.skipTest("Explicit historical compatibility source not supplied")
+        with tempfile.TemporaryDirectory() as temp:
+            target=pathlib.Path(temp)/"legacy.zip"
+            manifest=pack.build(target,legacy_source_catalog=True)
+            with zipfile.ZipFile(target) as archive:
+                raw=archive.read(pack.PREFIX+"/data/current_season_source_to_catalog.json")
+                self.assertEqual(manifest["source_catalog"]["artifact_sha256"],
+                                 hashlib.sha256(raw).hexdigest())
+                self.assertEqual(manifest["source_catalog"]["manifest_sha256"],
+                                 json.loads(raw)["manifest_sha256"])
+                self.assertFalse(manifest["source_catalog"]["automatic_ui_promotion"])
+                self.assertIn(pack.PREFIX+"/data/current_season_gear_ko_KR_verified.json",
+                              archive.namelist())
+
 
     def test_current_beta_file_list_is_derived_not_a_second_source_of_truth(self):
         """TXT is a snapshot of the same candidates used by ZIP, not READY."""
@@ -94,6 +99,7 @@ class WindowsBetaPackageOffline(unittest.TestCase):
             self.assertIn("runner/v216_environment_build_coordinator.py",paths)
             self.assertIn("runner/v155_season_api_probe.py",paths)
             self.assertIn("runner/webui/app.js",paths)
+            self.assertFalse(any(pack.historical_season_source(p) for p in paths))
             self.assertNotIn("tests/test_v181_windows_beta_package_offline.py",paths)
             self.assertFalse(any(p.startswith("docs/") or p.endswith(".exe")
                                  for p in paths))

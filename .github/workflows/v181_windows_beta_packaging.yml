@@ -82,6 +82,11 @@ on:
       - .github/workflows/v181_windows_beta_packaging.yml
   workflow_dispatch:
     inputs:
+      legacy_source_catalog:
+        description: Explicit historical compatibility package (not current-season authority)
+        type: boolean
+        required: false
+        default: false
       source_run_id:
         description: Successful v213 source-to-catalog workflow run ID
         type: string
@@ -123,6 +128,7 @@ jobs:
         with:
           python-version: ${{ matrix.py }}
       - name: Reuse exact source-backed v213 catalog artifact
+        if: inputs.legacy_source_catalog == true
         uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.source_artifact || 'v213-source-to-catalog-41360273361' }}
@@ -130,6 +136,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: p3c-source
       - name: Bind v213 catalog bytes into the Windows package workspace
+        if: inputs.legacy_source_catalog == true
         shell: pwsh
         run: |
           $source = Join-Path $PWD "p3c-source/v213_current_season_source_to_catalog.json"
@@ -138,6 +145,7 @@ jobs:
           python -c "import json,sys;sys.path.insert(0,'runner');import v213_source_to_catalog as v;p=json.load(open('data/current_season_source_to_catalog.json',encoding='utf8'));assert v.verify_catalog(p);assert p['native_calls']==0 and p['network_calls']==0 and p['automatic_ui_promotion'] is False;print('V181_V213_SOURCE_ARTIFACT_VALIDATED',p['manifest_sha256'])"
           if ($LASTEXITCODE -ne 0) { throw "V213_SOURCE_CATALOG_VALIDATION_FAILED" }
       - name: Validate existing v213 real source GJFO links (no Native)
+        if: inputs.legacy_source_catalog == true
         shell: pwsh
         run: |
           python integration_probes/v223_pinned_source_budget_smoke.py
@@ -153,9 +161,11 @@ jobs:
           python -m unittest -v tests.test_v181_windows_beta_package_offline
           if ($LASTEXITCODE -ne 0) { throw "Source archive unit tests failed" }
           New-Item -Path dist -ItemType Directory -Force | Out-Null
-          python integration_probes/v181_windows_beta_packager.py --out dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+          $legacy = @()
+          if ('${{ inputs.legacy_source_catalog }}' -eq 'true') { $legacy = @('--legacy-source-catalog') }
+          python integration_probes/v181_windows_beta_packager.py --out dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip @legacy
           if ($LASTEXITCODE -ne 0) { throw "Beta packaging failed" }
-      - name: Actual extracted Windows CMD launcher preflight + local HTTP server + 3 plans
+      - name: Actual extracted Windows CMD launcher and local HTTP (cold or explicit legacy plans)
         shell: pwsh
         run: |
           python integration_probes/v181_windows_beta_live_http.py --zip dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip

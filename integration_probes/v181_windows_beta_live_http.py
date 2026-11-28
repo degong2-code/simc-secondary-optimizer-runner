@@ -51,18 +51,36 @@ def run(archive_path):
             package_manifest=json.loads(archive.read(
                 "SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/V181_PACKAGE_MANIFEST.json"))
             source_meta=package_manifest.get("source_catalog")
-            need(type(source_meta) is dict and
-                 source_meta.get("schema")=="v213_current_season_source_to_catalog_v1",
-                 "V213_PACKAGE_IDENTITY_MISSING")
+            cold=source_meta is None
             source_member=("SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/"+
                            "data/current_season_source_to_catalog.json")
-            source_raw=archive.read(source_member)
-            source_doc=json.loads(source_raw)
-            need(hashlib.sha256(source_raw).hexdigest()==
-                 source_meta.get("artifact_sha256") and
-                 source_doc.get("manifest_sha256")==
-                 source_meta.get("manifest_sha256"),
-                 "V213_PACKAGE_SOURCE_SHA_MISMATCH")
+            if cold:
+                from v181_windows_beta_packager import historical_season_source
+                prefix="SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/"
+                need(package_manifest.get("package_variant")=="first_user_zero_history_candidate"
+                     and package_manifest.get("historical_season_sources_bundled") is False
+                     and not any(historical_season_source(n[len(prefix):]) for n in names),
+                     "COLD_PACKAGE_HISTORY_LEAK")
+            else:
+                need(type(source_meta) is dict and
+                     source_meta.get("schema")=="v213_current_season_source_to_catalog_v1",
+                     "V213_PACKAGE_IDENTITY_MISSING")
+                source_raw=archive.read(source_member)
+                source_doc=json.loads(source_raw)
+                need(hashlib.sha256(source_raw).hexdigest()==
+                     source_meta.get("artifact_sha256") and
+                     source_doc.get("manifest_sha256")==
+                     source_meta.get("manifest_sha256"),
+                     "V213_PACKAGE_SOURCE_SHA_MISMATCH")
+            prefix="SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/"
+            rows=package_manifest["files"]
+            need(len(names)==len(set(names))==len(rows)+1 and
+                 set(names)=={prefix+r["path"] for r in rows}|{prefix+"V181_PACKAGE_MANIFEST.json"},
+                 "PACKAGE_MEMBER_MANIFEST_DRIFT")
+            for row in rows:
+                raw=archive.read(prefix+row["path"])
+                need(len(raw)==row["size"] and hashlib.sha256(raw).hexdigest()==row["sha256"],
+                     "PACKAGE_PAYLOAD_SHA_DRIFT:"+row["path"])
             need(all(n.startswith("SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/")
                      and ".." not in pathlib.PurePosixPath(n).parts
                      for n in names),"INVALID_ZIP_MEMBER")
@@ -101,7 +119,10 @@ def run(archive_path):
                  cwd=root,stdin=subprocess.DEVNULL,stdout=handle,
                  stderr=subprocess.STDOUT,
                  env={**os.environ,"PYTHONIOENCODING":"utf-8",
-                      "PYTHONDONTWRITEBYTECODE":"1"})
+                      "PYTHONDONTWRITEBYTECODE":"1",
+                      **({"LOCALAPPDATA":str(work/"empty-appdata"),
+                          "HOME":str(work/"empty-home"),"USERPROFILE":str(work/"empty-home")}
+                         if cold else {})})
             try:
                 deadline=time.monotonic()+22
                 while time.monotonic()<deadline:
@@ -203,6 +224,29 @@ def run(archive_path):
                 need(status==403,"UPDATER_STATUS_TOKEN_NOT_REQUIRED")
                 print("V193_WINDOWS_MANAGED_SIMC_STATUS_NO_NATIVE_PASS",flush=True)
                 status,season_options=http(base,"/api/v1/season-option-catalog",token=token)
+                if cold:
+                    need(status==200 and
+                         season_options.get("status")=="SOURCE_OPTION_CATALOG_UNAVAILABLE"
+                         and season_options.get("enchant_candidates",{}).get("selectable_count")==0
+                         and season_options.get("native_calls_now")==0
+                         and not season_options.get("source_catalog"),
+                         "COLD_PACKAGE_UNVERIFIED_OPTIONS_EXPOSED")
+                    st,gear=http(base,"/api/v1/season-gear?game_build=99.0.0.1"
+                                 +"&installed_manifest_sha256="+"0"*64,token=token)
+                    need(st==200 and gear.get("count")==0
+                         and gear.get("status")=="SEASON_GEAR_INSTALLED_SOURCE_UNAVAILABLE",
+                         "COLD_PACKAGE_INVENTED_INSTALL")
+                    st,_=http(base,"/api/v1/defaults")
+                    need(st==403,"UNAUTHORIZED_DEFAULTS_NOT_DENIED")
+                    st,_=http(base,"/api/v1/bootstrap",
+                              extra={"Host":"evil.example:"+str(port)})
+                    need(st==403,"DNS_REBINDING_NOT_BLOCKED")
+                    st,_=http(base,"/api/v1/defaults",token=token,
+                              extra={"Origin":"http://evil.example"})
+                    need(st==403,"FOREIGN_ORIGIN_NOT_BLOCKED")
+                    print("V181_WINDOWS_COLD_PACKAGE_HTTP_PASS", "native 0",
+                          "no historical source",flush=True)
+                    return 0
                 need(status==200 and
                      season_options["schema"]=="v196_current_season_ui_catalog_v1" and
                      season_options["enchant_candidates"]["total"]==38 and
@@ -319,7 +363,7 @@ def main():
     args=parser.parse_args()
     need(os.name=="nt","WINDOWS_ONLY_REAL_PLATFORM_SMOKE")
     code=run(args.zip)
-    print("V181_WINDOWS_BETA_LIVE_3_PLANS_RESTORE_ZERO_NATIVE_PASS",flush=True)
+    print("V181_WINDOWS_BETA_LIVE_HTTP_ZERO_NATIVE_PASS",flush=True)
     return code
 
 if __name__=="__main__":raise SystemExit(main())
