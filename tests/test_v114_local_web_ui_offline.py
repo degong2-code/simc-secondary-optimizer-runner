@@ -809,6 +809,77 @@ console.log("V842_SELECTED_SPECIAL_CONTROL_PASS");
         self.assertNotIn("영약은 검증된 원본 고정치 F=165",html)
         self.assertNotIn("기존 6회 실행과 별개",html)
 
+    def test_v843_group_installed_budget_display_preserves_each_exact_sha(self):
+        """Actual JS projection: grouped display never merges or admits installs."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node missing")
+        harness=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const start=raw.indexOf("function renderInstalledFlaskChoices(data) {");
+const end=raw.indexOf("async function copyVerifiedFjCollisionDiagnostic()",start);
+assert(start>=0&&end>start);
+const nodes={};
+function make(tag){
+  return {tag,value:"",children:[],hidden:false,checked:false,
+    replaceChildren(...xs){this.children=xs;this.value=xs[0]?.value||"";},
+    appendChild(x){this.children.push(x);},
+    get options(){return this.children.flatMap(x=>x.tag==="optgroup"?x.children:[x]);}
+  };
+}
+const $=id=>nodes[id]||(nodes[id]=make("node"));
+const document={getElementById:$,createElement:make};
+const option=(v,label)=>({tag:"option",value:String(v),textContent:label});
+const field=id=>String($(id).value);
+const A="a".repeat(64),B="b".repeat(64),C="c".repeat(64),D="d".repeat(64);
+const state={seasonGearTargetIlevel:334,seasonGear:{
+  season_build:"12.1.5.70961",
+  source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
+  installed_manifest_sha256:B}};
+$("ilevel").value="334";$("spec").value="mage/fire";
+$("season-verified-budget").value=B;
+const render=Function("state","$","document","option","field",
+ "installedConsumableScopeMatches","refreshDefaultConsumableSummaries",
+ raw.slice(start,end)+"return renderInstalledFlaskChoices;")(
+ state,$,document,option,field,d=>d?.game_build==="12.1.5.70961",()=>{});
+const row=(sha,ids,J=92)=>({installed_manifest_sha256:sha,
+ flask_item_id:241327,flask_quality:3,J,F:165,socket_total:4,
+ ordinary_gem_item_ids:ids,individually_verified:true,simc_revision:"1234567890"});
+const data={game_build:"12.1.5.70961",verified_flasks:[
+ {physical_item_id:241327,official_name_ko:"테스트 영약",
+  simc_input_token:"test_flask",crafting_quality:3,F_rating:165}],
+ verified_base_flask_installs:[row(A,[1,2,3,4]),row(B,[1,2,3,4]),
+  row(C,[1,2,4,3]),row(D,[1,2,3,4],108)]};
+const before=JSON.stringify(data);
+render(data);
+const select=$("season-verified-budget");
+const groups=select.children.filter(x=>x.tag==="optgroup");
+assert.equal(groups.length,3,"ordered gem identity and J must remain distinct");
+assert.deepEqual(groups[0].children.map(x=>x.value),[A,B]);
+assert(groups[0].children[1].textContent.includes("현재 연결"));
+assert(!groups[0].children[0].textContent.includes("현재 연결"));
+assert.equal(select.value,B,"preserve explicit exact SHA");
+assert.deepEqual(select.options.slice(1).map(x=>x.value),[A,B,C,D]);
+assert.equal(state.verifiedBaseFlaskInstalls.length,4);
+assert.equal(JSON.stringify(data),before,"no source mutation");
+assert($("season-verified-budget-status").textContent.includes("구성 3종 · 저장본 4개"));
+assert.equal($("season-verified-budget-group").hidden,false);
+render({...data,game_build:"12.1.5.99999"});
+assert.equal(select.options.length,1,"stale build no choices");
+assert.equal(select.value,"");
+assert.equal($("season-verified-budget-group").hidden,true);
+render({...data,verified_base_flask_installs:[row(A,[1,2,3,4])]});
+assert.equal(select.value,"","do not automatically choose a new SHA");
+assert.equal($("season-verified-budget-group").hidden,true);
+console.log("V843_GROUPED_EXACT_INSTALL_DISPLAY_PASS");
+"""
+        result=subprocess.run([node,"-e",harness,
+              str(ROOT/"runner/webui/app.js")],
+              capture_output=True,text=True,timeout=15,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V843_GROUPED_EXACT_INSTALL_DISPLAY_PASS",result.stdout)
+
     def test_v490_verified_base_F_rebinds_exact_v212_without_new_native(self):
         """The user's flask selector must bind the same installed SHA as gear."""
         js=self.client.get("/assets/app.js").text

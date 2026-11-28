@@ -1512,31 +1512,49 @@ function renderInstalledFlaskChoices(data) {
     document.getElementById("season-verified-budget-group"):null;
   if(budgetSelector&&group){
     const previous=budgetSelector.value;
-    budgetSelector.replaceChildren(option("","검증된 F/J 구성 선택"));
+    budgetSelector.replaceChildren(option("","기존 계산 환경 선택"));
     const rows=state.verifiedBaseFlaskInstalls;
-    // An index identifies a choice, never a ranking or proof of superiority.
-    // The original manifest SHA is kept in the option value, not its label.
-    rows.forEach((item,i)=>{
-      // Do not compare whole receipts, rank installations, or merge them.
-      // Show the already verified physical flask/revision as human-readable
-      // differentiators rather than requiring the user to inspect a hash.
-      const flaskRow=(data.verified_flasks||[]).find(
-        row=>row.physical_item_id===item.flask_item_id);
+    // A display group is not a verified runtime identity. Keep every
+    // exact SHA selectable, including two independently verified receipts
+    // with identical physical F/J choices. Never rank or merge them.
+    const configurations=new Map();
+    const flaskNames=new Map((data?.verified_flasks||[]).map(row=>
+      [row.physical_item_id,row]));
+    for(const item of rows){
+      const key=JSON.stringify([item.flask_item_id,item.flask_quality,
+        item.F,item.J,item.socket_total,item.ordinary_gem_item_ids]);
+      if(!configurations.has(key))configurations.set(key,[]);
+      configurations.get(key).push(item);
+    }
+    const activeSha=state.seasonGearTargetIlevel===Number(field("ilevel")) &&
+      state.seasonGear?.season_build===data?.game_build &&
+      state.seasonGear?.source_scope==="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"?
+      state.seasonGear.installed_manifest_sha256:null;
+    const groups=[...configurations.values()];
+    groups.forEach((variants,i)=>{
+      const first=variants[0];
+      const flaskRow=flaskNames.get(first.flask_item_id);
       const flaskName=flaskRow?.official_name_ko||
         (flaskRow?.simc_input_token||"").replace(/_/g," ")||
-        "영약 #"+item.flask_item_id;
-      const rev=typeof item.simc_revision==="string"?
-        item.simc_revision.slice(0,7):"";
-      const label="검증 환경 "+(i+1)+" · "+flaskName+
-        " · F "+item.F+" · J "+item.J+
-        " · "+item.socket_total+"소켓 · 기름 없음"+
-        (rev?" · SimC "+rev:"");
-      const candidate=option(item.installed_manifest_sha256,label);
-      candidate.title=label+" · 영약 #"+item.flask_item_id+
-        " (품질 "+item.flask_quality+") · 보석 "+
-        item.ordinary_gem_item_ids.map(id=>"#"+id).join("/")+
-        (item.simc_revision?" · 원본 SimC "+item.simc_revision:"");
-      budgetSelector.appendChild(candidate);
+        "영약 #"+first.flask_item_id;
+      const label=flaskName+" · 영약 +"+first.F+" · 보석 +"+first.J+
+        " ("+first.socket_total+"개) · 기름 미사용";
+      const groupNode=document.createElement("optgroup");
+      groupNode.label="구성 "+(i+1)+" · "+label;
+      variants.forEach((item,j)=>{
+        const rev=typeof item.simc_revision==="string"?item.simc_revision.slice(0,7):"";
+        const active=item.installed_manifest_sha256===activeSha;
+        const savedLabel=(active?"현재 연결 · ":"")+"저장본 "+(j+1)+
+          (rev?" · SimC "+rev:"");
+        const candidate=option(item.installed_manifest_sha256,savedLabel);
+        candidate.title=label+" · 영약 #"+item.flask_item_id+
+          " (품질 "+item.flask_quality+") · 보석 "+
+          item.ordinary_gem_item_ids.map(id=>"#"+id).join("/")+
+          (item.simc_revision?" · 원본 SimC "+item.simc_revision:"")+
+          " · 설치 식별자 "+item.installed_manifest_sha256;
+        groupNode.appendChild(candidate);
+      });
+      budgetSelector.appendChild(groupNode);
     });
     budgetSelector.value=Array.from(budgetSelector.options).some(opt=>
       opt.value===previous&&!opt.disabled)?previous:"";
@@ -1545,8 +1563,9 @@ function renderInstalledFlaskChoices(data) {
     const detail=document.getElementById("season-verified-budget-diagnostic-detail");
     if(detail){detail.hidden=true;detail.open=false;}
     if(status)status.textContent=rows.length>1?
-      "개별 검증된 환경 "+rows.length+
-      "건 · 사용할 환경을 선택하면 정확한 원본을 다시 확인합니다.":
+      "사용자 구성 "+groups.length+"종 · 저장본 "+rows.length+
+      "개. 같은 구성의 저장본도 실행 조건은 다를 수 있습니다. "+
+      "선택한 저장본만 다시 확인하며 기존 데이터는 삭제하지 않습니다.":
       rows.length===1?"검증된 환경 1건 · 정확한 원본 확인 후 적용":
       "일치하는 검증 환경이 없습니다. 현재 시즌·설치본을 확인하세요.";
   }
@@ -1682,7 +1701,7 @@ async function chooseInstalledFlask() {
     state.seasonGearTargetIlevel=null; // never plan with an old F/J SHA
     $("season-verified-flask-status").textContent=
       "현재 영약의 검증된 F/J 환경이 여러 개이거나 선택 조건과 다릅니다. "+
-      "‘검증된 환경 구성’에서 F/J를 구분해 선택하세요. 동일 수치로 구별할 수 없는 "+
+      "‘기존 계산 환경 선택’에서 영약·보석 구성과 저장본을 구분해 선택하세요. 동일 구성의 "+
       "설치본은 임의로 적용하지 않습니다.";
     return;
   }
