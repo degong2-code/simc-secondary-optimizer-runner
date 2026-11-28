@@ -906,10 +906,11 @@ class LocalJobs:
         # Persist the small existing rank projection only when it comes
         # from this Build or its authenticated saved snapshot. It is
         # preparation metadata, not a second budget or effect owner.
-        if _special_gem_preparation_rows(
-                compilation.get("primary_gem_rank_source_unadmitted"),
-                game_build=doc["game_build"],simc_revision=doc["simc_revision"],
-                target_ilevel=doc["target_ilevel"]):
+        if (type(compilation.get("primary_gem_rank_source_unadmitted")) is dict
+                and _special_gem_preparation_rows(
+                    compilation["primary_gem_rank_source_unadmitted"],
+                    game_build=doc["game_build"],simc_revision=doc.get("simc_revision"),
+                    target_ilevel=doc["target_ilevel"])):
             names+=("primary_gem_rank_source_unadmitted",)
         socket_scope=doc.get("official_J_physical_socket_source")
         if socket_scope is not None:
