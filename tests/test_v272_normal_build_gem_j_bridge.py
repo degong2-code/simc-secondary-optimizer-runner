@@ -310,6 +310,24 @@ class NormalBuildGemJ(unittest.TestCase):
                 preflight=pre,compilation=compiled,staged=staged,
                 owner_numeric={"J":j},quality_scope={"J":q},
                 effect_observations=[])
+        # The packaged ordinary nominal source never proves the selected
+        # special's direct CHMV. This is an offline source-owner fixture.
+        self.assertNotIn("J",official(quality))
+        pre["physical_gem_layout_unadmitted"]=layout
+        self.assertNotIn("J",official(quality))
+        special={"item_id":layout["special_gem_id"],"enchant_id":12345,
+                 "source_basis":"EXACT_PRIMARY_OR_ARMOR_COMPONENTS_NO_LINKED_SPELL",
+                 "direct_static_CHMV_vector_source_only":{
+                     k:0 for k in build.season_budget_contract.STATS}}
+        identity={"game_build":pre["game_build"],
+                  "simc_revision":pre["simc_revision"],
+                  "v221_stage_receipt_sha256":"b"*64,
+                  "enchant_source_sha256":"1"*64}
+        compiled["primary_gem_rank_source_unadmitted"]={
+            **identity,"status":"PRIMARY_GEM_RANK_SOURCE_PROJECTED_UNADMITTED",
+            "direct_static_CHMV_source_by_item_id":{str(special["item_id"]):special}}
+        compiled["selected_special_gem_direct_CHMV_source_only"]={
+            **identity,**special,"ordinary_J_includes_selected_special":False}
         accepted=official(quality)
         self.assertEqual(accepted["J"]["rating"],92)
         self.assertEqual(accepted["J"]["source_verification"],

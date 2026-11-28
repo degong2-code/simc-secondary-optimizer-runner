@@ -2034,6 +2034,28 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         staged={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
                 "stage_status":"REUSED_VERIFIED",
                 "stage_receipt_sha256":"8"*64}
+        # No special CHMV evidence means that even a valid ordinary
+        # source and intrinsic layout must not approve J yet.
+        self.assertNotIn("J",build._fresh_source_owner_original_J_F_components(
+            preflight=pre,compilation=compiled,staged=staged,
+            owner_numeric=owner,quality_scope={"J":{**jq,
+                "same_enchant_quality_groups_source_only":[]}},
+            effect_observations=[]))
+        # Supply a synthetic exact zero source for this synthetic special.
+        # This is not a claim of actual physical gem or Native verification.
+        special={"item_id":layout["special_gem_id"],"enchant_id":12345,
+                 "source_basis":"EXACT_PRIMARY_OR_ARMOR_COMPONENTS_NO_LINKED_SPELL",
+                 "direct_static_CHMV_vector_source_only":{
+                     k:0 for k in build.season_budget_contract.STATS}}
+        identity={"game_build":pre["game_build"],
+                  "simc_revision":pre["simc_revision"],
+                  "v221_stage_receipt_sha256":owner["J"]["v221_stage_receipt_sha256"],
+                  "enchant_source_sha256":"1"*64}
+        compiled["primary_gem_rank_source_unadmitted"]={
+            **identity,"status":"PRIMARY_GEM_RANK_SOURCE_PROJECTED_UNADMITTED",
+            "direct_static_CHMV_source_by_item_id":{str(special["item_id"]):special}}
+        compiled["selected_special_gem_direct_CHMV_source_only"]={
+            **identity,**special,"ordinary_J_includes_selected_special":False}
         # A lower-quality same-family gem may not silently become the
         # official maximum. It remains a user source-only candidate.
         partial=build._fresh_source_owner_original_J_F_components(
