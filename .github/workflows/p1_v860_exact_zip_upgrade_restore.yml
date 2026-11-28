@@ -1,0 +1,46 @@
+name: P1 v860 exact two published Windows ZIP upgrade restore (Native0)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/p1_v860_exact_zip_upgrade_restore.py
+      - .github/workflows/p1_v860_exact_zip_upgrade_restore.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  exact-zip-upgrade:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Download exact previously retained v853.2 package
+        uses: actions/download-artifact@v4
+        with:
+          name: v181-windows-source-beta-46123293699
+          run-id: 46123293699
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: upgrade-old
+      - name: Download exact previously retained v859 package
+        uses: actions/download-artifact@v4
+        with:
+          name: v181-windows-source-beta-46130013679
+          run-id: 46130013679
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: upgrade-new
+      - name: Install existing offline test dependencies
+        run: python -m pip install -r requirements-web-test.txt
+      - name: Verify two archive payloads and restore original saved state with no Native
+        run: python integration_probes/p1_v860_exact_zip_upgrade_restore.py --old upgrade-old/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip --new upgrade-new/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip --out upgrade-receipt
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: p1-v860-exact-two-zip-upgrade-receipt
+          path: upgrade-receipt
+          if-no-files-found: warn
+          retention-days: 14
